@@ -9,6 +9,11 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/vue": "^5.1.0",
+    "@fontsource-variable/doto": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.6",
+    "@fontsource-variable/roboto-flex": "^5.2.6",
+    "@fontsource/doto": "^5.2.8",
     "astro": "^5.11.0"
   }
 }

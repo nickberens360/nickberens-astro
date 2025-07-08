@@ -1,0 +1,54 @@
+---
+import Head from '../components/Head.astro';
+import SiteHeader from '../components/SiteHeader.vue';
+import "@fontsource-variable/doto";
+import "@fontsource-variable/jetbrains-mono";
+import { getGitBranch } from '../utils/gitInfo.js';
+
+export interface Props {
+    title?: string;
+    description?: string;
+    favicon?: string;
+}
+
+const {title, description, favicon} = Astro.props;
+const gitBranch = getGitBranch();
+---
+
+<html lang="en">
+<Head
+    title={title}
+    description={description}
+    favicon={favicon}
+>
+  <!-- <link rel="preload" as="font" type="font/woff2" href={openSansWoff2} crossorigin="anonymous" />-->
+</Head>
+<body>
+<SiteHeader gitBranch={gitBranch} />
+<slot/>
+</body>
+</html>
+
+<style is:global>
+    /* Global styles can be added here */
+    //:root {
+    //  --font-sans: 'Doto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    //}
+
+    html {
+        font-family: 'JetBrains Mono', sans-serif;
+        background-color: #f6f6f6;
+        color: #111;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        margin: 0;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+        min-height: 100vh;
+    }
+</style>
