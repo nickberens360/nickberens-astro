@@ -22,7 +22,7 @@
           <li class="site-header__nav-item"><a href="/about">About</a></li>
           <li class="site-header__nav-item"><a href="/projects">Projects</a></li>
           <li class="site-header__nav-item"><a href="/blog">Blog</a></li>
-          <li class="site-header__nav-item"><a href="/contact">Contact</a></li>
+          <li class="site-header__nav-item"><a href="#contact">Contact</a></li>
         </ul>
       </nav>
 
@@ -32,7 +32,7 @@
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
           <li class="site-header__mobile-nav-item"><a href="/about" @click="closeMobileMenu">About</a></li>
           <li class="site-header__mobile-nav-item"><a href="/projects" @click="closeMobileMenu">Projects</a></li>
-          <li class="site-header__mobile-nav-item"><a href="/contact" @click="closeMobileMenu">Contact</a></li>
+          <li class="site-header__mobile-nav-item"><a href="#contact" @click="closeMobileMenu">Contact</a></li>
         </ul>
       </div>
     </div>
