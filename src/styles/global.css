@@ -1,0 +1,11 @@
+:root {
+    --primary-color: #d3a6fe;
+    --text-color: #000;
+    --background-color: #fff;
+    --accent-color: blue;
+    --highlight-color: red;
+    --special-color: yellow;
+    --link-hover-color: #666;
+    --highlight-background: black;
+    --highlight-text: white;
+}
