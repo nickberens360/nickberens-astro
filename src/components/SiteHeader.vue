@@ -7,9 +7,7 @@
 
       <!-- Hamburger menu button for mobile -->
       <button class="site-header__hamburger" :class="{ 'is-active': isMobileMenuOpen }" @click="toggleMobileMenu" aria-label="Toggle menu">
-        <span></span>
-        <span></span>
-        <span></span>
+        🍔
       </button>
 
       <!-- Desktop navigation -->
@@ -130,8 +128,9 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 10px;
   z-index: 1001;
+  font-size: 2rem;
+  line-height: 1;
 }
 
 .site-header__hamburger span {
