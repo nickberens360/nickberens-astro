@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import PageSection from '../../components/PageSection.vue';
 import BlogPostHeader from '../../components/blog/BlogPostHeader.vue';
+import HeroBanner from '../../components/HeroBanner.vue';
 
 export async function getStaticPaths() {
   const blogEntries = await getCollection('blog');

@@ -1,4 +1,8 @@
+/* Add these utility classes to your global.css file */
+
+/* Font Variables */
 :root {
+    /* Existing color variables */
     --primary-color: #d3a6fe;
     --text-color: #000;
     --background-color: #fff;
@@ -8,4 +12,173 @@
     --link-hover-color: #666;
     --highlight-background: black;
     --highlight-text: white;
+    --color-light: white;
+    --color-dark: black;
+
+    /* Font family */
+    --font-primary: 'JetBrains Mono', sans-serif;
+
+    /* Font sizes */
+    --font-size-xs: 0.8rem;
+    --font-size-sm: 0.9rem;
+    --font-size-base: 1rem;
+    --font-size-md: 1.25rem;
+    --font-size-lg: 1.5rem;
+    --font-size-xl: 2rem;
+    --font-size-2xl: 2.5rem;
+    --font-size-3xl: 3rem;
+    --font-size-4xl: 4rem;
+
+    /* Font weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+}
+
+p {
+    line-height: 1.5;
+}
+
+/* Font Size Utility Classes */
+
+.text-xs {
+    font-size: var(--font-size-xs);
+}
+
+.text-sm {
+    font-size: var(--font-size-sm);
+}
+
+.text-base {
+    font-size: var(--font-size-base);
+}
+
+.text-md {
+    font-size: var(--font-size-md);
+}
+
+.text-lg {
+    font-size: var(--font-size-lg);
+}
+
+.text-xl {
+    font-size: var(--font-size-xl);
+}
+
+.text-2xl {
+    font-size: var(--font-size-2xl);
+}
+
+.text-3xl {
+    font-size: var(--font-size-3xl);
+}
+
+.text-4xl {
+    font-size: var(--font-size-4xl);
+}
+
+/* Responsive Hero Text */
+.text-hero {
+    font-size: clamp(4rem, 8vw, 10.5rem);
+}
+
+/* Font Weight Utility Classes */
+.font-normal {
+    font-weight: var(--font-weight-normal);
+}
+
+.font-medium {
+    font-weight: var(--font-weight-medium);
+}
+
+.font-bold {
+    font-weight: var(--font-weight-bold);
+}
+
+/* Text Style Utility Classes */
+.text-italic {
+    font-style: italic;
+}
+
+.text-underline {
+    text-decoration: underline;
+}
+
+.text-no-underline {
+    text-decoration: none;
+}
+
+/* Text Alignment Utility Classes */
+.text-left {
+    text-align: left;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+/* Text Transform Utility Classes */
+.text-uppercase {
+    text-transform: uppercase;
+}
+
+.text-lowercase {
+    text-transform: lowercase;
+}
+
+.text-capitalize {
+    text-transform: capitalize;
+}
+
+/* Line Height Utility Classes */
+.leading-tight {
+    line-height: 1.25;
+}
+
+.leading-normal {
+    line-height: 1.5;
+}
+
+.leading-loose {
+    line-height: 2;
+}
+
+/* Text Color Utility Classes */
+.text-light {
+    color: var(--color-light);
+}
+
+.text-dark {
+    color: var(--color-dark);
+}
+
+/* Background Color Utility Classes */
+.bg-light {
+    background-color: var(--color-light);
+}
+
+.bg-dark {
+    background-color: var(--color-dark);
+}
+
+.highlight {
+    padding: 0 1rem;
+    background-color: var(--highlight-background);
+    color: var(--highlight-text);
+}
+
+.highlight-light {
+    padding: 0 1rem;
+    background-color: var(--color-light);
+    color: var(--color-dark);
+}
+
+.highlight-yellow {
+    padding: 0 1rem;
+    background-color: var(--special-color);
+    color: var(--color-dark);
 }

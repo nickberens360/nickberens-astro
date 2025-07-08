@@ -1,13 +1,12 @@
 <template>
   <section class="hero-banner">
     <div class="hero-content">
+      <div class="hero-banner__heading">
       <slot name="heading">
-        <h2 class="hero-banner__heading">One time I said the word
-          <span class="highlight">Sh!t</span>
-          during&nbspan interview&nbsp🙀.</h2>
+        <h1>{{heading}}</h1>
       </slot>
+      </div>
       <slot name="content">
-        <p><strong>( I didn't get the job )</strong></p>
         <p v-if="content">{{ content }}</p>
       </slot>
     </div>
@@ -25,19 +24,23 @@ export default {
     content: {
       type: String,
       default: ''
+    },
+    backgroundColor: {
+      type: String,
+      default: '#d3a6fe'
     }
   }
 }
 </script>
 
-<style scoped>
+<style>
 .hero-banner {
   height: 100vh;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #d3a6fe;
+  background-color: v-bind(backgroundColor);
 }
 
 .hero-content {
@@ -45,17 +48,8 @@ export default {
   padding: 1rem;
 }
 
-.hero-banner__heading {
-  /*font-family: 'Doto Variable', sans-serif;
-  font-weight: 900 !important;*/
+.hero-banner__heading  *{
   margin-bottom: 1rem;
   font-size: clamp(4rem, 8vw, 10.5rem);
-}
-
-.highlight {
-  background-color: black;
-  color: white;
-  font-weight: bold;
-  padding: 0.2rem 1rem;
 }
 </style>

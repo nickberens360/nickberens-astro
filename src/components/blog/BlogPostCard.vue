@@ -41,11 +41,9 @@ export default {
 
 <style scoped>
 .blog-post-card {
-  border: 1px solid #ddd;
   border-radius: 8px;
   padding: 1.5rem;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: rgb(255 255 255 / 26%);
   transition: transform 0.2s ease;
 }
 

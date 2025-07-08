@@ -2,30 +2,68 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
+import ContactForm from '../components/ContactForm.vue';
 ---
 
 <Layout title="Welcome to Astro" description="A simple Astro site example">
 	<HeroBanner
 		data-section-color="#d3a6fe"
-	/>
+	>
+		<h1 slot="heading">
+			One time I said the word
+			<span class="highlight">Sh!t</span>
+			during&nbspan interview&nbsp🙀.
+		</h1>
+		<p slot="content"><a href="#" style="color: blue"><strong>( I didn't get the job )</strong></a></p>
+	</HeroBanner>
 	<PageSection
 		data-section-color="yellow"
 		background-color="yellow"
 		full-height
 		width="1200"
 	>
-		<h2>It's true and here's how it went down.</h2>
-		<p>Q: What do you value in teammates?</p>
-		<p>A: I value a healthy team culture over all else. I love working with passionate people that love building cool sh!t!</p>
+		<h2 class="text-4xl">It's true.</h2>
+		<p class="text-xl"><span class="font-bold">Interviewer</span>: What do you value in teammates?</p>
+		<p class="text-xl"><span class="font-bold">Dummy</span>: I value a healthy team culture over all else. I love working with passionate people that love building cool <span class="highlight"><sup>*</sup>sh!t</span>!</p>
+		<p class="text-md text-center font-bold">*oops</p>
 	</PageSection>
+
 	<PageSection
 		data-section-color="lightblue"
 		background-color="lightblue"
 		full-height
 		width="1200"
 	>
-		<h2>This is a full-height section!</h2>
-		<p>It has a light gray background and a max-width of 1200px.</p>
+		<h2 class="text-4xl">Note from my recruiter.</h2>
+		<p class="text-xl">"They thought you had a great skill set for the position, but because of the curse word I wouldn't be a good fit culturally."</p>
+		<p>Love, Jacob</p>
+	</PageSection>
+	<PageSection
+		data-section-color="lightgreen"
+		background-color="lightgreen"
+		full-height
+		width="1200"
+	>
+		<h2 class="text-4xl">NOW LET ME BE CLEAR.</h2>
+		<p class="text-lg">I was definitely disappointed that I didn't get the position. It really did seem like it would be a good fit and the person that interviewed me was super cool.</p>
+		<p class="text-lg">I also for sure understand where they are coming from and hold no ill will or resentments towards the company and their values at all.</p>
+		<p class="text-lg">I am more just disappointed in myself. When I get excited about a topic sometimes I drop a curse word.</p>
+		<p></p>
+	</PageSection>
+
+	<PageSection
+		data-section-color="black"
+		data-section-theme="dark"
+		background-color="black"
+		full-height
+		width="1200"
+	>
+		<div class="text-light">
+			<h2 class="text-hero">But...</h2>
+			<p class="text-lg">If you're looking for a passionate Vue/Nuxt/UI/UX/Astro/WordPress/Prismic/What-else-you-got frontend developer that says <span class="highlight-yellow">Shit</span> every now and then hit me up!</p>
+			<ContactForm />
+
+		</div>
 	</PageSection>
 
 </Layout>

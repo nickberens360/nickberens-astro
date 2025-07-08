@@ -7,7 +7,7 @@
   >
     <div class="site-header__container">
       <div class="site-header__logo">
-        <h1>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></h1>
+        <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></p>
       </div>
 
       <!-- Hamburger menu button for mobile -->
@@ -32,7 +32,6 @@
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
           <li class="site-header__mobile-nav-item"><a href="/about" @click="closeMobileMenu">About</a></li>
           <li class="site-header__mobile-nav-item"><a href="/projects" @click="closeMobileMenu">Projects</a></li>
-          <li class="site-header__mobile-nav-item"><a href="/blog" @click="closeMobileMenu">Blog</a></li>
           <li class="site-header__mobile-nav-item"><a href="/contact" @click="closeMobileMenu">Contact</a></li>
         </ul>
       </div>
@@ -185,7 +184,7 @@ export default {
   z-index: 1002;
 }
 
-.site-header__logo h1 {
+.site-header__logo p {
   margin: 0;
   font-size: 1.5rem;
   font-weight: bold;

@@ -4,7 +4,7 @@ description: "This is the first post of my new Astro blog."
 pubDate: 2023-07-01
 tags: ["astro", "blogging", "learning in public"]
 author: "Nick Berens"
-backgroundColor: "lightgreen"
+backgroundColor: "#eee"
 ---
 
 # My First Blog Post
