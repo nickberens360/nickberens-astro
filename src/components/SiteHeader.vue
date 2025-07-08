@@ -127,11 +127,9 @@ export default {
       const colorSection = elementUnder.closest('[data-section-color]');
       const themeSection = elementUnder.closest('[data-section-theme]');
 
-      if (window.scrollY > 0) {
-        this.headerBackgroundColor = colorSection ? colorSection.dataset.sectionColor : 'white';
-      } else {
-        this.headerBackgroundColor = 'transparent';
-      }
+      this.headerBackgroundColor = colorSection
+        ? colorSection.dataset.sectionColor
+        : (window.scrollY > 0 ? 'white' : 'transparent');
 
       this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
     }
