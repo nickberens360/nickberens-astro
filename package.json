@@ -9,6 +9,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/mdx": "^4.3.0",
     "@astrojs/vue": "^5.1.0",
     "@fontsource-variable/doto": "^5.2.8",
     "@fontsource-variable/jetbrains-mono": "^5.2.6",

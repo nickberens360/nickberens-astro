@@ -42,7 +42,7 @@ export default {
 }
 
 .page-section--full-height {
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .page-section__inner {

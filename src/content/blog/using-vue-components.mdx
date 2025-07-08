@@ -1,0 +1,42 @@
+---
+title: "Using Vue Components in Blog Posts"
+description: "Learn how to use Vue components in your Astro MDX blog posts."
+pubDate: 2023-07-15
+tags: ["astro", "vue", "mdx"]
+author: "Nick Berens"
+backgroundColor: "lightyellow"
+---
+
+import PageSection from '../../components/PageSection.vue';
+
+# Using Vue Components in Blog Posts
+
+This is a blog post that uses Vue components directly in the content. MDX allows you to import and use components right in your markdown.
+
+<PageSection backgroundColor="yellow" width="800">
+  <h2>This is a Vue component inside MDX!</h2>
+  <p>It's that easy to use Vue components in your blog posts.</p>
+</PageSection>
+
+## Why use MDX?
+
+MDX combines the power of markdown with the flexibility of JSX. This means you can:
+
+1. Write content in markdown syntax
+2. Import and use components
+3. Use JavaScript expressions
+4. Create dynamic content
+
+## Example with dynamic content
+
+Here's an example of using JavaScript in your MDX:
+
+export const favoriteFrameworks = ['Vue', 'React', 'Svelte', 'Angular'];
+
+<ul>
+  {favoriteFrameworks.map(framework => (
+    <li key={framework}>{framework}</li>
+  ))}
+</ul>
+
+Try it out in your own blog posts!

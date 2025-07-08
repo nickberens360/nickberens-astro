@@ -1,8 +1,4 @@
 <template>
-  <!--
-    The background color and box shadow are now applied via a single computed style object.
-    This is safer for SSR hydration.
-  -->
   <header
     class="site-header"
     :class="[`theme-${overlayTheme}`]"
@@ -25,6 +21,7 @@
           <li class="site-header__nav-item"><a href="/">Home</a></li>
           <li class="site-header__nav-item"><a href="/about">About</a></li>
           <li class="site-header__nav-item"><a href="/projects">Projects</a></li>
+          <li class="site-header__nav-item"><a href="/blog">Blog</a></li>
           <li class="site-header__nav-item"><a href="/contact">Contact</a></li>
         </ul>
       </nav>
@@ -35,6 +32,7 @@
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
           <li class="site-header__mobile-nav-item"><a href="/about" @click="closeMobileMenu">About</a></li>
           <li class="site-header__mobile-nav-item"><a href="/projects" @click="closeMobileMenu">Projects</a></li>
+          <li class="site-header__mobile-nav-item"><a href="/blog" @click="closeMobileMenu">Blog</a></li>
           <li class="site-header__mobile-nav-item"><a href="/contact" @click="closeMobileMenu">Contact</a></li>
         </ul>
       </div>
@@ -180,6 +178,11 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.site-header__logo {
+  position: relative;
+  z-index: 1002;
 }
 
 .site-header__logo h1 {

@@ -2,11 +2,12 @@
   <section class="hero-banner">
     <div class="hero-content">
       <slot name="heading">
-        <h2 class="hero-banner__heading">This one time I said the word
+        <h2 class="hero-banner__heading">One time I said the word
           <span class="highlight">Sh!t</span>
           during&nbspan interview&nbsp🙀.</h2>
       </slot>
       <slot name="content">
+        <p><strong>( I didn't get the job )</strong></p>
         <p v-if="content">{{ content }}</p>
       </slot>
     </div>

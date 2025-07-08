@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import PageSection from '../../components/PageSection.vue';
+import BlogPostGrid from '../../components/blog/BlogPostGrid.vue';
+
+const posts = await getCollection('blog');
+const sortedPosts = posts.sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+---
+
+<Layout title="Blog | Nick Berens" description="Read my latest blog posts">
+  <PageSection
+    data-section-color="lightblue"
+    background-color="lightblue"
+    width="1200"
+    full-height
+  >
+    <h1>Blog</h1>
+    <BlogPostGrid posts={sortedPosts} client:load />
+  </PageSection>
+</Layout>
