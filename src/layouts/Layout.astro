@@ -24,7 +24,7 @@ const gitBranch = getGitBranch();
   <!-- <link rel="preload" as="font" type="font/woff2" href={openSansWoff2} crossorigin="anonymous" />-->
 </Head>
 <body>
-<SiteHeader gitBranch={gitBranch} />
+<SiteHeader gitBranch={gitBranch} client:load />
 <slot/>
 </body>
 </html>
