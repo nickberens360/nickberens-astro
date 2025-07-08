@@ -1,8 +1,30 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
+import PageSection from '../components/PageSection.vue';
 ---
 
 <Layout title="Welcome to Astro" description="A simple Astro site example">
-	<HeroBanner />
+	<HeroBanner
+		data-section-color="#d3a6fe"
+	/>
+	<PageSection
+		data-section-color="yellow"
+		background-color="yellow"
+		full-height
+		width="1200"
+	>
+		<h2>This is a full-height section!</h2>
+		<p>It has a light gray background and a max-width of 1200px.</p>
+	</PageSection>
+	<PageSection
+		data-section-color="lightblue"
+		background-color="lightblue"
+		full-height
+		width="1200"
+	>
+		<h2>This is a full-height section!</h2>
+		<p>It has a light gray background and a max-width of 1200px.</p>
+	</PageSection>
+
 </Layout>
