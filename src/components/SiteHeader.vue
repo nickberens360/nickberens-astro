@@ -186,7 +186,7 @@ export default {
 
 .site-header__logo p {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.2rem, 1.2rem + 0.5vw, 1.5rem);
   font-weight: bold;
 }
 
@@ -264,7 +264,7 @@ export default {
 .site-header__mobile-nav-item a {
   text-decoration: none;
   color: inherit;
-  font-size: 1.5rem;
+  font-size: clamp(1.3rem, 1.3rem + 0.5vw, 1.8rem);
   transition: color 0.3s ease;
 }
 

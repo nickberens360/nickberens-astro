@@ -41,6 +41,12 @@ export default {
 
 <style scoped>
 .blog-post-card {
+  --card-title-size: clamp(1.3rem, 1.3rem + 0.5vw, 1.8rem);
+  --card-text-size: clamp(0.9rem, 0.9rem + 0.2vw, 1.1rem);
+  --card-meta-size: clamp(0.8rem, 0.8rem + 0.1vw, 0.9rem);
+  --card-spacing-sm: clamp(0.4rem, 0.5vw, 0.7rem);
+  --card-spacing-md: clamp(0.8rem, 1vw, 1.2rem);
+
   border-radius: 8px;
   padding: 1.5rem;
   background-color: rgb(255 255 255 / 26%);
@@ -53,7 +59,8 @@ export default {
 
 .blog-post-card__title {
   margin-top: 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: clamp(0.4rem, 0.5vw, 0.7rem);
+  font-size: clamp(1.3rem, 1.3rem + 0.5vw, 1.8rem);
 }
 
 .blog-post-card__title a {
@@ -66,12 +73,14 @@ export default {
 }
 
 .blog-post-card__description {
-  margin-bottom: 1rem;
+  margin-bottom: clamp(0.8rem, 1vw, 1.2rem);
+  font-size: clamp(0.9rem, 0.9rem + 0.2vw, 1.1rem);
+  line-height: clamp(1.4, 1.4 + 0.1vw, 1.6);
 }
 
 .blog-post-card__meta {
-  margin-top: 1rem;
-  font-size: 0.9rem;
+  margin-top: clamp(0.8rem, 1vw, 1.2rem);
+  font-size: clamp(0.8rem, 0.8rem + 0.1vw, 0.9rem);
   color: #666;
   display: flex;
   flex-direction: column;

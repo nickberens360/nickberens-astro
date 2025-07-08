@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
-import ContactForm from '../components/ContactForm.vue';
 ---
 
 <Layout title="Welcome to Astro" description="A simple Astro site example">
@@ -12,7 +11,7 @@ import ContactForm from '../components/ContactForm.vue';
 		<h1 slot="heading">
 			One time I said the word
 			<span class="highlight">Sh!t</span>
-			during&nbspan interview&nbsp🙀.
+			during interview🙀.
 		</h1>
 		<p slot="content"><a href="#" style="color: blue"><strong>( I didn't get the job )</strong></a></p>
 	</HeroBanner>
@@ -60,8 +59,10 @@ import ContactForm from '../components/ContactForm.vue';
 	>
 		<div class="text-light">
 			<h2 class="text-hero">But...</h2>
-			<p class="text-lg">If you're looking for a passionate Vue/Nuxt/UI/UX/Astro/WordPress/Prismic/What-else-you-got frontend developer that says <span class="highlight-yellow">Shit</span> every now and then hit me up!</p>
-			<ContactForm />
+			<p class="text-lg text-wrap">If you're looking for a passionate Vue, Nuxt, UI, UX, Astro, WordPress, Prismic, What-else-you-got frontend developer that says <span class="highlight-yellow">Shit</span> every now and then hit me up!</p>
+			<div class="text-center">
+				<a class="text-fluid-md" href="mailto:nickberens360@gmail.com">nickberens360@gmail.com</a>
+			</div>
 
 		</div>
 	</PageSection>

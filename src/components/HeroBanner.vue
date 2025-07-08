@@ -35,7 +35,7 @@ export default {
 
 <style>
 .hero-banner {
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
   display: flex;
   align-items: center;
@@ -50,6 +50,7 @@ export default {
 
 .hero-banner__heading  *{
   margin-bottom: 1rem;
-  font-size: clamp(4rem, 8vw, 10.5rem);
+  font-size: clamp(2.5rem, 7vw, 10.5rem);
+
 }
 </style>
