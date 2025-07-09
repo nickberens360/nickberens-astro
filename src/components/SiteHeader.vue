@@ -10,12 +10,10 @@
         <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></p>
       </a>
 
-      <!-- Hamburger menu button for mobile -->
       <button class="site-header__hamburger" :class="{ 'is-active': isMobileMenuOpen }" @click="toggleMobileMenu" aria-label="Toggle menu">
         🍔
       </button>
 
-      <!-- Desktop navigation -->
       <nav class="site-header__nav">
         <ul class="site-header__nav-list">
           <li class="site-header__nav-item"><a href="/">Home</a></li>
@@ -23,16 +21,26 @@
           <li class="site-header__nav-item"><a href="/projects">Projects</a></li>
           <li class="site-header__nav-item"><a href="/blog">Blog</a></li>
           <li class="site-header__nav-item"><a href="#contact">Contact</a></li>
+          <li class="site-header__nav-item">
+            <a href="https://github.com/nickberens360" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
+              <font-awesome-icon :icon="['fab', 'github']" />
+            </a>
+          </li>
         </ul>
       </nav>
 
-      <!-- Mobile navigation -->
       <div class="site-header__mobile-nav" :class="{ 'is-active': isMobileMenuOpen }" :style="headerStyles">
         <ul class="site-header__mobile-nav-list">
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
           <li class="site-header__mobile-nav-item"><a href="/resume" @click="closeMobileMenu">Resume</a></li>
           <li class="site-header__mobile-nav-item"><a href="/projects" @click="closeMobileMenu">Projects</a></li>
           <li class="site-header__mobile-nav-item"><a href="#contact" @click="closeMobileMenu">Contact</a></li>
+          <li class="site-header__mobile-nav-item">
+            <a href="https://github.com/nickberens360" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile" @click="closeMobileMenu">
+              <font-awesome-icon :icon="['fab', 'github']" />
+              <span style="margin-left: 0.5em;">GitHub</span>
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -40,8 +48,21 @@
 </template>
 
 <script>
+// --- ADD THESE IMPORTS ---
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faGithub } from '@fortawesome/free-brands-svg-icons'
+
+// --- ADD THE ICON TO THE LIBRARY ---
+library.add(faGithub)
+
+
 export default {
   name: 'SiteHeader',
+  // --- ADD THIS COMPONENTS OBJECT ---
+  components: {
+    FontAwesomeIcon
+  },
   props: {
     gitBranch: {
       type: String,
@@ -52,39 +73,24 @@ export default {
     return {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
-      // This flag prevents client-side logic from running before hydration is complete.
       isMobileMenuOpen: false,
       isMounted: false
     };
   },
   computed: {
-    // A computed property to generate the dynamic styles.
-    // This avoids using v-bind in CSS which can cause hydration issues.
     headerStyles() {
-      // Return a default, server-matching state until the component is mounted on the client.
       if (!this.isMounted) {
         return { backgroundColor: 'transparent' };
       }
-
       const styles = {
         backgroundColor: this.headerBackgroundColor,
       };
-
-      // if (this.headerBackgroundColor !== 'transparent' && this.overlayTheme === 'light') {
-      //   styles.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-      // }
-
       return styles;
     }
   },
   mounted() {
-    // Now that we are on the client and the component is mounted, we can run our logic.
     this.isMounted = true;
-
     window.addEventListener('scroll', this.handleScroll, { passive: true });
-
-    // We still call handleScroll initially to set the correct state
-    // based on the initial page load position (e.g., if loaded from a hash link).
     this.handleScroll();
   },
   beforeDestroy() {
@@ -92,10 +98,7 @@ export default {
   },
   methods: {
     toggleMobileMenu() {
-      console.log('Toggle mobile menu clicked', this.isMobileMenuOpen);
       this.isMobileMenuOpen = !this.isMobileMenuOpen;
-      console.log('After toggle:', this.isMobileMenuOpen);
-      // Prevent scrolling when menu is open
       document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : '';
     },
     closeMobileMenu() {
@@ -103,31 +106,24 @@ export default {
       document.body.style.overflow = '';
     },
     handleScroll() {
-      // This method only runs on the client, so we don't need to worry about the server state.
       const headerEl = this.$refs.siteHeader;
       if (!headerEl) return;
-
       const headerRect = headerEl.getBoundingClientRect();
       const checkX = window.innerWidth / 2;
       const checkY = headerRect.top + (headerRect.height / 2) + 34;
-
       headerEl.style.pointerEvents = 'none';
       const elementUnder = document.elementFromPoint(checkX, checkY);
       headerEl.style.pointerEvents = 'auto';
-
       if (!elementUnder) {
         this.headerBackgroundColor = window.scrollY > 0 ? 'white' : 'transparent';
         this.overlayTheme = 'light';
         return;
       }
-
       const colorSection = elementUnder.closest('[data-section-color]');
       const themeSection = elementUnder.closest('[data-section-theme]');
-
       this.headerBackgroundColor = colorSection
         ? colorSection.dataset.sectionColor
         : (window.scrollY > 0 ? 'white' : 'transparent');
-
       this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
     }
   }
