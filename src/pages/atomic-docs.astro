@@ -10,10 +10,11 @@ import Image from 'astro/components/Image.astro';
 		data-section-color="lemonchiffon"
 		data-section-theme="light"
 		background-color="lemonchiffon"
+		width="1600"
 		full-height
 	>
-		<div class="container pt-16 md-pt-0">
-			<div class="row">
+		<div class="container-fluid pt-16">
+			<div class="row align-center justify-content-center">
 				<div class="col-12 col-md-6">
 					<Image
 						src={vueAtomicDocs}
@@ -23,14 +24,41 @@ import Image from 'astro/components/Image.astro';
 						class="rounded-lg shadow-xl"
 					/>
 				</div>
-				<div class="col-12 col-md-6 pt-8">
-					<h1 class="text-xl">Atomic Docs</h1>
-					<p class="text-md">A documentation site for the Atomic Design methodology, built with Vue 3 and Astro.</p>
-					<p>This project showcases how to create a documentation site using Vue components and Astro's static site generation capabilities.</p>
-					<p>Documentation and demo site. <a href="https://vue-atomic-docs-demo.netlify.app/atomic-docs" target="_blank">Vue Atomic Docs</a></p>
-					<p>Check out the source code on <a href="https://github.com/nickberens360/atomic-docs-vue-npm" target="_blank" class="text-blue">GitHub</a>.</p>
+				<div class="col-12 col-md-6">
+					<h1 class="text-xl">Vue Atomic Docs</h1>
+					<p>Vue Atomic Docs transforms your Vue components into a living, interactive documentation library that runs alongside your application without bloating your production bundle. It automatically extracts component props and provides an intuitive interface for showcasing real-world usage examples—keeping your component documentation always in sync with your actual code while events and slots can be easily defined through a simple API.</p>
+					<ul class="features-list">
+						<li>⚡ <strong>Automatic Prop & Type Tables</strong> - Extracts and displays component props with types</li>
+						<li>🛠️ <strong>Interactive Component Playground</strong> - Test components with different prop values</li>
+						<li>🗂️ <strong>Source Code Viewer</strong> (<code>&lt;template&gt;</code>, <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code>) - View component source code</li>
+						<li>🎨 <strong>Design System Color Palette</strong> - Display and document your brand colors</li>
+						<li>🔍 <strong>Component Search</strong> - Quickly find components in your documentation</li>
+						<li>🌙 <strong>Light/Dark Mode</strong> - Toggle between light and dark themes</li>
+						<li>📝 <strong>Typography Documentation</strong> - Document and display your typography styles</li>
+						<li>🔌 <strong>Custom Documentation Pages</strong> - Add custom routes and pages to your docs</li>
+						<li>📄 <strong>Markdown Support</strong> - Write documentation using Markdown</li>
+					</ul>
+					<p>Documentation and demo site. <a class="highlight" href="https://vue-atomic-docs-demo.netlify.app/atomic-docs" target="_blank">Vue Atomic Docs</a></p>
+					<p>Check out the source code on <a class="highlight" href="https://github.com/nickberens360/atomic-docs-vue-npm" target="_blank" class="text-blue">GitHub</a>.</p>
 				</div>
 			</div>
 		</div>
 	</PageSection>
 </Layout>
+
+<style>
+	.features-list {
+		list-style-type: none;
+		padding: 0;
+		margin: 1rem 0;
+	}
+
+	.features-list li {
+		margin-bottom: 1rem;
+		padding: 0 .5rem;
+	}
+
+	.features-list li strong {
+		font-weight: bold;
+	}
+</style>

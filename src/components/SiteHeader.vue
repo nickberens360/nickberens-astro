@@ -17,6 +17,7 @@
       <nav class="site-header__nav">
         <ul class="site-header__nav-list">
           <li class="site-header__nav-item"><a href="/">Home</a></li>
+          <li class="site-header__nav-item"><a href="/atomic-docs">Atomic Docs</a></li>
           <li class="site-header__nav-item"><a href="/resume">Resume</a></li>
           <li class="site-header__nav-item"><a href="/#contact">Contact</a></li>
           <li v-if="isMounted" class="site-header__nav-item">
@@ -30,6 +31,7 @@
       <div class="site-header__mobile-nav" :class="{ 'is-active': isMobileMenuOpen }" :style="headerStyles">
         <ul class="site-header__mobile-nav-list">
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
+          <li class="site-header__mobile-nav-item"><a href="/atomic-docs" @click="closeMobileMenu">Atomic Docs</a></li>
           <li class="site-header__mobile-nav-item"><a href="/resume" @click="closeMobileMenu">Resume</a></li>
           <li class="site-header__mobile-nav-item"><a href="/#contact" @click="closeMobileMenu">Contact</a></li>
           <li v-if="isMounted" class="site-header__mobile-nav-item">
