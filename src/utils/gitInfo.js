@@ -2,7 +2,12 @@ import { execSync } from 'child_process';
 
 export function getGitBranch() {
   try {
-    // Get current branch name
+    // On Netlify, use the BRANCH environment variable
+    if (process.env.BRANCH) {
+      return process.env.BRANCH;
+    }
+
+    // Fallback to git command for local development
     const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
     return branch;
   } catch (error) {
