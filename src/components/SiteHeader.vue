@@ -6,9 +6,9 @@
     ref="siteHeader"
   >
     <div class="site-header__container">
-      <div class="site-header__logo">
+      <a href="/" class="site-header__logo">
         <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></p>
-      </div>
+      </a>
 
       <!-- Hamburger menu button for mobile -->
       <button class="site-header__hamburger" :class="{ 'is-active': isMobileMenuOpen }" @click="toggleMobileMenu" aria-label="Toggle menu">
@@ -19,7 +19,7 @@
       <nav class="site-header__nav">
         <ul class="site-header__nav-list">
           <li class="site-header__nav-item"><a href="/">Home</a></li>
-          <li class="site-header__nav-item"><a href="/about">About</a></li>
+          <li class="site-header__nav-item"><a href="/resume">Resume</a></li>
           <li class="site-header__nav-item"><a href="/projects">Projects</a></li>
           <li class="site-header__nav-item"><a href="/blog">Blog</a></li>
           <li class="site-header__nav-item"><a href="#contact">Contact</a></li>
@@ -30,7 +30,7 @@
       <div class="site-header__mobile-nav" :class="{ 'is-active': isMobileMenuOpen }" :style="headerStyles">
         <ul class="site-header__mobile-nav-list">
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
-          <li class="site-header__mobile-nav-item"><a href="/about" @click="closeMobileMenu">About</a></li>
+          <li class="site-header__mobile-nav-item"><a href="/resume" @click="closeMobileMenu">Resume</a></li>
           <li class="site-header__mobile-nav-item"><a href="/projects" @click="closeMobileMenu">Projects</a></li>
           <li class="site-header__mobile-nav-item"><a href="#contact" @click="closeMobileMenu">Contact</a></li>
         </ul>
@@ -182,6 +182,8 @@ export default {
 .site-header__logo {
   position: relative;
   z-index: 1002;
+  color: var(--text-color, #000);
+  text-decoration: none;
 }
 
 .site-header__logo p {

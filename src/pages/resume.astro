@@ -1,0 +1,359 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageSection from '../components/PageSection.vue';
+---
+
+<Layout title="About" description="About page">
+	<PageSection
+		data-section-color="lightblue"
+		background-color="lightblue"
+		width="1200"
+	>
+		<div class="resume-container">
+			<header class="resume-header">
+				<h1>Nick Berens</h1>
+			</header>
+
+			<section class="resume-section">
+				<h2>Summary</h2>
+				<p>Passionate problem solver and lifelong learner with over 14 years' experience developing and designing maintainable and scalable frontends.</p>
+			</section>
+
+			<section class="resume-section">
+				<h2>Technical Skills</h2>
+				<div class="skills-grid">
+					<span class="skill-tag">Vue.js</span>
+					<span class="skill-tag">Nuxt.js</span>
+					<span class="skill-tag">Vuetify.js</span>
+					<span class="skill-tag">Vuex/Pina</span>
+					<span class="skill-tag">Vue Router</span>
+					<span class="skill-tag">WordPress</span>
+					<span class="skill-tag">GIT</span>
+					<span class="skill-tag">Agile Development</span>
+					<span class="skill-tag">Responsive CSS Design</span>
+					<span class="skill-tag">Chart.js</span>
+					<span class="skill-tag">Javascript</span>
+					<span class="skill-tag">Netlify</span>
+					<span class="skill-tag">CSS/Scss</span>
+					<span class="skill-tag">Prismic.io CMS</span>
+					<span class="skill-tag">IntelliJ IDEA</span>
+					<span class="skill-tag">Adobe Photoshop</span>
+					<span class="skill-tag">Adobe XD</span>
+					<span class="skill-tag">Sketch</span>
+					<span class="skill-tag">Atlassian Software</span>
+				</div>
+			</section>
+
+			<section class="resume-section">
+				<h2>Work Experience</h2>
+
+				<div class="job">
+					<div class="job-header">
+						<h3>Frontend Developer</h3>
+						<div class="job-details">
+							<span class="company">Hillman Group, Robotics & Digital Solutions</span>
+							<span class="location">Boulder, CO</span>
+							<span class="dates">10/2021 – 3/2025</span>
+						</div>
+					</div>
+					<ul class="job-responsibilities">
+						<li>Led successful migration of enterprise CRM dashboard from Vue/Vuetify 2 to 3, modernizing codebase and improving application maintainability</li>
+						<li>Built headless CMS marketing solutions using Vue/Nuxt, integrating Prismic.io APIs to enable dynamic content management</li>
+						<li>Engineered custom component documentation plugin, streamlining development workflows and fostering collaborative knowledge sharing across teams</li>
+						<li>Built Axios caching layer for efficient data management, boosting CRM responsiveness and streamlining user workflow</li>
+						<li>Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture</li>
+						<li>Led an initiative to integrate Cypress into our workflow to ensure feature integrity through end-to-end testing</li>
+						<li>Led product feature design initiatives using Adobe XD, reducing workload for the design team when needed</li>
+						<li>Actively contributed to daily standups, sprint planning and retrospectives to ensure project alignment and continuous improvement</li>
+					</ul>
+				</div>
+
+				<div class="job">
+					<div class="job-header">
+						<h3>Frontend Developer</h3>
+						<div class="job-details">
+							<span class="company">Wisnet.com LLC</span>
+							<span class="location">Fond Du Lac, WI</span>
+							<span class="dates">8/2012 – 10/2021</span>
+						</div>
+					</div>
+					<ul class="job-responsibilities">
+						<li>Developed Vue.js interfaces integrated with Laravel and WordPress APIs, focusing on scalability and maintainability</li>
+						<li>Created component library documentation with Storybook.js to improve team development efficiency</li>
+						<li>Built headless WordPress sites using Nuxt.js and Netlify for improved performance</li>
+						<li>Set up automated deployments to Netlify and Cloudflare Pages</li>
+						<li>Developed over 100 custom WordPress themes for diverse client needs</li>
+						<li>Maintained 200+ WordPress sites across WP Engine and Kinsta platforms</li>
+					</ul>
+				</div>
+
+				<div class="job">
+					<div class="job-header">
+						<h3>Frontend Developer Intern</h3>
+						<div class="job-details">
+							<span class="company">Thrivent Financial</span>
+							<span class="location">Appleton, WI</span>
+							<span class="dates">6/2012 – 8/2012</span>
+						</div>
+					</div>
+					<ul class="job-responsibilities">
+						<li>Wrote semantic HTML and scalable CSS per issue requests at Thrivent Financial</li>
+					</ul>
+				</div>
+			</section>
+
+			<section class="resume-section">
+				<h2>Education</h2>
+				<div class="education">
+					<h3>Fox Valley Technical College</h3>
+					<div class="education-details">
+						<span class="location">Appleton, WI</span>
+						<span class="dates">Aug 2008 – Jun 2012</span>
+					</div>
+					<p>Associate of Applied Science: Web Design and Development</p>
+				</div>
+			</section>
+
+			<section class="resume-section">
+				<h2>Accomplishments</h2>
+				<ul class="accomplishments">
+					<li>Developed an open-source tool for creating and managing Scss components called Atomic Docs with 781 stars on GitHub. <a href="http://atomicdocs.io/" target="_blank" rel="noopener noreferrer">http://atomicdocs.io/</a></li>
+					<li>Authored an article for css-tricks.com discussing style guide driven development. <a href="https://css-tricks.com/styleguide-driven-development-atomic-docs/" target="_blank" rel="noopener noreferrer">https://css-tricks.com/styleguide-driven-development-atomic-docs/</a></li>
+					<li>Honors graduate from Fox Valley Technical institute with a 3.89 GPA</li>
+				</ul>
+			</section>
+		</div>
+	</PageSection>
+</Layout>
+<style>
+	.resume-container {
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 2rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+		line-height: 1.6;
+		color: #333;
+		background: #fff;
+	}
+
+	.resume-header {
+		text-align: center;
+		margin-bottom: 2rem;
+		padding-bottom: 1rem;
+		border-bottom: 2px solid #e0e0e0;
+	}
+
+	.resume-header h1 {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: #2c3e50;
+		margin: 0;
+	}
+
+	.resume-section {
+		margin-bottom: 2rem;
+	}
+
+	.resume-section h2 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #34495e;
+		margin-bottom: 1rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid #e0e0e0;
+	}
+
+	.skills-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+
+	.skill-tag {
+		background: #f8f9fa;
+		color: #495057;
+		padding: 0.25rem 0.75rem;
+		border-radius: 1rem;
+		font-size: 0.875rem;
+		border: 1px solid #dee2e6;
+		transition: all 0.2s ease;
+	}
+
+	.skill-tag:hover {
+		background: #e9ecef;
+		transform: translateY(-1px);
+	}
+
+	.job {
+		margin-bottom: 2rem;
+		padding: 1.5rem;
+		background: #f8f9fa;
+		border-radius: 0.5rem;
+		border-left: 4px solid #3498db;
+	}
+
+	.job-header {
+		margin-bottom: 1rem;
+	}
+
+	.job-header h3 {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: #2c3e50;
+		margin: 0 0 0.5rem 0;
+	}
+
+	.job-details {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		font-size: 0.9rem;
+		color: #6c757d;
+	}
+
+	.company {
+		font-weight: 600;
+		color: #495057;
+	}
+
+	.job-responsibilities {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.job-responsibilities li {
+		position: relative;
+		padding-left: 1.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.job-responsibilities li:before {
+		content: "•";
+		color: #3498db;
+		font-weight: bold;
+		position: absolute;
+		left: 0;
+	}
+
+	.education {
+		background: #f8f9fa;
+		padding: 1.5rem;
+		border-radius: 0.5rem;
+		border-left: 4px solid #27ae60;
+	}
+
+	.education h3 {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: #2c3e50;
+		margin: 0 0 0.5rem 0;
+	}
+
+	.education-details {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		font-size: 0.9rem;
+		color: #6c757d;
+		margin-bottom: 0.5rem;
+	}
+
+	.accomplishments {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.accomplishments li {
+		position: relative;
+		padding-left: 1.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.accomplishments li:before {
+		content: "★";
+		color: #f39c12;
+		font-weight: bold;
+		position: absolute;
+		left: 0;
+	}
+
+	.accomplishments a {
+		color: #3498db;
+		text-decoration: none;
+	}
+
+	.accomplishments a:hover {
+		text-decoration: underline;
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.resume-container {
+			padding: 1rem;
+		}
+
+		.resume-header h1 {
+			font-size: 2rem;
+		}
+
+		.job-details {
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+
+		.education-details {
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+
+		.skills-grid {
+			justify-content: center;
+		}
+
+		.skill-tag {
+			font-size: 0.8rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.resume-container {
+			padding: 0.5rem;
+		}
+
+		.resume-header h1 {
+			font-size: 1.75rem;
+		}
+
+		.job, .education {
+			padding: 1rem;
+		}
+
+		.accomplishments a {
+			word-break: break-all;
+		}
+	}
+	@media print {
+		.site-header, .site-footer, .resume-header {
+			display: none !important;
+		}
+		.resume-container {
+			max-width: none;
+			padding: 0;
+		}
+
+		.job, .education {
+			background: transparent;
+			border: 1px solid #ddd;
+			page-break-inside: avoid;
+		}
+
+		.skill-tag {
+			background: transparent;
+			border: 1px solid #ddd;
+		}
+	}
+
+</style>
