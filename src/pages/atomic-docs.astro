@@ -1,0 +1,36 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageSection from '../components/PageSection.vue';
+import vueAtomicDocs from '../assets/images/vue-atomic-docs.png';
+import Image from 'astro/components/Image.astro';
+---
+
+<Layout title="Atomic Docs" description="Atomic Docs Project - Nick Berens">
+	<PageSection
+		data-section-color="lemonchiffon"
+		data-section-theme="light"
+		background-color="lemonchiffon"
+		full-height
+	>
+		<div>
+			<div class="row flex-nowrap">
+				<div class="col-12 col-md-6">
+					<Image
+						src={vueAtomicDocs}
+						alt="Vue Atomic Docs Project"
+						width="1200"
+						style="max-width: 100%; height: auto;"
+						class="rounded-lg shadow-xl"
+					/>
+				</div>
+				<div class="col-12 col-md-6">
+					<h1 class="text-xl">Atomic Docs</h1>
+					<p class="text-md">A documentation site for the Atomic Design methodology, built with Vue 3 and Astro.</p>
+					<p>This project showcases how to create a documentation site using Vue components and Astro's static site generation capabilities.</p>
+					<p>Documentation and demo site. <a href="https://vue-atomic-docs-demo.netlify.app/atomic-docs" target="_blank">Vue Atomic Docs</a></p>
+					<p>Check out the source code on <a href="https://github.com/nickberens360/atomic-docs-vue-npm" target="_blank" class="text-blue">GitHub</a>.</p>
+				</div>
+			</div>
+		</div>
+	</PageSection>
+</Layout>
