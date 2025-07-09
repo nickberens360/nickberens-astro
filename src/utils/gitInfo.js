@@ -22,6 +22,17 @@ export function getLatestCommitHash() {
   }
 }
 
+export function getLatestCommitMessage() {
+  try {
+    // Get latest commit message
+    const commitMessage = execSync('git log -1 --pretty=%B').toString().trim();
+    return commitMessage;
+  } catch (error) {
+    console.error('Error getting latest commit message:', error);
+    return 'unknown';
+  }
+}
+
 export function getGitHubRepoUrl() {
   try {
     // Get the remote URL

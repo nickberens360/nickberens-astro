@@ -7,9 +7,12 @@
         </p>
         <p class="site-footer__text">
           <span class="git">git: <span class="git-paren">(</span><span class="git-hash">
-            <a :href="`${repoUrl}/commit/${commitHash}`" target="_blank" rel="noopener noreferrer">
-              {{ commitHash }}
-            </a>
+            <span class="tooltip-container">
+              <a :href="`${repoUrl}/commit/${commitHash}`" target="_blank" rel="noopener noreferrer">
+                {{ commitHash }}
+              </a>
+              <span class="tooltip">{{ commitMessage }}</span>
+            </span>
           </span><span class="git-paren">)</span></span>
         </p>
       </div>
@@ -24,6 +27,10 @@ export default {
     commitHash: {
       type: String,
       default: 'unknown'
+    },
+    commitMessage: {
+      type: String,
+      default: 'No commit message available'
     },
     repoUrl: {
       type: String,
@@ -43,6 +50,50 @@ export default {
   width: 100%;
   transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
   border-top: 1px dashed #222222;
+}
+
+/* Custom tooltip styles */
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  visibility: hidden;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 5px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+  margin-bottom: 5px;
+  font-size: 0.8rem;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
 }
 
 .site-footer__container {

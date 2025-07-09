@@ -4,7 +4,7 @@ import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
-import { getGitBranch, getLatestCommitHash, getGitHubRepoUrl } from '../utils/gitInfo.js';
+import { getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl } from '../utils/gitInfo.js';
 
 export interface Props {
     title?: string;
@@ -15,6 +15,7 @@ export interface Props {
 const {title, description, favicon} = Astro.props;
 const gitBranch = getGitBranch();
 const commitHash = getLatestCommitHash();
+const commitMessage = getLatestCommitMessage();
 const repoUrl = getGitHubRepoUrl();
 ---
 
@@ -28,7 +29,7 @@ const repoUrl = getGitHubRepoUrl();
 <body>
 <SiteHeader gitBranch={gitBranch} client:load />
 <slot/>
-<SiteFooter commitHash={commitHash} repoUrl={repoUrl} client:load />
+<SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
 </body>
 </html>
 
