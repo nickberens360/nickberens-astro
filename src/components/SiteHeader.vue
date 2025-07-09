@@ -185,6 +185,10 @@ export default {
   color: var(--text-color, #000);
   text-decoration: none;
 }
+.theme-dark .site-header__logo {
+  color: #fff;
+}
+
 
 .site-header__logo p {
   margin: 0;

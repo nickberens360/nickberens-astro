@@ -5,9 +5,11 @@ import PageSection from '../components/PageSection.vue';
 
 <Layout title="About" description="About page">
 	<PageSection
-		data-section-color="white"
-		background-color="white"
+		data-section-color="black"
+		data-section-theme="dark"
+		background-color="black"
 		width="1200"
+		style="padding-top: 6rem;"
 	>
 		<div class="resume-container">
 			<header class="resume-header">
@@ -140,21 +142,32 @@ import PageSection from '../components/PageSection.vue';
 		padding: 2rem;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 		line-height: 1.6;
-		color: #333;
-		background: #fff;
+		color: #e0e0e0;
+		background: #0e0e0e;
 	}
-
+    button {
+		background-color: #3d3d3d;
+		padding: 0.5rem 1rem;
+		border-radius: 0.25rem;
+		cursor: pointer;
+		font-size: 1rem;
+		transition: background-color 0.2s ease;
+	}
+	button a {
+		color: #ffffff;
+		text-decoration: none;
+	}
 	.resume-header {
 		text-align: center;
 		margin-bottom: 2rem;
 		padding-bottom: 1rem;
-		border-bottom: 2px solid #e0e0e0;
+		border-bottom: 2px solid #404040;
 	}
 
 	.resume-header h1 {
 		font-size: 2.5rem;
 		font-weight: 700;
-		color: #2c3e50;
+		color: #ffffff;
 		margin: 0;
 	}
 
@@ -165,10 +178,10 @@ import PageSection from '../components/PageSection.vue';
 	.resume-section h2 {
 		font-size: 1.5rem;
 		font-weight: 600;
-		color: #34495e;
+		color: #ffffff;
 		margin-bottom: 1rem;
 		padding-bottom: 0.5rem;
-		border-bottom: 1px solid #e0e0e0;
+		border-bottom: 1px solid #404040;
 	}
 
 	.skills-grid {
@@ -179,24 +192,24 @@ import PageSection from '../components/PageSection.vue';
 	}
 
 	.skill-tag {
-		background: #f8f9fa;
-		color: #495057;
+		background: #2d2d2d;
+		color: #e0e0e0;
 		padding: 0.25rem 0.75rem;
 		border-radius: 1rem;
 		font-size: 0.875rem;
-		border: 1px solid #dee2e6;
+		border: 1px solid #404040;
 		transition: all 0.2s ease;
 	}
 
 	.skill-tag:hover {
-		background: #e9ecef;
+		background: #3d3d3d;
 		transform: translateY(-1px);
 	}
 
 	.job {
 		margin-bottom: 2rem;
 		padding: 1.5rem;
-		background: #f8f9fa;
+		background: #2d2d2d;
 		border-radius: 0.5rem;
 		border-left: 4px solid #3498db;
 	}
@@ -208,7 +221,7 @@ import PageSection from '../components/PageSection.vue';
 	.job-header h3 {
 		font-size: 1.25rem;
 		font-weight: 600;
-		color: #2c3e50;
+		color: #ffffff;
 		margin: 0 0 0.5rem 0;
 	}
 
@@ -217,12 +230,12 @@ import PageSection from '../components/PageSection.vue';
 		flex-wrap: wrap;
 		gap: 1rem;
 		font-size: 0.9rem;
-		color: #6c757d;
+		color: #b0b0b0;
 	}
 
 	.company {
 		font-weight: 600;
-		color: #495057;
+		color: #e0e0e0;
 	}
 
 	.job-responsibilities {
@@ -246,7 +259,7 @@ import PageSection from '../components/PageSection.vue';
 	}
 
 	.education {
-		background: #f8f9fa;
+		background: #2d2d2d;
 		padding: 1.5rem;
 		border-radius: 0.5rem;
 		border-left: 4px solid #27ae60;
@@ -255,7 +268,7 @@ import PageSection from '../components/PageSection.vue';
 	.education h3 {
 		font-size: 1.25rem;
 		font-weight: 600;
-		color: #2c3e50;
+		color: #ffffff;
 		margin: 0 0 0.5rem 0;
 	}
 
@@ -264,7 +277,7 @@ import PageSection from '../components/PageSection.vue';
 		flex-wrap: wrap;
 		gap: 1rem;
 		font-size: 0.9rem;
-		color: #6c757d;
+		color: #b0b0b0;
 		margin-bottom: 0.5rem;
 	}
 
@@ -289,7 +302,7 @@ import PageSection from '../components/PageSection.vue';
 	}
 
 	.accomplishments a {
-		color: #3498db;
+		color: #5dade2;
 		text-decoration: none;
 	}
 
@@ -343,6 +356,7 @@ import PageSection from '../components/PageSection.vue';
 			word-break: break-all;
 		}
 	}
+
 	@media print {
 		.site-header, .site-footer, .resume-header {
 			display: none !important;
@@ -350,6 +364,17 @@ import PageSection from '../components/PageSection.vue';
 		.resume-container {
 			max-width: none;
 			padding: 0;
+			background: #fff;
+			color: #333;
+		}
+
+		.resume-header h1 {
+			color: #2c3e50;
+		}
+
+		.resume-section h2 {
+			color: #34495e;
+			border-bottom: 1px solid #e0e0e0;
 		}
 
 		.job, .education {
@@ -361,7 +386,23 @@ import PageSection from '../components/PageSection.vue';
 		.skill-tag {
 			background: transparent;
 			border: 1px solid #ddd;
+			color: #495057;
+		}
+
+		.job-header h3, .education h3 {
+			color: #2c3e50;
+		}
+
+		.company {
+			color: #495057;
+		}
+
+		.job-details, .education-details {
+			color: #6c757d;
+		}
+
+		.accomplishments a {
+			color: #3498db;
 		}
 	}
-
 </style>
