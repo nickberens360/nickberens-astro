@@ -12,8 +12,8 @@ import Image from 'astro/components/Image.astro';
 		background-color="lemonchiffon"
 		full-height
 	>
-		<div>
-			<div class="row flex-nowrap">
+		<div class="container pt-16 md:pt-0">
+			<div class="row">
 				<div class="col-12 col-md-6">
 					<Image
 						src={vueAtomicDocs}
@@ -23,7 +23,7 @@ import Image from 'astro/components/Image.astro';
 						class="rounded-lg shadow-xl"
 					/>
 				</div>
-				<div class="col-12 col-md-6">
+				<div class="col-12 col-md-6 pt-8">
 					<h1 class="text-xl">Atomic Docs</h1>
 					<p class="text-md">A documentation site for the Atomic Design methodology, built with Vue 3 and Astro.</p>
 					<p>This project showcases how to create a documentation site using Vue components and Astro's static site generation capabilities.</p>
