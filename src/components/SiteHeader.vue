@@ -21,9 +21,9 @@
           <li class="site-header__nav-item"><a href="/projects">Projects</a></li>
           <li class="site-header__nav-item"><a href="/blog">Blog</a></li>
           <li class="site-header__nav-item"><a href="#contact">Contact</a></li>
-          <li class="site-header__nav-item">
+          <li v-if="isMounted" class="site-header__nav-item">
             <a href="https://github.com/nickberens360" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
-              <font-awesome-icon :icon="['fab', 'github']" />
+              <font-awesome-icon size="2x" :icon="['fab', 'github']" />
             </a>
           </li>
         </ul>
@@ -35,7 +35,7 @@
           <li class="site-header__mobile-nav-item"><a href="/resume" @click="closeMobileMenu">Resume</a></li>
           <li class="site-header__mobile-nav-item"><a href="/projects" @click="closeMobileMenu">Projects</a></li>
           <li class="site-header__mobile-nav-item"><a href="#contact" @click="closeMobileMenu">Contact</a></li>
-          <li class="site-header__mobile-nav-item">
+          <li v-if="isMounted" class="site-header__mobile-nav-item">
             <a href="https://github.com/nickberens360" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile" @click="closeMobileMenu">
               <font-awesome-icon :icon="['fab', 'github']" />
               <span style="margin-left: 0.5em;">GitHub</span>
@@ -194,6 +194,7 @@ export default {
 
 .site-header__nav-list {
   display: flex;
+  align-items: center;
   list-style: none;
   margin: 0;
   padding: 0;
