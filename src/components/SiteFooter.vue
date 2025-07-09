@@ -1,5 +1,5 @@
 <template>
-  <footer class="site-footer" :class="[`theme-${theme}`]">
+  <footer class="site-footer theme-dark" :class="[`theme-${theme}`]">
     <div class="site-footer__container">
       <div class="site-footer__content">
         <p class="copyright">
@@ -83,10 +83,10 @@ export default {
   text-decoration: underline;
 }
 
-.site-footer.theme-dark {
+/*.site-footer.theme-dark {
   color: #ffffff;
   background-color: #333333;
-}
+}*/
 
 .site-footer.theme-dark .git {
   color: #82aaff;
