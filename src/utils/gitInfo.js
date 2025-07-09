@@ -10,3 +10,34 @@ export function getGitBranch() {
     return 'unknown';
   }
 }
+
+export function getLatestCommitHash() {
+  try {
+    // Get latest commit hash (short version)
+    const commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+    return commitHash;
+  } catch (error) {
+    console.error('Error getting latest commit hash:', error);
+    return 'unknown';
+  }
+}
+
+export function getGitHubRepoUrl() {
+  try {
+    // Get the remote URL
+    const remoteUrl = execSync('git config --get remote.origin.url').toString().trim();
+
+    // Convert SSH URL to HTTPS URL if needed
+    let httpsUrl = remoteUrl;
+    if (remoteUrl.startsWith('git@github.com:')) {
+      httpsUrl = remoteUrl.replace('git@github.com:', 'https://github.com/').replace(/\.git$/, '');
+    } else if (remoteUrl.startsWith('https://') && remoteUrl.endsWith('.git')) {
+      httpsUrl = remoteUrl.replace(/\.git$/, '');
+    }
+
+    return httpsUrl;
+  } catch (error) {
+    console.error('Error getting GitHub repo URL:', error);
+    return 'https://github.com';
+  }
+}

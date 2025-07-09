@@ -1,9 +1,10 @@
 ---
 import Head from '../components/Head.astro';
 import SiteHeader from '../components/SiteHeader.vue';
+import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
-import { getGitBranch } from '../utils/gitInfo.js';
+import { getGitBranch, getLatestCommitHash, getGitHubRepoUrl } from '../utils/gitInfo.js';
 
 export interface Props {
     title?: string;
@@ -13,6 +14,8 @@ export interface Props {
 
 const {title, description, favicon} = Astro.props;
 const gitBranch = getGitBranch();
+const commitHash = getLatestCommitHash();
+const repoUrl = getGitHubRepoUrl();
 ---
 
 <html lang="en">
@@ -25,6 +28,7 @@ const gitBranch = getGitBranch();
 <body>
 <SiteHeader gitBranch={gitBranch} client:load />
 <slot/>
+<SiteFooter commitHash={commitHash} repoUrl={repoUrl} client:load />
 </body>
 </html>
 
