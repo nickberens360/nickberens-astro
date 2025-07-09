@@ -3,7 +3,7 @@
     <div class="site-footer__container">
       <div class="site-footer__content">
         <p class="copyright">
-          <span>© 2025 Nick Berens</span>
+          <span style="color: rgba(255,255,0,0.74)">© 2025 Nick Berens</span>
         </p>
         <p class="site-footer__text">
           <span class="git">git: <span class="git-paren">(</span><span class="git-hash">
