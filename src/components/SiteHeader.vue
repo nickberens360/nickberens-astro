@@ -11,18 +11,26 @@
         class="site-header__logo"
         :class="variant === 'pod' ? 'pod' : ''"
         :style="variant === 'pod' ? headerStyles : {}"
+        ref="logo"
       >
         <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></p>
       </a>
 
-      <button class="site-header__hamburger" :class="{ 'is-active': isMobileMenuOpen }" @click="toggleMobileMenu" aria-label="Toggle menu">
+      <button
+        class="site-header__hamburger"
+        :class="{ 'is-active': isMobileMenuOpen }"
+        @click="toggleMobileMenu"
+        aria-label="Toggle menu"
+        v-show="useMobileLayout"
+      >
         🍔
       </button>
 
       <nav
         class="site-header__nav"
-        :class="variant === 'pod' ? 'pod' : ''"
+        :class="[variant === 'pod' ? 'pod' : '', {'hidden': useMobileLayout}]"
         :style="variant === 'pod' ? headerStyles : {}"
+        ref="nav"
       >
         <ul class="site-header__nav-list">
           <li class="site-header__nav-item"><a href="/">Home</a></li>
@@ -89,7 +97,8 @@ export default {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
       isMobileMenuOpen: false,
-      isMounted: false
+      isMounted: false,
+      useMobileLayout: false
     };
   },
   computed: {
@@ -103,14 +112,128 @@ export default {
     }
   },
   mounted() {
+    console.log('SiteHeader mounted');
     this.isMounted = true;
+
+    // Create debounced versions of methods
+    this.debouncedCheckLayout = this.debounce(this.checkLayoutNeeds, 100);
+
+    // Use debounced version for resize events
     window.addEventListener('scroll', this.handleScroll, { passive: true });
+    window.addEventListener('resize', this.debouncedCheckLayout, { passive: true });
     this.handleScroll();
+
+    // Initial layout check might need to be delayed to ensure refs are available
+    this.$nextTick(() => {
+      console.log('Next tick - checking layout');
+      this.checkLayoutNeeds();
+
+      // Force another check after a short delay to ensure everything is rendered
+      setTimeout(() => {
+        console.log('Forced layout check after timeout');
+        this.checkLayoutNeeds();
+      }, 100);
+    });
+
+    // For more precise tracking, use ResizeObserver
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => {
+        console.log('ResizeObserver triggered');
+        this.debouncedCheckLayout();
+      });
+      this.resizeObserver.observe(this.$refs.siteHeader);
+    }
   },
   beforeDestroy() {
     window.removeEventListener('scroll', this.handleScroll);
+    window.removeEventListener('resize', this.debouncedCheckLayout);
+
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
   },
   methods: {
+    debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    },
+    checkLayoutNeeds() {
+      if (!this.$refs.logo || !this.$refs.nav) {
+        console.log('Refs not available yet');
+        return;
+      }
+
+      const logoRect = this.$refs.logo.getBoundingClientRect();
+      const headerWidth = this.$refs.siteHeader.clientWidth;
+      const logoRightEdge = logoRect.right;
+
+      // Use percentage-based buffer instead of fixed 20px
+      const bufferPercentage = 0.05; // 5% of header width
+      const buffer = headerWidth * bufferPercentage;
+
+      // Consider device pixel ratio for high-DPI displays
+      const pixelRatio = window.devicePixelRatio || 1;
+      const scaledBuffer = buffer * pixelRatio;
+
+      // Improved measurement of hidden nav element
+      const navElement = this.$refs.nav;
+      const wasHidden = navElement.classList.contains('hidden');
+      let navWidth;
+
+      // Create a clone for measurement instead of manipulating the original
+      if (wasHidden) {
+        const navClone = navElement.cloneNode(true);
+        navClone.style.position = 'absolute';
+        navClone.style.visibility = 'hidden';
+        navClone.style.display = 'block';
+        navClone.classList.remove('hidden');
+        document.body.appendChild(navClone);
+
+        navWidth = navClone.getBoundingClientRect().width;
+        document.body.removeChild(navClone);
+      } else {
+        navWidth = navElement.getBoundingClientRect().width;
+      }
+
+      // Calculate margins between nav items
+      const navItems = navElement.querySelectorAll('.site-header__nav-item');
+      let totalNavItemsMargin = 0;
+
+      if (navItems.length > 1) {
+        // Get the actual margins from computed styles
+        const firstItemStyle = window.getComputedStyle(navItems[0]);
+        const marginLeft = parseFloat(firstItemStyle.marginLeft);
+        // Account for margins between items
+        totalNavItemsMargin = marginLeft * (navItems.length - 1);
+      }
+
+      // Add margins to the effective nav width
+      const effectiveNavWidth = navWidth + totalNavItemsMargin;
+
+      // Calculate available space with percentage-based buffer
+      const availableSpace = headerWidth - logoRightEdge - scaledBuffer;
+
+      // Add a breakpoint safety mechanism
+      const minDesktopWidth = 768; // Common tablet breakpoint
+      const shouldUseMobileLayout =
+        (effectiveNavWidth > availableSpace) || (window.innerWidth < minDesktopWidth);
+
+      console.log('Layout check:', {
+        headerWidth,
+        logoRightEdge,
+        buffer: scaledBuffer,
+        availableSpace,
+        navWidth: effectiveNavWidth,
+        shouldUseMobileLayout,
+        wasHidden,
+        devicePixelRatio: pixelRatio
+      });
+
+      this.useMobileLayout = shouldUseMobileLayout;
+    },
     toggleMobileMenu() {
       this.isMobileMenuOpen = !this.isMobileMenuOpen;
       document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : '';
@@ -226,13 +349,14 @@ export default {
 
 /* Hamburger Menu Button */
 .site-header__hamburger {
-  display: none;
   background: none;
   border: none;
   cursor: pointer;
   z-index: 1001;
   font-size: 2rem;
   line-height: 1;
+  padding: 10px;
+  margin-right: -10px; /* Offset the padding */
 }
 
 .site-header__hamburger span {
@@ -285,6 +409,11 @@ export default {
   color: #666;
 }
 
+/* Hidden class for dynamic layout switching */
+.hidden {
+  display: none;
+}
+
 /* --- Theme-based Styling for Text --- */
 
 .site-header.theme-light {
@@ -315,31 +444,23 @@ export default {
 
 
 
-/* Responsive Styles */
-@media (max-width: 768px) {
-  .site-header__nav {
-    display: none;
-  }
+/* Dynamic Layout Styles */
+/* Hamburger is controlled by v-show="useMobileLayout" */
+/* Mobile nav is always in the DOM but transformed off-screen by default */
+.site-header__mobile-nav {
+  display: block;
+}
 
-  .site-header__hamburger {
-    display: block;
-  }
+/* Hamburger animation when menu is open */
+.site-header__hamburger.is-active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
 
-  .site-header__mobile-nav {
-    display: block;
-  }
+.site-header__hamburger.is-active span:nth-child(2) {
+  opacity: 0;
+}
 
-  /* Hamburger animation when menu is open */
-  .site-header__hamburger.is-active span:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
-  }
-
-  .site-header__hamburger.is-active span:nth-child(2) {
-    opacity: 0;
-  }
-
-  .site-header__hamburger.is-active span:nth-child(3) {
-    transform: rotate(-45deg) translate(7px, -7px);
-  }
+.site-header__hamburger.is-active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
 }
 </style>
