@@ -53,22 +53,20 @@ export default {
 </script>
 
 <style scoped>
-/*.page-section {
+.page-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  !*padding: 4rem 1.5rem;*!
+  padding: 4rem 1.5rem;
 }
-
-
 
 .page-section__inner {
   width: 100%;
   margin: 0 auto;
-}*/
+}
 
 
-/*.page-section--full-height {
+.page-section--full-height {
   min-height: calc(100vh - var(--site-header-height));
   padding: 0 1.5rem;
 }
@@ -81,13 +79,10 @@ export default {
 }
 .page-section--no-padding {
   padding: 0;
-}*/
+}
 
-/*.page-section__inner--full-width {
+.page-section__inner--full-width {
   width: 100%;
   padding: 0;
-}*/
+}
 </style>
-
-
-
