@@ -1155,8 +1155,8 @@ p {
 .leading-fluid { line-height: clamp(1.3, 1.3 + 0.2vw, 1.6); }
 
 /* Text Color Utility Classes */
-.text-light { color: var(--color-light); }
-.text-dark { color: var(--color-dark); }
+.text-dark { color: var(--color-light); }
+.text-light { color: var(--color-dark); }
 
 /* Background Color Utility Classes */
 .bg-light { background-color: var(--color-light); }

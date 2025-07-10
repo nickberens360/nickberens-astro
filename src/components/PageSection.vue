@@ -6,6 +6,7 @@
   >
     <div
       class="page-section__inner"
+      :class="themeClass"
       :style="{ maxWidth: width + 'px' }"
     >
       <slot></slot>
@@ -29,7 +30,13 @@ export default {
       type: [String, Number],
       default: 1400
     }
-  }
+  },
+  computed: {
+    themeClass() {
+      const theme = this.$attrs['data-section-theme'];
+      return theme ? `text-${theme}` : '';
+    }
+  },
 }
 </script>
 
