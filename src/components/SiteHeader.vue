@@ -1,7 +1,10 @@
 <template>
   <header
     class="site-header"
-    :class="[`theme-${overlayTheme}`]"
+    :class="[
+      `theme-${overlayTheme}`,
+       useMobileLayout ? 'mobile-layout' : '',
+      ]"
     :style="variant !== 'pod' ? headerStyles : {}"
     ref="siteHeader"
   >
@@ -13,7 +16,14 @@
         :style="variant === 'pod' ? headerStyles : {}"
         ref="logo"
       >
-        <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji d-none-xs"> ✗ </span></p>
+        <p>nickberens
+          <span class="git">git:
+            <span class="git-paren">(</span>
+            <span class="git-branch">{{ gitBranch }}</span>
+            <span class="git-paren">)</span>
+          </span>
+<!--          <span class="git-emoji d-none"> ✗ </span>-->
+        </p>
       </a>
 
       <button
@@ -112,7 +122,6 @@ export default {
     }
   },
   mounted() {
-    console.log('SiteHeader mounted');
     this.isMounted = true;
 
     // Create debounced versions of methods
@@ -125,12 +134,10 @@ export default {
 
     // Initial layout check might need to be delayed to ensure refs are available
     this.$nextTick(() => {
-      console.log('Next tick - checking layout');
       this.checkLayoutNeeds();
 
       // Force another check after a short delay to ensure everything is rendered
       setTimeout(() => {
-        console.log('Forced layout check after timeout');
         this.checkLayoutNeeds();
       }, 100);
     });
@@ -138,7 +145,6 @@ export default {
     // For more precise tracking, use ResizeObserver
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => {
-        console.log('ResizeObserver triggered');
         this.debouncedCheckLayout();
       });
       this.resizeObserver.observe(this.$refs.siteHeader);
@@ -162,7 +168,6 @@ export default {
     },
     checkLayoutNeeds() {
       if (!this.$refs.logo || !this.$refs.nav) {
-        console.log('Refs not available yet');
         return;
       }
 

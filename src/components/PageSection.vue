@@ -3,7 +3,8 @@
     class="page-section"
     :class="{
       'page-section--full-height': fullHeight,
-      'page-section--full-width': fullWidth
+      'page-section--full-width': fullWidth,
+      'page-section--no-padding': noPadding,
     }"
     :style="{ backgroundColor: backgroundColor }"
   >
@@ -30,6 +31,10 @@ export default {
       default: false
     },
     fullWidth: {
+      type: Boolean,
+      default: false
+    },
+    noPadding: {
       type: Boolean,
       default: false
     },
@@ -69,6 +74,9 @@ export default {
   padding: 4rem 0;
 }
 .page-section--full-width.page-section--full-height {
+  padding: 0;
+}
+.page-section--no-padding {
   padding: 0;
 }
 
