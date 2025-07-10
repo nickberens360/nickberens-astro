@@ -1,6 +1,6 @@
 ---
 import Head from '../components/Head.astro';
-import SiteHeader from '../components/SiteHeader.vue';
+// import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
@@ -28,7 +28,7 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:load />
+<!--<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:load />-->
 <slot/>
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
 </body>
