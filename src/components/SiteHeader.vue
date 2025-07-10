@@ -1,23 +1,52 @@
 <template>
   <header
     class="site-header"
-    :class="[`theme-${overlayTheme}`]"
-    :style="headerStyles"
+    :class="[
+      `theme-${overlayTheme}`,
+       useMobileLayout ? 'mobile-layout' : '',
+      ]"
+    :style="variant !== 'pod' ? headerStyles : {}"
     ref="siteHeader"
   >
     <div class="site-header__container">
-      <a href="/" class="site-header__logo">
-        <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></p>
+      <a
+        href="/"
+        class="site-header__logo"
+        :class="variant === 'pod' ? 'pod' : ''"
+        :style="variant === 'pod' ? headerStyles : {}"
+        ref="logo"
+      >
+        <p>nickberens
+          <span class="git">git:
+            <span class="git-paren">(</span>
+            <span class="git-branch">{{ gitBranch }}</span>
+            <span class="git-paren">)</span>
+          </span>
+<!--          <span class="git-emoji d-none"> ✗ </span>-->
+        </p>
       </a>
 
-      <button class="site-header__hamburger" :class="{ 'is-active': isMobileMenuOpen }" @click="toggleMobileMenu" aria-label="Toggle menu">
+      <button
+        class="site-header__hamburger"
+        :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
+        @click="toggleMobileMenu"
+        aria-label="Toggle menu"
+        v-show="useMobileLayout"
+        :style="variant === 'pod' ? headerStyles : {}"
+      >
         🍔
       </button>
 
-      <nav class="site-header__nav">
+      <nav
+        class="site-header__nav"
+        :class="[variant === 'pod' ? 'pod' : '', {'hidden': useMobileLayout}]"
+        :style="variant === 'pod' ? headerStyles : {}"
+        ref="nav"
+      >
         <ul class="site-header__nav-list">
           <li class="site-header__nav-item"><a href="/">Home</a></li>
           <li class="site-header__nav-item"><a href="/atomic-docs">Atomic Docs</a></li>
+          <li class="site-header__nav-item"><a href="/illustrations">Illustrations</a></li>
           <li class="site-header__nav-item"><a href="/resume">Resume</a></li>
           <li class="site-header__nav-item"><a href="/#contact">Contact</a></li>
           <li v-if="isMounted" class="site-header__nav-item">
@@ -32,6 +61,7 @@
         <ul class="site-header__mobile-nav-list">
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
           <li class="site-header__mobile-nav-item"><a href="/atomic-docs" @click="closeMobileMenu">Atomic Docs</a></li>
+          <li class="site-header__mobile-nav-item"><a href="/illustrations" @click="closeMobileMenu">Illustrations</a></li>
           <li class="site-header__mobile-nav-item"><a href="/resume" @click="closeMobileMenu">Resume</a></li>
           <li class="site-header__mobile-nav-item"><a href="/#contact" @click="closeMobileMenu">Contact</a></li>
           <li v-if="isMounted" class="site-header__mobile-nav-item">
@@ -47,10 +77,10 @@
 </template>
 
 <script>
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faGithub } from '@fortawesome/free-brands-svg-icons';
 // --- ADD THESE IMPORTS ---
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { faGithub } from '@fortawesome/free-brands-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 // --- ADD THE ICON TO THE LIBRARY ---
 library.add(faGithub)
@@ -58,7 +88,6 @@ library.add(faGithub)
 
 export default {
   name: 'SiteHeader',
-  // --- ADD THIS COMPONENTS OBJECT ---
   components: {
     FontAwesomeIcon
   },
@@ -66,6 +95,11 @@ export default {
     gitBranch: {
       type: String,
       default: 'main'
+    },
+    variant: {
+      type: String,
+      default: 'default',
+      validator: value => ['default', 'pod'].includes(value)
     }
   },
   data() {
@@ -73,7 +107,8 @@ export default {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
       isMobileMenuOpen: false,
-      isMounted: false
+      isMounted: false,
+      useMobileLayout: false
     };
   },
   computed: {
@@ -81,21 +116,129 @@ export default {
       if (!this.isMounted) {
         return { backgroundColor: 'transparent' };
       }
-      const styles = {
+      return {
         backgroundColor: this.headerBackgroundColor,
       };
-      return styles;
     }
   },
   mounted() {
     this.isMounted = true;
+
+    // Create debounced versions of methods
+    this.debouncedCheckLayout = this.debounce(this.checkLayoutNeeds, 100);
+
+    // Use debounced version for resize events
     window.addEventListener('scroll', this.handleScroll, { passive: true });
+    window.addEventListener('resize', this.debouncedCheckLayout, { passive: true });
     this.handleScroll();
+
+    // Initial layout check might need to be delayed to ensure refs are available
+    this.$nextTick(() => {
+      this.checkLayoutNeeds();
+
+      // Force another check after a short delay to ensure everything is rendered
+      setTimeout(() => {
+        this.checkLayoutNeeds();
+      }, 100);
+    });
+
+    // For more precise tracking, use ResizeObserver
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.debouncedCheckLayout();
+      });
+      this.resizeObserver.observe(this.$refs.siteHeader);
+    }
   },
   beforeDestroy() {
     window.removeEventListener('scroll', this.handleScroll);
+    window.removeEventListener('resize', this.debouncedCheckLayout);
+
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
   },
   methods: {
+    debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    },
+    checkLayoutNeeds() {
+      if (!this.$refs.logo || !this.$refs.nav) {
+        return;
+      }
+
+      const logoRect = this.$refs.logo.getBoundingClientRect();
+      const headerWidth = this.$refs.siteHeader.clientWidth;
+      const logoRightEdge = logoRect.right;
+
+      // Use percentage-based buffer instead of fixed 20px
+      const bufferPercentage = 0.05; // 5% of header width
+      const buffer = headerWidth * bufferPercentage;
+
+      // Consider device pixel ratio for high-DPI displays
+      const pixelRatio = window.devicePixelRatio || 1;
+      const scaledBuffer = buffer * pixelRatio;
+
+      // Improved measurement of hidden nav element
+      const navElement = this.$refs.nav;
+      const wasHidden = navElement.classList.contains('hidden');
+      let navWidth;
+
+      // Create a clone for measurement instead of manipulating the original
+      if (wasHidden) {
+        const navClone = navElement.cloneNode(true);
+        navClone.style.position = 'absolute';
+        navClone.style.visibility = 'hidden';
+        navClone.style.display = 'block';
+        navClone.classList.remove('hidden');
+        document.body.appendChild(navClone);
+
+        navWidth = navClone.getBoundingClientRect().width;
+        document.body.removeChild(navClone);
+      } else {
+        navWidth = navElement.getBoundingClientRect().width;
+      }
+
+      // Calculate margins between nav items
+      const navItems = navElement.querySelectorAll('.site-header__nav-item');
+      let totalNavItemsMargin = 0;
+
+      if (navItems.length > 1) {
+        // Get the actual margins from computed styles
+        const firstItemStyle = window.getComputedStyle(navItems[0]);
+        const marginLeft = parseFloat(firstItemStyle.marginLeft);
+        // Account for margins between items
+        totalNavItemsMargin = marginLeft * (navItems.length - 1);
+      }
+
+      // Add margins to the effective nav width
+      const effectiveNavWidth = navWidth + totalNavItemsMargin;
+
+      // Calculate available space with percentage-based buffer
+      const availableSpace = headerWidth - logoRightEdge - scaledBuffer;
+
+      // Add a breakpoint safety mechanism
+      const minDesktopWidth = 768; // Common tablet breakpoint
+      const shouldUseMobileLayout =
+        (effectiveNavWidth > availableSpace) || (window.innerWidth < minDesktopWidth);
+
+      console.log('Layout check:', {
+        headerWidth,
+        logoRightEdge,
+        buffer: scaledBuffer,
+        availableSpace,
+        navWidth: effectiveNavWidth,
+        shouldUseMobileLayout,
+        wasHidden,
+        devicePixelRatio: pixelRatio
+      });
+
+      this.useMobileLayout = shouldUseMobileLayout;
+    },
     toggleMobileMenu() {
       this.isMobileMenuOpen = !this.isMobileMenuOpen;
       document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : '';
@@ -133,38 +276,12 @@ export default {
 .site-header {
   position: fixed;
   width: 100%;
-  padding: 1rem 0;
   z-index: 100;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
+  height: var(--site-header-height);
 }
 
-/* --- Theme-based Styling for Text --- */
 
-.site-header.theme-light {
-  color: #000000;
-}
-.site-header.theme-light .git {
-  color: blue;
-}
-.site-header.theme-light .git-branch {
-  color: red;
-}
-
-.site-header.theme-dark {
-  color: #ffffff;
-}
-.site-header.theme-dark .git {
-  color: #82aaff;
-}
-.site-header.theme-dark .git-branch {
-  color: #ff8282;
-}
-.site-header.theme-dark .git-paren {
-  color: #82aaff;
-}
-.site-header.theme-dark .git-emoji {
-  color: yellow;
-}
 
 .site-header__container {
   margin: 0 auto;
@@ -172,6 +289,23 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 100%;
+}
+
+.pod {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 85%;
+  padding: 0 1.5rem;
+  border-radius: 200px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
+
+}
+
+.theme-dark .pod {
+  box-shadow: 0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -4px rgba(255, 255, 255, 0.05);
 }
 
 .site-header__logo {
@@ -179,6 +313,8 @@ export default {
   z-index: 1002;
   color: var(--text-color, #000);
   text-decoration: none;
+
+
 }
 .theme-dark .site-header__logo {
   color: #fff;
@@ -187,7 +323,7 @@ export default {
 
 .site-header__logo p {
   margin: 0;
-  font-size: clamp(1.2rem, 1.2rem + 0.5vw, 1.5rem);
+  font-size: clamp(1rem, 1rem + 0.5vw, 1.5rem);
   font-weight: bold;
 }
 
@@ -202,6 +338,9 @@ export default {
 .site-header__nav-item {
   margin-left: 1.5rem;
 }
+.site-header__nav-item:first-child {
+  margin-left: 0;
+}
 
 .site-header__nav-item a {
   text-decoration: none;
@@ -215,13 +354,14 @@ export default {
 
 /* Hamburger Menu Button */
 .site-header__hamburger {
-  display: none;
   background: none;
   border: none;
   cursor: pointer;
   z-index: 1001;
   font-size: 2rem;
   line-height: 1;
+  padding: 10px;
+  margin-right: -10px; /* Offset the padding */
 }
 
 .site-header__hamburger span {
@@ -274,31 +414,58 @@ export default {
   color: #666;
 }
 
-/* Responsive Styles */
-@media (max-width: 768px) {
-  .site-header__nav {
-    display: none;
-  }
+/* Hidden class for dynamic layout switching */
+.hidden {
+  display: none;
+}
 
-  .site-header__hamburger {
-    display: block;
-  }
+/* --- Theme-based Styling for Text --- */
 
-  .site-header__mobile-nav {
-    display: block;
-  }
+.site-header.theme-light {
+  color: #000000;
+}
+.site-header.theme-light .git {
+  color: blue;
+}
+.site-header.theme-light .git-branch {
+  color: red;
+}
 
-  /* Hamburger animation when menu is open */
-  .site-header__hamburger.is-active span:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
-  }
+.site-header.theme-dark {
+  color: #ffffff;
+}
+.site-header.theme-dark .git {
+  color: #82aaff;
+}
+.site-header.theme-dark .git-branch {
+  color: #ff8282;
+}
+.site-header.theme-dark .git-paren {
+  color: #82aaff;
+}
+.site-header.theme-dark .git-emoji {
+  color: yellow;
+}
 
-  .site-header__hamburger.is-active span:nth-child(2) {
-    opacity: 0;
-  }
 
-  .site-header__hamburger.is-active span:nth-child(3) {
-    transform: rotate(-45deg) translate(7px, -7px);
-  }
+
+/* Dynamic Layout Styles */
+/* Hamburger is controlled by v-show="useMobileLayout" */
+/* Mobile nav is always in the DOM but transformed off-screen by default */
+.site-header__mobile-nav {
+  display: block;
+}
+
+/* Hamburger animation when menu is open */
+.site-header__hamburger.is-active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.site-header__hamburger.is-active span:nth-child(2) {
+  opacity: 0;
+}
+
+.site-header__hamburger.is-active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
 }
 </style>
