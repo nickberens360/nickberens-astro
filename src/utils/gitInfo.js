@@ -4,6 +4,11 @@ export function getGitBranch() {
   try {
     // On Netlify, use the BRANCH environment variable
     if (process.env.BRANCH) {
+      // Check if it's a pull request preview (format: pull/X/head)
+      if (process.env.BRANCH.startsWith('pull/') && process.env.HEAD) {
+        // HEAD contains the actual branch name for pull requests
+        return process.env.HEAD;
+      }
       return process.env.BRANCH;
     }
 
