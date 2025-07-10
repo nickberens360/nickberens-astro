@@ -6,7 +6,22 @@
 
 /* Smooth Scrolling */
 html {
+    font-family: 'JetBrains Mono', sans-serif;
+    background-color: #f6f6f6;
+    color: #111;
     scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    /*max-width: 100vh;*/
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
 }
 
 /* Font and Spacing Variables */
