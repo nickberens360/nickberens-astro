@@ -2,11 +2,16 @@
   <header
     class="site-header"
     :class="[`theme-${overlayTheme}`]"
-    :style="headerStyles"
+    :style="variant !== 'pod' ? headerStyles : {}"
     ref="siteHeader"
   >
     <div class="site-header__container">
-      <a href="/" class="site-header__logo">
+      <a
+        href="/"
+        class="site-header__logo"
+        :class="variant === 'pod' ? 'pod' : ''"
+        :style="variant === 'pod' ? headerStyles : {}"
+      >
         <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></p>
       </a>
 
@@ -14,10 +19,15 @@
         🍔
       </button>
 
-      <nav class="site-header__nav">
+      <nav
+        class="site-header__nav"
+        :class="variant === 'pod' ? 'pod' : ''"
+        :style="variant === 'pod' ? headerStyles : {}"
+      >
         <ul class="site-header__nav-list">
           <li class="site-header__nav-item"><a href="/">Home</a></li>
           <li class="site-header__nav-item"><a href="/atomic-docs">Atomic Docs</a></li>
+          <li class="site-header__nav-item"><a href="/illustrations">Illustrations</a></li>
           <li class="site-header__nav-item"><a href="/resume">Resume</a></li>
           <li class="site-header__nav-item"><a href="/#contact">Contact</a></li>
           <li v-if="isMounted" class="site-header__nav-item">
@@ -32,6 +42,7 @@
         <ul class="site-header__mobile-nav-list">
           <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
           <li class="site-header__mobile-nav-item"><a href="/atomic-docs" @click="closeMobileMenu">Atomic Docs</a></li>
+          <li class="site-header__mobile-nav-item"><a href="/illustrations" @click="closeMobileMenu">Illustrations</a></li>
           <li class="site-header__mobile-nav-item"><a href="/resume" @click="closeMobileMenu">Resume</a></li>
           <li class="site-header__mobile-nav-item"><a href="/#contact" @click="closeMobileMenu">Contact</a></li>
           <li v-if="isMounted" class="site-header__mobile-nav-item">
@@ -47,10 +58,10 @@
 </template>
 
 <script>
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faGithub } from '@fortawesome/free-brands-svg-icons';
 // --- ADD THESE IMPORTS ---
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { faGithub } from '@fortawesome/free-brands-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 // --- ADD THE ICON TO THE LIBRARY ---
 library.add(faGithub)
@@ -66,6 +77,11 @@ export default {
     gitBranch: {
       type: String,
       default: 'main'
+    },
+    variant: {
+      type: String,
+      default: 'default',
+      validator: value => ['default', 'pod'].includes(value)
     }
   },
   data() {
@@ -81,10 +97,9 @@ export default {
       if (!this.isMounted) {
         return { backgroundColor: 'transparent' };
       }
-      const styles = {
+      return {
         backgroundColor: this.headerBackgroundColor,
       };
-      return styles;
     }
   },
   mounted() {
@@ -133,38 +148,12 @@ export default {
 .site-header {
   position: fixed;
   width: 100%;
-  padding: 1rem 0;
   z-index: 100;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
+  height: var(--site-header-height);
 }
 
-/* --- Theme-based Styling for Text --- */
 
-.site-header.theme-light {
-  color: #000000;
-}
-.site-header.theme-light .git {
-  color: blue;
-}
-.site-header.theme-light .git-branch {
-  color: red;
-}
-
-.site-header.theme-dark {
-  color: #ffffff;
-}
-.site-header.theme-dark .git {
-  color: #82aaff;
-}
-.site-header.theme-dark .git-branch {
-  color: #ff8282;
-}
-.site-header.theme-dark .git-paren {
-  color: #82aaff;
-}
-.site-header.theme-dark .git-emoji {
-  color: yellow;
-}
 
 .site-header__container {
   margin: 0 auto;
@@ -172,6 +161,23 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 100%;
+}
+
+.pod {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 85%;
+  padding: 0 1.5rem;
+  border-radius: 100px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
+
+}
+
+.theme-dark .pod {
+  box-shadow: 0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -4px rgba(255, 255, 255, 0.05);
 }
 
 .site-header__logo {
@@ -179,6 +185,8 @@ export default {
   z-index: 1002;
   color: var(--text-color, #000);
   text-decoration: none;
+
+
 }
 .theme-dark .site-header__logo {
   color: #fff;
@@ -201,6 +209,9 @@ export default {
 
 .site-header__nav-item {
   margin-left: 1.5rem;
+}
+.site-header__nav-item:first-child {
+  margin-left: 0;
 }
 
 .site-header__nav-item a {
@@ -273,6 +284,36 @@ export default {
 .site-header__mobile-nav-item a:hover {
   color: #666;
 }
+
+/* --- Theme-based Styling for Text --- */
+
+.site-header.theme-light {
+  color: #000000;
+}
+.site-header.theme-light .git {
+  color: blue;
+}
+.site-header.theme-light .git-branch {
+  color: red;
+}
+
+.site-header.theme-dark {
+  color: #ffffff;
+}
+.site-header.theme-dark .git {
+  color: #82aaff;
+}
+.site-header.theme-dark .git-branch {
+  color: #ff8282;
+}
+.site-header.theme-dark .git-paren {
+  color: #82aaff;
+}
+.site-header.theme-dark .git-emoji {
+  color: yellow;
+}
+
+
 
 /* Responsive Styles */
 @media (max-width: 768px) {

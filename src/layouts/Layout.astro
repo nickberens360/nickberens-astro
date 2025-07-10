@@ -10,9 +10,10 @@ export interface Props {
     title?: string;
     description?: string;
     favicon?: string;
+    headerVariant?: string;
 }
 
-const {title, description, favicon} = Astro.props;
+const {title, description, favicon, headerVariant = 'default'} = Astro.props;
 const gitBranch = getGitBranch();
 const commitHash = getLatestCommitHash();
 const commitMessage = getLatestCommitMessage();
@@ -27,7 +28,7 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<SiteHeader gitBranch={gitBranch} client:load />
+<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:load />
 <slot/>
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
 </body>

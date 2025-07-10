@@ -68,6 +68,9 @@ export default {
 .page-section--full-width {
   padding: 4rem 0;
 }
+.page-section--full-width.page-section--full-height {
+  padding: 0;
+}
 
 .page-section__inner--full-width {
   width: 100%;

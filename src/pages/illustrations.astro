@@ -2,10 +2,14 @@
 import Layout from '../layouts/Layout.astro';
 import PageSection from '../components/PageSection.vue';
 import snakeFlying from '../assets/images/snake-flying.png';
+import flyingRobot from '../assets/images/flying-robot.png';
+import vulture from '../assets/images/vulture.png';
+import hideOut from '../assets/images/hide-out.png';
+import smalltime from '../assets/images/smalltime.png';
 import { Image } from 'astro:assets';
 ---
 
-<Layout title="Illustrations" description="Illustrations - Nick Berens">
+<Layout title="Illustrations" description="Illustrations - Nick Berens" headerVariant="pod">
 	<PageSection
 		data-section-color="#ccebfe"
 		background-color="#ccebfe"
@@ -15,10 +19,70 @@ import { Image } from 'astro:assets';
 	>
 		<Image
 			src={snakeFlying}
-			alt="Vue Atomic Docs Project"
+			alt="Snake Illustration"
 			style="max-width: 100%; height: auto;"
 		/>
 	</PageSection>
+	<PageSection
+		data-section-color="#dcb1bb"
+		background-color="#dcb1bb"
+		data-section-theme="light"
+		full-width
+		full-height
+	>
+		<Image
+			src={flyingRobot}
+			alt="Robot Illustration"
+			style="max-width: 100%; height: auto;"
+		/>
+	</PageSection>
+	<PageSection
+		data-section-color="#baeeff"
+		background-color="#baeeff"
+		data-section-theme="light"
+		full-width
+		full-height
+	>
+		<Image
+			src={vulture}
+			alt="Vulture Illustration"
+			style="max-width: 100%; height: auto;"
+		/>
+	</PageSection>
+
+	<PageSection
+		data-section-color="#cdcdcd"
+		background-color="#cdcdcd"
+		data-section-theme="light"
+		full-width
+		full-height
+	>
+		<Image
+			src={hideOut}
+			alt="Hideout Illustration"
+			style="max-width: 100%; height: auto;"
+		/>
+	</PageSection>
+
+	<PageSection
+		data-section-color="#a3f6ff"
+		background-color="#a3f6ff"
+		data-section-theme="light"
+		full-width
+		full-height
+	>
+		<Image
+			src={smalltime}
+			alt="Smalltime Illustration"
+			style="max-width: 100%; height: auto;"
+		/>
+	</PageSection>
+
+
+
+
+
+
 </Layout>
 
 <style>
