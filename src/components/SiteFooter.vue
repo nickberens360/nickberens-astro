@@ -1,12 +1,16 @@
 <template>
-  <footer class="site-footer theme-dark" :class="[`theme-${theme}`]">
+  <footer
+    class="site-footer"
+    :class="[`theme-${computedTheme}`]"
+    :style="computedBackgroundColor ? { backgroundColor: computedBackgroundColor } : {}"
+  >
     <div class="site-footer__container">
       <div class="site-footer__content">
         <p class="copyright">
-          <span style="color: rgba(255,255,0,0.74)">© 2025 Nick Berens</span>
+          <span class="font-bold">© 2025 Nick Berens</span>
         </p>
         <p class="site-footer__text">
-          <span class="git">git: <span class="git-paren">(</span><span class="git-hash">
+          <span class="git">latest-commit: <span class="git-paren">(</span><span class="git-hash">
             <span class="tooltip-container">
               <a :href="`${repoUrl}/commit/${commitHash}`" target="_blank" rel="noopener noreferrer">
                 {{ commitHash }}
@@ -39,6 +43,37 @@ export default {
     theme: {
       type: String,
       default: 'light'
+    },
+    backgroundColor: {
+      type: String,
+      default: null
+    }
+  },
+  data() {
+    return {
+      lastSectionColor: null,
+      lastSectionTheme: null
+    }
+  },
+  computed: {
+    computedTheme() {
+      return this.lastSectionTheme || this.theme;
+    },
+    computedBackgroundColor() {
+      return this.lastSectionColor || this.backgroundColor;
+    }
+  },
+  mounted() {
+    // Find all page sections
+    const pageSections = document.querySelectorAll('.page-section');
+
+    // If there are page sections, get the last one
+    if (pageSections.length > 0) {
+      const lastSection = pageSections[pageSections.length - 1];
+
+      // Get data attributes
+      this.lastSectionColor = lastSection.dataset.sectionColor || null;
+      this.lastSectionTheme = lastSection.dataset.sectionTheme || null;
     }
   }
 }
@@ -134,11 +169,6 @@ export default {
   text-decoration: underline;
 }
 
-/*.site-footer.theme-dark {
-  color: #ffffff;
-  background-color: #333333;
-}*/
-
 .site-footer.theme-dark .git {
   color: #82aaff;
 }
@@ -161,6 +191,16 @@ export default {
   font-size: 0.9rem;
   margin-right: 2rem;
 }
+
+.theme-light .copyright {
+  color: black;
+}
+
+.theme-dark .copyright {
+  color: yellow;
+}
+
+
 
 @media (max-width: 768px) {
   .site-footer__text, .copyright {
