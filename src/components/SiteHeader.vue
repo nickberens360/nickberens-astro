@@ -18,10 +18,11 @@
 
       <button
         class="site-header__hamburger"
-        :class="{ 'is-active': isMobileMenuOpen }"
+        :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
         @click="toggleMobileMenu"
         aria-label="Toggle menu"
         v-show="useMobileLayout"
+        :style="variant === 'pod' ? headerStyles : {}"
       >
         🍔
       </button>
@@ -77,7 +78,6 @@ library.add(faGithub)
 
 export default {
   name: 'SiteHeader',
-  // --- ADD THIS COMPONENTS OBJECT ---
   components: {
     FontAwesomeIcon
   },
@@ -293,7 +293,7 @@ export default {
   justify-content: center;
   height: 85%;
   padding: 0 1.5rem;
-  border-radius: 100px;
+  border-radius: 200px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
 
@@ -318,7 +318,7 @@ export default {
 
 .site-header__logo p {
   margin: 0;
-  font-size: clamp(1.2rem, 1.2rem + 0.5vw, 1.5rem);
+  font-size: clamp(1rem, 1rem + 0.5vw, 1.5rem);
   font-weight: bold;
 }
 
