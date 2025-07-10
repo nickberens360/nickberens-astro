@@ -82,7 +82,7 @@ export default {
 <style scoped>
 .site-footer {
   padding: 1rem 0;
-  width: 100vh;
+  width: 100%;
   transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
   border-top: 1px dashed #222222;
 }
