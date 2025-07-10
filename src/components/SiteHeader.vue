@@ -361,7 +361,7 @@ export default {
   font-size: 2rem;
   line-height: 1;
   padding: 10px;
-  margin-right: -10px; /* Offset the padding */
+  /*margin-right: -10px;*/
 }
 
 .site-header__hamburger span {
