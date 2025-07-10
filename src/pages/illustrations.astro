@@ -1,0 +1,39 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageSection from '../components/PageSection.vue';
+import snakeFlying from '../assets/images/snake-flying.png';
+import { Image } from 'astro:assets';
+---
+
+<Layout title="Illustrations" description="Illustrations - Nick Berens">
+	<PageSection
+		data-section-color="#ccebfe"
+		background-color="#ccebfe"
+		data-section-theme="light"
+		full-width
+		full-height
+	>
+		<Image
+			src={snakeFlying}
+			alt="Vue Atomic Docs Project"
+			style="max-width: 100%; height: auto;"
+		/>
+	</PageSection>
+</Layout>
+
+<style>
+	.features-list {
+		list-style-type: none;
+		padding: 0;
+		margin: 1rem 0;
+	}
+
+	.features-list li {
+		margin-bottom: 1rem;
+		padding: 0 .5rem;
+	}
+
+	.features-list li strong {
+		font-weight: bold;
+	}
+</style>
