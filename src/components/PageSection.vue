@@ -34,7 +34,7 @@ export default {
   computed: {
     themeClass() {
       const theme = this.$attrs['data-section-theme'];
-      return theme ? `text-${theme}` : '';
+      return theme ? `text-on-${theme}` : '';
     }
   },
 }
