@@ -14,4 +14,17 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    inlineStylesheets: 'auto', // 'auto' or 'always' to inline small stylesheets
+  },
+  vite: {
+    build: {
+      cssMinify: true,
+      cssCodeSplit: true,
+    },
+    css: {
+      // Enable CSS code splitting
+      splitSelectors: true,
+    }
+  }
 });
