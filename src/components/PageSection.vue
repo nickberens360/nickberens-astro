@@ -58,16 +58,18 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 4rem 1.5rem;
-}
-
-.page-section--full-height {
-  min-height: calc(100vh - var(--site-header-height));
-  padding: 0 1.5rem;
+  width: 100vh;
 }
 
 .page-section__inner {
   width: 100%;
   margin: 0 auto;
+}
+
+
+/*.page-section--full-height {
+  min-height: calc(100vh - var(--site-header-height));
+  padding: 0 1.5rem;
 }
 
 .page-section--full-width {
@@ -78,7 +80,7 @@ export default {
 }
 .page-section--no-padding {
   padding: 0;
-}
+}*/
 
 .page-section__inner--full-width {
   width: 100%;
