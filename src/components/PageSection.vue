@@ -1,13 +1,17 @@
 <template>
   <section
     class="page-section"
-    :class="{ 'page-section--full-height': fullHeight }"
+    :class="{
+      'page-section--full-height': fullHeight,
+      'page-section--full-width': fullWidth,
+      'page-section--no-padding': noPadding,
+    }"
     :style="{ backgroundColor: backgroundColor }"
   >
     <div
       class="page-section__inner"
-      :class="themeClass"
-      :style="{ maxWidth: width + 'px' }"
+      :class="[themeClass, { 'page-section__inner--full-width': fullWidth }]"
+      :style="fullWidth ? {} : { maxWidth: width + 'px' }"
     >
       <slot></slot>
     </div>
@@ -23,6 +27,14 @@ export default {
       default: 'transparent'
     },
     fullHeight: {
+      type: Boolean,
+      default: false
+    },
+    fullWidth: {
+      type: Boolean,
+      default: false
+    },
+    noPadding: {
       type: Boolean,
       default: false
     },
@@ -56,5 +68,20 @@ export default {
 .page-section__inner {
   width: 100%;
   margin: 0 auto;
+}
+
+.page-section--full-width {
+  padding: 4rem 0;
+}
+.page-section--full-width.page-section--full-height {
+  padding: 0;
+}
+.page-section--no-padding {
+  padding: 0;
+}
+
+.page-section__inner--full-width {
+  width: 100%;
+  padding: 0;
 }
 </style>
