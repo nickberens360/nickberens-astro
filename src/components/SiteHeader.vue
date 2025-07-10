@@ -13,7 +13,7 @@
         :style="variant === 'pod' ? headerStyles : {}"
         ref="logo"
       >
-        <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji"> ✗ </span></p>
+        <p>nickberens <span class="git">git: <span class="git-paren">(</span><span class="git-branch">{{ gitBranch }}</span><span class="git-paren">)</span></span><span class="git-emoji d-none-xs"> ✗ </span></p>
       </a>
 
       <button
