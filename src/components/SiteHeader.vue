@@ -3,7 +3,6 @@
     class="site-header"
     :class="[
       `theme-${overlayTheme}`,
-       useMobileLayout ? 'mobile-layout' : '',
       ]"
     :style="variant !== 'pod' ? headerStyles : {}"
     ref="siteHeader"
@@ -22,7 +21,7 @@
             <span class="git-branch">{{ gitBranch }}</span>
             <span class="git-paren">)</span>
           </span>
-<!--          <span class="git-emoji d-none"> ✗ </span>-->
+          <!--          <span class="git-emoji d-none"> ✗ </span>-->
         </p>
       </a>
 
@@ -31,7 +30,6 @@
         :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
         @click="toggleMobileMenu"
         aria-label="Toggle menu"
-        v-show="useMobileLayout"
         :style="variant === 'pod' ? headerStyles : {}"
       >
         🍔
@@ -39,7 +37,7 @@
 
       <nav
         class="site-header__nav"
-        :class="[variant === 'pod' ? 'pod' : '', {'hidden': useMobileLayout}]"
+        :class="[variant === 'pod' ? 'pod' : '']"
         :style="variant === 'pod' ? headerStyles : {}"
         ref="nav"
       >
@@ -79,12 +77,9 @@
 <script>
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
-// --- ADD THESE IMPORTS ---
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
-// --- ADD THE ICON TO THE LIBRARY ---
 library.add(faGithub)
-
 
 export default {
   name: 'SiteHeader',
@@ -107,8 +102,7 @@ export default {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
       isMobileMenuOpen: false,
-      isMounted: false,
-      useMobileLayout: false
+      isMounted: false
     };
   },
   computed: {
@@ -123,122 +117,13 @@ export default {
   },
   mounted() {
     this.isMounted = true;
-
-    // Create debounced versions of methods
-    this.debouncedCheckLayout = this.debounce(this.checkLayoutNeeds, 100);
-
-    // Use debounced version for resize events
     window.addEventListener('scroll', this.handleScroll, { passive: true });
-    window.addEventListener('resize', this.debouncedCheckLayout, { passive: true });
     this.handleScroll();
-
-    // Initial layout check might need to be delayed to ensure refs are available
-    this.$nextTick(() => {
-      this.checkLayoutNeeds();
-
-      // Force another check after a short delay to ensure everything is rendered
-      setTimeout(() => {
-        this.checkLayoutNeeds();
-      }, 100);
-    });
-
-    // For more precise tracking, use ResizeObserver
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => {
-        this.debouncedCheckLayout();
-      });
-      this.resizeObserver.observe(this.$refs.siteHeader);
-    }
   },
   beforeDestroy() {
     window.removeEventListener('scroll', this.handleScroll);
-    window.removeEventListener('resize', this.debouncedCheckLayout);
-
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
   },
   methods: {
-    debounce(func, wait) {
-      let timeout;
-      return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-      };
-    },
-    checkLayoutNeeds() {
-      if (!this.$refs.logo || !this.$refs.nav) {
-        return;
-      }
-
-      const logoRect = this.$refs.logo.getBoundingClientRect();
-      const headerWidth = this.$refs.siteHeader.clientWidth;
-      const logoRightEdge = logoRect.right;
-
-      // Use percentage-based buffer instead of fixed 20px
-      const bufferPercentage = 0.05; // 5% of header width
-      const buffer = headerWidth * bufferPercentage;
-
-      // Consider device pixel ratio for high-DPI displays
-      const pixelRatio = window.devicePixelRatio || 1;
-      const scaledBuffer = buffer * pixelRatio;
-
-      // Improved measurement of hidden nav element
-      const navElement = this.$refs.nav;
-      const wasHidden = navElement.classList.contains('hidden');
-      let navWidth;
-
-      // Create a clone for measurement instead of manipulating the original
-      if (wasHidden) {
-        const navClone = navElement.cloneNode(true);
-        navClone.style.position = 'absolute';
-        navClone.style.visibility = 'hidden';
-        navClone.style.display = 'block';
-        navClone.classList.remove('hidden');
-        document.body.appendChild(navClone);
-
-        navWidth = navClone.getBoundingClientRect().width;
-        document.body.removeChild(navClone);
-      } else {
-        navWidth = navElement.getBoundingClientRect().width;
-      }
-
-      // Calculate margins between nav items
-      const navItems = navElement.querySelectorAll('.site-header__nav-item');
-      let totalNavItemsMargin = 0;
-
-      if (navItems.length > 1) {
-        // Get the actual margins from computed styles
-        const firstItemStyle = window.getComputedStyle(navItems[0]);
-        const marginLeft = parseFloat(firstItemStyle.marginLeft);
-        // Account for margins between items
-        totalNavItemsMargin = marginLeft * (navItems.length - 1);
-      }
-
-      // Add margins to the effective nav width
-      const effectiveNavWidth = navWidth + totalNavItemsMargin;
-
-      // Calculate available space with percentage-based buffer
-      const availableSpace = headerWidth - logoRightEdge - scaledBuffer;
-
-      // Add a breakpoint safety mechanism
-      const minDesktopWidth = 768; // Common tablet breakpoint
-      const shouldUseMobileLayout =
-        (effectiveNavWidth > availableSpace) || (window.innerWidth < minDesktopWidth);
-
-      console.log('Layout check:', {
-        headerWidth,
-        logoRightEdge,
-        buffer: scaledBuffer,
-        availableSpace,
-        navWidth: effectiveNavWidth,
-        shouldUseMobileLayout,
-        wasHidden,
-        devicePixelRatio: pixelRatio
-      });
-
-      this.useMobileLayout = shouldUseMobileLayout;
-    },
     toggleMobileMenu() {
       this.isMobileMenuOpen = !this.isMobileMenuOpen;
       document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : '';
@@ -281,8 +166,6 @@ export default {
   height: var(--site-header-height);
 }
 
-
-
 .site-header__container {
   margin: 0 auto;
   padding: 0 1.5rem;
@@ -301,7 +184,6 @@ export default {
   border-radius: 200px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
-
 }
 
 .theme-dark .pod {
@@ -313,18 +195,21 @@ export default {
   z-index: 1002;
   color: var(--text-color, #000);
   text-decoration: none;
-
-
 }
+
 .theme-dark .site-header__logo {
   color: #fff;
 }
-
 
 .site-header__logo p {
   margin: 0;
   font-size: clamp(1rem, 1rem + 0.5vw, 1.5rem);
   font-weight: bold;
+}
+
+/* Desktop Navigation - Hidden on mobile */
+.site-header__nav {
+  display: block;
 }
 
 .site-header__nav-list {
@@ -338,6 +223,7 @@ export default {
 .site-header__nav-item {
   margin-left: 1.5rem;
 }
+
 .site-header__nav-item:first-child {
   margin-left: 0;
 }
@@ -352,8 +238,9 @@ export default {
   color: #666;
 }
 
-/* Hamburger Menu Button */
+/* Hamburger Menu Button - Hidden on desktop */
 .site-header__hamburger {
+  display: none;
   background: none;
   border: none;
   cursor: pointer;
@@ -361,16 +248,6 @@ export default {
   font-size: 2rem;
   line-height: 1;
   padding: 10px;
-  /*margin-right: -10px;*/
-}
-
-.site-header__hamburger span {
-  display: block;
-  width: 25px;
-  height: 3px;
-  margin: 5px 0;
-  background-color: #000;
-  transition: all 0.3s ease;
 }
 
 /* Mobile Navigation */
@@ -414,19 +291,33 @@ export default {
   color: #666;
 }
 
-/* Hidden class for dynamic layout switching */
-.hidden {
-  display: none;
+/* Media Query for Mobile Layout */
+@media (max-width: 768px) {
+  /* Hide desktop navigation */
+  .site-header__nav {
+    display: none;
+  }
+
+  /* Show hamburger menu */
+  .site-header__hamburger {
+    display: block;
+  }
+
+  /* Show mobile navigation menu */
+  .site-header__mobile-nav {
+    display: block;
+  }
 }
 
-/* --- Theme-based Styling for Text --- */
-
+/* Theme-based Styling for Text */
 .site-header.theme-light {
   color: #000000;
 }
+
 .site-header.theme-light .git {
   color: blue;
 }
+
 .site-header.theme-light .git-branch {
   color: red;
 }
@@ -434,26 +325,21 @@ export default {
 .site-header.theme-dark {
   color: #ffffff;
 }
+
 .site-header.theme-dark .git {
   color: #82aaff;
 }
+
 .site-header.theme-dark .git-branch {
   color: #ff8282;
 }
+
 .site-header.theme-dark .git-paren {
   color: #82aaff;
 }
+
 .site-header.theme-dark .git-emoji {
   color: yellow;
-}
-
-
-
-/* Dynamic Layout Styles */
-/* Hamburger is controlled by v-show="useMobileLayout" */
-/* Mobile nav is always in the DOM but transformed off-screen by default */
-.site-header__mobile-nav {
-  display: block;
 }
 
 /* Hamburger animation when menu is open */
