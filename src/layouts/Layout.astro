@@ -31,6 +31,13 @@ const repoUrl = getGitHubRepoUrl();
 <SiteHeader gitBranch={gitBranch} variant={headerVariant} client:load />
 <slot/>
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
+
+<script>
+  // Initialize the viewport height calculation
+  import { initViewportHeight } from '../utils/viewportHeight.js';
+  document.addEventListener('DOMContentLoaded', () => {
+    initViewportHeight();
+  });
+</script>
 </body>
 </html>
-
