@@ -93,6 +93,12 @@ export default {
   display: inline-block;
 }
 
+@media (max-width: 768px) {
+  .site-footer__text {
+    font-size: 0.8rem;
+  }
+}
+
 .tooltip {
   visibility: hidden;
   position: absolute;
@@ -203,8 +209,11 @@ export default {
 
 
 @media (max-width: 768px) {
-  .site-footer__text, .copyright {
-    font-size: 0.8rem;
+  .site-footer {
+    padding: .5rem 0;
+  }
+  .site-footer__container, .site-footer__content {
+    display: block;
   }
 }
 </style>

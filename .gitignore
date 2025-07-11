@@ -2,7 +2,9 @@
 dist/
 # generated types
 .astro/
-
+.BAK/
+*.bak
+*.BAK
 # dependencies
 node_modules/
 
