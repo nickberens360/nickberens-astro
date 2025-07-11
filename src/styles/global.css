@@ -5,8 +5,21 @@
 }
 
 /* Smooth Scrolling */
+
 html {
+    font-family: var(--font-primary), sans-serif;
+    background-color: var(--background-color, #f6f6f6);
+    color: var(--text-color, #111);
     scroll-behavior: smooth;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
 }
 
 /* Font and Spacing Variables */
