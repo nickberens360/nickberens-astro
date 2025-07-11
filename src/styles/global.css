@@ -8,8 +8,8 @@
 
 html {
     font-family: var(--font-primary), sans-serif;
-    background-color: #f6f6f6;
-    color: #111;
+    background-color: var(--background-color, #f6f6f6);
+    color: var(--text-color, #111);
     scroll-behavior: smooth;
 }
 
