@@ -67,12 +67,7 @@ export default {
 
 
 .page-section--full-height {
-  /* Fallback for browsers that don't support dvh */
   min-height: calc(100vh - var(--site-header-height));
-  /* Use the custom --vh property as a fallback */
-  min-height: calc((var(--vh, 1vh) * 100) - var(--site-header-height));
-  /* Use dvh when supported */
-  min-height: calc(100dvh - var(--site-header-height));
 }
 
 .page-section--full-width {
