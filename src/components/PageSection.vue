@@ -68,6 +68,8 @@ export default {
 
 .page-section--full-height {
   min-height: calc(100vh - var(--site-header-height));
+  min-height: -webkit-fill-available;
+
 }
 
 .page-section--full-width {
