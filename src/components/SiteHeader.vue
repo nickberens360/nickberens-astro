@@ -8,14 +8,14 @@
     ref="siteHeader"
   >
     <div class="site-header__container">
+      <div class="site-header__logo d-flex align-center">
       <a
         href="/"
-        class="site-header__logo"
         :class="variant === 'pod' ? 'pod' : ''"
         :style="variant === 'pod' ? headerStyles : {}"
         ref="logo"
       >
-        <p>nickberens
+        <p class="site-header__name">nickberens
           <span class="git">git:
             <span class="git-paren">(</span>
             <span class="git-branch">{{ gitBranch }}</span>
@@ -24,6 +24,10 @@
           <!--          <span class="git-emoji d-none"> ✗ </span>-->
         </p>
       </a>
+        <TerminalInput
+          v-model="inputValue"
+        />
+      </div>
 
       <button
         class="site-header__hamburger"
@@ -78,12 +82,14 @@
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import TerminalInput from './TerminalInput.vue';
 
 library.add(faGithub)
 
 export default {
   name: 'SiteHeader',
   components: {
+    TerminalInput,
     FontAwesomeIcon
   },
   props: {
@@ -102,7 +108,8 @@ export default {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
       isMobileMenuOpen: false,
-      isMounted: false
+      isMounted: false,
+      inputValue: 'Sh!t'
     };
   },
   computed: {
@@ -186,6 +193,15 @@ export default {
 }
 
 .theme-dark .site-header__logo {
+  color: #fff;
+}
+
+.site-header__logo a {
+  color: black;
+  text-decoration: none;
+}
+
+.theme-dark .site-header__logo a {
   color: #fff;
 }
 
