@@ -5,7 +5,9 @@ import icon from "astro-icon";
 
 export default defineConfig({
   integrations: [
-    vue(),
+    vue({
+      appEntrypoint: '/src/app'
+    }),
     mdx(),
     icon({
       // Define the icon packs to include

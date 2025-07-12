@@ -19,6 +19,8 @@
 </template>
 
 <script>
+import { useUiStore } from '../stores/uiStore';
+
 export default {
   name: 'TerminalInput',
   props: {
@@ -41,12 +43,19 @@ export default {
       isFocused: true
     };
   },
+  setup() {
+    const uiStore = useUiStore();
+    return { uiStore };
+  },
   mounted() {
     const el = this.$refs.editableDiv;
     el.textContent = this.modelValue;
     el.focus();
     this.setCaretToEnd(el);
     this.isEmpty = !this.modelValue || this.modelValue === '$';
+
+    // Initialize store with current value
+    this.uiStore.updateTerminalInputText(this.modelValue);
   },
   watch: {
     modelValue(newValue) {
@@ -55,6 +64,9 @@ export default {
         el.textContent = newValue;
         this.setCaretToEnd(el);
         this.isEmpty = !newValue || newValue === '$';
+
+        // Update store when modelValue changes
+        this.uiStore.updateTerminalInputText(newValue);
       }
     }
   },
@@ -63,6 +75,9 @@ export default {
       const content = event.target.textContent;
       this.$emit('update:modelValue', content);
       this.isEmpty = !content || content === '$';
+
+      // Update the Pinia store with the new text
+      this.uiStore.updateTerminalInputText(content);
     },
     handleKeydown(event) {
       if (event.key === 'Enter' && this.submitOnEnter) {
@@ -81,6 +96,9 @@ export default {
       this.$emit('update:modelValue', el.textContent);
       this.isEmpty = true;
       this.setCaretToEnd(el);
+
+      // Update the Pinia store when clearing the input
+      this.uiStore.updateTerminalInputText(el.textContent);
     },
     onFocus() {
       this.isFocused = true;

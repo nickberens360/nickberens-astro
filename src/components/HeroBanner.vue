@@ -2,6 +2,8 @@
   <section class="hero-banner">
     <div class="hero-content">
       <div class="hero-banner__heading">
+<!--        add pinia data here-->
+        <div class="terminal-text">{{ terminalInputText }}</div>
       <slot name="heading">
         <h1>{{heading}}</h1>
       </slot>
@@ -14,6 +16,9 @@
 </template>
 
 <script>
+import { useUiStore } from '../stores/uiStore';
+import { computed } from 'vue';
+
 export default {
   name: 'HeroBanner',
   props: {
@@ -29,6 +34,17 @@ export default {
       type: String,
       default: '#d3a6fe'
     }
+  },
+  setup() {
+    const uiStore = useUiStore();
+    console.log('HeroBanner mounted');
+
+    // Use computed to reactively access the store data
+    const terminalInputText = computed(() => uiStore.getTerminalInputText);
+    console.log('Terminal Input Text:', terminalInputText.value);
+    return {
+      terminalInputText
+    };
   }
 }
 </script>
@@ -51,6 +67,10 @@ export default {
 .hero-banner__heading  *{
   margin-bottom: 1rem;
   font-size: clamp(2.5rem, 7vw, 10.5rem);
+}
 
+.terminal-text {
+  font-family: monospace;
+  margin-bottom: 1rem;
 }
 </style>
