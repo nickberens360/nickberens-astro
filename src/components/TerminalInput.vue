@@ -5,8 +5,10 @@
       :contenteditable="true"
       @input="updateValue"
       @keydown="handleKeydown"
-      @focus="isFocused = true"
+      @focus="onFocus"
       @blur="isFocused = false"
+      @click="onFocus"
+      @mouseup="onFocus"
       class="terminal-input"
       ref="editableDiv"
       autofocus
@@ -36,7 +38,7 @@ export default {
   data() {
     return {
       isEmpty: true,
-      isFocused: false
+      isFocused: true
     };
   },
   mounted() {
@@ -80,9 +82,25 @@ export default {
       this.isEmpty = true;
       this.setCaretToEnd(el);
     },
+    onFocus() {
+      this.isFocused = true;
+      // Use setTimeout to ensure the caret positioning happens after any default browser behavior
+      setTimeout(() => {
+        this.setCaretToEnd(this.$refs.editableDiv);
+      }, 0);
+    },
     setCaretToEnd(el) {
+      if (!el) return;
+
+      // Method 1: Using Range API (your current approach)
       const range = document.createRange();
       const selection = window.getSelection();
+
+      // Make sure there's content or at least a text node
+      if (el.childNodes.length === 0) {
+        el.appendChild(document.createTextNode(''));
+      }
+
       range.selectNodeContents(el);
       range.collapse(false); // Move caret to end
       selection.removeAllRanges();
@@ -106,7 +124,7 @@ export default {
   height: 20px;
 }
 .terminal-input::selection {
-  background-color: #00ff00;
+  background-color: white;
 }
 
 @keyframes blink {
@@ -125,11 +143,11 @@ export default {
   width: 10px;
   background-color: white;
   pointer-events: none;
-  animation: blink 1s infinite;
+  animation: unset;
 }
 
 .focused.terminal-input:after {
-  background-color: #00ff00;
+  animation: blink 1s infinite;
 }
 
 /* Add focus styles if needed */
