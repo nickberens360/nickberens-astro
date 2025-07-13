@@ -210,6 +210,7 @@ export default {
   z-index: 1002;
   color: var(--text-color, #000);
   text-decoration: none;
+  height: 100%;
 }
 
 .theme-dark .site-header__logo {
