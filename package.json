@@ -21,8 +21,10 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/vue-fontawesome": "^3.0.8",
     "@iconify-json/fa-brands": "^1.2.1",
+    "@nanostores/vue": "^1.0.1",
     "astro": "^5.11.0",
     "astro-icon": "^1.1.5",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.21",
+    "nanostores": "^1.0.1"
   }
 }

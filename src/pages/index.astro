@@ -2,75 +2,122 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
+import {terminalInputValue} from '../stores/ui';
+
+// Get the initial value for server-side rendering
+const initialCurseWord = terminalInputValue.get();
 ---
 
 <Layout
-	title="Nick Berens | Sh00t"
-	description="Nick Berens - Frontend Developer"
+    title="Nick Berens | Sh00t"
+    description="Nick Berens - Frontend Developer"
 >
-	<HeroBanner
-		data-section-color="#d3a6fe"
-	>
-		<h1 slot="heading">
-			One time I said the word
-			<span class="highlight">Sh!t</span>
-			during an interview&nbsp;🙀.
-		</h1>
-		<p slot="content"><a href="#interview" style="color: blue"><strong>( I didn't get the job )</strong></a></p>
-	</HeroBanner>
-	<PageSection
-		id="interview"
-		data-section-color="yellow"
-		background-color="yellow"
-		width="1200"
-		full-height
-	>
-		<h2 class="text-hero">It's true.</h2>
-		<p class="text-xl"><span class="font-bold">Interviewer</span>: What do you value in your teammates?</p>
-		<p class="text-xl"><span class="font-bold">Dummy</span>: I value a healthy team culture over all else. I love working with passionate people that love building cool <span class="highlight"><sup>*</sup>sh!t</span>!</p>
-		<p class="text-md text-center font-bold">*oops</p>
-	</PageSection>
+  <HeroBanner
+      data-section-color="#d3a6fe"
+      data-has-terminal-input="true"
+      client:load
+  >
+    <p slot="content">
+      <a
+          href="#interview"
+          style="color: blue"
+      ><strong>( I didn't get the job )</strong></a>
+    </p>
+  </HeroBanner>
+  <PageSection
+      id="interview"
+      data-section-color="yellow"
+      background-color="yellow"
+      width="1200"
+      full-height
+  >
+    <h2 class="text-hero">It's true.</h2>
+    <p class="text-xl">
+      <span class="font-bold">Interviewer</span>
+      : What do you value in your teammates?
+    </p>
+    <p class="text-xl">
+      <span class="font-bold">Dummy</span>
+      : I value a healthy team culture over all else. I love working with passionate people that love building cool
+      <span class="highlight"><sup>*</sup><span id="curse-word">{initialCurseWord}</span></span>
+      !
+    </p>
+    <p class="text-md text-center font-bold">*oops</p>
+  </PageSection>
 
-	<PageSection
-		id="recruiter"
-		data-section-color="lightblue"
-		background-color="lightblue"
-		width="1200"
-		full-height
-	>
-		<h2 class="text-hero">Note from my recruiter.</h2>
-		<p class="text-xl">"They thought you had a great skill set for the position, but because of the curse word you wouldn't be a good fit culturally."</p>
-		<p>Love, Jacob the Recruiter</p>
-	</PageSection>
+  <PageSection
+      id="recruiter"
+      data-section-color="lightblue"
+      background-color="lightblue"
+      data-has-terminal-input="false"
+      width="1200"
+      full-height
+  >
+    <h2 class="text-hero">Note from my recruiter.</h2>
+    <p class="text-xl">"They thought you had a great skill set for the position, but because of the curse word you
+      wouldn't be a good fit culturally."</p>
+    <p>Love, Jacob the Recruiter</p>
+  </PageSection>
 
-	<PageSection
-		data-section-color="lightgreen"
-		background-color="lightgreen"
-		width="1200"
-		full-height
-	>
-		<h2 class="text-hero">NOW LET ME BE CLEAR.</h2>
-		<p class="text-fluid-lg">I for sure understand this was a me problem and completely understand where they are coming from and hold no ill will nor resentments towards the company and their values at all.</p>
-		<p class="text-lg ">I was definitely bummed that I didn't get the position. It really did seem like it would be a good fit and the person that interviewed me was super cool.</p>
-		<p class="text-lg">I am more just disappointed in myself, but when I get excited about a topic sometimes I drop a curse word.</p>
-	</PageSection>
+  <PageSection
+      data-section-color="lightgreen"
+      background-color="lightgreen"
+      width="1200"
+      full-height
+  >
+    <h2 class="text-hero">NOW LET ME BE CLEAR.</h2>
+    <p class="text-fluid-lg">I for sure understand this was a me problem and completely understand where they are coming
+      from and hold no ill will nor resentments towards the company and their values at all.</p>
+    <p class="text-lg ">I was definitely bummed that I didn't get the position. It really did seem like it would be a
+      good fit and the person that interviewed me was super cool.</p>
+    <p class="text-lg">I am more just disappointed in myself, but when I get excited about a topic sometimes I drop a
+      curse word.</p>
+  </PageSection>
 
-	<PageSection
-		id="contact"
-		data-section-color="black"
-		data-section-theme="dark"
-		background-color="black"
-		width="1200"
-		full-height
-	>
-		<div>
-			<h2 class="text-hero">But...</h2>
-			<p class="text-fluid-lg text-wrap">If you're looking for a passionate Javascript, Vue, Nuxt, UI, UX, Astro, WordPress, Prismic, What-else-you-got frontend developer with 14 years of experience who says <span class="highlight-yellow">Shit</span> every now and then, hit me up!</p>
-			<div class="text-center">
-				<a class="text-fluid-md" href="mailto:nickberens360@gmail.com" style="color: #82aaff">nickberens360@gmail.com</a>
-			</div>
+  <PageSection
+      id="contact"
+      data-section-color="black"
+      data-section-theme="dark"
+      background-color="black"
+      width="1200"
+      full-height
+  >
+    <div>
+      <h2 class="text-hero">But...</h2>
+      <p class="text-fluid-lg text-wrap">If you're looking for a passionate Javascript, Vue, Nuxt, UI, UX, Astro,
+        WordPress, Prismic, What-else-you-got frontend developer with 14 years of experience who says
+        <span
+            id="contact-curse-word"
+            class="highlight-yellow"
+        >{initialCurseWord}</span>
+        every now and then, hit me up!
+      </p>
+      <div class="text-center">
+        <a
+            class="text-fluid-md"
+            href="mailto:nickberens360@gmail.com"
+            style="color: #82aaff"
+        >nickberens360@gmail.com
+        </a>
+      </div>
 
-		</div>
-	</PageSection>
+    </div>
+  </PageSection>
+
+  <script>
+
+      import {terminalInputValue} from '../stores/ui';
+      document.addEventListener('DOMContentLoaded', () => {
+          terminalInputValue.subscribe(value => {
+              const idsToUpdate = ['curse-word', 'contact-curse-word'];
+              idsToUpdate.forEach(id => {
+                  const element = document.getElementById(id);
+                  if (element) {
+                      element.textContent = value;
+                  }
+              });
+          })
+      })
+  </script>
 
 </Layout>
