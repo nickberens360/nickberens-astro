@@ -15,6 +15,7 @@ import dumbDoug from '../assets/images/dumb-doug.jpg';
 import poolShark from '../assets/images/pool-shark.jpg';
 import dougFightsBack from '../assets/images/doug-fights-back.jpg';
 import eatUsForFun from '../assets/images/eat-us-for-fun.jpg';
+import dont from '../assets/images/dont.jpg';
 import { Image } from 'astro:assets';
 ---
 
@@ -126,6 +127,7 @@ import { Image } from 'astro:assets';
 		data-section-theme="light"
 		full-width
 		no-padding
+		class="pt-16"
 	>
 		<Image
 			src={poolShark}
@@ -201,6 +203,20 @@ import { Image } from 'astro:assets';
 		<Image
 			src={eatUsForFun}
 			alt="Eat Us For Fun Illustration"
+			style="max-width: 100%; height: auto;"
+		/>
+	</PageSection>
+	<PageSection
+		data-section-color="#000"
+		data-section-theme="dark"
+		data-footer-color="#000"
+		background-color="#baeeff"
+		full-width
+		no-padding
+	>
+		<Image
+			src={dont}
+			alt="Don't Illustration"
 			style="max-width: 100%; height: auto;"
 		/>
 	</PageSection>
