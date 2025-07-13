@@ -11,7 +11,6 @@
       @mouseup="onFocus"
       class="terminal-input"
       ref="editableDiv"
-      autofocus
       :data-placeholder="placeholder"
       :class="{ 'empty': isEmpty, 'focused': isFocused }"
     ></div>
