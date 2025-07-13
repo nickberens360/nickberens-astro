@@ -71,8 +71,13 @@ export default {
     if (pageSections.length > 0) {
       const lastSection = pageSections[pageSections.length - 1];
 
+      if (lastSection.dataset.footerColor) {
+        this.lastSectionColor = lastSection.dataset.footerColor;
+      } else {
+        this.lastSectionColor = lastSection.dataset.sectionColor || null;
+      }
       // Get data attributes
-      this.lastSectionColor = lastSection.dataset.sectionColor || null;
+      // this.lastSectionColor = lastSection.dataset.sectionColor || null;
       this.lastSectionTheme = lastSection.dataset.sectionTheme || null;
     }
   }
