@@ -80,15 +80,13 @@ const initialCurseWord = terminalInputValue.get();
 
 		// Subscribe to changes
 		terminalInputValue.subscribe(value => {
-			const curseWordElement = document.getElementById('curse-word');
-			if (curseWordElement) {
-				curseWordElement.textContent = value;
-			}
-
-			const contactCurseWordElement = document.getElementById('contact-curse-word');
-			if (contactCurseWordElement) {
-				contactCurseWordElement.textContent = value;
-			}
+			const idsToUpdate = ['curse-word', 'contact-curse-word'];
+			idsToUpdate.forEach(id => {
+				const element = document.getElementById(id);
+				if (element) {
+					element.textContent = value;
+				}
+			});
 		});
 	</script>
 
