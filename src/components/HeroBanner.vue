@@ -39,7 +39,6 @@ export default {
   },
   setup() {
     const terminalInputValueStore = useStore(terminalInputValue);
-    console.log('HeroBanner mounted, terminalInputValue:', terminalInputValueStore);
     return {
       inputValue: terminalInputValueStore
     }
