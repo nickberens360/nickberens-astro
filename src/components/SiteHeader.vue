@@ -8,22 +8,26 @@
     ref="siteHeader"
   >
     <div class="site-header__container">
-      <a
-        href="/"
-        class="site-header__logo"
-        :class="variant === 'pod' ? 'pod' : ''"
-        :style="variant === 'pod' ? headerStyles : {}"
-        ref="logo"
-      >
-        <p>nickberens
-          <span class="git">git:
+      <div class="site-header__logo d-flex align-center">
+        <a
+          href="/"
+          :class="variant === 'pod' ? 'pod' : ''"
+          :style="variant === 'pod' ? headerStyles : {}"
+          ref="logo"
+        >
+          <p class="site-header__name">nickberens
+            <span class="git">git:
             <span class="git-paren">(</span>
             <span class="git-branch">{{ gitBranch }}</span>
             <span class="git-paren">)</span>
           </span>
-          <!--          <span class="git-emoji d-none"> ✗ </span>-->
-        </p>
-      </a>
+          </p>
+        </a>
+        <TerminalInput
+          v-if="maybeTerminalInput"
+        />
+      </div>
+
 
       <button
         class="site-header__hamburger"
@@ -43,8 +47,8 @@
       >
         <ul class="site-header__nav-list">
           <li class="site-header__nav-item"><a href="/">Home</a></li>
-          <li class="site-header__nav-item"><a href="/atomic-docs">Atomic Docs</a></li>
           <li class="site-header__nav-item"><a href="/illustrations">Illustrations</a></li>
+          <li class="site-header__nav-item"><a href="/atomic-docs">Atomic Docs</a></li>
           <li class="site-header__nav-item"><a href="/resume">Resume</a></li>
           <li class="site-header__nav-item"><a href="/#contact">Contact</a></li>
           <li v-if="isMounted" class="site-header__nav-item">
@@ -78,18 +82,24 @@
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import TerminalInput from './TerminalInput.vue';
 
 library.add(faGithub)
 
 export default {
   name: 'SiteHeader',
   components: {
+    TerminalInput,
     FontAwesomeIcon
   },
   props: {
     gitBranch: {
       type: String,
       default: 'main'
+    },
+    hasTerminalInput: {
+      type: Boolean,
+      default: false
     },
     variant: {
       type: String,
@@ -101,8 +111,9 @@ export default {
     return {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
+      isMounted: false,
       isMobileMenuOpen: false,
-      isMounted: false
+      useTerminalInput: false,
     };
   },
   computed: {
@@ -113,6 +124,9 @@ export default {
       return {
         backgroundColor: this.headerBackgroundColor,
       };
+    },
+    maybeTerminalInput() {
+      return this.hasTerminalInput || this.useTerminalInput;
     }
   },
   mounted() {
@@ -120,7 +134,7 @@ export default {
     window.addEventListener('scroll', this.handleScroll, { passive: true });
     this.handleScroll();
   },
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
   },
   methods: {
@@ -148,6 +162,9 @@ export default {
       }
       const colorSection = elementUnder.closest('[data-section-color]');
       const themeSection = elementUnder.closest('[data-section-theme]');
+      const terminalInputElement = elementUnder.closest('[data-has-terminal-input]');
+      this.useTerminalInput = terminalInputElement && terminalInputElement.dataset.hasTerminalInput === 'true';
+
       this.headerBackgroundColor = colorSection
         ? colorSection.dataset.sectionColor
         : (window.scrollY > 0 ? 'white' : 'transparent');
@@ -156,6 +173,16 @@ export default {
   }
 }
 </script>
+
+<style>
+.theme-dark .terminal-input:after {
+  background-color: #fff;
+}
+.terminal-input::selection {
+  background-color: white;
+  color: black;
+}
+</style>
 
 <style scoped>
 .site-header {
@@ -189,13 +216,21 @@ export default {
   color: #fff;
 }
 
+.site-header__logo a {
+  color: black;
+  text-decoration: none;
+}
+
+.theme-dark .site-header__logo a {
+  color: #fff;
+}
+
 .site-header__logo p {
   margin: 0;
   font-size: clamp(1rem, 1rem + 0.5vw, 1.5rem);
   font-weight: bold;
 }
 
-/* Desktop Navigation - Hidden on mobile */
 .site-header__nav {
   display: block;
 }
