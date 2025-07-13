@@ -2,6 +2,10 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
+import { terminalInputValue } from '../stores/ui';
+
+// Get the initial value for server-side rendering
+const initialCurseWord = terminalInputValue.get();
 ---
 
 <Layout
@@ -10,6 +14,7 @@ import PageSection from '../components/PageSection.vue';
 >
 	<HeroBanner
 		data-section-color="#d3a6fe"
+		data-has-terminal-input="true"
 		client:load
 	>
 		<p slot="content"><a href="#interview" style="color: blue"><strong>( I didn't get the job )</strong></a></p>
@@ -23,7 +28,7 @@ import PageSection from '../components/PageSection.vue';
 	>
 		<h2 class="text-hero">It's true.</h2>
 		<p class="text-xl"><span class="font-bold">Interviewer</span>: What do you value in your teammates?</p>
-		<p class="text-xl"><span class="font-bold">Dummy</span>: I value a healthy team culture over all else. I love working with passionate people that love building cool <span class="highlight"><sup>*</sup>sh!t</span>!</p>
+  <p class="text-xl"><span class="font-bold">Dummy</span>: I value a healthy team culture over all else. I love working with passionate people that love building cool <span class="highlight"><sup>*</sup><span id="curse-word">{initialCurseWord}</span></span>!</p>
 		<p class="text-md text-center font-bold">*oops</p>
 	</PageSection>
 
@@ -31,6 +36,7 @@ import PageSection from '../components/PageSection.vue';
 		id="recruiter"
 		data-section-color="lightblue"
 		background-color="lightblue"
+		data-has-terminal-input="false"
 		width="1200"
 		full-height
 	>
@@ -61,12 +67,30 @@ import PageSection from '../components/PageSection.vue';
 	>
 		<div>
 			<h2 class="text-hero">But...</h2>
-			<p class="text-fluid-lg text-wrap">If you're looking for a passionate Javascript, Vue, Nuxt, UI, UX, Astro, WordPress, Prismic, What-else-you-got frontend developer with 14 years of experience who says <span class="highlight-yellow">Shit</span> every now and then, hit me up!</p>
+			<p class="text-fluid-lg text-wrap">If you're looking for a passionate Javascript, Vue, Nuxt, UI, UX, Astro, WordPress, Prismic, What-else-you-got frontend developer with 14 years of experience who says <span id="contact-curse-word" class="highlight-yellow">{initialCurseWord}</span> every now and then, hit me up!</p>
 			<div class="text-center">
 				<a class="text-fluid-md" href="mailto:nickberens360@gmail.com" style="color: #82aaff">nickberens360@gmail.com</a>
 			</div>
 
 		</div>
 	</PageSection>
+
+	<script>
+		// Client-side code for reactivity
+		import { terminalInputValue } from '../stores/ui';
+
+		// Subscribe to changes
+		terminalInputValue.subscribe(value => {
+			const curseWordElement = document.getElementById('curse-word');
+			if (curseWordElement) {
+				curseWordElement.textContent = value;
+			}
+
+			const contactCurseWordElement = document.getElementById('contact-curse-word');
+			if (contactCurseWordElement) {
+				contactCurseWordElement.textContent = value;
+			}
+		});
+	</script>
 
 </Layout>

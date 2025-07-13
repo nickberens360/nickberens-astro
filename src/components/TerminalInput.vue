@@ -119,7 +119,8 @@ export default {
   height: 20px;
 }
 .terminal-input::selection {
-  background-color: white;
+  background-color: black;
+  color: white;
 }
 
 @keyframes blink {
@@ -136,13 +137,15 @@ export default {
   right: -10px;
   height: 100%;
   width: 10px;
-  background-color: white;
+  border: 1px solid black;
   pointer-events: none;
   animation: unset;
 }
 
 .focused.terminal-input:after {
   animation: blink 1s infinite;
+  border: none;
+  background-color: #000000;
 }
 
 .terminal-input:focus {

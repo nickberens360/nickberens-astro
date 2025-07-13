@@ -23,7 +23,9 @@
           </span>
           </p>
         </a>
-        <TerminalInput />
+        <TerminalInput
+          v-if="maybeTerminalInput"
+        />
       </div>
 
       <nav
@@ -68,6 +70,10 @@ export default {
       type: String,
       default: 'main'
     },
+    hasTerminalInput: {
+      type: Boolean,
+      default: false
+    },
     variant: {
       type: String,
       default: 'default',
@@ -79,6 +85,7 @@ export default {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
       isMounted: false,
+      useTerminalInput: false,
     };
   },
   computed: {
@@ -89,6 +96,9 @@ export default {
       return {
         backgroundColor: this.headerBackgroundColor,
       };
+    },
+    maybeTerminalInput() {
+      return this.hasTerminalInput || this.useTerminalInput;
     }
   },
   mounted() {
@@ -116,6 +126,9 @@ export default {
       }
       const colorSection = elementUnder.closest('[data-section-color]');
       const themeSection = elementUnder.closest('[data-section-theme]');
+      const terminalInputElement = elementUnder.closest('[data-has-terminal-input]');
+      this.useTerminalInput = terminalInputElement && terminalInputElement.dataset.hasTerminalInput === 'true';
+
       this.headerBackgroundColor = colorSection
         ? colorSection.dataset.sectionColor
         : (window.scrollY > 0 ? 'white' : 'transparent');
@@ -124,6 +137,16 @@ export default {
   }
 }
 </script>
+
+<style>
+.theme-dark .terminal-input:after {
+  background-color: #fff;
+}
+.terminal-input::selection {
+  background-color: white;
+  color: black;
+}
+</style>
 
 <style scoped>
 .site-header {
