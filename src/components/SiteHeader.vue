@@ -46,7 +46,7 @@
         ref="nav"
       >
         <ul class="site-header__nav-list">
-          <li class="site-header__nav-item"><a href="/home">Home</a></li>
+          <li class="site-header__nav-item"><a href="/">Home</a></li>
           <li class="site-header__nav-item"><a href="/illustrations">Illustrations</a></li>
           <li class="site-header__nav-item"><a href="/atomic-docs">Atomic Docs</a></li>
           <li class="site-header__nav-item"><a href="/resume">Resume</a></li>
