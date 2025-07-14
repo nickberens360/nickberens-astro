@@ -36,8 +36,39 @@
       <!-- Terminal content area -->
       <div class="terminal-content">
         <div class="terminal-output" ref="terminalOutput">
-          <div v-for="(line, index) in outputLines" :key="index" class="output-line">
-            {{ line }}
+          <div v-for="(line, index) in outputLines" :key="index" class="output-line" v-html="line">
+          </div>
+
+          <!-- Git Graph Visualization -->
+          <div v-if="graphData.isVisible" class="git-graph-container">
+            <div class="git-graph-title">{{ graphData.title }}</div>
+
+            <!-- No data message -->
+            <div v-if="graphData.noData" class="git-graph-no-data">
+              <div class="git-graph-no-data-icon">📊</div>
+              <div class="git-graph-no-data-message">No code frequency data available</div>
+            </div>
+
+            <!-- Graph data rows -->
+            <template v-else>
+              <div v-for="(week, index) in graphData.weeks" :key="index" class="git-graph-row">
+                <span class="git-graph-date">{{ week.date }}:</span>
+
+                <span class="git-graph-additions">
+                  {{ '+'.repeat(week.additionBars) }}
+                </span>
+
+                <span class="git-graph-deletions">
+                  {{ '-'.repeat(week.deletionBars) }}
+                </span>
+
+                <span class="git-graph-stats">
+                  ({{ week.additions }} additions, {{ week.deletions }} deletions)
+                </span>
+              </div>
+            </template>
+
+            <div class="git-graph-note">{{ graphData.note }}</div>
           </div>
         </div>
 
@@ -52,6 +83,7 @@
             ref="terminalInput"
             placeholder=""
             autocomplete="off"
+            autofocus
           />
         </div>
       </div>
@@ -64,7 +96,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTerminal } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { getLatestCommitMessage } from '../utils/gitInfo.js';
+import { getLatestCommitMessage, getCodeFrequency } from '../utils/gitInfo.js';
 
 library.add(faTerminal);
 
@@ -97,6 +129,14 @@ export default {
     const terminalWindow = ref(null);
     const terminalInput = ref(null);
     const terminalOutput = ref(null);
+
+    // Add this to your reactive state
+    const graphData = ref({
+      title: '',
+      weeks: [],
+      note: '',
+      isVisible: false
+    });
 
     // Dragging functionality
     const startDrag = (event) => {
@@ -156,6 +196,7 @@ export default {
         outputLines.value.push('- theme: Toggle between light and dark theme');
         outputLines.value.push('- version: Show terminal version');
         outputLines.value.push('- git --latest-commit: Show the latest git commit message');
+        outputLines.value.push('- git --graph: Show code frequency (additions/deletions over time)');
       } else if (baseCommand === 'theme') {
         // Toggle theme
         const newTheme = props.theme === 'dark' ? 'light' : 'dark';
@@ -186,6 +227,28 @@ export default {
               outputLines.value.push('Error retrieving latest commit message');
               outputLines.value.push(error.message);
             });
+        } else if (args[0] === '--graph') {
+          outputLines.value.push('Fetching code frequency data...');
+
+          getCodeFrequency()
+            .then(frequencyData => {
+              outputLines.value.push('Code Frequency (additions/deletions over time):');
+              outputLines.value.push('');
+
+              // Render the ASCII graph or show "no data" message
+              renderCodeFrequencyGraph(frequencyData);
+
+              // Scroll to bottom of output
+              setTimeout(() => {
+                if (terminalOutput.value) {
+                  terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+                }
+              }, 0);
+            })
+            .catch(error => {
+              outputLines.value.push('Error retrieving code frequency data');
+              outputLines.value.push(error.message);
+            });
         } else {
           outputLines.value.push(`Unknown git option: ${args.join(' ')}`);
         }
@@ -199,6 +262,76 @@ export default {
           terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
         }
       }, 0);
+    };
+
+    // Render code frequency graph
+    const renderCodeFrequencyGraph = (frequencyData) => {
+      // Ensure frequencyData is an array
+      if (!Array.isArray(frequencyData)) {
+        outputLines.value.push('Error: Invalid frequency data format');
+        return;
+      }
+
+      // Check if we have any data
+      if (frequencyData.length === 0) {
+        // Set up graph data with no-data message
+        graphData.value = {
+          title: 'Code Frequency Data',
+          weeks: [],
+          note: 'No code frequency data available. This could be because the repository is new, private, or the GitHub API has not calculated the statistics yet.',
+          isVisible: true,
+          noData: true
+        };
+
+        // Add a message to the output lines
+        outputLines.value.push('[No graph data available]');
+        outputLines.value.push('');
+        return;
+      }
+
+      // Get the last 10 weeks of data (or less if not available)
+      const recentData = frequencyData.slice(-10);
+
+      // Find max values for scaling
+      let maxAddition = 0;
+      let maxDeletion = 0;
+
+      recentData.forEach(week => {
+        maxAddition = Math.max(maxAddition, week[1]);
+        maxDeletion = Math.max(maxDeletion, Math.abs(week[2]));
+      });
+
+      const maxValue = Math.max(maxAddition, maxDeletion);
+      const graphHeight = 10; // Height of the graph in lines
+
+      // Update the graph data structure
+      graphData.value = {
+        title: 'Additions (+) / Deletions (-) - Last 10 weeks',
+        weeks: recentData.map(week => {
+          const date = new Date(week[0] * 1000).toISOString().split('T')[0];
+          const additions = week[1];
+          const deletions = Math.abs(week[2]);
+
+          // Scale the values to fit in the terminal
+          const additionBars = Math.round((additions / maxValue) * graphHeight);
+          const deletionBars = Math.round((deletions / maxValue) * graphHeight);
+
+          return {
+            date,
+            additions,
+            deletions,
+            additionBars,
+            deletionBars
+          };
+        }),
+        note: 'Note: Graph is scaled to fit the terminal window',
+        isVisible: true,
+        noData: false
+      };
+
+      // Add a message to the output lines
+      outputLines.value.push('[Graph data displayed below]');
+      outputLines.value.push('');
     };
 
     // Clean up event listeners
@@ -222,7 +355,9 @@ export default {
       handleCommand,
       terminalWindow,
       terminalInput,
-      terminalOutput
+      terminalOutput,
+      renderCodeFrequencyGraph,
+      graphData  // Add this line
     };
   }
 };
@@ -336,6 +471,7 @@ export default {
   margin-bottom: 4px;
   white-space: pre-wrap;
   word-break: break-all;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
 }
 
 .terminal-input-line {
@@ -431,6 +567,116 @@ export default {
 
 .theme-light .terminal-output::-webkit-scrollbar-thumb:hover {
   background: #aaa;
+}
+
+/* Git graph styling */
+.git-graph-additions {
+  color: #27c93f; /* Green color for additions */
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.git-graph-deletions {
+  color: #ff5f56; /* Red color for deletions */
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.git-graph-date {
+  color: #ffbd2e; /* Yellow color for dates */
+  font-weight: bold;
+}
+
+.git-graph-stats {
+  color: #cccccc; /* Light gray for stats */
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.git-graph-title {
+  color: #ffffff; /* White color for title */
+  font-weight: bold;
+  font-size: 1.1em;
+  text-decoration: underline;
+  margin-bottom: 10px;
+}
+
+.git-graph-note {
+  color: #aaaaaa; /* Light gray for note */
+  font-style: italic;
+  font-size: 0.85em;
+}
+
+/* Theme-specific git graph styling */
+.theme-light .git-graph-additions {
+  color: #27a83f;
+}
+
+.theme-light .git-graph-deletions {
+  color: #e74c3c;
+}
+
+.theme-light .git-graph-date {
+  color: #f39c12;
+}
+
+.theme-light .git-graph-stats {
+  color: #666666;
+}
+
+.theme-light .git-graph-title {
+  color: #333333;
+}
+
+.theme-light .git-graph-note {
+  color: #777777;
+}
+
+/* Git graph container styling */
+.git-graph-container {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 5px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.git-graph-row {
+  display: flex;
+  align-items: center;
+  margin: 2px 0;
+  white-space: nowrap;
+}
+
+/* No data message styling */
+.git-graph-no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 10px;
+  text-align: center;
+}
+
+.git-graph-no-data-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.git-graph-no-data-message {
+  font-size: 14px;
+  color: #cccccc;
+  font-style: italic;
+}
+
+.theme-light .git-graph-container {
+  border-color: #ccc;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-light .git-graph-no-data-message {
+  color: #666666;
 }
 
 /* Responsive adjustments */

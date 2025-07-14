@@ -14,9 +14,9 @@ export interface Props {
 }
 
 const {title, description, favicon, headerVariant = 'default'} = Astro.props;
-const gitBranch = getGitBranch();
-const commitHash = getLatestCommitHash();
-const commitMessage = getLatestCommitMessage();
+const gitBranch = await getGitBranch();
+const commitHash = await getLatestCommitHash();
+const commitMessage = await getLatestCommitMessage();
 const repoUrl = getGitHubRepoUrl();
 ---
 
@@ -33,4 +33,3 @@ const repoUrl = getGitHubRepoUrl();
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
 </body>
 </html>
-

@@ -72,3 +72,31 @@ export function getGitHubRepoUrl() {
   const { username, repo } = getGitHubCredentials();
   return `https://github.com/${username}/${repo}`;
 }
+
+export async function getCodeFrequency() {
+  try {
+    const { username, repo, token } = getGitHubCredentials();
+
+    const headers = token ? { Authorization: `token ${token}` } : {};
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/stats/code_frequency`, { headers });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    // GitHub returns an array of weekly data points
+    // Each data point is [timestamp, additions, deletions]
+    const frequencyData = await response.json();
+
+    // Ensure we always return an array
+    if (!Array.isArray(frequencyData)) {
+      console.error('Unexpected response format from GitHub API:', frequencyData);
+      return [];
+    }
+
+    return frequencyData;
+  } catch (error) {
+    console.error('Error fetching code frequency:', error);
+    return [];
+  }
+}
