@@ -43,7 +43,6 @@
           <div v-for="(item, index) in commandHistory" :key="item.id" class="command-history-item">
             <!-- Command input -->
             <div v-if="item.command" class="command-input">
-              <span class="prompt mr-2">~$</span>
               <span>{{ item.command }}</span>
             </div>
 
@@ -1007,7 +1006,7 @@ export default {
   border-radius: 0;
   transition: width 0.3s ease;
 }
-
+d
 .theme-light .progress-bar {
   background-color: #000000;
 }
