@@ -7,7 +7,9 @@
       @click="isMinimized = false"
     >
       <div class="terminal-icon">
-        <font-awesome-icon :icon="['fas', 'terminal']" />
+        <client-only>
+          <font-awesome-icon :icon="['fas', 'terminal']" />
+        </client-only>
       </div>
     </div>
 
@@ -37,52 +39,85 @@
       <!-- Terminal content area -->
       <div class="terminal-content" @click="focusInput">
         <div class="terminal-output" ref="terminalOutput">
-          <!-- Output lines before the graph -->
-          <div v-for="(line, index) in outputLinesBeforeGraph" :key="`before-${index}`" class="output-line" v-html="line">
-          </div>
-
-          <!-- Git Graph Visualization -->
-          <div v-if="graphData.isVisible" class="git-graph-container">
-            <div class="git-graph-title">{{ graphData.title }}</div>
-
-            <!-- No data message -->
-            <div v-if="graphData.noData" class="git-graph-no-data">
-              <div class="git-graph-no-data-icon">📊</div>
-              <div class="git-graph-no-data-message">No code frequency data available</div>
-              <div class="git-graph-no-data-explanation">{{ graphData.note }}</div>
+          <!-- Render command history in chronological order -->
+          <div v-for="(item, index) in commandHistory" :key="item.id" class="command-history-item">
+            <!-- Command input -->
+            <div v-if="item.command" class="command-input">
+              <span class="prompt mr-2">~$</span>
+              <span>{{ item.command }}</span>
             </div>
 
-            <!-- Graph data rows -->
-            <template v-else>
-              <div v-for="(week, index) in graphData.weeks" :key="index" class="git-graph-row">
-                <span class="git-graph-date">{{ week.date }}:</span>
-
-                <span class="git-graph-additions">
-                  {{ '+'.repeat(week.additionBars) }}
-                </span>
-
-                <span class="git-graph-deletions">
-                  {{ '-'.repeat(week.deletionBars) }}
-                </span>
-
-                <span class="git-graph-stats">
-                  ({{ week.additions }} additions, {{ week.deletions }} deletions)
-                </span>
+            <!-- Command output -->
+            <div class="command-output">
+              <!-- Regular text output -->
+              <div v-for="(line, lineIndex) in item.textOutput" :key="`text-${lineIndex}`" class="output-line">
+                <template v-if="typeof line === 'string'">{{ line }}</template>
+                <template v-else-if="line.type === 'link'">
+                  {{ line.prefix }}<a :href="line.url" class="terminal-link">{{ line.text }}</a>
+                </template>
+                <template v-else-if="line.type === 'graph-history'">
+                  <span class="git-graph-date">{{ line.date }}:</span>
+                  <span class="git-graph-additions">{{ line.additionBars }}</span>
+                  <span class="git-graph-deletions">{{ line.deletionBars }}</span>
+                  <span class="git-graph-stats">({{ line.additions }} additions, {{ line.deletions }} deletions)</span>
+                </template>
+                <template v-else-if="line.type === 'latest-commit'">
+                  <div class="git-latest-commit-container">
+                    <div class="git-graph-title">{{ line.title }}</div>
+                    <div class="latest-commit-content">
+                      <div class="latest-commit-line">
+                        <span class="latest-commit-hash">[{{ line.hash }}]</span>
+                        <a v-if="line.url" :href="line.url" class="terminal-link">View on GitHub</a>
+                      </div>
+                      <div class="latest-commit-message">{{ line.message }}</div>
+                    </div>
+                  </div>
+                </template>
               </div>
-            </template>
 
-            <div v-if="!graphData.noData" class="git-graph-note">{{ graphData.note }}</div>
-          </div>
+              <!-- Graph visualization (if present) -->
+              <div v-if="item.graphData && item.graphData.isVisible" class="git-graph-container">
+                <div class="git-graph-title">{{ item.graphData.title }}</div>
 
-          <!-- Output lines after the graph -->
-          <div v-for="(line, index) in outputLinesAfterGraph" :key="`after-${index}`" class="output-line" v-html="line">
-          </div>
-        </div>
+                <!-- No data message -->
+                <div v-if="item.graphData.noData" class="git-graph-no-data">
+                  <div class="git-graph-no-data-icon">📊</div>
+                  <div class="git-graph-no-data-message">No code frequency data available</div>
+                  <div class="git-graph-no-data-explanation">{{ item.graphData.note }}</div>
+                </div>
 
-        <!-- Loading indicator -->
-        <div v-if="isLoading" class="loading-container">
-          <div class="progress-bar-container">
-            <div class="progress-bar" :style="{ width: `${loadingProgress}%` }"></div>
+                <!-- Graph data rows -->
+                <template v-else>
+                  <div v-for="(week, weekIndex) in item.graphData.weeks" :key="weekIndex" class="git-graph-row">
+                    <span class="git-graph-date">{{ week.date }}:</span>
+                    <span class="git-graph-additions">{{ '+'.repeat(week.additionBars) }}</span>
+                    <span class="git-graph-deletions">{{ '-'.repeat(week.deletionBars) }}</span>
+                    <span class="git-graph-stats">({{ week.additions }} additions, {{ week.deletions }} deletions)</span>
+                  </div>
+                </template>
+
+                <div v-if="!item.graphData.noData" class="git-graph-note">{{ item.graphData.note }}</div>
+              </div>
+
+              <!-- Latest commit data (if present) -->
+              <div v-if="item.commitData && item.commitData.isVisible" class="git-latest-commit-container">
+                <div class="git-graph-title">{{ item.commitData.title }}</div>
+                <div class="latest-commit-content">
+                  <div class="latest-commit-line">
+                    <span class="latest-commit-hash">[{{ item.commitData.hash }}]</span>
+                    <a v-if="item.commitData.url" :href="item.commitData.url" class="terminal-link">View on GitHub</a>
+                  </div>
+                  <div class="latest-commit-message">{{ item.commitData.message }}</div>
+                </div>
+              </div>
+
+              <!-- Loading indicator -->
+              <div v-if="item.isLoading" class="loading-container">
+                <div class="progress-bar-container">
+                  <div class="progress-bar" :style="{ width: `${item.loadingProgress}%` }"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -110,14 +145,17 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTerminal } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import ClientOnly from './ClientOnly.vue';
 import { getLatestCommitMessage, getCodeFrequency } from '../utils/gitInfo.js';
+import { navItems } from '../stores/ui.js';
 
 library.add(faTerminal);
 
 export default {
   name: 'TerminalWindow',
   components: {
-    FontAwesomeIcon
+    FontAwesomeIcon,
+    ClientOnly
   },
   props: {
     title: {
@@ -127,10 +165,6 @@ export default {
     initialOutput: {
       type: Array,
       default: () => ['Welcome to Terminal']
-    },
-    theme: {
-      type: String,
-      default: 'dark'
     }
   },
   setup(props, { emit }) {
@@ -138,9 +172,24 @@ export default {
     const position = reactive({ x: 100, y: 100 });
     const isDragging = ref(false);
     const dragOffset = reactive({ x: 0, y: 0 });
-    // Split output lines into before and after graph
-    const outputLinesBeforeGraph = ref([...props.initialOutput]);
-    const outputLinesAfterGraph = ref([]);
+    const theme = ref('dark');
+    // Command history state
+    const commandHistory = ref([]);
+    const nextCommandId = ref(1);
+
+    // Initialize with welcome message if provided
+    if (props.initialOutput && props.initialOutput.length > 0) {
+      commandHistory.value.push({
+        id: nextCommandId.value++,
+        timestamp: Date.now(),
+        command: '',  // No command for initial output
+        textOutput: [...props.initialOutput],
+        isLoading: false,
+        loadingProgress: 0,
+        graphData: null,
+        commitData: null
+      });
+    }
 
     const inputValue = ref('');
     const terminalWindow = ref(null);
@@ -151,17 +200,25 @@ export default {
     const loadingProgress = ref(0);
 
     // Helper function to ensure minimum loading time with progress simulation
-    const ensureMinLoadingTime = async (promise, minTime = 3000) => {
-      isLoading.value = true;
-      loadingProgress.value = 0;
+    const ensureMinLoadingTime = async (promise, historyIndex, minTime = 3000) => {
+      // Set loading state on the specific history item
+      if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
+        commandHistory.value[historyIndex].isLoading = true;
+        commandHistory.value[historyIndex].loadingProgress = 0;
+      }
+
       loadingStartTime.value = Date.now();
 
       // Start progress animation
       const progressInterval = setInterval(() => {
         // Increase progress gradually up to 90% while waiting for the promise
-        if (loadingProgress.value < 90) {
-          loadingProgress.value += Math.random() * 3 + 1;
-          if (loadingProgress.value > 90) loadingProgress.value = 90;
+        if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
+          if (commandHistory.value[historyIndex].loadingProgress < 90) {
+            commandHistory.value[historyIndex].loadingProgress += Math.random() * 3 + 1;
+            if (commandHistory.value[historyIndex].loadingProgress > 90) {
+              commandHistory.value[historyIndex].loadingProgress = 90;
+            }
+          }
         }
       }, 100);
 
@@ -177,23 +234,24 @@ export default {
       }
 
       // Complete the progress to 100%
-      loadingProgress.value = 100;
+      if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
+        commandHistory.value[historyIndex].loadingProgress = 100;
+      }
+
       clearInterval(progressInterval);
 
       // Small delay to show the completed progress bar before hiding
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      isLoading.value = false;
+      // Set loading state to false
+      if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
+        commandHistory.value[historyIndex].isLoading = false;
+      }
+
       return result;
     };
 
-    // Add this to your reactive state
-    const graphData = ref({
-      title: '',
-      weeks: [],
-      note: '',
-      isVisible: false
-    });
+    // These global states are no longer needed as they're now part of each history item
 
     // Dragging functionality
     const startDrag = (event) => {
@@ -244,19 +302,42 @@ export default {
     // Submit command from input
     const submitCommand = () => {
       if (inputValue.value.trim()) {
-        handleCommand(inputValue.value.trim());
+        const command = inputValue.value.trim();
         inputValue.value = ''; // Clear the input
+
+        // Create a new history item for this command
+        const commandId = nextCommandId.value++;
+        const historyItem = {
+          id: commandId,
+          timestamp: Date.now(),
+          command: command,
+          textOutput: [],
+          isLoading: false,
+          loadingProgress: 0,
+          graphData: null,
+          commitData: null
+        };
+
+        // Add to history immediately
+        commandHistory.value.push(historyItem);
+
+        // Process the command
+        handleCommand(command, commandId);
+
+        // Scroll to bottom
+        setTimeout(() => {
+          if (terminalOutput.value) {
+            terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+          }
+        }, 0);
       }
     };
 
-    // Command handling
-    const handleCommand = (command) => {
-      // Add command to appropriate output lines array
-      if (graphData.value.isVisible) {
-        outputLinesAfterGraph.value.push(`${command}`);
-      } else {
-        outputLinesBeforeGraph.value.push(`${command}`);
-      }
+    // Command handling with history ID
+    const handleCommand = (command, commandId) => {
+      // Find the history item for this command
+      const historyIndex = commandHistory.value.findIndex(item => item.id === commandId);
+      if (historyIndex === -1) return;
 
       // Parse command and arguments
       const parts = command.split(' ');
@@ -265,166 +346,155 @@ export default {
 
       // Process commands
       if (baseCommand === 'clear') {
-        outputLinesBeforeGraph.value = [];
-        outputLinesAfterGraph.value = [];
-        graphData.value.isVisible = false; // Also hide the GitHub graph
+        // Clear all history except this command
+        commandHistory.value = [commandHistory.value[historyIndex]];
       } else if (baseCommand === 'help') {
-        // Add output to appropriate array
-        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-        outputArray.value.push('Available commands:');
-        outputArray.value.push('- clear: Clear the terminal');
-        outputArray.value.push('- help: Show this help message');
-        outputArray.value.push('- theme: Toggle between light and dark theme');
-        outputArray.value.push('- version: Show terminal version');
-        outputArray.value.push('- git --latest-commit: Show the latest git commit message');
-        outputArray.value.push('- git --graph: Show code frequency (additions/deletions over time)');
+        // Add help text to this command's output
+        commandHistory.value[historyIndex].textOutput.push('Available commands:');
+        commandHistory.value[historyIndex].textOutput.push('- clear: Clear the terminal');
+        commandHistory.value[historyIndex].textOutput.push('- help: Show this help message');
+        commandHistory.value[historyIndex].textOutput.push('- theme: Toggle between light and dark theme');
+        commandHistory.value[historyIndex].textOutput.push('- version: Show terminal version');
+        commandHistory.value[historyIndex].textOutput.push('- ls: List navigation links');
+        commandHistory.value[historyIndex].textOutput.push('- git --latest-commit: Show the latest git commit message');
+        commandHistory.value[historyIndex].textOutput.push('- git --graph: Show code frequency (additions/deletions over time)');
       } else if (baseCommand === 'theme') {
         // Toggle theme
-        const newTheme = props.theme === 'dark' ? 'light' : 'dark';
-        emit('update:theme', newTheme);
-
-        // Add output to appropriate array
-        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-        outputArray.value.push(`Theme switched to ${newTheme} mode`);
+        theme.value = theme.value === 'dark' ? 'light' : 'dark';
+        commandHistory.value[historyIndex].textOutput.push(`Theme switched to ${theme.value} mode`);
       } else if (baseCommand === 'version') {
-        // Add output to appropriate array
-        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-        outputArray.value.push('Terminal v1.0.0');
-        outputArray.value.push('Created by nickberens');
+        commandHistory.value[historyIndex].textOutput.push('Terminal v1.0.0');
+        commandHistory.value[historyIndex].textOutput.push('Created by nickberens');
+      } else if (baseCommand === 'ls') {
+        commandHistory.value[historyIndex].textOutput.push('Navigation links:');
+
+        // Get the current nav items and display them as links
+        const items = navItems.get();
+        items.forEach(item => {
+          commandHistory.value[historyIndex].textOutput.push({
+            type: 'link',
+            prefix: '- ',
+            url: item.url,
+            text: item.text
+          });
+        });
       } else if (baseCommand === 'git') {
         if (args.length === 0) {
-          // Add output to appropriate array
-          const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-          outputArray.value.push('Usage: git [--latest-commit]');
+          commandHistory.value[historyIndex].textOutput.push('Usage: git [--latest-commit | --graph]');
         } else if (args[0] === '--latest-commit') {
-          // Add output to appropriate array
-          const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-          outputArray.value.push('Fetching latest commit message...');
+          commandHistory.value[historyIndex].textOutput.push('Fetching latest commit message...');
+          commandHistory.value[historyIndex].isLoading = true;
 
-          ensureMinLoadingTime(getLatestCommitMessage())
-            .then(commitMessage => {
-              // Add output to appropriate array
-              const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-              outputArray.value.push('Latest commit message:');
-              outputArray.value.push(commitMessage);
+          ensureMinLoadingTime(getLatestCommitMessage(), historyIndex)
+            .then(commitData => {
+              // Update the history item with commit data
+              if (historyIndex !== -1) {
+                commandHistory.value[historyIndex].isLoading = false;
+                commandHistory.value[historyIndex].commitData = {
+                  title: 'Latest Commit',
+                  hash: commitData.hash,
+                  url: commitData.url,
+                  message: commitData.message,
+                  isVisible: true
+                };
 
-              // Scroll to bottom of output
-              setTimeout(() => {
-                if (terminalOutput.value) {
-                  terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-                }
-              }, 0);
+                // Scroll to bottom
+                setTimeout(() => {
+                  if (terminalOutput.value) {
+                    terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+                  }
+                }, 0);
+              }
             })
             .catch(error => {
-              // Add output to appropriate array
-              const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-              outputArray.value.push('Error retrieving latest commit message');
-              outputArray.value.push(error.message);
+              if (historyIndex !== -1) {
+                commandHistory.value[historyIndex].isLoading = false;
+                commandHistory.value[historyIndex].textOutput.push('Error retrieving latest commit message');
+                commandHistory.value[historyIndex].textOutput.push(error.message);
+              }
             });
         } else if (args[0] === '--graph') {
-          // If graph is already visible, hide it and move its content to before array
-          if (graphData.value.isVisible) {
-            // Move all content from after array to before array
-            outputLinesBeforeGraph.value = [...outputLinesBeforeGraph.value, ...outputLinesAfterGraph.value];
-            outputLinesAfterGraph.value = [];
-            graphData.value.isVisible = false;
-          }
+          commandHistory.value[historyIndex].textOutput.push('Fetching code frequency data...');
+          commandHistory.value[historyIndex].isLoading = true;
 
-          // Add graph command output to the before array
-          outputLinesBeforeGraph.value.push('Fetching code frequency data...');
-
-          ensureMinLoadingTime(getCodeFrequency())
+          ensureMinLoadingTime(getCodeFrequency(), historyIndex)
             .then(frequencyData => {
-              outputLinesBeforeGraph.value.push('Code Frequency (additions/deletions over time):');
-              outputLinesBeforeGraph.value.push('');
+              if (historyIndex !== -1) {
+                commandHistory.value[historyIndex].isLoading = false;
+                commandHistory.value[historyIndex].textOutput.push('Code Frequency (additions/deletions over time):');
+                commandHistory.value[historyIndex].textOutput.push('');
 
-              // Render the ASCII graph or show "no data" message
-              renderCodeFrequencyGraph(frequencyData);
+                // Process graph data
+                const graphData = processCodeFrequencyData(frequencyData);
+                commandHistory.value[historyIndex].graphData = graphData;
 
-              // Scroll to bottom of output
-              setTimeout(() => {
-                if (terminalOutput.value) {
-                  terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-                }
-              }, 0);
+                // Scroll to bottom
+                setTimeout(() => {
+                  if (terminalOutput.value) {
+                    terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+                  }
+                }, 0);
+              }
             })
             .catch(error => {
-              outputLinesBeforeGraph.value.push('Error retrieving code frequency data');
-              outputLinesBeforeGraph.value.push(error.message);
+              if (historyIndex !== -1) {
+                commandHistory.value[historyIndex].isLoading = false;
+                commandHistory.value[historyIndex].textOutput.push('Error retrieving code frequency data');
+                commandHistory.value[historyIndex].textOutput.push(error.message);
+              }
             });
         } else {
-          // Add output to appropriate array
-          const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-          outputArray.value.push(`Unknown git option: ${args.join(' ')}`);
+          commandHistory.value[historyIndex].textOutput.push(`Unknown git option: ${args.join(' ')}`);
         }
       } else {
-        // Add output to appropriate array
-        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
-        outputArray.value.push(`Command not found: ${baseCommand}`);
+        commandHistory.value[historyIndex].textOutput.push(`Command not found: ${baseCommand}`);
       }
-
-      // Scroll to bottom of output
-      setTimeout(() => {
-        if (terminalOutput.value) {
-          terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-        }
-      }, 0);
     };
 
-    // Render code frequency graph
-    const renderCodeFrequencyGraph = (frequencyData) => {
+    // Helper function to process code frequency data
+    const processCodeFrequencyData = (frequencyData) => {
       // Check if GitHub is still computing the data
       if (frequencyData && frequencyData.computing) {
-        graphData.value = {
+        return {
           title: 'Code Frequency Data',
           weeks: [],
           note: frequencyData.message,
           isVisible: true,
           noData: true
         };
-
-        outputLinesBeforeGraph.value.push('[Statistics being calculated]');
-        outputLinesBeforeGraph.value.push('');
-        return;
       }
 
       // Check if there was an error
       if (frequencyData && frequencyData.error) {
-        graphData.value = {
+        return {
           title: 'Code Frequency Data',
           weeks: [],
           note: frequencyData.message,
           isVisible: true,
           noData: true
         };
-
-        outputLinesBeforeGraph.value.push('[Error retrieving statistics]');
-        outputLinesBeforeGraph.value.push(frequencyData.message);
-        outputLinesBeforeGraph.value.push('');
-        return;
       }
 
       // Ensure frequencyData is an array
       if (!Array.isArray(frequencyData)) {
-        outputLinesBeforeGraph.value.push('Error: Invalid frequency data format');
-        return;
+        return {
+          title: 'Code Frequency Data',
+          weeks: [],
+          note: 'Invalid data format received',
+          isVisible: true,
+          noData: true
+        };
       }
 
       // Check if we have any data
       if (frequencyData.length === 0) {
-        // Set up graph data with no-data message
-        graphData.value = {
+        return {
           title: 'Code Frequency Data',
           weeks: [],
           note: 'No code frequency data available. This could be because the repository is new, private, or the GitHub API has not calculated the statistics yet.',
           isVisible: true,
           noData: true
         };
-
-        // Add a message to the output lines
-        outputLinesBeforeGraph.value.push('[No graph data available]');
-        outputLinesBeforeGraph.value.push('');
-        return;
       }
 
       // Get the last 10 weeks of data (or less if not available)
@@ -442,8 +512,7 @@ export default {
       const maxValue = Math.max(maxAddition, maxDeletion);
       const graphHeight = 10; // Height of the graph in lines
 
-      // Update the graph data structure
-      graphData.value = {
+      return {
         title: 'Additions (+) / Deletions (-) - Last 10 weeks',
         weeks: recentData.map(week => {
           const date = new Date(week[0] * 1000).toISOString().split('T')[0];
@@ -466,10 +535,6 @@ export default {
         isVisible: true,
         noData: false
       };
-
-      // Add a message to the output lines
-      outputLinesBeforeGraph.value.push('[Graph data displayed below]');
-      outputLinesBeforeGraph.value.push('');
     };
 
     // Handle clicks outside the terminal window
@@ -501,25 +566,39 @@ export default {
       position,
       startDrag,
       stopDrag,
-      outputLinesBeforeGraph,
-      outputLinesAfterGraph,
+      commandHistory,  // New command history array
       inputValue,
       submitCommand,
       handleCommand,
       terminalWindow,
       terminalInput,
       terminalOutput,
-      renderCodeFrequencyGraph,
-      graphData,
+      processCodeFrequencyData,  // New function to process graph data
       focusInput,  // Expose focusInput function
-      isLoading,   // Add loading state
-      loadingProgress  // Add loading progress state
+      isLoading,   // Global loading state (could be removed in future)
+      loadingProgress,  // Global loading progress (could be removed in future)
+      theme  // Return the theme ref for use in the template
     };
   }
 };
 </script>
 
 <style scoped>
+/* Command history styles */
+.command-history-item {
+  margin-bottom: 8px;
+}
+
+.command-input {
+  color: #63c5da;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.command-output {
+  margin-left: 8px;
+}
+
 /* Terminal window when minimized */
 .terminal-minimized {
   position: fixed;
@@ -849,6 +928,37 @@ export default {
   color: #888888;
 }
 
+/* Git latest commit container styling - similar to git graph container */
+.git-latest-commit-container {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 5px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.theme-light .git-latest-commit-container {
+  border-color: #ccc;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.latest-commit-line {
+  margin: 5px 0;
+}
+
+.latest-commit-hash {
+  color: #ffbd2e; /* Yellow color for hash, same as dates in graph */
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.latest-commit-message {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .terminal-window {
@@ -913,5 +1023,24 @@ export default {
 
 .theme-light .progress-bar-container {
   background-color: rgba(39, 168, 63, 0.2);
+}
+
+/* Terminal link styling */
+.terminal-link {
+  color: #3498db;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.terminal-link:hover {
+  color: #2980b9;
+}
+
+.theme-light .terminal-link {
+  color: #2980b9;
+}
+
+.theme-light .terminal-link:hover {
+  color: #1c6ea4;
 }
 </style>

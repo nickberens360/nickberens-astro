@@ -4,6 +4,7 @@ import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
+import TerminalWindow from '../components/TerminalWindow.vue';
 import { getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl } from '../utils/gitInfo.js';
 
 export interface Props {
@@ -31,5 +32,11 @@ const repoUrl = getGitHubRepoUrl();
 <SiteHeader gitBranch={gitBranch} variant={headerVariant} client:load />
 <slot/>
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
+<TerminalWindow
+    client:load
+    title="Nick's Terminal"
+    initialOutput={['Welcome to Nick Berens\' Terminal', 'Type \'help\' for available commands']}
+    theme="dark"
+/>
 </body>
 </html>

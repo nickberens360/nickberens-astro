@@ -61,10 +61,22 @@ export async function getLatestCommitMessage() {
     }
 
     const commits = await response.json();
-    return commits[0].commit.message;
+    const commitHash = commits[0].sha.substring(0, 7); // Short hash (first 7 characters)
+    const commitMessage = commits[0].commit.message;
+    const commitUrl = commits[0].html_url; // GitHub URL to the commit
+
+    return {
+      hash: commitHash,
+      message: commitMessage,
+      url: commitUrl
+    };
   } catch (error) {
     console.error('Error fetching commit message:', error);
-    return 'Error fetching commit message';
+    return {
+      hash: 'unknown',
+      message: 'Error fetching commit message',
+      url: null
+    };
   }
 }
 

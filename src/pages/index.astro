@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
-import TerminalWindow from '../components/TerminalWindow.vue';
 import {terminalInputValue} from '../stores/ui';
 
 // Get the initial value for server-side rendering
@@ -15,7 +14,6 @@ const initialCurseWord = terminalInputValue.get();
 >
   <HeroBanner
       data-section-color="#d3a6fe"
-      data-has-terminal-input="true"
       client:load
   >
     <p slot="content">
@@ -103,13 +101,6 @@ const initialCurseWord = terminalInputValue.get();
 
     </div>
   </PageSection>
-
-  <TerminalWindow
-    client:load
-    title="Nick's Terminal"
-    initialOutput={['Welcome to Nick Berens\' Terminal', 'Type \'help\' for available commands']}
-    theme="dark"
-  />
 
   <script>
 
