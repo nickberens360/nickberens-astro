@@ -987,15 +987,6 @@ export default {
   background-color: #333;
 }
 
-.loading-text {
-  color: #27c93f;
-  font-weight: bold;
-}
-
-.theme-light .loading-text {
-  color: #27a83f;
-}
-
 /* Progress bar styling */
 .loading-container {
   margin: 10px 0;
@@ -1005,24 +996,24 @@ export default {
 .progress-bar-container {
   width: 100%;
   height: 20px;
-  background-color: rgba(39, 201, 63, 0.2);
+  background-color: rgba(255, 255, 255, 0.2);
   border-radius: 0;
   overflow: hidden;
 }
 
 .progress-bar {
   height: 100%;
-  background-color: #27c93f; /* Green color */
+  background-color: #ffffff; /* Green color */
   border-radius: 0;
   transition: width 0.3s ease;
 }
 
 .theme-light .progress-bar {
-  background-color: #27a83f;
+  background-color: #000000;
 }
 
 .theme-light .progress-bar-container {
-  background-color: rgba(39, 168, 63, 0.2);
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* Terminal link styling */
