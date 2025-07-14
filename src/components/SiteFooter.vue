@@ -76,9 +76,11 @@ export default {
       } else {
         this.lastSectionColor = lastSection.dataset.sectionColor || null;
       }
-      // Get data attributes
-      // this.lastSectionColor = lastSection.dataset.sectionColor || null;
-      this.lastSectionTheme = lastSection.dataset.sectionTheme || null;
+      if (lastSection.dataset.footerTheme) {
+        this.lastSectionTheme = lastSection.dataset.footerTheme;
+      } else if (lastSection.dataset.sectionTheme) {
+        this.lastSectionTheme = lastSection.dataset.sectionTheme;
+      }
     }
   }
 }
@@ -215,10 +217,14 @@ export default {
 
 @media (max-width: 768px) {
   .site-footer {
+    text-align: center;
     padding: .5rem 0;
   }
   .site-footer__container, .site-footer__content {
     display: block;
+  }
+  .copyright {
+    margin: 0;
   }
 }
 </style>
