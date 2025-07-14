@@ -1,64 +1,74 @@
-import { execSync } from 'child_process';
+// GitHub API integration for fetching git data
+// Environment variables are accessed using import.meta.env in Astro
 
-export function getGitBranch() {
+// Helper function to get GitHub credentials
+const getGitHubCredentials = () => {
+  return {
+    username: import.meta.env.PUBLIC_GITHUB_USERNAME || 'nickberens360',
+    repo: import.meta.env.PUBLIC_GITHUB_REPO || 'nickberens-astro',
+    token: import.meta.env.GITHUB_TOKEN
+  };
+};
+
+export async function getGitBranch() {
   try {
-    // On Netlify, use the BRANCH environment variable
-    if (process.env.BRANCH) {
-      // Check if it's a pull request preview (format: pull/X/head)
-      if (process.env.BRANCH.startsWith('pull/') && process.env.HEAD) {
-        // HEAD contains the actual branch name for pull requests
-        return process.env.HEAD;
-      }
-      return process.env.BRANCH;
+    const { username, repo, token } = getGitHubCredentials();
+
+    // First try to get the default branch
+    const headers = token ? { Authorization: `token ${token}` } : {};
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}`, { headers });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
     }
 
-    // Fallback to git command for local development
-    const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-    return branch;
+    const repoData = await response.json();
+    return repoData.default_branch;
   } catch (error) {
-    console.error('Error getting git branch:', error);
+    console.error('Error fetching branch:', error);
+    return 'main'; // Fallback to a common default branch name
+  }
+}
+
+export async function getLatestCommitHash() {
+  try {
+    const { username, repo, token } = getGitHubCredentials();
+
+    const headers = token ? { Authorization: `token ${token}` } : {};
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { headers });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const commits = await response.json();
+    return commits[0].sha.substring(0, 7); // Short hash (first 7 characters)
+  } catch (error) {
+    console.error('Error fetching commit hash:', error);
     return 'unknown';
   }
 }
 
-export function getLatestCommitHash() {
+export async function getLatestCommitMessage() {
   try {
-    // Get latest commit hash (short version)
-    const commitHash = execSync('git rev-parse --short HEAD').toString().trim();
-    return commitHash;
-  } catch (error) {
-    console.error('Error getting latest commit hash:', error);
-    return 'unknown';
-  }
-}
+    const { username, repo, token } = getGitHubCredentials();
 
-export function getLatestCommitMessage() {
-  try {
-    // Get latest commit message
-    const commitMessage = execSync('git log -1 --pretty=%B').toString().trim();
-    return commitMessage;
+    const headers = token ? { Authorization: `token ${token}` } : {};
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { headers });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const commits = await response.json();
+    return commits[0].commit.message;
   } catch (error) {
-    console.error('Error getting latest commit message:', error);
-    return 'unknown';
+    console.error('Error fetching commit message:', error);
+    return 'Error fetching commit message';
   }
 }
 
 export function getGitHubRepoUrl() {
-  try {
-    // Get the remote URL
-    const remoteUrl = execSync('git config --get remote.origin.url').toString().trim();
-
-    // Convert SSH URL to HTTPS URL if needed
-    let httpsUrl = remoteUrl;
-    if (remoteUrl.startsWith('git@github.com:')) {
-      httpsUrl = remoteUrl.replace('git@github.com:', 'https://github.com/').replace(/\.git$/, '');
-    } else if (remoteUrl.startsWith('https://') && remoteUrl.endsWith('.git')) {
-      httpsUrl = remoteUrl.replace(/\.git$/, '');
-    }
-
-    return httpsUrl;
-  } catch (error) {
-    console.error('Error getting GitHub repo URL:', error);
-    return 'https://github.com';
-  }
+  const { username, repo } = getGitHubCredentials();
+  return `https://github.com/${username}/${repo}`;
 }
