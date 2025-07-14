@@ -18,6 +18,7 @@
       :class="`theme-${theme}`"
       :style="{ top: position.y + 'px', left: position.x + 'px' }"
       ref="terminalWindow"
+      @click="focusInput"
     >
       <!-- Terminal header with controls -->
       <div
@@ -34,7 +35,7 @@
       </div>
 
       <!-- Terminal content area -->
-      <div class="terminal-content">
+      <div class="terminal-content" @click="focusInput">
         <div class="terminal-output" ref="terminalOutput">
           <div v-for="(line, index) in outputLines" :key="index" class="output-line" v-html="line">
           </div>
@@ -47,6 +48,7 @@
             <div v-if="graphData.noData" class="git-graph-no-data">
               <div class="git-graph-no-data-icon">📊</div>
               <div class="git-graph-no-data-message">No code frequency data available</div>
+              <div class="git-graph-no-data-explanation">{{ graphData.note }}</div>
             </div>
 
             <!-- Graph data rows -->
@@ -68,7 +70,7 @@
               </div>
             </template>
 
-            <div class="git-graph-note">{{ graphData.note }}</div>
+            <div v-if="!graphData.noData" class="git-graph-note">{{ graphData.note }}</div>
           </div>
         </div>
 
@@ -162,10 +164,25 @@ export default {
       }
     };
 
+    const focusInput = (event) => {
+      // Focus the input element if it exists
+      if (terminalInput.value) {
+        terminalInput.value.focus();
+      }
+
+      // If this was triggered by a click event, stop propagation
+      // to prevent the document click handler from being triggered
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+    };
+
     const stopDrag = () => {
       if (isDragging.value) {
         isDragging.value = false;
         document.removeEventListener('mousemove', onDrag);
+        // Focus the input after dragging stops
+        focusInput(null);
       }
     };
 
@@ -266,6 +283,37 @@ export default {
 
     // Render code frequency graph
     const renderCodeFrequencyGraph = (frequencyData) => {
+      // Check if GitHub is still computing the data
+      if (frequencyData && frequencyData.computing) {
+        graphData.value = {
+          title: 'Code Frequency Data',
+          weeks: [],
+          note: frequencyData.message,
+          isVisible: true,
+          noData: true
+        };
+
+        outputLines.value.push('[Statistics being calculated]');
+        outputLines.value.push('');
+        return;
+      }
+
+      // Check if there was an error
+      if (frequencyData && frequencyData.error) {
+        graphData.value = {
+          title: 'Code Frequency Data',
+          weeks: [],
+          note: frequencyData.message,
+          isVisible: true,
+          noData: true
+        };
+
+        outputLines.value.push('[Error retrieving statistics]');
+        outputLines.value.push(frequencyData.message);
+        outputLines.value.push('');
+        return;
+      }
+
       // Ensure frequencyData is an array
       if (!Array.isArray(frequencyData)) {
         outputLines.value.push('Error: Invalid frequency data format');
@@ -334,14 +382,28 @@ export default {
       outputLines.value.push('');
     };
 
+    // Handle clicks outside the terminal window
+    const handleDocumentClick = (event) => {
+      // If the click is outside the terminal window, we don't need to do anything
+      // The input will naturally lose focus
+      // When the terminal window is clicked, the focusInput handler will take care of focusing
+    };
+
     // Clean up event listeners
     onMounted(() => {
       document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('click', handleDocumentClick);
+
+      // Focus the input when the component is mounted
+      setTimeout(() => {
+        focusInput(null);
+      }, 0);
     });
 
     onUnmounted(() => {
       document.removeEventListener('mouseup', stopDrag);
       document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('click', handleDocumentClick);
     });
 
     return {
@@ -357,7 +419,8 @@ export default {
       terminalInput,
       terminalOutput,
       renderCodeFrequencyGraph,
-      graphData  // Add this line
+      graphData,  // Add this line
+      focusInput  // Expose focusInput function
     };
   }
 };
@@ -668,6 +731,16 @@ export default {
   font-size: 14px;
   color: #cccccc;
   font-style: italic;
+  margin-bottom: 8px;
+}
+
+.git-graph-no-data-explanation {
+  font-size: 12px;
+  color: #aaaaaa;
+  font-style: italic;
+  max-width: 80%;
+  text-align: center;
+  margin-top: 8px;
 }
 
 .theme-light .git-graph-container {
@@ -677,6 +750,10 @@ export default {
 
 .theme-light .git-graph-no-data-message {
   color: #666666;
+}
+
+.theme-light .git-graph-no-data-explanation {
+  color: #888888;
 }
 
 /* Responsive adjustments */

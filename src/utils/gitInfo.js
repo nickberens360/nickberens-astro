@@ -73,15 +73,59 @@ export function getGitHubRepoUrl() {
   return `https://github.com/${username}/${repo}`;
 }
 
-export async function getCodeFrequency() {
+// Cache for code frequency data
+let codeFrequencyCache = {
+  data: null,
+  timestamp: 0,
+  expiryTime: 5 * 60 * 1000 // 5 minutes in milliseconds
+};
+
+export async function getCodeFrequency(retryCount = 0, maxRetries = 3) {
   try {
     const { username, repo, token } = getGitHubCredentials();
+
+    // Check if we have valid cached data
+    const now = Date.now();
+    if (codeFrequencyCache.data && (now - codeFrequencyCache.timestamp) < codeFrequencyCache.expiryTime) {
+      console.log('Using cached code frequency data');
+      return codeFrequencyCache.data;
+    }
 
     const headers = token ? { Authorization: `token ${token}` } : {};
     const response = await fetch(`https://api.github.com/repos/${username}/${repo}/stats/code_frequency`, { headers });
 
+    // Handle 202 Accepted response with retry logic
+    if (response.status === 202) {
+      if (retryCount < maxRetries) {
+        console.log(`GitHub is computing statistics. Retry ${retryCount + 1}/${maxRetries} in 2 seconds...`);
+
+        // Wait for 2 seconds before retrying
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(getCodeFrequency(retryCount + 1, maxRetries));
+          }, 2000);
+        });
+      } else {
+        return {
+          computing: true,
+          message: "GitHub is still calculating statistics. Please try again later."
+        };
+      }
+    }
+
+    // Handle different error cases with specific messages
     if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
+      let errorMessage = `GitHub API error: ${response.status}`;
+
+      if (response.status === 403) {
+        errorMessage = 'Rate limit exceeded. Please try again later or use a GitHub token.';
+      } else if (response.status === 404) {
+        errorMessage = 'Repository not found. Please check the repository name and username.';
+      } else if (response.status === 401) {
+        errorMessage = 'Authentication failed. Please check your GitHub token.';
+      }
+
+      throw new Error(errorMessage);
     }
 
     // GitHub returns an array of weekly data points
@@ -94,9 +138,16 @@ export async function getCodeFrequency() {
       return [];
     }
 
+    // Cache the successful result
+    codeFrequencyCache.data = frequencyData;
+    codeFrequencyCache.timestamp = now;
+
     return frequencyData;
   } catch (error) {
     console.error('Error fetching code frequency:', error);
-    return [];
+    return {
+      error: true,
+      message: error.message || 'An error occurred while fetching code frequency data'
+    };
   }
 }
