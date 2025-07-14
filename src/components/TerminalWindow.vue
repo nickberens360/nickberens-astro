@@ -74,6 +74,12 @@
           </div>
         </div>
 
+        <!-- Loading indicator -->
+        <div v-if="isLoading" class="loading-container">
+          <span class="loading-text">Loading data</span>
+          <span class="loading-indicator"></span>
+        </div>
+
         <!-- Terminal input using standard input element -->
         <div class="terminal-input-line">
           <span class="prompt mr-2">~$</span>
@@ -131,6 +137,28 @@ export default {
     const terminalWindow = ref(null);
     const terminalInput = ref(null);
     const terminalOutput = ref(null);
+    const isLoading = ref(false);
+    const loadingStartTime = ref(0);
+
+    // Helper function to ensure minimum loading time
+    const ensureMinLoadingTime = async (promise, minTime = 3000) => {
+      isLoading.value = true;
+      loadingStartTime.value = Date.now();
+
+      // Wait for the promise to resolve
+      const result = await promise;
+
+      // Calculate how much time has passed
+      const elapsedTime = Date.now() - loadingStartTime.value;
+
+      // If less than minTime has passed, wait for the remaining time
+      if (elapsedTime < minTime) {
+        await new Promise(resolve => setTimeout(resolve, minTime - elapsedTime));
+      }
+
+      isLoading.value = false;
+      return result;
+    };
 
     // Add this to your reactive state
     const graphData = ref({
@@ -206,6 +234,7 @@ export default {
       // Process commands
       if (baseCommand === 'clear') {
         outputLines.value = [];
+        graphData.value.isVisible = false; // Also hide the GitHub graph
       } else if (baseCommand === 'help') {
         outputLines.value.push('Available commands:');
         outputLines.value.push('- clear: Clear the terminal');
@@ -228,7 +257,7 @@ export default {
         } else if (args[0] === '--latest-commit') {
           outputLines.value.push('Fetching latest commit message...');
 
-          getLatestCommitMessage()
+          ensureMinLoadingTime(getLatestCommitMessage())
             .then(commitMessage => {
               outputLines.value.push('Latest commit message:');
               outputLines.value.push(commitMessage);
@@ -247,7 +276,7 @@ export default {
         } else if (args[0] === '--graph') {
           outputLines.value.push('Fetching code frequency data...');
 
-          getCodeFrequency()
+          ensureMinLoadingTime(getCodeFrequency())
             .then(frequencyData => {
               outputLines.value.push('Code Frequency (additions/deletions over time):');
               outputLines.value.push('');
@@ -420,7 +449,8 @@ export default {
       terminalOutput,
       renderCodeFrequencyGraph,
       graphData,  // Add this line
-      focusInput  // Expose focusInput function
+      focusInput,  // Expose focusInput function
+      isLoading   // Add loading state
     };
   }
 };
@@ -762,5 +792,34 @@ export default {
     width: 90%;
     height: 350px;
   }
+}
+
+/* Loading animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.loading-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 16px;
+  background-color: #f8f8f8;
+  animation: blink 1s infinite;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.theme-light .loading-indicator {
+  background-color: #333;
+}
+
+.loading-text {
+  color: #27c93f;
+  font-weight: bold;
+}
+
+.theme-light .loading-text {
+  color: #27a83f;
 }
 </style>
