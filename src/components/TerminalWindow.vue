@@ -37,7 +37,8 @@
       <!-- Terminal content area -->
       <div class="terminal-content" @click="focusInput">
         <div class="terminal-output" ref="terminalOutput">
-          <div v-for="(line, index) in outputLines" :key="index" class="output-line" v-html="line">
+          <!-- Output lines before the graph -->
+          <div v-for="(line, index) in outputLinesBeforeGraph" :key="`before-${index}`" class="output-line" v-html="line">
           </div>
 
           <!-- Git Graph Visualization -->
@@ -72,12 +73,17 @@
 
             <div v-if="!graphData.noData" class="git-graph-note">{{ graphData.note }}</div>
           </div>
+
+          <!-- Output lines after the graph -->
+          <div v-for="(line, index) in outputLinesAfterGraph" :key="`after-${index}`" class="output-line" v-html="line">
+          </div>
         </div>
 
         <!-- Loading indicator -->
         <div v-if="isLoading" class="loading-container">
-          <span class="loading-text">Loading data</span>
-          <span class="loading-indicator"></span>
+          <div class="progress-bar-container">
+            <div class="progress-bar" :style="{ width: `${loadingProgress}%` }"></div>
+          </div>
         </div>
 
         <!-- Terminal input using standard input element -->
@@ -132,18 +138,32 @@ export default {
     const position = reactive({ x: 100, y: 100 });
     const isDragging = ref(false);
     const dragOffset = reactive({ x: 0, y: 0 });
-    const outputLines = ref([...props.initialOutput]);
+    // Split output lines into before and after graph
+    const outputLinesBeforeGraph = ref([...props.initialOutput]);
+    const outputLinesAfterGraph = ref([]);
+
     const inputValue = ref('');
     const terminalWindow = ref(null);
     const terminalInput = ref(null);
     const terminalOutput = ref(null);
     const isLoading = ref(false);
     const loadingStartTime = ref(0);
+    const loadingProgress = ref(0);
 
-    // Helper function to ensure minimum loading time
+    // Helper function to ensure minimum loading time with progress simulation
     const ensureMinLoadingTime = async (promise, minTime = 3000) => {
       isLoading.value = true;
+      loadingProgress.value = 0;
       loadingStartTime.value = Date.now();
+
+      // Start progress animation
+      const progressInterval = setInterval(() => {
+        // Increase progress gradually up to 90% while waiting for the promise
+        if (loadingProgress.value < 90) {
+          loadingProgress.value += Math.random() * 3 + 1;
+          if (loadingProgress.value > 90) loadingProgress.value = 90;
+        }
+      }, 100);
 
       // Wait for the promise to resolve
       const result = await promise;
@@ -155,6 +175,13 @@ export default {
       if (elapsedTime < minTime) {
         await new Promise(resolve => setTimeout(resolve, minTime - elapsedTime));
       }
+
+      // Complete the progress to 100%
+      loadingProgress.value = 100;
+      clearInterval(progressInterval);
+
+      // Small delay to show the completed progress bar before hiding
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       isLoading.value = false;
       return result;
@@ -224,7 +251,12 @@ export default {
 
     // Command handling
     const handleCommand = (command) => {
-      outputLines.value.push(`${command}`);
+      // Add command to appropriate output lines array
+      if (graphData.value.isVisible) {
+        outputLinesAfterGraph.value.push(`${command}`);
+      } else {
+        outputLinesBeforeGraph.value.push(`${command}`);
+      }
 
       // Parse command and arguments
       const parts = command.split(' ');
@@ -233,34 +265,48 @@ export default {
 
       // Process commands
       if (baseCommand === 'clear') {
-        outputLines.value = [];
+        outputLinesBeforeGraph.value = [];
+        outputLinesAfterGraph.value = [];
         graphData.value.isVisible = false; // Also hide the GitHub graph
       } else if (baseCommand === 'help') {
-        outputLines.value.push('Available commands:');
-        outputLines.value.push('- clear: Clear the terminal');
-        outputLines.value.push('- help: Show this help message');
-        outputLines.value.push('- theme: Toggle between light and dark theme');
-        outputLines.value.push('- version: Show terminal version');
-        outputLines.value.push('- git --latest-commit: Show the latest git commit message');
-        outputLines.value.push('- git --graph: Show code frequency (additions/deletions over time)');
+        // Add output to appropriate array
+        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+        outputArray.value.push('Available commands:');
+        outputArray.value.push('- clear: Clear the terminal');
+        outputArray.value.push('- help: Show this help message');
+        outputArray.value.push('- theme: Toggle between light and dark theme');
+        outputArray.value.push('- version: Show terminal version');
+        outputArray.value.push('- git --latest-commit: Show the latest git commit message');
+        outputArray.value.push('- git --graph: Show code frequency (additions/deletions over time)');
       } else if (baseCommand === 'theme') {
         // Toggle theme
         const newTheme = props.theme === 'dark' ? 'light' : 'dark';
         emit('update:theme', newTheme);
-        outputLines.value.push(`Theme switched to ${newTheme} mode`);
+
+        // Add output to appropriate array
+        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+        outputArray.value.push(`Theme switched to ${newTheme} mode`);
       } else if (baseCommand === 'version') {
-        outputLines.value.push('Terminal v1.0.0');
-        outputLines.value.push('Created by nickberens');
+        // Add output to appropriate array
+        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+        outputArray.value.push('Terminal v1.0.0');
+        outputArray.value.push('Created by nickberens');
       } else if (baseCommand === 'git') {
         if (args.length === 0) {
-          outputLines.value.push('Usage: git [--latest-commit]');
+          // Add output to appropriate array
+          const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+          outputArray.value.push('Usage: git [--latest-commit]');
         } else if (args[0] === '--latest-commit') {
-          outputLines.value.push('Fetching latest commit message...');
+          // Add output to appropriate array
+          const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+          outputArray.value.push('Fetching latest commit message...');
 
           ensureMinLoadingTime(getLatestCommitMessage())
             .then(commitMessage => {
-              outputLines.value.push('Latest commit message:');
-              outputLines.value.push(commitMessage);
+              // Add output to appropriate array
+              const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+              outputArray.value.push('Latest commit message:');
+              outputArray.value.push(commitMessage);
 
               // Scroll to bottom of output
               setTimeout(() => {
@@ -270,16 +316,27 @@ export default {
               }, 0);
             })
             .catch(error => {
-              outputLines.value.push('Error retrieving latest commit message');
-              outputLines.value.push(error.message);
+              // Add output to appropriate array
+              const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+              outputArray.value.push('Error retrieving latest commit message');
+              outputArray.value.push(error.message);
             });
         } else if (args[0] === '--graph') {
-          outputLines.value.push('Fetching code frequency data...');
+          // If graph is already visible, hide it and move its content to before array
+          if (graphData.value.isVisible) {
+            // Move all content from after array to before array
+            outputLinesBeforeGraph.value = [...outputLinesBeforeGraph.value, ...outputLinesAfterGraph.value];
+            outputLinesAfterGraph.value = [];
+            graphData.value.isVisible = false;
+          }
+
+          // Add graph command output to the before array
+          outputLinesBeforeGraph.value.push('Fetching code frequency data...');
 
           ensureMinLoadingTime(getCodeFrequency())
             .then(frequencyData => {
-              outputLines.value.push('Code Frequency (additions/deletions over time):');
-              outputLines.value.push('');
+              outputLinesBeforeGraph.value.push('Code Frequency (additions/deletions over time):');
+              outputLinesBeforeGraph.value.push('');
 
               // Render the ASCII graph or show "no data" message
               renderCodeFrequencyGraph(frequencyData);
@@ -292,14 +349,18 @@ export default {
               }, 0);
             })
             .catch(error => {
-              outputLines.value.push('Error retrieving code frequency data');
-              outputLines.value.push(error.message);
+              outputLinesBeforeGraph.value.push('Error retrieving code frequency data');
+              outputLinesBeforeGraph.value.push(error.message);
             });
         } else {
-          outputLines.value.push(`Unknown git option: ${args.join(' ')}`);
+          // Add output to appropriate array
+          const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+          outputArray.value.push(`Unknown git option: ${args.join(' ')}`);
         }
       } else {
-        outputLines.value.push(`Command not found: ${baseCommand}`);
+        // Add output to appropriate array
+        const outputArray = graphData.value.isVisible ? outputLinesAfterGraph : outputLinesBeforeGraph;
+        outputArray.value.push(`Command not found: ${baseCommand}`);
       }
 
       // Scroll to bottom of output
@@ -322,8 +383,8 @@ export default {
           noData: true
         };
 
-        outputLines.value.push('[Statistics being calculated]');
-        outputLines.value.push('');
+        outputLinesBeforeGraph.value.push('[Statistics being calculated]');
+        outputLinesBeforeGraph.value.push('');
         return;
       }
 
@@ -337,15 +398,15 @@ export default {
           noData: true
         };
 
-        outputLines.value.push('[Error retrieving statistics]');
-        outputLines.value.push(frequencyData.message);
-        outputLines.value.push('');
+        outputLinesBeforeGraph.value.push('[Error retrieving statistics]');
+        outputLinesBeforeGraph.value.push(frequencyData.message);
+        outputLinesBeforeGraph.value.push('');
         return;
       }
 
       // Ensure frequencyData is an array
       if (!Array.isArray(frequencyData)) {
-        outputLines.value.push('Error: Invalid frequency data format');
+        outputLinesBeforeGraph.value.push('Error: Invalid frequency data format');
         return;
       }
 
@@ -361,8 +422,8 @@ export default {
         };
 
         // Add a message to the output lines
-        outputLines.value.push('[No graph data available]');
-        outputLines.value.push('');
+        outputLinesBeforeGraph.value.push('[No graph data available]');
+        outputLinesBeforeGraph.value.push('');
         return;
       }
 
@@ -407,8 +468,8 @@ export default {
       };
 
       // Add a message to the output lines
-      outputLines.value.push('[Graph data displayed below]');
-      outputLines.value.push('');
+      outputLinesBeforeGraph.value.push('[Graph data displayed below]');
+      outputLinesBeforeGraph.value.push('');
     };
 
     // Handle clicks outside the terminal window
@@ -440,7 +501,8 @@ export default {
       position,
       startDrag,
       stopDrag,
-      outputLines,
+      outputLinesBeforeGraph,
+      outputLinesAfterGraph,
       inputValue,
       submitCommand,
       handleCommand,
@@ -448,9 +510,10 @@ export default {
       terminalInput,
       terminalOutput,
       renderCodeFrequencyGraph,
-      graphData,  // Add this line
+      graphData,
       focusInput,  // Expose focusInput function
-      isLoading   // Add loading state
+      isLoading,   // Add loading state
+      loadingProgress  // Add loading progress state
     };
   }
 };
@@ -821,5 +884,34 @@ export default {
 
 .theme-light .loading-text {
   color: #27a83f;
+}
+
+/* Progress bar styling */
+.loading-container {
+  margin: 10px 0;
+  width: 100%;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 20px;
+  background-color: rgba(39, 201, 63, 0.2);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #27c93f; /* Green color */
+  border-radius: 0;
+  transition: width 0.3s ease;
+}
+
+.theme-light .progress-bar {
+  background-color: #27a83f;
+}
+
+.theme-light .progress-bar-container {
+  background-color: rgba(39, 168, 63, 0.2);
 }
 </style>
