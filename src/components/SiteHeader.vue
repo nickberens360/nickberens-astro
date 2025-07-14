@@ -53,9 +53,9 @@
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
             >
-              <client-only v-if="item.icon">
+              <ClientOnly v-if="item.icon">
                 <font-awesome-icon size="2x" :icon="item.icon" />
-              </client-only>
+              </ClientOnly>
               <span v-else>{{ item.text }}</span>
             </a>
           </li>
@@ -72,9 +72,9 @@
               :aria-label="item.ariaLabel"
               @click="closeMobileMenu"
             >
-              <client-only v-if="item.icon">
+              <ClientOnly v-if="item.icon">
                 <font-awesome-icon :icon="item.icon" />
-              </client-only>
+              </ClientOnly>
               <span v-if="item.icon" style="margin-left: 0.5em;">{{ item.text }}</span>
               <span v-else>{{ item.text }}</span>
             </a>
@@ -90,9 +90,9 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import TerminalInput from './TerminalInput.vue';
-import ClientOnly from './ClientOnly.vue';
 import { useStore } from '@nanostores/vue';
 import { navItems } from '../stores/ui';
+import ClientOnly from './ClientOnly.vue';
 
 library.add(faGithub)
 

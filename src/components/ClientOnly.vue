@@ -1,7 +1,8 @@
 <template>
-  <template v-if="isMounted">
+  <div v-if="isMounted">
     <slot></slot>
-  </template>
+  </div>
+  <div v-else style="display: none;"></div>
 </template>
 
 <script>

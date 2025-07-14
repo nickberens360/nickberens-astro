@@ -33,10 +33,12 @@ const repoUrl = getGitHubRepoUrl();
 <slot/>
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
 <TerminalWindow
-    client:load
+    client:only="vue"
     title="Nick's Terminal"
-    initialOutput={['Welcome to Nick Berens\' Terminal', 'Type \'help\' for available commands']}
-    theme="dark"
+    initialOutput={[
+        "Welcome to Nick Berens' Terminal",
+        "Type 'help' for available commands"
+    ]}
 />
 </body>
 </html>
