@@ -2,6 +2,53 @@ import { atom } from 'nanostores';
 
 // Store for the mobile menu state
 
+// Load terminal window position from localStorage or use default
+const loadTerminalPosition = () => {
+  try {
+    const savedPosition = localStorage.getItem('terminalPosition');
+    if (savedPosition) {
+      return JSON.parse(savedPosition);
+    }
+  } catch (error) {
+    console.error('Error loading terminal position:', error);
+  }
+  return { x: 100, y: 100 }; // Default position
+};
+
+// Load terminal window size from localStorage or use default
+const loadTerminalSize = () => {
+  try {
+    const savedSize = localStorage.getItem('terminalSize');
+    if (savedSize) {
+      return JSON.parse(savedSize);
+    }
+  } catch (error) {
+    console.error('Error loading terminal size:', error);
+  }
+  return { width: 600, height: 400 }; // Default size
+};
+
+// Terminal position and size stores with persisted data
+export const terminalPositionStore = atom(loadTerminalPosition());
+export const terminalSizeStore = atom(loadTerminalSize());
+
+// Subscribe to changes and save to localStorage
+terminalPositionStore.listen((value) => {
+  try {
+    localStorage.setItem('terminalPosition', JSON.stringify(value));
+  } catch (error) {
+    console.error('Error saving terminal position:', error);
+  }
+});
+
+terminalSizeStore.listen((value) => {
+  try {
+    localStorage.setItem('terminalSize', JSON.stringify(value));
+  } catch (error) {
+    console.error('Error saving terminal size:', error);
+  }
+});
+
 // Default value for the terminal input
 const DEFAULT_TERMINAL_INPUT_VALUE = 'Sh!t';
 

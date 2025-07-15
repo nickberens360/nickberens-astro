@@ -14,12 +14,7 @@
       v-else
       class="terminal-window"
       :class="`theme-${theme}`"
-      :style="{
-        top: position.y + 'px',
-        left: position.x + 'px',
-        width: size.width + 'px',
-        height: size.height + 'px'
-      }"
+      :style="terminalStyle"
       ref="terminalWindow"
       @click="focusInput"
     >
@@ -90,7 +85,6 @@
         </div>
       </div>
 
-      <!-- Add resize handle -->
       <div
         class="resize-handle"
         @mousedown="startResize"
@@ -100,12 +94,12 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTerminal } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../utils/gitInfo.js';
-import { navItems, commandHistoryStore, nextCommandIdStore } from '../stores/ui.js';
+import { navItems, commandHistoryStore, nextCommandIdStore, terminalPositionStore, terminalSizeStore } from '../stores/ui.js';
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
@@ -133,8 +127,8 @@ export default {
   },
   setup(props, { emit }) {
     const isMinimized = ref(false);
-    const position = reactive({ x: 100, y: 100 });
-    const size = reactive({ width: 600, height: 400 });
+    const position = useStore(terminalPositionStore);
+    const size = useStore(terminalSizeStore);
     const isDragging = ref(false);
     const dragOffset = reactive({ x: 0, y: 0 });
     const isResizing = ref(false);
@@ -168,7 +162,18 @@ export default {
     const loadingStartTime = ref(0);
     const loadingProgress = ref(0);
 
-    // Using processCodeFrequencyData imported from TerminalGraphOutput.vue
+    // CORRECTED: Create a computed property for the dynamic styles
+    const terminalStyle = computed(() => {
+      const pos = position.value || { x: 100, y: 100 };
+      const sz = size.value || { width: 600, height: 400 };
+
+      return {
+        top: `${pos.y}px`,
+        left: `${pos.x}px`,
+        width: `${sz.width}px`,
+        height: `${sz.height}px`,
+      };
+    });
 
     const ensureMinLoadingTime = async (promise, historyIndex, minTime = 1000) => {
       if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
@@ -236,8 +241,8 @@ export default {
     const startDrag = (event) => {
       if (terminalWindow.value && event.button === 0) {
         isDragging.value = true;
-        dragOffset.x = event.clientX - position.x;
-        dragOffset.y = event.clientY - position.y;
+        dragOffset.x = event.clientX - (position.value?.x || 100);
+        dragOffset.y = event.clientY - (position.value?.y || 100);
         document.addEventListener('mousemove', onDrag);
       }
     };
@@ -248,8 +253,10 @@ export default {
           stopDrag();
           return;
         }
-        position.x = event.clientX - dragOffset.x;
-        position.y = event.clientY - dragOffset.y;
+        terminalPositionStore.set({
+          x: event.clientX - dragOffset.x,
+          y: event.clientY - dragOffset.y
+        });
       }
     };
 
@@ -275,8 +282,8 @@ export default {
         isResizing.value = true;
         resizeStartPos.x = event.clientX;
         resizeStartPos.y = event.clientY;
-        resizeStartSize.width = size.width;
-        resizeStartSize.height = size.height;
+        resizeStartSize.width = size.value?.width || 600;
+        resizeStartSize.height = size.value?.height || 400;
         document.addEventListener('mousemove', onResize);
         document.addEventListener('mouseup', stopResize);
         event.preventDefault();
@@ -288,13 +295,12 @@ export default {
       if (isResizing.value) {
         const deltaX = event.clientX - resizeStartPos.x;
         const deltaY = event.clientY - resizeStartPos.y;
-
-        // Set minimum size constraints
         const newWidth = Math.max(300, resizeStartSize.width + deltaX);
         const newHeight = Math.max(200, resizeStartSize.height + deltaY);
-
-        size.width = newWidth;
-        size.height = newHeight;
+        terminalSizeStore.set({
+          width: newWidth,
+          height: newHeight
+        });
       }
     };
 
@@ -311,10 +317,8 @@ export default {
       if (inputValue.value.trim()) {
         const command = inputValue.value.trim();
         inputValue.value = '';
-
         const commandId = nextCommandIdStore.get();
         nextCommandIdStore.set(commandId + 1);
-
         const historyItem = {
           id: commandId,
           timestamp: Date.now(),
@@ -326,10 +330,8 @@ export default {
           commitData: null,
           commitHistory: null
         };
-
         commandHistoryStore.set([...commandHistory.value, historyItem]);
         handleCommand(command, commandId);
-
         setTimeout(() => {
           if (terminalOutput.value) {
             terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
@@ -341,12 +343,9 @@ export default {
     const handleCommand = (command, commandId) => {
       const historyIndex = commandHistory.value.findIndex(item => item.id === commandId);
       if (historyIndex === -1) return;
-
       const parts = command.split(' ');
-      // Convert baseCommand to lowercase for case-insensitive comparison
       const baseCommand = parts[0].toLowerCase();
       const args = parts.slice(1);
-
       if (baseCommand === 'clear') {
         const currentCommand = commandHistory.value[historyIndex];
         commandHistoryStore.set([currentCommand]);
@@ -416,15 +415,11 @@ export default {
           updatedHistory[historyIndex].textOutput.push('Fetching commit history...');
           updatedHistory[historyIndex].isLoading = true;
           commandHistoryStore.set(updatedHistory);
-
           ensureMinLoadingTime(getCommitHistory(), historyIndex)
             .then(commits => {
               if (historyIndex !== -1) {
                 const updatedHistory = [...commandHistory.value];
-
-                // Use the imported processCommitHistory function from TerminalLogOutput.vue
                 const logOutputRef = processCommitHistory(commits);
-
                 updatedHistory[historyIndex] = {
                   ...updatedHistory[historyIndex],
                   textOutput: [...updatedHistory[historyIndex].textOutput],
@@ -450,14 +445,11 @@ export default {
           updatedHistory[historyIndex].textOutput.push('Fetching code frequency data...');
           updatedHistory[historyIndex].isLoading = true;
           commandHistoryStore.set(updatedHistory);
-
           ensureMinLoadingTime(getCodeFrequency(), historyIndex)
             .then(frequencyData => {
               if (historyIndex !== -1) {
                 const updatedHistory = [...commandHistory.value];
-                // Use the local utility function
                 const graphOutputRef = processCodeFrequencyData(frequencyData);
-
                 updatedHistory[historyIndex] = {
                   ...updatedHistory[historyIndex],
                   textOutput: [...updatedHistory[historyIndex].textOutput, 'Code Frequency (additions/deletions over time):', ''],
@@ -498,8 +490,6 @@ export default {
       document.addEventListener('mouseup', stopResize);
       document.addEventListener('click', handleDocumentClick);
       setTimeout(() => { focusInput(null); }, 0);
-
-      // Add this line to scroll to the bottom when the component is mounted
       setTimeout(() => {
         if (terminalOutput.value) {
           terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
@@ -519,6 +509,7 @@ export default {
       isMinimized,
       position,
       size,
+      terminalStyle, // CORRECTED: Expose the computed property to the template
       startDrag,
       stopDrag,
       startResize,
@@ -586,7 +577,6 @@ export default {
 /* Main terminal window */
 .terminal-window {
   position: fixed;
-  /* width and height are now dynamic */
   background-color: #1e1e1e;
   border-radius: 8px;
   overflow: hidden;
@@ -595,8 +585,6 @@ export default {
   flex-direction: column;
   z-index: 1000;
 }
-
-/* Terminal header styles moved to TerminalControlBar.vue */
 
 /* Terminal content area */
 .terminal-content {
@@ -670,8 +658,6 @@ export default {
   color: #333;
 }
 
-/* Terminal header theme styles moved to TerminalControlBar.vue */
-
 .terminal-window.theme-light .terminal-content {
   color: #333;
 }
@@ -711,8 +697,6 @@ export default {
 .theme-light .terminal-output::-webkit-scrollbar-thumb:hover {
   background: #aaa;
 }
-
-/* Git graph styling moved to TerminalGraphOutput.vue */
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
@@ -758,12 +742,10 @@ export default {
 
 .progress-bar {
   height: 100%;
-  background-color: #ffffff; /* White color */
+  background-color: #ffffff;
   border-radius: 0;
   transition: width 0.3s ease;
 }
-
-/* NOTE: The stray 'd' was here. It has been removed. */
 
 .theme-light .progress-bar {
   background-color: #000000;
