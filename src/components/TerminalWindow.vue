@@ -38,7 +38,7 @@
               <div v-for="(line, lineIndex) in item.textOutput" :key="`text-${lineIndex}`" class="output-line">
                 <template v-if="typeof line === 'string'">{{ line }}</template>
                 <template v-else-if="line.type === 'link'">
-                  {{ line.prefix }}<a :href="line.url" class="terminal-link">{{ line.text }}</a>
+                  {{ line.prefix }}<a :href="line.url" class="terminal-link">{{ line.text }}</a>{{ line.suffix || '' }}
                 </template>
                 <terminal-graph-output
                   v-else-if="line.type === 'graph-history' || line.type === 'latest-commit'"
@@ -54,6 +54,11 @@
               <terminal-graph-output
                 v-if="item.commitData && item.commitData.isVisible"
                 :commit-data="item.commitData"
+              />
+
+              <terminal-log-output
+                v-if="item.commitHistory && item.commitHistory.isVisible"
+                :commit-history="item.commitHistory"
               />
 
               <div v-if="item.isLoading" class="loading-container">
@@ -93,6 +98,7 @@ import { navItems, commandHistoryStore, nextCommandIdStore } from '../stores/ui.
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput from './TerminalGraphOutput.vue';
+import TerminalLogOutput from './TerminalLogOutput.vue';
 
 library.add(faTerminal);
 
@@ -102,6 +108,7 @@ export default {
     FontAwesomeIcon,
     TerminalControlBar,
     TerminalGraphOutput,
+    TerminalLogOutput,
   },
   props: {
     title: {
@@ -132,7 +139,8 @@ export default {
         isLoading: false,
         loadingProgress: 0,
         graphData: null,
-        commitData: null
+        commitData: null,
+        commitHistory: null
       }]);
       nextCommandIdStore.set(nextCommandIdStore.get() + 1);
     }
@@ -145,7 +153,7 @@ export default {
     const loadingStartTime = ref(0);
     const loadingProgress = ref(0);
 
-    const ensureMinLoadingTime = async (promise, historyIndex, minTime = 3000) => {
+    const ensureMinLoadingTime = async (promise, historyIndex, minTime = 2000) => {
       if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
         const updatedHistory = [...commandHistory.value];
         updatedHistory[historyIndex] = {
@@ -261,7 +269,8 @@ export default {
           isLoading: false,
           loadingProgress: 0,
           graphData: null,
-          commitData: null
+          commitData: null,
+          commitHistory: null
         };
 
         commandHistoryStore.set([...commandHistory.value, historyItem]);
@@ -390,25 +399,15 @@ export default {
               if (historyIndex !== -1) {
                 const updatedHistory = [...commandHistory.value];
 
-                if (commits.error) {
-                  updatedHistory[historyIndex] = {
-                    ...updatedHistory[historyIndex],
-                    textOutput: [...updatedHistory[historyIndex].textOutput, commits.message],
-                    isLoading: false
-                  };
-                } else {
-                  // Format commits to match the git log --oneline output
-                  const commitLines = commits.map(commit =>
-                    `${commit.hash} ${commit.message}`
-                  );
+                // Create a temporary instance to use the method
+                const logOutputRef = TerminalLogOutput.methods.processCommitHistory(commits);
 
-                  updatedHistory[historyIndex] = {
-                    ...updatedHistory[historyIndex],
-                    textOutput: [...updatedHistory[historyIndex].textOutput, ...commitLines],
-                    isLoading: false
-                  };
-                }
-
+                updatedHistory[historyIndex] = {
+                  ...updatedHistory[historyIndex],
+                  textOutput: [...updatedHistory[historyIndex].textOutput],
+                  isLoading: false,
+                  commitHistory: logOutputRef
+                };
                 commandHistoryStore.set(updatedHistory);
                 setTimeout(() => { if (terminalOutput.value) terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight; }, 0);
               }
