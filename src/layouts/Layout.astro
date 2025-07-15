@@ -29,7 +29,7 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:load />
+<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:only="vue" />
 <slot/>
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
 <TerminalWindow

@@ -53,9 +53,7 @@
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
             >
-              <ClientOnly v-if="item.icon">
-                <font-awesome-icon size="2x" :icon="item.icon" />
-              </ClientOnly>
+              <font-awesome-icon v-if="item.icon" size="2x" :icon="item.icon" />
               <span v-else>{{ item.text }}</span>
             </a>
           </li>
@@ -72,9 +70,7 @@
               :aria-label="item.ariaLabel"
               @click="closeMobileMenu"
             >
-              <ClientOnly v-if="item.icon">
-                <font-awesome-icon :icon="item.icon" />
-              </ClientOnly>
+              <font-awesome-icon v-if="item.icon" :icon="item.icon" />
               <span v-if="item.icon" style="margin-left: 0.5em;">{{ item.text }}</span>
               <span v-else>{{ item.text }}</span>
             </a>
@@ -92,7 +88,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import TerminalInput from './TerminalInput.vue';
 import { useStore } from '@nanostores/vue';
 import { navItems } from '../stores/ui';
-import ClientOnly from './ClientOnly.vue';
+// The unused ClientOnly import has been removed.
 
 library.add(faGithub)
 
@@ -101,7 +97,7 @@ export default {
   components: {
     TerminalInput,
     FontAwesomeIcon,
-    ClientOnly
+    // ClientOnly has been removed from the components object.
   },
   props: {
     gitBranch: {
