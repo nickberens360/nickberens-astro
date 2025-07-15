@@ -194,9 +194,8 @@ export default {
       };
     };
 
-    // Using the imported processCommitHistory function from TerminalLogOutput.vue
 
-    const ensureMinLoadingTime = async (promise, historyIndex, minTime = 2000) => {
+    const ensureMinLoadingTime = async (promise, historyIndex, minTime = 1000) => {
       if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
         const updatedHistory = [...commandHistory.value];
         updatedHistory[historyIndex] = {
@@ -341,7 +340,7 @@ export default {
       } else if (baseCommand === 'help') {
         const updatedHistory = [...commandHistory.value];
         updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-        updatedHistory[historyIndex].textOutput.push('Available commands:', '- clear: Clear the terminal', '- help: Show this help message', '- theme: Toggle between light and dark theme', '- version: Show terminal version', '- ls: List navigation links', '- git --latest-commit: Show the latest git commit message', '- git --graph: Show code frequency (additions/deletions over time)', '- git log: Show commit history in oneline format');
+        updatedHistory[historyIndex].textOutput.push('Available commands:', '- clear: Clear the terminal', '- help: Show this help message', '- theme: Toggle between light and dark theme', '- version: Show terminal version', '- ls: List navigation links', '- git --graph: Show code frequency (additions/deletions over time)', '- git log: Show commit history in oneline format');
         commandHistoryStore.set(updatedHistory);
       } else if (baseCommand === 'theme') {
         theme.value = theme.value === 'dark' ? 'light' : 'dark';
@@ -367,7 +366,7 @@ export default {
         if (args.length === 0) {
           const updatedHistory = [...commandHistory.value];
           updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-          updatedHistory[historyIndex].textOutput.push('Usage: git [--latest-commit | --graph | log]');
+          updatedHistory[historyIndex].textOutput.push('Usage: git [--graph | log]');
           commandHistoryStore.set(updatedHistory);
         } else if (args[0] === '--latest-commit') {
           const updatedHistory = [...commandHistory.value];
@@ -486,6 +485,13 @@ export default {
       document.addEventListener('mouseup', stopDrag);
       document.addEventListener('click', handleDocumentClick);
       setTimeout(() => { focusInput(null); }, 0);
+
+      // Add this line to scroll to the bottom when the component is mounted
+      setTimeout(() => {
+        if (terminalOutput.value) {
+          terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+        }
+      }, 0);
     });
 
     onUnmounted(() => {
