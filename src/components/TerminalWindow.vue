@@ -229,7 +229,7 @@ export default {
         const deltaY = event.clientY - resizeStartPos.y;
         terminalSizeStore.set({
           width: Math.max(200, resizeStartSize.width + deltaX),
-          height: Math.max(28, resizeStartSize.height + deltaY),
+          height: Math.max(74, resizeStartSize.height + deltaY),
         });
       }
     };
