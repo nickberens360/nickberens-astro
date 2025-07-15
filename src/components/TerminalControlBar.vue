@@ -47,9 +47,11 @@ export default {
 /* Terminal header with controls */
 .terminal-header {
   height: 28px;
+  z-index: 1000;
   background-color: #3c3c3c;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   padding: 0 10px;
   cursor: move;
   user-select: none;

@@ -228,8 +228,8 @@ export default {
         const deltaX = event.clientX - resizeStartPos.x;
         const deltaY = event.clientY - resizeStartPos.y;
         terminalSizeStore.set({
-          width: Math.max(300, resizeStartSize.width + deltaX),
-          height: Math.max(200, resizeStartSize.height + deltaY),
+          width: Math.max(200, resizeStartSize.width + deltaX),
+          height: Math.max(28, resizeStartSize.height + deltaY),
         });
       }
     };
@@ -346,6 +346,29 @@ export default {
           default: () => updateHistoryItem(commandId, { textOutput: ['Usage: git [log|graph|--latest-commit]'] })
         };
         (gitAction[args[0]?.toLowerCase()] || gitAction.default)();
+      },
+      'bust-cache': (args, commandId) => {
+        // Clear localStorage items
+        localStorage.removeItem('terminalPosition');
+        localStorage.removeItem('terminalSize');
+        localStorage.removeItem('commandHistory');
+        localStorage.removeItem('nextCommandId');
+
+        // Reset nanostores to default values
+        terminalPositionStore.set({ x: 100, y: 100 });
+        terminalSizeStore.set({ width: 600, height: 400 });
+
+        // Keep only the current command in history
+        const currentCommand = commandHistory.value.find(c => c.id === commandId);
+        commandHistoryStore.set(currentCommand ? [currentCommand] : []);
+
+        // Reset next command ID
+        nextCommandIdStore.set(2);
+
+        // Provide feedback
+        updateHistoryItem(commandId, {
+          textOutput: ['Cache busted! Nanostores and localStorage have been reset.']
+        });
       },
       default: (baseCommand, commandId) => {
         updateHistoryItem(commandId, { textOutput: [`Command not found: ${baseCommand}`] });
@@ -537,7 +560,7 @@ export default {
 }
 
 .terminal-output {
-  flex-grow: 1;
+  /*flex-grow: 1;*/
   overflow-y: auto;
   margin-bottom: 10px;
 }
@@ -635,7 +658,7 @@ export default {
 @media (max-width: 768px) {
   .terminal-window {
     min-width: 90%;
-    min-height: 350px;
+    /*min-height: 350px;*/
   }
 }
 
