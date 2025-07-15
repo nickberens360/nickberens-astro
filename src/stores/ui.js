@@ -130,3 +130,6 @@ export const navItems = atom([
     ariaLabel: 'GitHub Profile'
   }
 ]);
+
+// Store for tracking terminal active state
+export const isTerminalActive = atom(false);
