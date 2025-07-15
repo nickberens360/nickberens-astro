@@ -59,6 +59,47 @@
 </template>
 
 <script>
+// Export the processCodeFrequencyData function so it can be imported elsewhere
+export function processCodeFrequencyData(frequencyData) {
+  if (frequencyData && frequencyData.computing) {
+    return { title: 'Code Frequency Data', weeks: [], note: frequencyData.message, isVisible: true, noData: true };
+  }
+  if (frequencyData && frequencyData.error) {
+    return { title: 'Code Frequency Data', weeks: [], note: frequencyData.message, isVisible: true, noData: true };
+  }
+  if (!Array.isArray(frequencyData)) {
+    return { title: 'Code Frequency Data', weeks: [], note: 'Invalid data format received', isVisible: true, noData: true };
+  }
+  if (frequencyData.length === 0) {
+    return { title: 'Code Frequency Data', weeks: [], note: 'No code frequency data available. This could be because the repository is new, private, or the GitHub API has not calculated the statistics yet.', isVisible: true, noData: true };
+  }
+
+  const recentData = frequencyData.slice(-10);
+  let maxAddition = 0;
+  let maxDeletion = 0;
+  recentData.forEach(week => {
+    maxAddition = Math.max(maxAddition, week[1]);
+    maxDeletion = Math.max(maxDeletion, Math.abs(week[2]));
+  });
+  const maxValue = Math.max(maxAddition, maxDeletion);
+  const graphHeight = 10;
+
+  return {
+    title: 'Additions (+) / Deletions (-) - Last 10 weeks',
+    weeks: recentData.map(week => {
+      const date = new Date(week[0] * 1000).toISOString().split('T')[0];
+      const additions = week[1];
+      const deletions = Math.abs(week[2]);
+      const additionBars = Math.round((additions / maxValue) * graphHeight);
+      const deletionBars = Math.round((deletions / maxValue) * graphHeight);
+      return { date, additions, deletions, additionBars, deletionBars };
+    }),
+    note: 'Note: Graph is scaled to fit the terminal window',
+    isVisible: true,
+    noData: false
+  };
+}
+
 export default {
   name: 'TerminalGraphOutput',
   props: {
@@ -76,45 +117,7 @@ export default {
     }
   },
   methods: {
-    processCodeFrequencyData(frequencyData) {
-      if (frequencyData && frequencyData.computing) {
-        return { title: 'Code Frequency Data', weeks: [], note: frequencyData.message, isVisible: true, noData: true };
-      }
-      if (frequencyData && frequencyData.error) {
-        return { title: 'Code Frequency Data', weeks: [], note: frequencyData.message, isVisible: true, noData: true };
-      }
-      if (!Array.isArray(frequencyData)) {
-        return { title: 'Code Frequency Data', weeks: [], note: 'Invalid data format received', isVisible: true, noData: true };
-      }
-      if (frequencyData.length === 0) {
-        return { title: 'Code Frequency Data', weeks: [], note: 'No code frequency data available. This could be because the repository is new, private, or the GitHub API has not calculated the statistics yet.', isVisible: true, noData: true };
-      }
-
-      const recentData = frequencyData.slice(-10);
-      let maxAddition = 0;
-      let maxDeletion = 0;
-      recentData.forEach(week => {
-        maxAddition = Math.max(maxAddition, week[1]);
-        maxDeletion = Math.max(maxDeletion, Math.abs(week[2]));
-      });
-      const maxValue = Math.max(maxAddition, maxDeletion);
-      const graphHeight = 10;
-
-      return {
-        title: 'Additions (+) / Deletions (-) - Last 10 weeks',
-        weeks: recentData.map(week => {
-          const date = new Date(week[0] * 1000).toISOString().split('T')[0];
-          const additions = week[1];
-          const deletions = Math.abs(week[2]);
-          const additionBars = Math.round((additions / maxValue) * graphHeight);
-          const deletionBars = Math.round((deletions / maxValue) * graphHeight);
-          return { date, additions, deletions, additionBars, deletionBars };
-        }),
-        note: 'Note: Graph is scaled to fit the terminal window',
-        isVisible: true,
-        noData: false
-      };
-    }
+    processCodeFrequencyData
   }
 };
 </script>

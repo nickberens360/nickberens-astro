@@ -97,7 +97,7 @@ import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../u
 import { navItems, commandHistoryStore, nextCommandIdStore } from '../stores/ui.js';
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
-import TerminalGraphOutput from './TerminalGraphOutput.vue';
+import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
 import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
 
 library.add(faTerminal);
@@ -153,47 +153,7 @@ export default {
     const loadingStartTime = ref(0);
     const loadingProgress = ref(0);
 
-    // Utility function to process code frequency data
-    const processCodeFrequencyData = (frequencyData) => {
-      if (frequencyData && frequencyData.computing) {
-        return { title: 'Code Frequency Data', weeks: [], note: frequencyData.message, isVisible: true, noData: true };
-      }
-      if (frequencyData && frequencyData.error) {
-        return { title: 'Code Frequency Data', weeks: [], note: frequencyData.message, isVisible: true, noData: true };
-      }
-      if (!Array.isArray(frequencyData)) {
-        return { title: 'Code Frequency Data', weeks: [], note: 'Invalid data format received', isVisible: true, noData: true };
-      }
-      if (frequencyData.length === 0) {
-        return { title: 'Code Frequency Data', weeks: [], note: 'No code frequency data available. This could be because the repository is new, private, or the GitHub API has not calculated the statistics yet.', isVisible: true, noData: true };
-      }
-
-      const recentData = frequencyData.slice(-10);
-      let maxAddition = 0;
-      let maxDeletion = 0;
-      recentData.forEach(week => {
-        maxAddition = Math.max(maxAddition, week[1]);
-        maxDeletion = Math.max(maxDeletion, Math.abs(week[2]));
-      });
-      const maxValue = Math.max(maxAddition, maxDeletion);
-      const graphHeight = 10;
-
-      return {
-        title: 'Additions (+) / Deletions (-) - Last 10 weeks',
-        weeks: recentData.map(week => {
-          const date = new Date(week[0] * 1000).toISOString().split('T')[0];
-          const additions = week[1];
-          const deletions = Math.abs(week[2]);
-          const additionBars = Math.round((additions / maxValue) * graphHeight);
-          const deletionBars = Math.round((deletions / maxValue) * graphHeight);
-          return { date, additions, deletions, additionBars, deletionBars };
-        }),
-        note: 'Each + or - represents relative code changes',
-        isVisible: true,
-        noData: false
-      };
-    };
-
+    // Using processCodeFrequencyData imported from TerminalGraphOutput.vue
 
     const ensureMinLoadingTime = async (promise, historyIndex, minTime = 1000) => {
       if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
@@ -331,7 +291,8 @@ export default {
       if (historyIndex === -1) return;
 
       const parts = command.split(' ');
-      const baseCommand = parts[0];
+      // Convert baseCommand to lowercase for case-insensitive comparison
+      const baseCommand = parts[0].toLowerCase();
       const args = parts.slice(1);
 
       if (baseCommand === 'clear') {
@@ -340,7 +301,7 @@ export default {
       } else if (baseCommand === 'help') {
         const updatedHistory = [...commandHistory.value];
         updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-        updatedHistory[historyIndex].textOutput.push('Available commands:', '- clear: Clear the terminal', '- help: Show this help message', '- theme: Toggle between light and dark theme', '- version: Show terminal version', '- ls: List navigation links', '- git --graph: Show code frequency (additions/deletions over time)', '- git log: Show commit history in oneline format');
+        updatedHistory[historyIndex].textOutput.push('Available commands:', '- clear: Clear the terminal', '- help: Show this help message', '- theme: Toggle between light and dark theme', '- version: Show terminal version', '- ls: List navigation links', '- git graph: Show code frequency (additions/deletions over time)', '- git log: Show commit history in oneline format');
         commandHistoryStore.set(updatedHistory);
       } else if (baseCommand === 'theme') {
         theme.value = theme.value === 'dark' ? 'light' : 'dark';
@@ -366,9 +327,9 @@ export default {
         if (args.length === 0) {
           const updatedHistory = [...commandHistory.value];
           updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-          updatedHistory[historyIndex].textOutput.push('Usage: git [--graph | log]');
+          updatedHistory[historyIndex].textOutput.push('Usage: git [log|graph]');
           commandHistoryStore.set(updatedHistory);
-        } else if (args[0] === '--latest-commit') {
+        } else if (args[0].toLowerCase() === '--latest-commit') {
           const updatedHistory = [...commandHistory.value];
           updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
           updatedHistory[historyIndex].textOutput.push('Fetching latest commit message...');
@@ -397,39 +358,7 @@ export default {
                 commandHistoryStore.set(updatedHistory);
               }
             });
-        } else if (args[0] === '--graph') {
-          const updatedHistory = [...commandHistory.value];
-          updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-          updatedHistory[historyIndex].textOutput.push('Fetching code frequency data...');
-          updatedHistory[historyIndex].isLoading = true;
-          commandHistoryStore.set(updatedHistory);
-          ensureMinLoadingTime(getCodeFrequency(), historyIndex)
-            .then(frequencyData => {
-              if (historyIndex !== -1) {
-                const updatedHistory = [...commandHistory.value];
-                // Use the local utility function
-                const graphOutputRef = processCodeFrequencyData(frequencyData);
-
-                updatedHistory[historyIndex] = {
-                  ...updatedHistory[historyIndex],
-                  textOutput: [...updatedHistory[historyIndex].textOutput, 'Code Frequency (additions/deletions over time):', ''],
-                  isLoading: false,
-                  graphData: graphOutputRef
-                };
-                commandHistoryStore.set(updatedHistory);
-                setTimeout(() => { if (terminalOutput.value) terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight; }, 0);
-              }
-            })
-            .catch(error => {
-              if (historyIndex !== -1) {
-                const updatedHistory = [...commandHistory.value];
-                updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-                updatedHistory[historyIndex].isLoading = false;
-                updatedHistory[historyIndex].textOutput.push('Error retrieving code frequency data', error.message);
-                commandHistoryStore.set(updatedHistory);
-              }
-            });
-        } else if (args[0] === 'log') {
+        } else if (args[0].toLowerCase() === 'log') {
           const updatedHistory = [...commandHistory.value];
           updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
           updatedHistory[historyIndex].textOutput.push('Fetching commit history...');
@@ -463,6 +392,39 @@ export default {
                 commandHistoryStore.set(updatedHistory);
               }
             });
+        } else if (args[0].toLowerCase() === 'graph') {
+          const updatedHistory = [...commandHistory.value];
+          updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
+          updatedHistory[historyIndex].textOutput.push('Fetching code frequency data...');
+          updatedHistory[historyIndex].isLoading = true;
+          commandHistoryStore.set(updatedHistory);
+
+          ensureMinLoadingTime(getCodeFrequency(), historyIndex)
+            .then(frequencyData => {
+              if (historyIndex !== -1) {
+                const updatedHistory = [...commandHistory.value];
+                // Use the local utility function
+                const graphOutputRef = processCodeFrequencyData(frequencyData);
+
+                updatedHistory[historyIndex] = {
+                  ...updatedHistory[historyIndex],
+                  textOutput: [...updatedHistory[historyIndex].textOutput, 'Code Frequency (additions/deletions over time):', ''],
+                  isLoading: false,
+                  graphData: graphOutputRef
+                };
+                commandHistoryStore.set(updatedHistory);
+                setTimeout(() => { if (terminalOutput.value) terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight; }, 0);
+              }
+            })
+            .catch(error => {
+              if (historyIndex !== -1) {
+                const updatedHistory = [...commandHistory.value];
+                updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
+                updatedHistory[historyIndex].isLoading = false;
+                updatedHistory[historyIndex].textOutput.push('Error retrieving code frequency data', error.message);
+                commandHistoryStore.set(updatedHistory);
+              }
+            });
         } else {
           const updatedHistory = [...commandHistory.value];
           updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
@@ -476,8 +438,6 @@ export default {
         commandHistoryStore.set(updatedHistory);
       }
     };
-
-    // processCodeFrequencyData function moved to TerminalGraphOutput.vue
 
     const handleDocumentClick = (event) => {};
 
