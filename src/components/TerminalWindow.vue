@@ -6,7 +6,7 @@
       @click="isMinimized = false"
     >
       <div class="terminal-icon">
-        <font-awesome-icon :icon="['fas', 'terminal']" />
+        <font-awesome-icon :icon="['fas', 'terminal']"/>
       </div>
     </div>
 
@@ -26,19 +26,42 @@
         @stopDrag="stopDrag"
       />
 
-      <div class="terminal-content" @click="focusInput">
-        <div class="terminal-output" ref="terminalOutput">
-          <div v-for="(item, index) in commandHistory" :key="item.id" class="command-history-item">
-            <div v-if="item.command" class="command-input">
+      <div
+        class="terminal-content"
+        @click="focusInput"
+      >
+        <div
+          class="terminal-output"
+          ref="terminalOutput"
+        >
+          <div
+            v-for="(item, index) in commandHistory"
+            :key="item.id"
+            class="command-history-item"
+          >
+            <div
+              v-if="item.command"
+              class="command-input"
+            >
               <span class="prompt mr-2">~$</span>
               <span>{{ item.command }}</span>
             </div>
 
             <div class="command-output">
-              <div v-for="(line, lineIndex) in item.textOutput" :key="`text-${lineIndex}`" class="output-line">
+              <div
+                v-for="(line, lineIndex) in item.textOutput"
+                :key="`text-${lineIndex}`"
+                class="output-line"
+              >
                 <template v-if="typeof line === 'string'">{{ line }}</template>
                 <template v-else-if="line.type === 'link'">
-                  {{ line.prefix }}<a :href="line.url" class="terminal-link">{{ line.text }}</a>{{ line.suffix || '' }}
+                  {{ line.prefix }}
+                  <a
+                    :href="line.url"
+                    class="terminal-link"
+                  >{{ line.text }}
+                  </a>
+                  {{ line.suffix || '' }}
                 </template>
                 <terminal-graph-output
                   v-else-if="line.type === 'graph-history' || line.type === 'latest-commit'"
@@ -61,9 +84,15 @@
                 :commit-history="item.commitHistory"
               />
 
-              <div v-if="item.isLoading" class="loading-container">
+              <div
+                v-if="item.isLoading"
+                class="loading-container"
+              >
                 <div class="progress-bar-container">
-                  <div class="progress-bar" :style="{ width: `${item.loadingProgress}%` }"></div>
+                  <div
+                    class="progress-bar"
+                    :style="{ width: `${item.loadingProgress}%` }"
+                  ></div>
                 </div>
               </div>
             </div>
@@ -87,7 +116,7 @@
 
       <div
         class="resize-handle"
-        @mousedown="startResize"
+        @pointerdown="startResize"
       ></div>
     </div>
   </div>
@@ -99,7 +128,14 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTerminal } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../utils/gitInfo.js';
-import { navItems, commandHistoryStore, nextCommandIdStore, terminalPositionStore, terminalSizeStore, isTerminalActive } from '../stores/ui.js';
+import {
+  navItems,
+  commandHistoryStore,
+  nextCommandIdStore,
+  terminalPositionStore,
+  terminalSizeStore,
+  isTerminalActive
+} from '../stores/ui.js';
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
@@ -154,33 +190,35 @@ export default {
     }));
 
     const startDrag = (event) => {
-      if (terminalWindow.value && event.button === 0) {
+      if (terminalWindow.value && event.isPrimary) {
         isDragging.value = true;
         dragOffset.x = event.clientX - position.value.x;
         dragOffset.y = event.clientY - position.value.y;
-        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('pointermove', onDrag);
+        document.addEventListener('pointerup', stopDrag);
+        event.preventDefault(); // Prevent scrolling on touch devices
       }
     };
     const onDrag = (event) => {
       if (isDragging.value) {
-        if (event.buttons === 0) { stopDrag(); return; }
         terminalPositionStore.set({ x: event.clientX - dragOffset.x, y: event.clientY - dragOffset.y });
       }
     };
     const stopDrag = () => {
       isDragging.value = false;
-      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('pointermove', onDrag);
+      document.removeEventListener('pointerup', stopDrag);
     };
 
     const startResize = (event) => {
-      if (event.button === 0) {
+      if (event.isPrimary) {
         isResizing.value = true;
         resizeStartPos.x = event.clientX;
         resizeStartPos.y = event.clientY;
         resizeStartSize.width = size.value.width;
         resizeStartSize.height = size.value.height;
-        document.addEventListener('mousemove', onResize);
-        document.addEventListener('mouseup', stopResize);
+        document.addEventListener('pointermove', onResize);
+        document.addEventListener('pointerup', stopResize);
         event.preventDefault();
         event.stopPropagation();
       }
@@ -197,8 +235,8 @@ export default {
     };
     const stopResize = () => {
       isResizing.value = false;
-      document.removeEventListener('mousemove', onResize);
-      document.removeEventListener('mouseup', stopResize);
+      document.removeEventListener('pointermove', onResize);
+      document.removeEventListener('pointerup', stopResize);
     };
 
     // --- STATE UPDATE HELPERS ---
@@ -251,7 +289,9 @@ export default {
       ensureMinLoadingTime(fetchFn(), commandId)
         .then(data => {
           updateHistoryItem(commandId, processFn(data));
-          setTimeout(() => { if (terminalOutput.value) terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight; }, 0);
+          setTimeout(() => {
+            if (terminalOutput.value) terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+          }, 0);
         })
         .catch(error => {
           updateHistoryItem(commandId, { textOutput: [`Error retrieving data: ${error.message}`] });
@@ -293,8 +333,16 @@ export default {
       git: (args, commandId) => {
         const gitAction = {
           log: () => createAsyncGitHandler(commandId, getCommitHistory, data => ({ commitHistory: processCommitHistory(data) }), 'Fetching commit history...'),
-          graph: () => createAsyncGitHandler(commandId, getCodeFrequency, data => ({ graphData: processCodeFrequencyData(data), textOutput: ['Code Frequency (additions/deletions over time):'] }), 'Fetching code frequency data...'),
-          '--latest-commit': () => createAsyncGitHandler(commandId, getLatestCommitMessage, data => ({ commitData: { ...data, isVisible: true } }), 'Fetching latest commit...'),
+          graph: () => createAsyncGitHandler(commandId, getCodeFrequency, data => ({
+            graphData: processCodeFrequencyData(data),
+            textOutput: ['Code Frequency (additions/deletions over time):']
+          }), 'Fetching code frequency data...'),
+          '--latest-commit': () => createAsyncGitHandler(commandId, getLatestCommitMessage, data => ({
+            commitData: {
+              ...data,
+              isVisible: true
+            }
+          }), 'Fetching latest commit...'),
           default: () => updateHistoryItem(commandId, { textOutput: ['Usage: git [log|graph|--latest-commit]'] })
         };
         (gitAction[args[0]?.toLowerCase()] || gitAction.default)();
@@ -372,14 +420,14 @@ export default {
         nextCommandIdStore.set(2);
       }
 
-      document.addEventListener('mouseup', stopDrag);
-      document.addEventListener('mouseup', stopResize);
+      document.addEventListener('pointerup', stopDrag);
+      document.addEventListener('pointerup', stopResize);
       setTimeout(focusInput, 0);
 
       // Add event listeners for terminal focus
       if (terminalWindow.value) {
-        terminalWindow.value.addEventListener('mousedown', activateTerminal);
-        document.addEventListener('mousedown', (event) => {
+        terminalWindow.value.addEventListener('pointerdown', activateTerminal);
+        document.addEventListener('pointerdown', (event) => {
           if (terminalWindow.value && !terminalWindow.value.contains(event.target) && !isMinimized.value) {
             deactivateTerminal();
           }
@@ -388,15 +436,15 @@ export default {
     });
 
     onUnmounted(() => {
-      document.removeEventListener('mouseup', stopDrag);
-      document.removeEventListener('mousemove', onDrag);
-      document.removeEventListener('mouseup', stopResize);
-      document.removeEventListener('mousemove', onResize);
+      document.removeEventListener('pointerup', stopDrag);
+      document.removeEventListener('pointermove', onDrag);
+      document.removeEventListener('pointerup', stopResize);
+      document.removeEventListener('pointermove', onResize);
 
       if (terminalWindow.value) {
-        terminalWindow.value.removeEventListener('mousedown', activateTerminal);
+        terminalWindow.value.removeEventListener('pointerdown', activateTerminal);
       }
-      document.removeEventListener('mousedown', deactivateTerminal);
+      document.removeEventListener('pointerdown', deactivateTerminal);
     });
 
     return {
@@ -425,44 +473,242 @@ export default {
 
 <style scoped>
 /* All styles remain the same */
-.command-history-item { margin-bottom: 8px; }
-.command-input { color: #63c5da; font-weight: bold; margin-bottom: 4px; }
-.command-output { margin-left: 8px; }
-.terminal-minimized { position: fixed; left: 20px; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background-color: #2d2d2d; border-radius: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); transition: all 0.3s ease; }
-.terminal-minimized:hover { transform: translateY(-50%) scale(1.05); }
-.terminal-icon { color: #fff; font-size: 24px; }
-.terminal-window { position: fixed; background-color: #1e1e1e; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; z-index: 1000; }
-.terminal-content { flex-grow: 1; display: flex; flex-direction: column; padding: 10px; overflow: hidden; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 14px; color: #f8f8f8; }
-.terminal-output { flex-grow: 1; overflow-y: auto; margin-bottom: 10px; }
-.output-line { margin-bottom: 4px; white-space: pre-wrap; word-break: break-all; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
-.terminal-input-line { display: flex; align-items: center; }
-.prompt { color: #f8f8f8; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 14px; margin-right: 8px; }
-.terminal-input { background: transparent; border: none; color: #f8f8f8; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 14px; font-weight: bold; outline: none; flex-grow: 1; caret-color: #f8f8f8; }
-.terminal-input::selection { background-color: rgba(255, 255, 255, 0.3); }
-.theme-light .prompt, .theme-light .terminal-input { color: #333; }
-.theme-light .terminal-input { caret-color: #333; }
-.theme-light .terminal-input::selection { background-color: rgba(0, 0, 0, 0.1); }
-.terminal-window.theme-light { background-color: #f0f0f0; color: #333; }
-.terminal-window.theme-light .terminal-content { color: #333; }
-.terminal-window.theme-dark { background-color: #1e1e1e; color: #f8f8f8; }
-.terminal-output::-webkit-scrollbar { width: 8px; }
-.terminal-output::-webkit-scrollbar-track { background: #1e1e1e; }
-.terminal-output::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-.terminal-output::-webkit-scrollbar-thumb:hover { background: #777; }
-.theme-light .terminal-output::-webkit-scrollbar-track { background: #f0f0f0; }
-.theme-light .terminal-output::-webkit-scrollbar-thumb { background: #ccc; }
-.theme-light .terminal-output::-webkit-scrollbar-thumb:hover { background: #aaa; }
-@media (max-width: 768px) { .terminal-window { min-width: 90%; min-height: 350px; } }
-.loading-container { margin: 10px 0; width: 100%; }
-.progress-bar-container { width: 100%; height: 20px; background-color: rgba(255, 255, 255, 0.2); border-radius: 0; overflow: hidden; }
-.progress-bar { height: 100%; background-color: #ffffff; border-radius: 0; transition: width 0.3s ease; }
-.theme-light .progress-bar { background-color: #000000; }
-.theme-light .progress-bar-container { background-color: rgba(0, 0, 0, 0.2); }
-.resize-handle { position: absolute; bottom: 0; right: 0; width: 15px; height: 15px; cursor: nwse-resize; background: transparent; }
-.resize-handle::before { content: ""; position: absolute; right: 3px; bottom: 3px; width: 9px; height: 9px; border-right: 2px solid rgba(255, 255, 255, 0.5); border-bottom: 2px solid rgba(255, 255, 255, 0.5); }
-.theme-light .resize-handle::before { border-right: 2px solid rgba(0, 0, 0, 0.3); border-bottom: 2px solid rgba(0, 0, 0, 0.3); }
-.terminal-link { color: #3498db; text-decoration: underline; cursor: pointer; }
-.terminal-link:hover { color: #2980b9; }
-.theme-light .terminal-link { color: #2980b9; }
-.theme-light .terminal-link:hover { color: #1c6ea4; }
+.command-history-item {
+  margin-bottom: 8px;
+}
+
+.command-input {
+  color: #63c5da;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.command-output {
+  margin-left: 8px;
+}
+
+.terminal-minimized {
+  position: fixed;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  background-color: #2d2d2d;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.terminal-minimized:hover {
+  transform: translateY(-50%) scale(1.05);
+}
+
+.terminal-icon {
+  color: #fff;
+  font-size: 24px;
+}
+
+.terminal-window {
+  position: fixed;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.terminal-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  overflow: hidden;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  color: #f8f8f8;
+}
+
+.terminal-output {
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.output-line {
+  margin-bottom: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.terminal-input-line {
+  display: flex;
+  align-items: center;
+}
+
+.prompt {
+  color: #f8f8f8;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.terminal-input {
+  background: transparent;
+  border: none;
+  color: #f8f8f8;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  outline: none;
+  flex-grow: 1;
+  caret-color: #f8f8f8;
+}
+
+.terminal-input::selection {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.theme-light .prompt, .theme-light .terminal-input {
+  color: #333;
+}
+
+.theme-light .terminal-input {
+  caret-color: #333;
+}
+
+.theme-light .terminal-input::selection {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.terminal-window.theme-light {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.terminal-window.theme-light .terminal-content {
+  color: #333;
+}
+
+.terminal-window.theme-dark {
+  background-color: #1e1e1e;
+  color: #f8f8f8;
+}
+
+.terminal-output::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-output::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.terminal-output::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+.theme-light .terminal-output::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.theme-light .terminal-output::-webkit-scrollbar-thumb {
+  background: #ccc;
+}
+
+.theme-light .terminal-output::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+@media (max-width: 768px) {
+  .terminal-window {
+    min-width: 90%;
+    min-height: 350px;
+  }
+}
+
+.loading-container {
+  margin: 10px 0;
+  width: 100%;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 20px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #ffffff;
+  border-radius: 0;
+  transition: width 0.3s ease;
+}
+
+.theme-light .progress-bar {
+  background-color: #000000;
+}
+
+.theme-light .progress-bar-container {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  cursor: nwse-resize;
+  background: transparent;
+  touch-action: none;
+}
+
+.resize-handle::before {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.theme-light .resize-handle::before {
+  border-right: 2px solid rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.terminal-link {
+  color: #3498db;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.terminal-link:hover {
+  color: #2980b9;
+}
+
+.theme-light .terminal-link {
+  color: #2980b9;
+}
+
+.theme-light .terminal-link:hover {
+  color: #1c6ea4;
+}
 </style>

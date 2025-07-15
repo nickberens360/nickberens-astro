@@ -1,8 +1,8 @@
 <template>
   <div
     class="terminal-header"
-    @mousedown="startDrag"
-    @mouseup="stopDrag"
+    @pointerdown="startDrag"
+    @pointerup="stopDrag"
   >
     <div class="terminal-controls">
       <div class="control close" @click="$emit('close')"></div>
@@ -25,8 +25,9 @@ export default {
   emits: ['close', 'minimize', 'startDrag', 'stopDrag'],
   setup(props, { emit }) {
     const startDrag = (event) => {
-      if (event.button === 0) {
+      if (event.isPrimary) {
         emit('startDrag', event);
+        event.preventDefault(); // Prevent default touch actions
       }
     };
 
@@ -52,6 +53,7 @@ export default {
   padding: 0 10px;
   cursor: move;
   user-select: none;
+  touch-action: none;
 }
 
 .terminal-controls {
