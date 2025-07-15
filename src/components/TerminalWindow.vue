@@ -14,7 +14,12 @@
       v-else
       class="terminal-window"
       :class="`theme-${theme}`"
-      :style="{ top: position.y + 'px', left: position.x + 'px' }"
+      :style="{
+        top: position.y + 'px',
+        left: position.x + 'px',
+        width: size.width + 'px',
+        height: size.height + 'px'
+      }"
       ref="terminalWindow"
       @click="focusInput"
     >
@@ -84,6 +89,12 @@
           />
         </div>
       </div>
+
+      <!-- Add resize handle -->
+      <div
+        class="resize-handle"
+        @mousedown="startResize"
+      ></div>
     </div>
   </div>
 </template>
@@ -123,8 +134,12 @@ export default {
   setup(props, { emit }) {
     const isMinimized = ref(false);
     const position = reactive({ x: 100, y: 100 });
+    const size = reactive({ width: 600, height: 400 });
     const isDragging = ref(false);
     const dragOffset = reactive({ x: 0, y: 0 });
+    const isResizing = ref(false);
+    const resizeStartPos = reactive({ x: 0, y: 0 });
+    const resizeStartSize = reactive({ width: 0, height: 0 });
     const theme = ref('dark');
 
     const commandHistory = useStore(commandHistoryStore);
@@ -251,6 +266,43 @@ export default {
       if (isDragging.value) {
         isDragging.value = false;
         document.removeEventListener('mousemove', onDrag);
+        focusInput(null);
+      }
+    };
+
+    const startResize = (event) => {
+      if (event.button === 0) {
+        isResizing.value = true;
+        resizeStartPos.x = event.clientX;
+        resizeStartPos.y = event.clientY;
+        resizeStartSize.width = size.width;
+        resizeStartSize.height = size.height;
+        document.addEventListener('mousemove', onResize);
+        document.addEventListener('mouseup', stopResize);
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const onResize = (event) => {
+      if (isResizing.value) {
+        const deltaX = event.clientX - resizeStartPos.x;
+        const deltaY = event.clientY - resizeStartPos.y;
+
+        // Set minimum size constraints
+        const newWidth = Math.max(300, resizeStartSize.width + deltaX);
+        const newHeight = Math.max(200, resizeStartSize.height + deltaY);
+
+        size.width = newWidth;
+        size.height = newHeight;
+      }
+    };
+
+    const stopResize = () => {
+      if (isResizing.value) {
+        isResizing.value = false;
+        document.removeEventListener('mousemove', onResize);
+        document.removeEventListener('mouseup', stopResize);
         focusInput(null);
       }
     };
@@ -443,6 +495,7 @@ export default {
 
     onMounted(() => {
       document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('mouseup', stopResize);
       document.addEventListener('click', handleDocumentClick);
       setTimeout(() => { focusInput(null); }, 0);
 
@@ -457,14 +510,19 @@ export default {
     onUnmounted(() => {
       document.removeEventListener('mouseup', stopDrag);
       document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', stopResize);
+      document.removeEventListener('mousemove', onResize);
       document.removeEventListener('click', handleDocumentClick);
     });
 
     return {
       isMinimized,
       position,
+      size,
       startDrag,
       stopDrag,
+      startResize,
+      stopResize,
       commandHistory,
       inputValue,
       submitCommand,
@@ -528,8 +586,7 @@ export default {
 /* Main terminal window */
 .terminal-window {
   position: fixed;
-  width: 600px;
-  height: 400px;
+  /* width and height are now dynamic */
   background-color: #1e1e1e;
   border-radius: 8px;
   overflow: hidden;
@@ -660,8 +717,8 @@ export default {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .terminal-window {
-    width: 90%;
-    height: 350px;
+    min-width: 90%;
+    min-height: 350px;
   }
 }
 
@@ -714,6 +771,33 @@ export default {
 
 .theme-light .progress-bar-container {
   background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Resize handle */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  cursor: nwse-resize;
+  background: transparent;
+}
+
+.resize-handle::before {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.theme-light .resize-handle::before {
+  border-right: 2px solid rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
 }
 
 /* Terminal link styling */
