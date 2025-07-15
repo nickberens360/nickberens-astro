@@ -88,7 +88,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTerminal } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { getLatestCommitMessage, getCodeFrequency } from '../utils/gitInfo.js';
+import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../utils/gitInfo.js';
 import { navItems, commandHistoryStore, nextCommandIdStore } from '../stores/ui.js';
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
@@ -289,7 +289,7 @@ export default {
       } else if (baseCommand === 'help') {
         const updatedHistory = [...commandHistory.value];
         updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-        updatedHistory[historyIndex].textOutput.push('Available commands:', '- clear: Clear the terminal', '- help: Show this help message', '- theme: Toggle between light and dark theme', '- version: Show terminal version', '- ls: List navigation links', '- git --latest-commit: Show the latest git commit message', '- git --graph: Show code frequency (additions/deletions over time)');
+        updatedHistory[historyIndex].textOutput.push('Available commands:', '- clear: Clear the terminal', '- help: Show this help message', '- theme: Toggle between light and dark theme', '- version: Show terminal version', '- ls: List navigation links', '- git --latest-commit: Show the latest git commit message', '- git --graph: Show code frequency (additions/deletions over time)', '- git log: Show commit history in oneline format');
         commandHistoryStore.set(updatedHistory);
       } else if (baseCommand === 'theme') {
         theme.value = theme.value === 'dark' ? 'light' : 'dark';
@@ -315,7 +315,7 @@ export default {
         if (args.length === 0) {
           const updatedHistory = [...commandHistory.value];
           updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
-          updatedHistory[historyIndex].textOutput.push('Usage: git [--latest-commit | --graph]');
+          updatedHistory[historyIndex].textOutput.push('Usage: git [--latest-commit | --graph | log]');
           commandHistoryStore.set(updatedHistory);
         } else if (args[0] === '--latest-commit') {
           const updatedHistory = [...commandHistory.value];
@@ -375,6 +375,50 @@ export default {
                 updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
                 updatedHistory[historyIndex].isLoading = false;
                 updatedHistory[historyIndex].textOutput.push('Error retrieving code frequency data', error.message);
+                commandHistoryStore.set(updatedHistory);
+              }
+            });
+        } else if (args[0] === 'log') {
+          const updatedHistory = [...commandHistory.value];
+          updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
+          updatedHistory[historyIndex].textOutput.push('Fetching commit history...');
+          updatedHistory[historyIndex].isLoading = true;
+          commandHistoryStore.set(updatedHistory);
+
+          ensureMinLoadingTime(getCommitHistory(), historyIndex)
+            .then(commits => {
+              if (historyIndex !== -1) {
+                const updatedHistory = [...commandHistory.value];
+
+                if (commits.error) {
+                  updatedHistory[historyIndex] = {
+                    ...updatedHistory[historyIndex],
+                    textOutput: [...updatedHistory[historyIndex].textOutput, commits.message],
+                    isLoading: false
+                  };
+                } else {
+                  // Format commits to match the git log --oneline output
+                  const commitLines = commits.map(commit =>
+                    `${commit.hash} ${commit.message}`
+                  );
+
+                  updatedHistory[historyIndex] = {
+                    ...updatedHistory[historyIndex],
+                    textOutput: [...updatedHistory[historyIndex].textOutput, ...commitLines],
+                    isLoading: false
+                  };
+                }
+
+                commandHistoryStore.set(updatedHistory);
+                setTimeout(() => { if (terminalOutput.value) terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight; }, 0);
+              }
+            })
+            .catch(error => {
+              if (historyIndex !== -1) {
+                const updatedHistory = [...commandHistory.value];
+                updatedHistory[historyIndex] = { ...updatedHistory[historyIndex], textOutput: [...updatedHistory[historyIndex].textOutput] };
+                updatedHistory[historyIndex].isLoading = false;
+                updatedHistory[historyIndex].textOutput.push('Error retrieving commit history', error.message);
                 commandHistoryStore.set(updatedHistory);
               }
             });

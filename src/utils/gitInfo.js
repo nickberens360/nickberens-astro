@@ -92,6 +92,66 @@ let codeFrequencyCache = {
   expiryTime: 5 * 60 * 1000 // 5 minutes in milliseconds
 };
 
+// Cache for commit history data
+let commitHistoryCache = {
+  data: null,
+  timestamp: 0,
+  expiryTime: 5 * 60 * 1000 // 5 minutes in milliseconds
+};
+
+export async function getCommitHistory(limit = 10) {
+  try {
+    const { username, repo, token } = getGitHubCredentials();
+
+    // Check if we have valid cached data
+    const now = Date.now();
+    if (commitHistoryCache.data && (now - commitHistoryCache.timestamp) < commitHistoryCache.expiryTime) {
+      console.log('Using cached commit history data');
+      return commitHistoryCache.data;
+    }
+
+    const headers = token ? { Authorization: `token ${token}` } : {};
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=${limit}`, { headers });
+
+    if (!response.ok) {
+      let errorMessage = `GitHub API error: ${response.status}`;
+
+      if (response.status === 403) {
+        errorMessage = 'Rate limit exceeded. Please try again later or use a GitHub token.';
+      } else if (response.status === 404) {
+        errorMessage = 'Repository not found. Please check the repository name and username.';
+      } else if (response.status === 401) {
+        errorMessage = 'Authentication failed. Please check your GitHub token.';
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const commits = await response.json();
+
+    // Format the commits to match the desired output format
+    const formattedCommits = commits.map(commit => {
+      return {
+        hash: commit.sha.substring(0, 7),
+        message: commit.commit.message.split('\n')[0], // Get first line of commit message
+        url: commit.html_url
+      };
+    });
+
+    // Cache the successful result
+    commitHistoryCache.data = formattedCommits;
+    commitHistoryCache.timestamp = now;
+
+    return formattedCommits;
+  } catch (error) {
+    console.error('Error fetching commit history:', error);
+    return {
+      error: true,
+      message: error.message || 'An error occurred while fetching commit history'
+    };
+  }
+}
+
 export async function getCodeFrequency(retryCount = 0, maxRetries = 3) {
   try {
     const { username, repo, token } = getGitHubCredentials();
