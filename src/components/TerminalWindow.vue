@@ -98,7 +98,7 @@ import { navItems, commandHistoryStore, nextCommandIdStore } from '../stores/ui.
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput from './TerminalGraphOutput.vue';
-import TerminalLogOutput from './TerminalLogOutput.vue';
+import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
 
 library.add(faTerminal);
 
@@ -194,50 +194,7 @@ export default {
       };
     };
 
-    // Utility function to process commit history
-    const processCommitHistory = (commits) => {
-      if (commits && commits.error) {
-        return {
-          title: 'Git Commit History',
-          commits: [],
-          message: commits.message,
-          isVisible: true,
-          error: true
-        };
-      }
-
-      if (!Array.isArray(commits)) {
-        return {
-          title: 'Git Commit History',
-          commits: [],
-          message: 'Invalid data format received',
-          isVisible: true,
-          error: true
-        };
-      }
-
-      if (commits.length === 0) {
-        return {
-          title: 'Git Commit History',
-          commits: [],
-          message: 'No commit history available.',
-          isVisible: true,
-          error: true
-        };
-      }
-
-      return {
-        title: 'Git Commit History',
-        commits: commits.map(commit => ({
-          hash: commit.hash,
-          message: commit.message,
-          url: commit.url
-        })),
-        note: `Showing ${commits.length} most recent commits`,
-        isVisible: true,
-        error: false
-      };
-    };
+    // Using the imported processCommitHistory function from TerminalLogOutput.vue
 
     const ensureMinLoadingTime = async (promise, historyIndex, minTime = 2000) => {
       if (historyIndex !== -1 && historyIndex < commandHistory.value.length) {
@@ -485,7 +442,7 @@ export default {
               if (historyIndex !== -1) {
                 const updatedHistory = [...commandHistory.value];
 
-                // Use the local utility function
+                // Use the imported processCommitHistory function from TerminalLogOutput.vue
                 const logOutputRef = processCommitHistory(commits);
 
                 updatedHistory[historyIndex] = {
