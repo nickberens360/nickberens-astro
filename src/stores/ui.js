@@ -1,8 +1,11 @@
 import { atom } from 'nanostores';
+import {
+  DEFAULT_TERMINAL_SIZE,
+  DEFAULT_TERMINAL_MARGIN,
+  DEFAULT_HELP_OUTPUT
+} from '../config/terminalConfig';
 
-// Store for the mobile menu state
-
-// Load terminal window position from localStorage or use default
+// --- Load terminal window position from localStorage or use default ---
 const loadTerminalPosition = () => {
   try {
     const savedPosition = localStorage.getItem('terminalPosition');
@@ -12,13 +15,12 @@ const loadTerminalPosition = () => {
   } catch (error) {
     console.error('Error loading terminal position:', error);
   }
-
-  // Return a simple, static default that works on the server.
-  return { x: 20, y: 100 };
+  // Return a simple, static default for SSR.
+  // The dynamic bottom-left calculation will happen on the client.
+  return { x: DEFAULT_TERMINAL_MARGIN, y: 100 };
 };
 
-
-// Load terminal window size from localStorage or use default
+// --- Load terminal window size from localStorage or use default ---
 const loadTerminalSize = () => {
   try {
     const savedSize = localStorage.getItem('terminalSize');
@@ -28,12 +30,11 @@ const loadTerminalSize = () => {
   } catch (error) {
     console.error('Error loading terminal size:', error);
   }
-  // Change the default size here
-  return { width: 200, height: 74 };
+  // Use the imported default size
+  return DEFAULT_TERMINAL_SIZE;
 };
 
-
-// Terminal position and size stores with persisted data
+// --- Terminal position and size stores with persisted data ---
 export const terminalPositionStore = atom(loadTerminalPosition());
 export const terminalSizeStore = atom(loadTerminalSize());
 
@@ -76,7 +77,7 @@ const loadCommandHistory = () => {
     id: 1,
     timestamp: Date.now(),
     command: '',
-    textOutput: ['Welcome to Terminal'],
+    textOutput: DEFAULT_HELP_OUTPUT,
     isLoading: false,
     loadingProgress: 0,
     graphData: null,

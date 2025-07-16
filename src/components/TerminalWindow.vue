@@ -139,6 +139,7 @@ import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
 import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
+import { DEFAULT_TERMINAL_SIZE, DEFAULT_TERMINAL_MARGIN, DEFAULT_HELP_OUTPUT  } from '../config/terminalConfig.js'; // Adjust path if needed
 
 library.add(faTerminal);
 
@@ -336,18 +337,8 @@ export default {
       },
       help: (args, commandId) => {
         updateHistoryItem(commandId, {
-          textOutput: [
-            'Available commands:',
-            '- clear: Clear the terminal',
-            '- help: Show this help message',
-            '- theme: Toggle between light and dark theme',
-            '- version: Show terminal version',
-            '- ls: List navigation links',
-            '- git log: Show commit history',
-            '- git graph: Show code frequency chart',
-            '- git --latest-commit: Show latest commit message'
-          ]
-        });
+          textOutput: DEFAULT_HELP_OUTPUT
+      });
       },
       theme: (args, commandId) => {
         theme.value = theme.value === 'dark' ? 'light' : 'dark';
@@ -367,13 +358,13 @@ export default {
             graphData: processCodeFrequencyData(data),
             textOutput: ['Code Frequency (additions/deletions over time):']
           }), 'Fetching code frequency data...'),
-          '--latest-commit': () => createAsyncGitHandler(commandId, getLatestCommitMessage, data => ({
+          'latest-commit': () => createAsyncGitHandler(commandId, getLatestCommitMessage, data => ({
             commitData: {
               ...data,
               isVisible: true
             }
           }), 'Fetching latest commit...'),
-          default: () => updateHistoryItem(commandId, { textOutput: ['Usage: git [log|graph|--latest-commit]'] })
+          default: () => updateHistoryItem(commandId, { textOutput: ['Usage: git [log|graph|latest-commit]'] })
         };
         (gitAction[args[0]?.toLowerCase()] || gitAction.default)();
       },
@@ -385,25 +376,26 @@ export default {
         localStorage.removeItem('nextCommandId');
         localStorage.removeItem('isTerminalMinimized');
 
-        // Reset nanostores to default values
-        const margin = 20;
+        terminalSizeStore.set(DEFAULT_TERMINAL_SIZE);
 
-        // 1. Set the new default size FIRST.
-        terminalSizeStore.set({ width: 200, height: 74 });
-
-        // 2. NOW get the new height from the store.
-        const terminalHeight = terminalSizeStore.get().height; // This will correctly be 74
-
-        // 3. Calculate the position using the correct new height.
+        const terminalHeight = DEFAULT_TERMINAL_SIZE.height;
         terminalPositionStore.set({
-          x: margin,
-          y: window.innerHeight - terminalHeight - margin
+          x: DEFAULT_TERMINAL_MARGIN,
+          y: window.innerHeight - terminalHeight - DEFAULT_TERMINAL_MARGIN
         });
         isTerminalMinimizedStore.set(false);
 
-        // Keep only the current command in history
-        const currentCommand = commandHistory.value.find(c => c.id === commandId);
-        commandHistoryStore.set(currentCommand ? [currentCommand] : []);
+        commandHistoryStore.set([{
+          id: 1,
+          timestamp: Date.now(),
+          command: '',
+          textOutput: DEFAULT_HELP_OUTPUT,
+          isLoading: false,
+          loadingProgress: 0,
+          graphData: null,
+          commitData: null,
+          commitHistory: null
+        }]);
 
         // Reset next command ID
         nextCommandIdStore.set(2);
