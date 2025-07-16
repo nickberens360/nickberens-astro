@@ -508,6 +508,13 @@ export default {
           }
         });
       }
+
+      // Ensure terminal is scrolled to bottom when mounted
+      setTimeout(() => {
+        if (terminalOutput.value && isMounted.value) {
+          terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+        }
+      }, 0);
     });
 
     onUnmounted(() => {
