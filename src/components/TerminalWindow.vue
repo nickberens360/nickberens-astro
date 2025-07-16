@@ -341,8 +341,9 @@ export default {
       },
       help: (args, commandId) => {
         updateHistoryItem(commandId, {
-          textOutput: DEFAULT_HELP_OUTPUT
-      });
+         updateHistoryItem(commandId, {
+           textOutput: DEFAULT_HELP_OUTPUT
+        });
       },
       theme: (args, commandId) => {
         theme.value = theme.value === 'dark' ? 'light' : 'dark';
