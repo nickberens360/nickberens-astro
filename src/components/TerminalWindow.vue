@@ -1,7 +1,7 @@
 <template>
   <div>
 
-<TerminalControlBar
+    <TerminalControlBar
       v-if="isMinimized"
       :title="title"
       class="terminal-minimized"
@@ -386,8 +386,19 @@ export default {
         localStorage.removeItem('isTerminalMinimized');
 
         // Reset nanostores to default values
-        terminalPositionStore.set({ x: 100, y: 100 });
-        terminalSizeStore.set({ width: 600, height: 400 });
+        const margin = 20;
+
+        // 1. Set the new default size FIRST.
+        terminalSizeStore.set({ width: 200, height: 74 });
+
+        // 2. NOW get the new height from the store.
+        const terminalHeight = terminalSizeStore.get().height; // This will correctly be 74
+
+        // 3. Calculate the position using the correct new height.
+        terminalPositionStore.set({
+          x: margin,
+          y: window.innerHeight - terminalHeight - margin
+        });
         isTerminalMinimizedStore.set(false);
 
         // Keep only the current command in history
@@ -467,6 +478,15 @@ export default {
     onMounted(() => {
       // Set mounted flag to true
       isMounted.value = true;
+
+      // Check if a position has been saved in localStorage. If not, set our default.
+      const savedPosition = localStorage.getItem('terminalPosition');
+      if (!savedPosition) {
+        const margin = 20;
+        const terminalHeight = size.value.height; // Use the current height from the store
+        const newY = window.innerHeight - terminalHeight - margin;
+        terminalPositionStore.set({ x: margin, y: newY });
+      }
 
       // Add initial output if history is empty
       if (props.initialOutput && props.initialOutput.length > 0 && commandHistory.value.length === 0) {

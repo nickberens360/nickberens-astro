@@ -9,12 +9,14 @@ const loadTerminalPosition = () => {
     if (savedPosition) {
       return JSON.parse(savedPosition);
     }
-  } catch (error)
-  {
+  } catch (error) {
     console.error('Error loading terminal position:', error);
   }
-  return { x: 100, y: 100 }; // Default position
+
+  // Return a simple, static default that works on the server.
+  return { x: 20, y: 100 };
 };
+
 
 // Load terminal window size from localStorage or use default
 const loadTerminalSize = () => {
@@ -26,8 +28,10 @@ const loadTerminalSize = () => {
   } catch (error) {
     console.error('Error loading terminal size:', error);
   }
-  return { width: 600, height: 400 }; // Default size
+  // Change the default size here
+  return { width: 200, height: 74 };
 };
+
 
 // Terminal position and size stores with persisted data
 export const terminalPositionStore = atom(loadTerminalPosition());
