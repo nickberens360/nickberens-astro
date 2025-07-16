@@ -3,8 +3,8 @@
  */
 
 export const DEFAULT_TERMINAL_SIZE = {
-  width: 400,
-  height: 260,
+  width: 330,
+  height: 105,
 };
 
 export const DEFAULT_TERMINAL_MARGIN = 20;
@@ -19,3 +19,9 @@ export const DEFAULT_HELP_OUTPUT = [
   '- git log: Show commit history',
   '- git graph: Show code frequency chart',
 ];
+
+export const DEFAULT_TERMINAL_OUTPUT = [
+  'Type "help" for a list of commands.',
+];
+
+

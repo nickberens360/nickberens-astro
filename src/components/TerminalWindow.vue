@@ -139,7 +139,12 @@ import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
 import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
-import { DEFAULT_TERMINAL_SIZE, DEFAULT_TERMINAL_MARGIN, DEFAULT_HELP_OUTPUT  } from '../config/terminalConfig.js'; // Adjust path if needed
+import {
+  DEFAULT_TERMINAL_SIZE,
+  DEFAULT_TERMINAL_MARGIN,
+  DEFAULT_HELP_OUTPUT,
+  DEFAULT_TERMINAL_OUTPUT
+} from '../config/terminalConfig.js'; // Adjust path if needed
 
 library.add(faTerminal);
 
@@ -331,9 +336,8 @@ export default {
 
     // --- COMMAND MAP ---
     const commands = {
-      clear: (args, commandId) => {
-        const currentCommand = commandHistory.value.find(c => c.id === commandId);
-        commandHistoryStore.set(currentCommand ? [currentCommand] : []);
+      clear: () => {
+        commandHistoryStore.set([]);
       },
       help: (args, commandId) => {
         updateHistoryItem(commandId, {
@@ -389,7 +393,7 @@ export default {
           id: 1,
           timestamp: Date.now(),
           command: '',
-          textOutput: DEFAULT_HELP_OUTPUT,
+          textOutput: DEFAULT_TERMINAL_OUTPUT,
           isLoading: false,
           loadingProgress: 0,
           graphData: null,

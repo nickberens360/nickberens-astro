@@ -2,7 +2,7 @@ import { atom } from 'nanostores';
 import {
   DEFAULT_TERMINAL_SIZE,
   DEFAULT_TERMINAL_MARGIN,
-  DEFAULT_HELP_OUTPUT
+  DEFAULT_TERMINAL_OUTPUT
 } from '../config/terminalConfig';
 
 // --- Load terminal window position from localStorage or use default ---
@@ -77,7 +77,7 @@ const loadCommandHistory = () => {
     id: 1,
     timestamp: Date.now(),
     command: '',
-    textOutput: DEFAULT_HELP_OUTPUT,
+    textOutput: DEFAULT_TERMINAL_OUTPUT,
     isLoading: false,
     loadingProgress: 0,
     graphData: null,
