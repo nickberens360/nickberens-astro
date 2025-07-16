@@ -46,14 +46,15 @@
         ref="nav"
       >
         <ul class="site-header__nav-list">
-          <li class="site-header__nav-item"><a href="/">Home</a></li>
-          <li class="site-header__nav-item"><a href="/illustrations">Illustrations</a></li>
-          <li class="site-header__nav-item"><a href="/atomic-docs">Atomic Docs</a></li>
-          <li class="site-header__nav-item"><a href="/resume">Resume</a></li>
-          <li class="site-header__nav-item"><a href="/#contact">Contact</a></li>
-          <li v-if="isMounted" class="site-header__nav-item">
-            <a href="https://github.com/nickberens360" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
-              <font-awesome-icon size="2x" :icon="['fab', 'github']" />
+          <li v-for="item in navItemsStore" :key="item.url" class="site-header__nav-item">
+            <a
+              :href="item.url"
+              :target="item.isExternal ? '_blank' : undefined"
+              :rel="item.isExternal ? 'noopener noreferrer' : undefined"
+              :aria-label="item.ariaLabel"
+            >
+              <font-awesome-icon v-if="item.icon" size="2x" :icon="item.icon" />
+              <span v-else>{{ item.text }}</span>
             </a>
           </li>
         </ul>
@@ -61,15 +62,17 @@
 
       <div class="site-header__mobile-nav" :class="{ 'is-active': isMobileMenuOpen }" :style="headerStyles">
         <ul class="site-header__mobile-nav-list">
-          <li class="site-header__mobile-nav-item"><a href="/" @click="closeMobileMenu">Home</a></li>
-          <li class="site-header__mobile-nav-item"><a href="/atomic-docs" @click="closeMobileMenu">Atomic Docs</a></li>
-          <li class="site-header__mobile-nav-item"><a href="/illustrations" @click="closeMobileMenu">Illustrations</a></li>
-          <li class="site-header__mobile-nav-item"><a href="/resume" @click="closeMobileMenu">Resume</a></li>
-          <li class="site-header__mobile-nav-item"><a href="/#contact" @click="closeMobileMenu">Contact</a></li>
-          <li v-if="isMounted" class="site-header__mobile-nav-item">
-            <a href="https://github.com/nickberens360" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile" @click="closeMobileMenu">
-              <font-awesome-icon :icon="['fab', 'github']" />
-              <span style="margin-left: 0.5em;">GitHub</span>
+          <li v-for="item in navItemsStore" :key="item.url" class="site-header__mobile-nav-item">
+            <a
+              :href="item.url"
+              :target="item.isExternal ? '_blank' : undefined"
+              :rel="item.isExternal ? 'noopener noreferrer' : undefined"
+              :aria-label="item.ariaLabel"
+              @click="closeMobileMenu"
+            >
+              <font-awesome-icon v-if="item.icon" :icon="item.icon" />
+              <span v-if="item.icon" style="margin-left: 0.5em;">{{ item.text }}</span>
+              <span v-else>{{ item.text }}</span>
             </a>
           </li>
         </ul>
@@ -83,6 +86,9 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import TerminalInput from './TerminalInput.vue';
+import { useStore } from '@nanostores/vue';
+import { navItems } from '../stores/ui';
+// The unused ClientOnly import has been removed.
 
 library.add(faGithub)
 
@@ -90,7 +96,8 @@ export default {
   name: 'SiteHeader',
   components: {
     TerminalInput,
-    FontAwesomeIcon
+    FontAwesomeIcon,
+    // ClientOnly has been removed from the components object.
   },
   props: {
     gitBranch: {
@@ -111,16 +118,15 @@ export default {
     return {
       overlayTheme: 'light',
       headerBackgroundColor: 'transparent',
-      isMounted: false,
       isMobileMenuOpen: false,
       useTerminalInput: false,
     };
   },
   computed: {
+    navItemsStore() {
+      return this.navItemsStoreRaw;
+    },
     headerStyles() {
-      if (!this.isMounted) {
-        return { backgroundColor: 'transparent' };
-      }
       return {
         backgroundColor: this.headerBackgroundColor,
       };
@@ -129,8 +135,13 @@ export default {
       return this.hasTerminalInput || this.useTerminalInput;
     }
   },
+  setup() {
+    const navItemsStoreRaw = useStore(navItems);
+    return {
+      navItemsStoreRaw
+    };
+  },
   mounted() {
-    this.isMounted = true;
     window.addEventListener('scroll', this.handleScroll, { passive: true });
     this.handleScroll();
   },
