@@ -272,7 +272,7 @@ export default {
       const updateProgress = async () => {
         let currentProgress = 0;
 
-        while (currentProgress < 90) {
+        while (currentProgress < 90 && isMounted.value) {
           await new Promise(resolve => setTimeout(resolve, 100));
 
           // Check if the command still exists in history (could be cleared)
