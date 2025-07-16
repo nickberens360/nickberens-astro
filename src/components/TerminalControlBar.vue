@@ -5,9 +5,18 @@
     @pointerup="stopDrag"
   >
     <div class="terminal-controls">
-      <div class="control close" @click="$emit('close')"></div>
-      <div class="control minimize" @click="$emit('minimize')"></div>
-      <div class="control maximize"></div>
+      <div
+        class="control close"
+        @click="$emit('minimize')"
+      ></div>
+      <div
+        class="control minimize"
+        @click="$emit('minimize')"
+      ></div>
+      <div
+        class="control maximize"
+        @click="$emit('maximize')"
+      />
     </div>
     <div class="terminal-title">{{ title }}</div>
   </div>
@@ -22,7 +31,7 @@ export default {
       default: 'Terminal'
     }
   },
-  emits: ['close', 'minimize', 'startDrag', 'stopDrag'],
+  emits: ['close', 'minimize', 'maximize', 'startDrag', 'stopDrag'],
   setup(props, { emit }) {
     const startDrag = (event) => {
       if (event.isPrimary) {
@@ -40,7 +49,7 @@ export default {
       stopDrag
     };
   }
-}
+};
 </script>
 
 <style scoped>

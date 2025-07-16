@@ -177,6 +177,8 @@ export default {
     const terminalWindow = ref(null);
     const terminalInput = ref(null);
     const terminalOutput = ref(null);
+    // Add a flag to track component mounted state
+    const isMounted = ref(false);
 
     const position = useStore(terminalPositionStore);
     const size = useStore(terminalSizeStore);
@@ -265,28 +267,49 @@ export default {
     };
 
     const ensureMinLoadingTime = async (promise, commandId, minTime = 1000) => {
+      // Initialize loading state
       updateHistoryItem(commandId, { isLoading: true, loadingProgress: 0 });
       const loadingStartTime = Date.now();
 
-      const progressInterval = setInterval(() => {
-        const currentProgress = commandHistory.value.find(c => c.id === commandId)?.loadingProgress || 0;
-        if (currentProgress < 90) {
-          let newProgress = currentProgress + Math.random() * 3 + 1;
-          updateHistoryItem(commandId, { loadingProgress: Math.min(newProgress, 90) });
-        }
-      }, 100);
+      // Create a progress update function that runs in the background
+      const updateProgress = async () => {
+        let currentProgress = 0;
 
+        while (currentProgress < 90) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Check if the command still exists in history (could be cleared)
+          const historyItem = commandHistory.value.find(c => c.id === commandId);
+          if (!historyItem) break;
+
+          // Update progress with a small random increment
+          currentProgress = historyItem.loadingProgress || 0;
+          const newProgress = currentProgress + Math.random() * 3 + 1;
+          // Check if component is still mounted before updating state
+          if (isMounted.value) {
+            updateHistoryItem(commandId, { loadingProgress: Math.min(newProgress, 90) });
+          }
+        }
+      };
+
+      // Start the progress updates and the main promise in parallel
+      const progressPromise = updateProgress();
       const result = await promise;
+
+      // Calculate elapsed time
       const elapsedTime = Date.now() - loadingStartTime;
 
+      // Ensure minimum loading time
       if (elapsedTime < minTime) {
         await new Promise(resolve => setTimeout(resolve, minTime - elapsedTime));
       }
 
-      clearInterval(progressInterval);
-      updateHistoryItem(commandId, { loadingProgress: 100 });
-      await new Promise(resolve => setTimeout(resolve, 200));
-      updateHistoryItem(commandId, { isLoading: false });
+      // Complete the loading sequence - check if component is still mounted
+      if (isMounted.value) {
+        updateHistoryItem(commandId, { loadingProgress: 100 });
+        await new Promise(resolve => setTimeout(resolve, 200));
+        updateHistoryItem(commandId, { isLoading: false });
+      }
 
       return result;
     };
@@ -296,13 +319,21 @@ export default {
       updateHistoryItem(commandId, { textOutput: [initialText] });
       ensureMinLoadingTime(fetchFn(), commandId)
         .then(data => {
-          updateHistoryItem(commandId, processFn(data));
-          setTimeout(() => {
-            if (terminalOutput.value) terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-          }, 0);
+          // Check if component is still mounted before updating state
+          if (isMounted.value) {
+            updateHistoryItem(commandId, processFn(data));
+            setTimeout(() => {
+              if (terminalOutput.value && isMounted.value) {
+                terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+              }
+            }, 0);
+          }
         })
         .catch(error => {
-          updateHistoryItem(commandId, { textOutput: [`Error retrieving data: ${error.message}`] });
+          // Check if component is still mounted before updating state
+          if (isMounted.value) {
+            updateHistoryItem(commandId, { textOutput: [`Error retrieving data: ${error.message}`] });
+          }
         });
     };
 
@@ -441,6 +472,9 @@ export default {
 
     // --- LIFECYCLE HOOKS ---
     onMounted(() => {
+      // Set mounted flag to true
+      isMounted.value = true;
+
       // Add initial output if history is empty
       if (props.initialOutput && props.initialOutput.length > 0 && commandHistory.value.length === 0) {
         commandHistoryStore.set([{
@@ -467,6 +501,9 @@ export default {
     });
 
     onUnmounted(() => {
+      // Set mounted flag to false
+      isMounted.value = false;
+
       document.removeEventListener('pointerup', stopDrag);
       document.removeEventListener('pointermove', onDrag);
       document.removeEventListener('pointerup', stopResize);
@@ -496,7 +533,8 @@ export default {
       focusInput,
       theme,
       activateTerminal,
-      deactivateTerminal
+      deactivateTerminal,
+      isMounted
     };
   }
 };
