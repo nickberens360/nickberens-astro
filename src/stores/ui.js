@@ -9,7 +9,8 @@ const loadTerminalPosition = () => {
     if (savedPosition) {
       return JSON.parse(savedPosition);
     }
-  } catch (error) {
+  } catch (error)
+  {
     console.error('Error loading terminal position:', error);
   }
   return { x: 100, y: 100 }; // Default position
@@ -50,7 +51,7 @@ terminalSizeStore.listen((value) => {
 });
 
 // Default value for the terminal input
-const DEFAULT_TERMINAL_INPUT_VALUE = 'Sh!t';
+const DEFAULT_TERMINAL_INPUT_VALUE = 'Shoot';
 
 // Store for the terminal input's value, initialized with a default.
 export const terminalInputValue = atom(DEFAULT_TERMINAL_INPUT_VALUE);
@@ -133,3 +134,30 @@ export const navItems = atom([
 
 // Store for tracking terminal active state
 export const isTerminalActive = atom(false);
+
+// ✨ --- NEW CODE --- ✨
+// Load isMinimized state from localStorage or use default
+const loadIsTerminalMinimized = () => {
+  try {
+    const savedState = localStorage.getItem('isTerminalMinimized');
+    // Check for null to handle case where it's explicitly set to false
+    if (savedState !== null) {
+      return JSON.parse(savedState);
+    }
+  } catch (error) {
+    console.error('Error loading terminal minimized state:', error);
+  }
+  return false; // Default: not minimized
+};
+
+// Store for terminal minimized state with persisted data
+export const isTerminalMinimizedStore = atom(loadIsTerminalMinimized());
+
+// Subscribe to changes and save to localStorage
+isTerminalMinimizedStore.listen((value) => {
+  try {
+    localStorage.setItem('isTerminalMinimized', JSON.stringify(value));
+  } catch (error) {
+    console.error('Error saving terminal minimized state:', error);
+  }
+});

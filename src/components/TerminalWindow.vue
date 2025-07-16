@@ -1,21 +1,11 @@
 <template>
   <div>
 
-<!--    <div
-      v-if="isMinimized"
-      class="terminal-minimized"
-      @click="isMinimized = false"
-    >
-      <div class="terminal-icon">
-        <font-awesome-icon :icon="['fas', 'terminal']"/>
-      </div>
-    </div>-->
-
-    <TerminalControlBar
+<TerminalControlBar
       v-if="isMinimized"
       :title="title"
       class="terminal-minimized"
-      @click="isMinimized = false"
+      @click="isTerminalMinimizedStore.set(false)"
     />
 
     <div
@@ -29,7 +19,7 @@
       <TerminalControlBar
         :title="title"
         @close="$emit('close')"
-        @minimize="isMinimized = true"
+        @minimize="isTerminalMinimizedStore.set(true)"
         @startDrag="startDrag"
         @stopDrag="stopDrag"
       />
@@ -142,7 +132,8 @@ import {
   nextCommandIdStore,
   terminalPositionStore,
   terminalSizeStore,
-  isTerminalActive
+  isTerminalActive,
+  isTerminalMinimizedStore
 } from '../stores/ui.js';
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
@@ -171,7 +162,7 @@ export default {
   },
   setup(props, { emit }) {
     // --- STATE AND STORE HOOKS ---
-    const isMinimized = ref(false);
+    const isMinimized = useStore(isTerminalMinimizedStore);
     const theme = ref('dark');
     const inputValue = ref('');
     const terminalWindow = ref(null);
@@ -392,10 +383,12 @@ export default {
         localStorage.removeItem('terminalSize');
         localStorage.removeItem('commandHistory');
         localStorage.removeItem('nextCommandId');
+        localStorage.removeItem('isTerminalMinimized');
 
         // Reset nanostores to default values
         terminalPositionStore.set({ x: 100, y: 100 });
         terminalSizeStore.set({ width: 600, height: 400 });
+        isTerminalMinimizedStore.set(false);
 
         // Keep only the current command in history
         const currentCommand = commandHistory.value.find(c => c.id === commandId);
@@ -517,6 +510,7 @@ export default {
 
     return {
       isMinimized,
+      isTerminalMinimizedStore,
       position,
       size,
       terminalStyle,
