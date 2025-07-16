@@ -342,8 +342,7 @@ export default {
       },
       help: (args, commandId) => {
         updateHistoryItem(commandId, {
-         updateHistoryItem(commandId, {
-           textOutput: DEFAULT_HELP_OUTPUT
+          textOutput: DEFAULT_HELP_OUTPUT
         });
       },
       theme: (args, commandId) => {

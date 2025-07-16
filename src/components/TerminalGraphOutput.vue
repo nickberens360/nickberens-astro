@@ -100,8 +100,6 @@ export function processCodeFrequencyData(frequencyData) {
       const deletionBars = maxValue > 0 ? Math.round(deletions * scaleFactor) : 0;
       return { date, additions, deletions, additionBars, deletionBars };
     }),
-      return { date, additions, deletions, additionBars, deletionBars };
-    }),
     note: 'Note: Graph is scaled to fit the terminal window',
     isVisible: true,
     noData: false
