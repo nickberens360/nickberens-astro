@@ -5,30 +5,36 @@ import {
   DEFAULT_TERMINAL_OUTPUT
 } from '../config/terminalConfig';
 
+// Helper to check if we're in a browser environment
+const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+
 // --- Load terminal window position from localStorage or use default ---
 const loadTerminalPosition = () => {
-  try {
-    const savedPosition = localStorage.getItem('terminalPosition');
-    if (savedPosition) {
-      return JSON.parse(savedPosition);
+  if (isBrowser()) {
+    try {
+      const savedPosition = localStorage.getItem('terminalPosition');
+      if (savedPosition) {
+        return JSON.parse(savedPosition);
+      }
+    } catch (error) {
+      console.error('Error loading terminal position:', error);
     }
-  } catch (error) {
-    console.error('Error loading terminal position:', error);
   }
   // Return a simple, static default for SSR.
-  // The dynamic bottom-left calculation will happen on the client.
   return { x: DEFAULT_TERMINAL_MARGIN, y: 100 };
 };
 
 // --- Load terminal window size from localStorage or use default ---
 const loadTerminalSize = () => {
-  try {
-    const savedSize = localStorage.getItem('terminalSize');
-    if (savedSize) {
-      return JSON.parse(savedSize);
+  if (isBrowser()) {
+    try {
+      const savedSize = localStorage.getItem('terminalSize');
+      if (savedSize) {
+        return JSON.parse(savedSize);
+      }
+    } catch (error) {
+      console.error('Error loading terminal size:', error);
     }
-  } catch (error) {
-    console.error('Error loading terminal size:', error);
   }
   // Use the imported default size
   return DEFAULT_TERMINAL_SIZE;
@@ -40,18 +46,22 @@ export const terminalSizeStore = atom(loadTerminalSize());
 
 // Subscribe to changes and save to localStorage
 terminalPositionStore.listen((value) => {
-  try {
-    localStorage.setItem('terminalPosition', JSON.stringify(value));
-  } catch (error) {
-    console.error('Error saving terminal position:', error);
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('terminalPosition', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving terminal position:', error);
+    }
   }
 });
 
 terminalSizeStore.listen((value) => {
-  try {
-    localStorage.setItem('terminalSize', JSON.stringify(value));
-  } catch (error) {
-    console.error('Error saving terminal size:', error);
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('terminalSize', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving terminal size:', error);
+    }
   }
 });
 
@@ -63,13 +73,15 @@ export const terminalInputValue = atom(DEFAULT_TERMINAL_INPUT_VALUE);
 
 // Load command history from localStorage or use default
 const loadCommandHistory = () => {
-  try {
-    const savedHistory = localStorage.getItem('commandHistory');
-    if (savedHistory) {
-      return JSON.parse(savedHistory);
+  if (isBrowser()) {
+    try {
+      const savedHistory = localStorage.getItem('commandHistory');
+      if (savedHistory) {
+        return JSON.parse(savedHistory);
+      }
+    } catch (error) {
+      console.error('Error loading command history:', error);
     }
-  } catch (error) {
-    console.error('Error loading command history:', error);
   }
 
   // Default history if nothing in localStorage
@@ -87,13 +99,15 @@ const loadCommandHistory = () => {
 
 // Load next command ID from localStorage or use default
 const loadNextCommandId = () => {
-  try {
-    const savedId = localStorage.getItem('nextCommandId');
-    if (savedId) {
-      return parseInt(savedId, 10);
+  if (isBrowser()) {
+    try {
+      const savedId = localStorage.getItem('nextCommandId');
+      if (savedId) {
+        return parseInt(savedId, 10);
+      }
+    } catch (error) {
+      console.error('Error loading next command ID:', error);
     }
-  } catch (error) {
-    console.error('Error loading next command ID:', error);
   }
   return 2; // Default next ID
 };
@@ -106,18 +120,22 @@ export const nextCommandIdStore = atom(loadNextCommandId());
 
 // Subscribe to changes and save to localStorage
 commandHistoryStore.listen((value) => {
-  try {
-    localStorage.setItem('commandHistory', JSON.stringify(value));
-  } catch (error) {
-    console.error('Error saving command history:', error);
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('commandHistory', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving command history:', error);
+    }
   }
 });
 
 nextCommandIdStore.listen((value) => {
-  try {
-    localStorage.setItem('nextCommandId', value.toString());
-  } catch (error) {
-    console.error('Error saving next command ID:', error);
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('nextCommandId', value.toString());
+    } catch (error) {
+      console.error('Error saving next command ID:', error);
+    }
   }
 });
 
@@ -140,17 +158,18 @@ export const navItems = atom([
 // Store for tracking terminal active state
 export const isTerminalActive = atom(false);
 
-// ✨ --- NEW CODE --- ✨
 // Load isMinimized state from localStorage or use default
 const loadIsTerminalMinimized = () => {
-  try {
-    const savedState = localStorage.getItem('isTerminalMinimized');
-    // Check for null to handle case where it's explicitly set to false
-    if (savedState !== null) {
-      return JSON.parse(savedState);
+  if (isBrowser()) {
+    try {
+      const savedState = localStorage.getItem('isTerminalMinimized');
+      // Check for null to handle case where it's explicitly set to false
+      if (savedState !== null) {
+        return JSON.parse(savedState);
+      }
+    } catch (error) {
+      console.error('Error loading terminal minimized state:', error);
     }
-  } catch (error) {
-    console.error('Error loading terminal minimized state:', error);
   }
   return false; // Default: not minimized
 };
@@ -160,9 +179,11 @@ export const isTerminalMinimizedStore = atom(loadIsTerminalMinimized());
 
 // Subscribe to changes and save to localStorage
 isTerminalMinimizedStore.listen((value) => {
-  try {
-    localStorage.setItem('isTerminalMinimized', JSON.stringify(value));
-  } catch (error) {
-    console.error('Error saving terminal minimized state:', error);
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('isTerminalMinimized', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving terminal minimized state:', error);
+    }
   }
 });
