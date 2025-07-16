@@ -80,6 +80,7 @@
               <terminal-log-output
                 v-if="item.commitHistory && item.commitHistory.isVisible"
                 :commit-history="item.commitHistory"
+                :theme="theme"
               />
 
               <div
@@ -610,7 +611,7 @@ export default {
 }
 
 .terminal-output {
-  /*flex-grow: 1;*/
+  flex-grow: 1;
   overflow-y: auto;
   margin-bottom: 10px;
 }

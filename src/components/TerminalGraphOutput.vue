@@ -1,5 +1,8 @@
 <template>
-  <div>
+  <div
+    class="terminal-output"
+    :class="`theme-${theme}`"
+  >
     <!-- Graph history output -->
     <template v-if="line && line.type === 'graph-history'">
       <span class="git-graph-date">{{ line.date }}:</span>
@@ -114,6 +117,10 @@ export default {
     commitData: {
       type: Object,
       default: null
+    },
+    theme: {
+      type: String,
+      default: 'dark'
     }
   },
   methods: {
@@ -162,27 +169,27 @@ export default {
 }
 
 /* Theme-specific git graph styling */
-:deep(.theme-light) .git-graph-additions {
+.theme-light .git-graph-additions {
   color: #27a83f;
 }
 
-:deep(.theme-light) .git-graph-deletions {
+.theme-light .git-graph-deletions {
   color: #e74c3c;
 }
 
-:deep(.theme-light) .git-graph-date {
+.theme-light .git-graph-date {
   color: #f39c12;
 }
 
-:deep(.theme-light) .git-graph-stats {
+.theme-light .git-graph-stats {
   color: #666666;
 }
 
-:deep(.theme-light) .git-graph-title {
+.theme-light .git-graph-title {
   color: #333333;
 }
 
-:deep(.theme-light) .git-graph-note {
+.theme-light .git-graph-note {
   color: #777777;
 }
 
@@ -234,16 +241,16 @@ export default {
   margin-top: 8px;
 }
 
-:deep(.theme-light) .git-graph-container {
+.theme-light .git-graph-container {
   border-color: #ccc;
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-:deep(.theme-light) .git-graph-no-data-message {
+.theme-light .git-graph-no-data-message {
   color: #666666;
 }
 
-:deep(.theme-light) .git-graph-no-data-explanation {
+.theme-light .git-graph-no-data-explanation {
   color: #888888;
 }
 
@@ -257,7 +264,7 @@ export default {
   background-color: rgba(0, 0, 0, 0.2);
 }
 
-:deep(.theme-light) .git-latest-commit-container {
+.theme-light .git-latest-commit-container {
   border-color: #ccc;
   background-color: rgba(0, 0, 0, 0.05);
 }
@@ -289,11 +296,11 @@ export default {
   color: #2980b9;
 }
 
-:deep(.theme-light) .terminal-link {
+.theme-light .terminal-link {
   color: #2980b9;
 }
 
-:deep(.theme-light) .terminal-link:hover {
+.theme-light .terminal-link:hover {
   color: #1c6ea4;
 }
 </style>

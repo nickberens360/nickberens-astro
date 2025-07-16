@@ -1,5 +1,8 @@
 <template>
-  <div>
+  <div
+    class="terminal-log-output"
+    :class="`theme-${theme}`"
+  >
     <!-- Individual commit line display -->
     <template v-if="commit">
       <div class="commit-line">
@@ -89,6 +92,10 @@ export default {
     commitHistory: {
       type: Object,
       default: null
+    },
+    theme: {
+      type: String,
+      default: 'dark'
     }
   },
   methods: {
@@ -183,32 +190,32 @@ export default {
 }
 
 /* Theme-specific styling */
-:deep(.theme-light) .commit-history-container {
+.theme-light .commit-history-container {
   border-color: #ccc;
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-:deep(.theme-light) .commit-history-title {
+.theme-light .commit-history-title {
   color: #333333;
 }
 
-:deep(.theme-light) .commit-hash {
+.theme-light .commit-hash {
   color: #f39c12;
 }
 
-:deep(.theme-light) .terminal-link {
+.theme-light .terminal-link {
   color: #2980b9;
 }
 
-:deep(.theme-light) .terminal-link:hover {
+.theme-light .terminal-link:hover {
   color: #1c6ea4;
 }
 
-:deep(.theme-light) .commit-history-note {
+.theme-light .commit-history-note {
   color: #777777;
 }
 
-:deep(.theme-light) .commit-history-error-message {
+.theme-light .commit-history-error-message {
   color: #666666;
 }
 </style>
