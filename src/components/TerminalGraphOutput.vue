@@ -87,14 +87,19 @@ export function processCodeFrequencyData(frequencyData) {
   const maxValue = Math.max(maxAddition, maxDeletion);
   const graphHeight = 10;
 
+  // Avoid division by zero
+  const scaleFactor = maxValue > 0 ? graphHeight / maxValue : 0;
+
   return {
     title: 'Additions (+) / Deletions (-) - Last 10 weeks',
     weeks: recentData.map(week => {
       const date = new Date(week[0] * 1000).toISOString().split('T')[0];
       const additions = week[1];
       const deletions = Math.abs(week[2]);
-      const additionBars = Math.round((additions / maxValue) * graphHeight);
-      const deletionBars = Math.round((deletions / maxValue) * graphHeight);
+      const additionBars = maxValue > 0 ? Math.round(additions * scaleFactor) : 0;
+      const deletionBars = maxValue > 0 ? Math.round(deletions * scaleFactor) : 0;
+      return { date, additions, deletions, additionBars, deletionBars };
+    }),
       return { date, additions, deletions, additionBars, deletionBars };
     }),
     note: 'Note: Graph is scaled to fit the terminal window',
