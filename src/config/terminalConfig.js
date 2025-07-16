@@ -3,8 +3,8 @@
  */
 
 export const DEFAULT_TERMINAL_SIZE = {
-  width: 330,
-  height: 105,
+  width: 415,
+  height: 290,
 };
 
 export const DEFAULT_TERMINAL_MARGIN = 20;
