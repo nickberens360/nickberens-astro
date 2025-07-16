@@ -122,7 +122,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTerminal } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -320,11 +320,11 @@ export default {
           // Check if component is still mounted before updating state
           if (isMounted.value) {
             updateHistoryItem(commandId, processFn(data));
-            setTimeout(() => {
+            nextTick(() => {
               if (terminalOutput.value && isMounted.value) {
                 terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
               }
-            }, 0);
+            });
           }
         })
         .catch(error => {
@@ -455,11 +455,11 @@ export default {
 
       handleCommand(command, commandId);
 
-      setTimeout(() => {
+      nextTick(() => {
         if (terminalOutput.value) {
           terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
         }
-      }, 0);
+      });
     };
 
     // --- TERMINAL ACTIVE STATE HANDLERS ---
@@ -497,7 +497,7 @@ export default {
 
       document.addEventListener('pointerup', stopDrag);
       document.addEventListener('pointerup', stopResize);
-      setTimeout(focusInput, 0);
+      nextTick(focusInput);
 
       // Add event listeners for terminal focus
       if (terminalWindow.value) {
@@ -510,11 +510,11 @@ export default {
       }
 
       // Ensure terminal is scrolled to bottom when mounted
-      setTimeout(() => {
+      nextTick(() => {
         if (terminalOutput.value && isMounted.value) {
           terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
         }
-      }, 0);
+      });
     });
 
     onUnmounted(() => {

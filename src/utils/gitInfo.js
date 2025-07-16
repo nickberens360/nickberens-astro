@@ -32,17 +32,8 @@ export async function getGitBranch() {
 
 export async function getLatestCommitHash() {
   try {
-    const { username, repo, token } = getGitHubCredentials();
-
-    const headers = token ? { Authorization: `token ${token}` } : {};
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { headers });
-
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
-    }
-
-    const commits = await response.json();
-    return commits[0].sha.substring(0, 7); // Short hash (first 7 characters)
+    const commitData = await getLatestCommit();
+    return commitData.hash;
   } catch (error) {
     console.error('Error fetching commit hash:', error);
     return 'unknown';
@@ -51,25 +42,7 @@ export async function getLatestCommitHash() {
 
 export async function getLatestCommitMessage() {
   try {
-    const { username, repo, token } = getGitHubCredentials();
-
-    const headers = token ? { Authorization: `token ${token}` } : {};
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { headers });
-
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
-    }
-
-    const commits = await response.json();
-    const commitHash = commits[0].sha.substring(0, 7); // Short hash (first 7 characters)
-    const commitMessage = commits[0].commit.message;
-    const commitUrl = commits[0].html_url; // GitHub URL to the commit
-
-    return {
-      hash: commitHash,
-      message: commitMessage,
-      url: commitUrl
-    };
+    return await getLatestCommit();
   } catch (error) {
     console.error('Error fetching commit message:', error);
     return {
@@ -85,6 +58,47 @@ export function getGitHubRepoUrl() {
   return `https://github.com/${username}/${repo}`;
 }
 
+// Shared function to fetch latest commit data
+export async function getLatestCommit() {
+  try {
+    const { username, repo, token } = getGitHubCredentials();
+
+    // Check if we have valid cached data
+    const now = Date.now();
+    if (latestCommitCache.data && (now - latestCommitCache.timestamp) < latestCommitCache.expiryTime) {
+      console.log('Using cached latest commit data');
+      return latestCommitCache.data;
+    }
+
+    const headers = token ? { Authorization: `token ${token}` } : {};
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { headers });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const commits = await response.json();
+    const commitData = {
+      hash: commits[0].sha.substring(0, 7),
+      message: commits[0].commit.message,
+      url: commits[0].html_url
+    };
+
+    // Cache the successful result
+    latestCommitCache.data = commitData;
+    latestCommitCache.timestamp = now;
+
+    return commitData;
+  } catch (error) {
+    console.error('Error fetching latest commit:', error);
+    return {
+      hash: 'unknown',
+      message: 'Error fetching commit message',
+      url: null
+    };
+  }
+}
+
 // Cache for code frequency data
 let codeFrequencyCache = {
   data: null,
@@ -94,6 +108,13 @@ let codeFrequencyCache = {
 
 // Cache for commit history data
 let commitHistoryCache = {
+  data: null,
+  timestamp: 0,
+  expiryTime: 5 * 60 * 1000 // 5 minutes in milliseconds
+};
+
+// Cache for latest commit data
+let latestCommitCache = {
   data: null,
   timestamp: 0,
   expiryTime: 5 * 60 * 1000 // 5 minutes in milliseconds
