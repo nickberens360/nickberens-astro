@@ -1,6 +1,7 @@
 <template>
   <div>
-    <div
+
+<!--    <div
       v-if="isMinimized"
       class="terminal-minimized"
       @click="isMinimized = false"
@@ -8,7 +9,14 @@
       <div class="terminal-icon">
         <font-awesome-icon :icon="['fas', 'terminal']"/>
       </div>
-    </div>
+    </div>-->
+
+    <TerminalControlBar
+      v-if="isMinimized"
+      :title="title"
+      class="terminal-minimized"
+      @click="isMinimized = false"
+    />
 
     <div
       v-else
@@ -513,15 +521,9 @@ export default {
 .terminal-minimized {
   position: fixed;
   left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 50px;
-  height: 50px;
-  background-color: #2d2d2d;
-  border-radius: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  bottom: 20px;
+  border-radius: 5px;
+  width: 200px;
   cursor: pointer;
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -529,7 +531,7 @@ export default {
 }
 
 .terminal-minimized:hover {
-  transform: translateY(-50%) scale(1.05);
+  transform: scale(1.05);
 }
 
 .terminal-icon {

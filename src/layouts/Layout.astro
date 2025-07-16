@@ -6,7 +6,7 @@ import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
 import TerminalWindow from '../components/TerminalWindow.vue';
 import { getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl } from '../utils/gitInfo.js';
-import { isTerminalActive } from '../stores/ui.js';
+// import { isTerminalActive } from '../stores/ui.js';
 
 export interface Props {
     title?: string;
@@ -28,18 +28,6 @@ const repoUrl = getGitHubRepoUrl();
     description={description}
     favicon={favicon}
 >
-  <script>
-    // Script to handle body scrolling based on terminal active state
-    import { isTerminalActive } from '../stores/ui.js';
-
-    isTerminalActive.listen((active) => {
-      if (active) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = '';
-      }
-    });
-  </script>
 </Head>
 <body>
 <SiteHeader gitBranch={gitBranch} variant={headerVariant} client:only="vue" />
