@@ -14,4 +14,12 @@ export default defineConfig({
       }
     })
   ],
+  vite: {
+    // Ensure environment variables are properly loaded
+    envPrefix: 'PUBLIC_',
+    // Make non-prefixed env vars available to server-side code
+    ssr: {
+      noExternal: ['@fortawesome/fontawesome-svg-core']
+    }
+  }
 });

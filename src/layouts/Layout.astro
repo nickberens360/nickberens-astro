@@ -4,6 +4,7 @@ import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
+import TerminalWindow from '../components/TerminalWindow.vue';
 import { getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl } from '../utils/gitInfo.js';
 
 export interface Props {
@@ -14,9 +15,9 @@ export interface Props {
 }
 
 const {title, description, favicon, headerVariant = 'default'} = Astro.props;
-const gitBranch = getGitBranch();
-const commitHash = getLatestCommitHash();
-const commitMessage = getLatestCommitMessage();
+const gitBranch = await getGitBranch();
+const commitHash = await getLatestCommitHash();
+const commitMessage = await getLatestCommitMessage();
 const repoUrl = getGitHubRepoUrl();
 ---
 
@@ -28,9 +29,16 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:load />
+<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:only="vue" />
 <slot/>
 <SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
+<TerminalWindow
+    client:only="vue"
+    title="Nick's Terminal"
+    initialOutput={[
+        "Welcome to Nick Berens' Terminal",
+        "Type 'help' for available commands"
+    ]}
+></TerminalWindow>
 </body>
 </html>
-

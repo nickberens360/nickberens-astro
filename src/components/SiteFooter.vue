@@ -15,7 +15,7 @@
               <a :href="`${repoUrl}/commit/${commitHash}`" target="_blank" rel="noopener noreferrer">
                 {{ commitHash }}
               </a>
-              <span class="tooltip">{{ commitMessage }}</span>
+              <span class="tooltip">{{ typeof commitMessage === 'object' ? commitMessage.message : commitMessage }}</span>
             </span>
           </span><span class="git-paren">)</span></span>
         </p>
@@ -33,7 +33,7 @@ export default {
       default: 'unknown'
     },
     commitMessage: {
-      type: String,
+      type: [String, Object],
       default: 'No commit message available'
     },
     repoUrl: {
