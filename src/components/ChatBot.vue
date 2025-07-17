@@ -135,7 +135,7 @@ export default {
         const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
         const apiUrl = isDev
           ? 'http://localhost:8000'
-          : 'https://nickberens-api.onrender.com';
+          : 'https://nickberens-astro-api.onrender.com';
 
         console.log(`Environment: ${isDev ? 'development' : 'production'}, API URL: ${apiUrl}`);
         const response = await fetch(`${apiUrl}/query`, {

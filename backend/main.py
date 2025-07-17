@@ -138,16 +138,17 @@ except Exception as e:
     app_initialized = False
 
 origins = [
-    "http://localhost:4321",                  # Local Astro dev
-    "http://localhost:3000",                  # Local React/Vue
+    "http://localhost:4321",                  # Local development
+    "http://localhost:3000",                  # Other local ports
     "http://localhost:5173",                  # Vite dev server
-    "https://nickberens.me",                  # ✅ Your custom domain
-    "https://www.nickberens.me",              # ✅ Add www version too
-    "https://nickberens360.netlify.app",      # Your Netlify deployment
+    "https://nickberens.me",                  # ← YOUR CUSTOM DOMAIN
+    "https://www.nickberens.me",              # ← WWW VERSION
+    "https://nickberens360.netlify.app",      # Netlify deployment
     "https://deploy-preview-14--nickberens360.netlify.app",
-    # Add wildcard for all Netlify deploy previews:
+    # Add wildcard for all Netlify previews:
     "https://*.netlify.app",
 ]
+
 
 app.add_middleware(
     CORSMiddleware,
