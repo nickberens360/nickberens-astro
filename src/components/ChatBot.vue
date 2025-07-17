@@ -1,20 +1,42 @@
 <template>
-  <div class="chatbot-container" :class="`theme-${theme}`">
-    <div class="messages-window" ref="messagesWindow">
-      <ChatBotWelcome 
-        v-if="messages.length === 0" 
-        :theme="theme" 
-        @select-prompt="handlePromptSelect" 
+  <div
+    class="chatbot-container"
+    :class="`theme-${theme}`"
+  >
+    <div
+      class="messages-window"
+      ref="messagesWindow"
+    >
+      <ChatBotWelcome
+        v-if="messages.length === 0"
+        :theme="theme"
+        @select-prompt="handlePromptSelect"
       />
-      <div v-for="(message, index) in messages" :key="index" :class="['message', message.sender]">
+      <div
+        v-for="(message, index) in messages"
+        :key="index"
+        :class="['message', message.sender]"
+      >
         <div class="message-bubble">
           <p v-if="message.text">{{ message.text }}</p>
-          <div v-if="message.images && message.images.length" class="image-gallery">
-            <img v-for="src in message.images" :key="src" :src="src" alt="Illustration" class="chat-image" />
+          <div
+            v-if="message.images && message.images.length"
+            class="image-gallery"
+          >
+            <img
+              v-for="src in message.images"
+              :key="src"
+              :src="src"
+              alt="Illustration"
+              class="chat-image"
+            />
           </div>
         </div>
       </div>
-      <div v-if="isLoading" class="message bot">
+      <div
+        v-if="isLoading"
+        class="message bot"
+      >
         <div class="message-bubble">
           <div class="typing-indicator">
             <span class="typing-dot"></span>
@@ -32,7 +54,11 @@
         class="message-input"
         :disabled="isLoading"
       />
-      <button @click="sendMessage" class="send-button" :disabled="isLoading">
+      <button
+        @click="sendMessage"
+        class="send-button"
+        :disabled="isLoading"
+      >
         Send
       </button>
     </div>
@@ -43,7 +69,13 @@
 import { ref, nextTick, watch, onMounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 // --- UPDATED: Import the new updateChatTitle function ---
-import { activeChatId, activeChatMessages, addMessageToActiveChat, createNewChat, updateChatTitle } from '../stores/ai.js';
+import {
+  activeChatId,
+  activeChatMessages,
+  addMessageToActiveChat,
+  createNewChat,
+  updateChatTitle
+} from '../stores/ai.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
 
 export default {
@@ -72,9 +104,9 @@ export default {
     };
 
     onMounted(() => {
-        if (!activeChatId.get()) {
-            createNewChat();
-        }
+      if (!activeChatId.get()) {
+        createNewChat();
+      }
     });
 
     watch(messages, () => {
@@ -99,7 +131,14 @@ export default {
       isLoading.value = true;
 
       try {
-        const response = await fetch('http://localhost:8000/query', {
+        // Replace the hardcoded line with this:
+        const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+        const apiUrl = isDev
+          ? 'http://localhost:8000'
+          : 'https://nickberens-api.onrender.com';
+
+        console.log(`Environment: ${isDev ? 'development' : 'production'}, API URL: ${apiUrl}`);
+        const response = await fetch(`${apiUrl}/query`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -127,7 +166,7 @@ export default {
 
           // Handle rate limit (429) errors specifically
           if (response.status === 429) {
-            errorMessage = "Rate limit exceeded. Please wait a moment before sending more messages.";
+            errorMessage = 'Rate limit exceeded. Please wait a moment before sending more messages.';
           }
 
           throw new Error(errorMessage);
@@ -143,9 +182,9 @@ export default {
       } catch (error) {
         console.error('Error fetching response:', error);
         // Display the specific error message instead of a generic one
-        addMessageToActiveChat({ 
-          text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`, 
-          sender: 'bot' 
+        addMessageToActiveChat({
+          text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`,
+          sender: 'bot'
         });
       } finally {
         isLoading.value = false;
@@ -184,35 +223,182 @@ export default {
 }
 
 /* --- All other styles from your previous version remain the same --- */
-.image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
-.chat-image { width: 100%; height: auto; border-radius: 8px; border: 1px solid #ddd; }
-.message-bubble p { margin: 0; }
-.theme-dark { background-color: #111111; border-color: #333333; }
-.theme-dark .messages-window { background-color: #111111; }
-.theme-dark .input-form { background-color: #000000; border-top-color: #333333; }
-.theme-dark .message-input { background-color: #222222; border-color: #444444; color: #f9fafb; }
-.theme-dark .message-input::placeholder { color: #999999; }
-.theme-dark .message-input:focus { border-color: #555555; box-shadow: 0 0 0 2px rgba(85, 85, 85, 0.2); }
-.theme-dark .user .message-bubble { background-color: #333333; }
-.theme-dark .bot .message-bubble { background-color: #222222; color: #f9fafb; }
-.theme-dark .typing-dot { background-color: #666666; }
-.theme-dark .chat-image { border-color: #444444; }
-.messages-window { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
-.message { display: flex; }
-.message-bubble { padding: 0.75rem 1.25rem; border-radius: 18px; max-width: 85%; line-height: 1.5; }
-.user { justify-content: flex-end; }
-.user .message-bubble { background-color: #3b82f6; color: white; border-bottom-right-radius: 4px; }
-.bot { justify-content: flex-start; }
-.bot .message-bubble { background-color: #e5e7eb; color: #1f2937; border-bottom-left-radius: 4px; }
-.input-form { display: flex; padding: 1rem; border-top: 1px solid #e5e7eb; background-color: #ffffff; }
-.message-input { flex-grow: 1; border: 1px solid #d1d5db; padding: 0.75rem; border-radius: 8px; font-size: 1rem; }
-.message-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
-.send-button { margin-left: 1rem; padding: 0.75rem 1.5rem; border: none; background-color: #ff8282; color: white; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background-color 0.2s; }
-.send-button:hover { background-color: #2563eb; }
-.send-button:disabled { background-color: #9ca3af; cursor: not-allowed; }
-.typing-indicator { display: flex; align-items: center; gap: 5px; }
-.typing-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #9ca3af; animation: typing 1.2s infinite ease-in-out; }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typing { 0%, 100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-5px); opacity: 1; } }
+.image-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.chat-image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.message-bubble p {
+  margin: 0;
+}
+
+.theme-dark {
+  background-color: #111111;
+  border-color: #333333;
+}
+
+.theme-dark .messages-window {
+  background-color: #111111;
+}
+
+.theme-dark .input-form {
+  background-color: #000000;
+  border-top-color: #333333;
+}
+
+.theme-dark .message-input {
+  background-color: #222222;
+  border-color: #444444;
+  color: #f9fafb;
+}
+
+.theme-dark .message-input::placeholder {
+  color: #999999;
+}
+
+.theme-dark .message-input:focus {
+  border-color: #555555;
+  box-shadow: 0 0 0 2px rgba(85, 85, 85, 0.2);
+}
+
+.theme-dark .user .message-bubble {
+  background-color: #333333;
+}
+
+.theme-dark .bot .message-bubble {
+  background-color: #222222;
+  color: #f9fafb;
+}
+
+.theme-dark .typing-dot {
+  background-color: #666666;
+}
+
+.theme-dark .chat-image {
+  border-color: #444444;
+}
+
+.messages-window {
+  flex-grow: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.message {
+  display: flex;
+}
+
+.message-bubble {
+  padding: 0.75rem 1.25rem;
+  border-radius: 18px;
+  max-width: 85%;
+  line-height: 1.5;
+}
+
+.user {
+  justify-content: flex-end;
+}
+
+.user .message-bubble {
+  background-color: #3b82f6;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.bot {
+  justify-content: flex-start;
+}
+
+.bot .message-bubble {
+  background-color: #e5e7eb;
+  color: #1f2937;
+  border-bottom-left-radius: 4px;
+}
+
+.input-form {
+  display: flex;
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+  background-color: #ffffff;
+}
+
+.message-input {
+  flex-grow: 1;
+  border: 1px solid #d1d5db;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.send-button {
+  margin-left: 1rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background-color: #ff8282;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.send-button:hover {
+  background-color: #2563eb;
+}
+
+.send-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #9ca3af;
+  animation: typing 1.2s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
 </style>
