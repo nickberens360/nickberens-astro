@@ -10,6 +10,10 @@
       <h2>Welcome to nickAI Assistant</h2>
       <p>Try asking me some questions like:</p>
       <ul class="example-prompts">
+        <li @click="selectPrompt('Tell me about Nick')">
+          <span class="prompt-icon">→</span>
+          Tell me about Nick
+        </li>
         <li @click="selectPrompt('Show all illustrations')">
           <span class="prompt-icon">→</span>
           Show all illustrations
@@ -17,10 +21,6 @@
         <li @click="selectPrompt('Show me images of Doug')">
           <span class="prompt-icon">→</span>
           Show me images of Doug
-        </li>
-        <li @click="selectPrompt('Tell me about Nick')">
-          <span class="prompt-icon">→</span>
-          Tell me about Nick
         </li>
       </ul>
     </div>
