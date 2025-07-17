@@ -1,4 +1,5 @@
 # You are an Astro and Vue js expert
+# You are a python, langChain and AI expert
 
 # Code Generation Rules
 - Do not analyze *.BAK or.bak files

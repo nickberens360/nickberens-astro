@@ -1,12 +1,14 @@
 import os
-import glob
 import json
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Import your new modules
+# Import the fuzzy matching library
+from thefuzz import process
+
+# Import your custom modules
 from .core.data_loader import load_all_documents
 from .core.llm_chain import create_retrieval_chain_from_docs
 
@@ -15,7 +17,6 @@ load_dotenv()
 # --- Setup Application at Startup ---
 app = FastAPI()
 
-# Load documents and create the retrieval chain once when the app starts
 all_docs = load_all_documents()
 retrieval_chain = create_retrieval_chain_from_docs(all_docs)
 
@@ -32,35 +33,47 @@ class Query(BaseModel):
     question: str
 
 
-# --- NEW AND IMPROVED SEARCH FUNCTION ---
+# --- YOUR CORRECTED FUZZY SEARCH FUNCTION ---
 def search_illustrations(search_term: str):
     try:
         with open("public/illustrations.json", "r") as f:
             illustrations = json.load(f)
 
-        if not search_term or search_term == "all":
-            return illustrations
+        if not search_term or search_term.lower() == "all":
+            return [{"file": img["file"]} for img in illustrations]
 
-        # Tokenize the search query into a set of unique words
-        query_words = set(search_term.lower().split())
-        # Remove common "stop words" that don't add meaning
-        stop_words = {"and", "the", "of", "a", "an", "with"}
-        query_words = query_words - stop_words
+        # Handle common singular/plural conversions
+        search_terms = [search_term]
+        if search_term.endswith('s'):
+            # Add singular form (remove trailing 's')
+            search_terms.append(search_term[:-1])
+        else:
+            # Add plural form (add 's')
+            search_terms.append(search_term + 's')
 
-        results = []
-        for img in illustrations:
-            # Create a combined set of all searchable words for the image
-            image_words = set(img["title"].lower().split())
-            for tag in img["tags"]:
-                image_words.add(tag.lower())
+        # Create a dictionary where keys are image files and values are searchable strings
+        choices = {
+            img["file"]: f"{img['title']} {' '.join(img['tags'])}"
+            for img in illustrations
+        }
 
-            # --- THE CORE LOGIC FIX ---
-            # Check if there is any intersection (at least one common word).
-            # This performs an "OR" search for the keywords.
-            if not query_words.isdisjoint(image_words):
-                results.append(img)
+        all_matches = []
+        for term in search_terms:
+            # Use thefuzz to find matches
+            found_matches = process.extract(term, choices, limit=10)
+            # Lower the threshold to 55 to be more lenient
+            matches = [{"file": key} for match, score, key in found_matches if score >= 55]
+            all_matches.extend(matches)
 
-        return results
+        # Remove duplicates
+        unique_matches = []
+        seen_files = set()
+        for match in all_matches:
+            if match["file"] not in seen_files:
+                unique_matches.append(match)
+                seen_files.add(match["file"])
+
+        return unique_matches
     except FileNotFoundError:
         return []
 
@@ -70,10 +83,7 @@ async def query_endpoint(query: Query):
     question = query.question.lower().strip()
 
     specific_image_keywords = [
-        "images of", "image of",
-        "illustrations of", "illustration of",
-        "drawings of", "drawing of",
-        "art of"
+        "images of", "image of", "drawings of", "drawing of", "illustrations of", "illustration of", "art of"
     ]
     all_image_phrases = [
         "show me all illustrations", "show all illustrations", "show me your illustrations",
