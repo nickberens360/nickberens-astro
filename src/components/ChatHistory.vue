@@ -53,7 +53,7 @@
 <script>
 import { useStore } from '@nanostores/vue';
 import { allChats, activeChatId, createNewChat, selectChat, isChatHistoryVisible } from '../stores/ai.js';
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 
 export default {
   props: {
@@ -76,6 +76,33 @@ export default {
     const toggleVisibility = () => {
       isChatHistoryVisible.set(!isVisible.value);
     };
+
+    // Function to check if screen is mobile size
+    const isMobileSize = () => {
+      return window.innerWidth < 768; // Using md breakpoint (768px)
+    };
+
+    // Function to update visibility based on screen size
+    const updateVisibilityForScreenSize = () => {
+      // If mobile size, collapse the chat history
+      if (isMobileSize()) {
+        isChatHistoryVisible.set(false);
+      }
+    };
+
+    // Add resize event listener on component mount
+    onMounted(() => {
+      // Initial check
+      updateVisibilityForScreenSize();
+
+      // Add event listener for window resize
+      window.addEventListener('resize', updateVisibilityForScreenSize);
+    });
+
+    // Clean up event listener on component unmount
+    onUnmounted(() => {
+      window.removeEventListener('resize', updateVisibilityForScreenSize);
+    });
 
     return {
       chatList,
