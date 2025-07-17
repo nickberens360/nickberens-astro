@@ -4,9 +4,12 @@
     :class="`theme-${theme}`"
   >
     <div class="welcome-content">
-      <pre class="welcome-content__ascii">░█▀█░▀█▀░█▀▀░█░█░█▀█░▀█▀
-░█░█░░█░░█░░░█▀▄░█▀█░░█░
-░▀░▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀</pre>
+      <pre class="welcome-content__ascii">███╗   ██╗██╗ ██████╗██╗  ██╗    █████╗ ██╗
+████╗  ██║██║██╔════╝██║ ██╔╝   ██╔══██╗██║
+██╔██╗ ██║██║██║     █████╔╝    ███████║██║
+██║╚██╗██║██║██║     ██╔═██╗    ██╔══██║██║
+██║ ╚████║██║╚██████╗██║  ██╗██╗██║  ██║██║
+╚═╝  ╚═══╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝</pre>
       <h2>Welcome to nickAI Assistant</h2>
       <p>Try asking me some questions like:</p>
       <ul class="example-prompts">
