@@ -1,6 +1,5 @@
 <template>
-  <div>
-
+  <div v-if="!hideTerminal">
     <TerminalControlBar
       v-if="isMinimized"
       :title="title"
@@ -165,6 +164,10 @@ export default {
     initialOutput: {
       type: Array,
       default: () => ['Welcome to Terminal']
+    },
+    hideTerminal: {
+      type: Boolean,
+      default: false,
     }
   },
   setup(props, { emit }) {

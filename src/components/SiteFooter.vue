@@ -1,5 +1,6 @@
 <template>
   <footer
+    v-if="!hideFooter"
     class="site-footer"
     :class="[`theme-${computedTheme}`]"
     :style="computedBackgroundColor ? { backgroundColor: computedBackgroundColor } : {}"
@@ -47,6 +48,10 @@ export default {
     backgroundColor: {
       type: String,
       default: null
+    },
+    hideFooter: {
+      type: Boolean,
+      default: false,
     }
   },
   data() {

@@ -12,9 +12,11 @@ export interface Props {
     description?: string;
     favicon?: string;
     headerVariant?: string;
+    hideFooter?: boolean;
+    hideTerminal?: boolean;
 }
 
-const {title, description, favicon, headerVariant = 'default'} = Astro.props;
+const {title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false} = Astro.props;
 const gitBranch = await getGitBranch();
 const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
@@ -31,7 +33,7 @@ const repoUrl = getGitHubRepoUrl();
 <body>
 <SiteHeader gitBranch={gitBranch} variant={headerVariant} client:only="vue" />
 <slot/>
-<SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
+<SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} hideFooter={hideFooter} client:load />
 <TerminalWindow
     client:only="vue"
     title="Nick's Terminal"
@@ -39,6 +41,7 @@ const repoUrl = getGitHubRepoUrl();
         "Welcome to Nick Berens' Terminal",
         "Type 'help' for available commands"
     ]}
+    hideTerminal={hideTerminal}
 ></TerminalWindow>
 </body>
 </html>

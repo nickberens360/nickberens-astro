@@ -1,0 +1,33 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ChatBot from '../components/ChatBot.vue';
+import ChatHistory from '../components/ChatHistory.vue';
+---
+
+<Layout 
+  title="Nick AI | A Chatbot for Nick's Portfolio"
+  hideFooter={true}
+  hideTerminal={true}
+>
+  <main
+      data-section-color="black"
+      background-color="black"
+      data-section-theme="dark"
+      class="chat-layout"
+  >
+    <ChatHistory client:only="vue" />
+    <ChatBot
+         client:only="vue"
+        theme="dark"
+    />
+  </main>
+</Layout>
+
+<style>
+    .chat-layout {
+        display: flex;
+        height: calc(100vh - var(--site-header-height));
+        margin-top: var(--site-header-height);
+        overflow: hidden;
+    }
+</style>
