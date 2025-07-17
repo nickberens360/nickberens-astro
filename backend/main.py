@@ -139,7 +139,8 @@ except Exception as e:
 
 origins = [
     "http://localhost:4321",                  # For local development
-    "https://nickberens.me",                  # Your custom domain
+     "https://nickberens.me",                  # ✅ Your custom domain
+    "https://www.nickberens.me",              # ✅ Add www version too
     "https://nickberens360.netlify.app"      # Your Netlify subdomain
 ]
 
