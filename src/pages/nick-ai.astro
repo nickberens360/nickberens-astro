@@ -1,17 +1,29 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PageSection from '../components/PageSection.vue';
 import ChatBot from '../components/ChatBot.vue';
+import ChatHistory from '../components/ChatHistory.vue';
 ---
 
-<Layout title="nickAI" description="nickAI - Nick Berens">
-	<PageSection
-		data-section-color="black"
-		background-color="black"
-		data-section-theme="dark"
-		full-height
-		full-width
-	>
-		<ChatBot client:load />
-	</PageSection>
+<Layout title="Nick AI | A Chatbot for Nick's Portfolio">
+  <main
+      data-section-color="black"
+      background-color="black"
+      data-section-theme="dark"
+      class="chat-layout"
+  >
+    <ChatHistory client:only="vue" />
+    <ChatBot
+        client:load
+        theme="dark"
+    />
+  </main>
 </Layout>
+
+<style>
+    .chat-layout {
+        display: flex;
+        height: calc(100vh - var(--site-header-height));
+        margin-top: var(--site-header-height);
+        overflow: hidden;
+    }
+</style>
