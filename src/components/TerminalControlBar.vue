@@ -5,18 +5,24 @@
     @pointerup="stopDrag"
   >
     <div class="terminal-controls">
-      <div
-        class="control close"
-        @click="$emit('minimize')"
-      ></div>
+      <div class="tooltip-container">
+        <div
+          class="control close"
+          @click="$emit('minimize')"
+        ></div>
+        <span class="tooltip">Close functionality not implemented yet</span>
+      </div>
       <div
         class="control minimize"
         @click="$emit('minimize')"
       ></div>
-      <div
-        class="control maximize"
-        @click="$emit('maximize')"
-      />
+      <div class="tooltip-container">
+        <div
+          class="control maximize"
+          @click="$emit('maximize')"
+        />
+        <span class="tooltip">Maximize functionality not implemented yet</span>
+      </div>
     </div>
     <div class="terminal-title">{{ title }}</div>
   </div>
@@ -97,6 +103,50 @@ export default {
   color: #cccccc;
   font-size: 14px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Custom tooltip styles */
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  visibility: hidden;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 5px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+  margin-bottom: 5px;
+  font-size: 0.8rem;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Theme-specific styles */
