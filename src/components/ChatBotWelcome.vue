@@ -1,7 +1,10 @@
 <template>
   <div class="welcome-container" :class="`theme-${theme}`">
     <div class="welcome-content">
-      <h2>Welcome to Nick's AI Assistant</h2>
+      <pre class="welcome-content__ascii">░█▀█░▀█▀░█▀▀░█░█░█▀█░▀█▀
+░█░█░░█░░█░░░█▀▄░█▀█░░█░
+░▀░▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀</pre>
+      <h2>Welcome to nickAI Assistant</h2>
       <p>Try asking me some questions like:</p>
       <ul class="example-prompts">
         <li @click="selectPrompt('Show all illustrations')">
@@ -57,7 +60,9 @@ export default {
   max-width: 500px;
   margin: 0 auto;
 }
-
+.welcome-content__ascii {
+  color: #61fc61;
+}
 h2 {
   margin-bottom: 1rem;
   font-size: 1.5rem;

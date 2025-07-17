@@ -1,6 +1,7 @@
 from langchain_community.document_loaders import (
     PyPDFLoader,
     UnstructuredHTMLLoader,
+    UnstructuredMarkdownLoader,
 )
 
 
@@ -8,10 +9,10 @@ def load_all_documents():
     """Loads all data sources and returns them as a single list of documents."""
     print("Loading documents...")
 
-    # For now, let's focus on the most reliable data sources.
     loaders = [
         PyPDFLoader("public/Nick_Berens_Resume.pdf"),
         UnstructuredHTMLLoader("nick_berens_cv.html"),
+        UnstructuredMarkdownLoader("public/about-nick-berens.md"),  # Add this line
     ]
 
     docs = []
