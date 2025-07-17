@@ -140,7 +140,9 @@ except Exception as e:
 origins = [
     "http://localhost:4321",                  # For local development
     "https://nickberens.me",                  # Your custom domain
-    "https://nickberens360.netlify.app"      # Your Netlify subdomain
+    "https://nickberens360.netlify.app",
+    "https://deploy-preview-14--nickberens360.netlify.app"
+    # Your Netlify subdomain
 ]
 
 app.add_middleware(
