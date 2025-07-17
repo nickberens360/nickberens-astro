@@ -141,7 +141,7 @@ nextCommandIdStore.listen((value) => {
 
 // Navigation items store
 export const navItems = atom([
-  { text: 'nickAI', url: '/nick-ai' },
+  { text: 'nick.AI', url: '/nick-ai' },
   { text: 'Illustrations', url: '/illustrations' },
   { text: 'Atomic Docs', url: '/atomic-docs' },
   { text: 'Resume', url: '/resume' },
