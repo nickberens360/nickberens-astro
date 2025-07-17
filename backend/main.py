@@ -138,18 +138,30 @@ except Exception as e:
     app_initialized = False
 
 origins = [
-    "http://localhost:4321",                  # For local development
-    "https://nickberens.me",                  # Your custom domain
-    "https://nickberens360.netlify.app",
-    "https://deploy-preview-14--nickberens360.netlify.app"
-    # Your Netlify subdomain
+    "http://localhost:4321",                   # Astro local development
+    "http://localhost:3000",                   # React/Vue local development
+    "http://localhost:5173",                   # Vite dev server
+    "http://localhost:8080",                   # Alternative local port
+    "https://nickberens.me",                   # Your custom domain
+    "https://nickberens360.netlify.app",       # Main Netlify deployment
+    "https://deploy-preview-14--nickberens360.netlify.app",  # Specific preview
+    "https://deploy-preview-*--nickberens360.netlify.app",   # All deploy previews
+    "https://*.netlify.app",                   # All Netlify subdomains
 ]
+
+# For production, you might want to be more restrictive:
+if os.getenv("ENVIRONMENT") == "production":
+    origins = [
+        "https://nickberens.me",
+        "https://nickberens360.netlify.app",
+        # Add any other production domains
+    ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

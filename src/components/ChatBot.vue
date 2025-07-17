@@ -131,8 +131,14 @@ export default {
       isLoading.value = true;
 
       try {
-        const apiUrl = `${import.meta.env.PUBLIC_API_URL}/query`;
-        const response = await fetch(apiUrl, {
+        // Replace the hardcoded line with this:
+const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+const apiUrl = isDev
+  ? 'http://localhost:8000'
+  : 'https://nickberens-api.onrender.com';
+
+console.log(`Environment: ${isDev ? 'development' : 'production'}, API URL: ${apiUrl}`);
+        const response = await fetch(`${apiUrl}/query`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
