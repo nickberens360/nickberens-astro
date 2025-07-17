@@ -1,8 +1,88 @@
 import { atom, map, computed } from 'nanostores';
 
-export const allChats = map({});
-export const activeChatId = atom(null);
-export const isChatHistoryVisible = atom(true); // Default to visible
+// Helper to check if we're in a browser environment
+const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+
+// --- Load chat data from localStorage or use default ---
+const loadChats = () => {
+  if (isBrowser()) {
+    try {
+      const savedChats = localStorage.getItem('allChats');
+      if (savedChats) {
+        return JSON.parse(savedChats);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    }
+  }
+  return {}; // Default empty chats object
+};
+
+// --- Load active chat ID from localStorage or use default ---
+const loadActiveChatId = () => {
+  if (isBrowser()) {
+    try {
+      const savedId = localStorage.getItem('activeChatId');
+      if (savedId) {
+        return savedId;
+      }
+    } catch (error) {
+      console.error('Error loading active chat ID:', error);
+    }
+  }
+  return null; // Default to no active chat
+};
+
+// --- Load chat history visibility state from localStorage or use default ---
+const loadChatHistoryVisibility = () => {
+  if (isBrowser()) {
+    try {
+      const savedVisibility = localStorage.getItem('isChatHistoryVisible');
+      if (savedVisibility !== null) {
+        return JSON.parse(savedVisibility);
+      }
+    } catch (error) {
+      console.error('Error loading chat history visibility:', error);
+    }
+  }
+  return true; // Default to visible
+};
+
+// Initialize stores with persisted data
+export const allChats = map(loadChats());
+export const activeChatId = atom(loadActiveChatId());
+export const isChatHistoryVisible = atom(loadChatHistoryVisibility());
+
+// Subscribe to changes and save to localStorage
+allChats.listen((value) => {
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('allChats', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving chat history:', error);
+    }
+  }
+});
+
+activeChatId.listen((value) => {
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('activeChatId', value);
+    } catch (error) {
+      console.error('Error saving active chat ID:', error);
+    }
+  }
+});
+
+isChatHistoryVisible.listen((value) => {
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('isChatHistoryVisible', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving chat history visibility:', error);
+    }
+  }
+});
 
 export const activeChat = computed([allChats, activeChatId], (chats, id) => {
   return id ? chats[id] : null;

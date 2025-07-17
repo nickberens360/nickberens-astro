@@ -192,7 +192,7 @@ export default {
 .input-form { display: flex; padding: 1rem; border-top: 1px solid #e5e7eb; background-color: #ffffff; }
 .message-input { flex-grow: 1; border: 1px solid #d1d5db; padding: 0.75rem; border-radius: 8px; font-size: 1rem; }
 .message-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
-.send-button { margin-left: 1rem; padding: 0.75rem 1.5rem; border: none; background-color: #3b82f6; color: white; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background-color 0.2s; }
+.send-button { margin-left: 1rem; padding: 0.75rem 1.5rem; border: none; background-color: #ff8282; color: white; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background-color 0.2s; }
 .send-button:hover { background-color: #2563eb; }
 .send-button:disabled { background-color: #9ca3af; cursor: not-allowed; }
 .typing-indicator { display: flex; align-items: center; gap: 5px; }
