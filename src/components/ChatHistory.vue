@@ -18,13 +18,13 @@
         ✏️ New Chat
       </button>
     </div>
-<!--    <button
+    <button
       v-if="!isVisible"
       class="toggle-button"
       @click="createNewChat"
     >
       ✏️
-    </button>-->
+    </button>
     <p v-if="isVisible">Recent</p>
     <div
       v-if="isVisible"
@@ -37,6 +37,14 @@
         @click="selectChat(chat.id)"
       >
         {{ chat.title }}
+      </div>
+    </div>
+    <div v-else>
+      <div
+        v-for="chat in chatList"
+        :key="chat.id"
+      >
+        ...
       </div>
     </div>
   </div>
@@ -95,9 +103,9 @@ export default {
 }
 
 .drawer-header {
-  display: flex;
+  /*display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: center;*/
   margin-bottom: 1rem;
 }
 
@@ -121,16 +129,13 @@ export default {
 }
 
 .new-chat-button {
-  background-color: #3b82f6;
-  color: white;
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem;
-  font-size: 1rem;
-  cursor: pointer;
-  text-align: center;
-  flex-grow: 1;
-  margin-left: 0.5rem;
+  background: none !important;
+  font-weight: bold;
+  font-size: 18px;
+  margin-top: 16px;
+  outline: none;
+  color: white;
 }
 
 .history-list {
