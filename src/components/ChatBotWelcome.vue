@@ -10,7 +10,7 @@
 ██║╚██╗██║██║██║     ██╔═██╗    ██╔══██║██║
 ██║ ╚████║██║╚██████╗██║  ██╗██╗██║  ██║██║
 ╚═╝  ╚═══╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝</pre>
-      <h2>Welcome to nick.AI Assistant</h2>
+      <h2>Welcome to nick.AI</h2>
       <p>Try asking me some questions like:</p>
       <ul class="example-prompts">
         <li @click="selectPrompt('Tell me about Nick')">
