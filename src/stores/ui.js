@@ -187,3 +187,24 @@ isTerminalMinimizedStore.listen((value) => {
     }
   }
 });
+
+// Image overlay state
+export const imageOverlayStore = atom({
+  isOpen: false,
+  imageSrc: null
+});
+
+// Helper functions to open and close the overlay
+export const openImageOverlay = (src) => {
+  imageOverlayStore.set({
+    isOpen: true,
+    imageSrc: src
+  });
+};
+
+export const closeImageOverlay = () => {
+  imageOverlayStore.set({
+    isOpen: false,
+    imageSrc: null
+  });
+};

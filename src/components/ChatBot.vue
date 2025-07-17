@@ -29,6 +29,7 @@
               :src="src"
               alt="Illustration"
               class="chat-image"
+              @click="handleImageClick(src)"
             />
           </div>
         </div>
@@ -62,6 +63,7 @@
         Send
       </button>
     </div>
+    <ImageOverlay />
   </div>
 </template>
 
@@ -76,11 +78,14 @@ import {
   createNewChat,
   updateChatTitle
 } from '../stores/ai.js';
+import { openImageOverlay } from '../stores/ui.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
+import ImageOverlay from './ImageOverlay.vue';
 
 export default {
   components: {
-    ChatBotWelcome
+    ChatBotWelcome,
+    ImageOverlay
   },
   props: {
     theme: {
@@ -196,6 +201,10 @@ export default {
       sendMessage();
     };
 
+    const handleImageClick = (src) => {
+      openImageOverlay(src);
+    };
+
     return {
       userInput,
       messages,
@@ -203,6 +212,7 @@ export default {
       messagesWindow,
       sendMessage,
       handlePromptSelect,
+      handleImageClick
     };
   },
 };
@@ -235,6 +245,12 @@ export default {
   height: auto;
   border-radius: 8px;
   border: 1px solid #ddd;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.chat-image:hover {
+  transform: scale(1.05);
 }
 
 .message-bubble p {
