@@ -139,4 +139,9 @@ p {
 .theme-dark .example-prompts li:hover {
   background-color: #333333;
 }
+@media (max-width: 768px) {
+  .welcome-content__ascii {
+    font-size: 8px;
+  }
+}
 </style>
