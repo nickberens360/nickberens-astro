@@ -66,7 +66,7 @@ terminalSizeStore.listen((value) => {
 });
 
 // Default value for the terminal input
-const DEFAULT_TERMINAL_INPUT_VALUE = 'Shoot';
+const DEFAULT_TERMINAL_INPUT_VALUE = 'Sh*t';
 
 // Store for the terminal input's value, initialized with a default.
 export const terminalInputValue = atom(DEFAULT_TERMINAL_INPUT_VALUE);
@@ -171,7 +171,7 @@ const loadIsTerminalMinimized = () => {
       console.error('Error loading terminal minimized state:', error);
     }
   }
-  return false; // Default: not minimized
+  return true;
 };
 
 // Store for terminal minimized state with persisted data
