@@ -137,10 +137,15 @@ except Exception as e:
     retriever, illustrations_data = None, []
     app_initialized = False
 
-# CORS middleware
+origins = [
+    "http://localhost:4321",                  # For local development
+    "https://nickberens.me",                  # Your custom domain
+    "https://nickberens360.netlify.app"      # Your Netlify subdomain
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Consider restricting this in production
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
