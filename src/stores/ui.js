@@ -146,6 +146,7 @@ export const navItems = atom([
   { text: 'Atomic Docs', url: '/atomic-docs' },
   { text: 'Resume', url: '/resume' },
   { text: 'Contact', url: '/#contact' },
+  { text: 'nickAI', url: '/nick-ai' },
   {
     text: 'GitHub',
     url: 'https://github.com/nickberens360',
