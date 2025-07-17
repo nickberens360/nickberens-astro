@@ -90,7 +90,7 @@ export default {
       isLoading.value = true;
 
       try {
-       const response = await fetch('http://localhost:8000/query', {
+        const response = await fetch('http://localhost:8000/query', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -103,7 +103,25 @@ export default {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          // Extract error details from the response when possible
+          let errorMessage = `Error: ${response.status} ${response.statusText}`;
+
+          try {
+            // Try to get detailed error message from response body
+            const errorData = await response.json();
+            if (errorData.detail) {
+              errorMessage = errorData.detail;
+            }
+          } catch (parseError) {
+            // If we can't parse the JSON, just use the status message
+          }
+
+          // Handle rate limit (429) errors specifically
+          if (response.status === 429) {
+            errorMessage = "Rate limit exceeded. Please wait a moment before sending more messages.";
+          }
+
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
@@ -115,7 +133,11 @@ export default {
 
       } catch (error) {
         console.error('Error fetching response:', error);
-        addMessageToActiveChat({ text: 'Sorry, I encountered an error. Please try again.', sender: 'bot' });
+        // Display the specific error message instead of a generic one
+        addMessageToActiveChat({ 
+          text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`, 
+          sender: 'bot' 
+        });
       } finally {
         isLoading.value = false;
       }
