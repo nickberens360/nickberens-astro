@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import PageSection from '../components/PageSection.vue';
+import ChatBot from '../components/ChatBot.vue';
 ---
 
 <Layout title="nickAI" description="nickAI - Nick Berens">
@@ -11,6 +12,6 @@ import PageSection from '../components/PageSection.vue';
 		full-height
 		full-width
 	>
-		nickAI
+		<ChatBot client:load />
 	</PageSection>
 </Layout>
