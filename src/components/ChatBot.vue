@@ -1,6 +1,11 @@
 <template>
   <div class="chatbot-container" :class="`theme-${theme}`">
     <div class="messages-window" ref="messagesWindow">
+      <ChatBotWelcome 
+        v-if="messages.length === 0" 
+        :theme="theme" 
+        @select-prompt="handlePromptSelect" 
+      />
       <div v-for="(message, index) in messages" :key="index" :class="['message', message.sender]">
         <div class="message-bubble">
           <p v-if="message.text">{{ message.text }}</p>
@@ -39,8 +44,12 @@ import { ref, nextTick, watch, onMounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 // --- UPDATED: Import the new updateChatTitle function ---
 import { activeChatId, activeChatMessages, addMessageToActiveChat, createNewChat, updateChatTitle } from '../stores/ai.js';
+import ChatBotWelcome from './ChatBotWelcome.vue';
 
 export default {
+  components: {
+    ChatBotWelcome
+  },
   props: {
     theme: {
       type: String,
@@ -143,12 +152,18 @@ export default {
       }
     };
 
+    const handlePromptSelect = (prompt) => {
+      userInput.value = prompt;
+      sendMessage();
+    };
+
     return {
       userInput,
       messages,
       isLoading,
       messagesWindow,
       sendMessage,
+      handlePromptSelect,
     };
   },
 };

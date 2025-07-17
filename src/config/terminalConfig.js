@@ -3,7 +3,7 @@
  */
 
 export const DEFAULT_TERMINAL_SIZE = {
-  width: 415,
+  width: 315,
   height: 290,
 };
 
