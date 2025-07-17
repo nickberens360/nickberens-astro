@@ -302,6 +302,12 @@ async def query_endpoint(request: Request, query: Query) -> QueryResponse:
         # Log the query (truncated for privacy)
         logger.info(f"Processing query: {question[:50]}{'...' if len(question) > 50 else ''}")
 
+        # Define image-related keywords that indicate user wants illustrations
+        image_keywords = [
+            "image", "images", "illustration", "illustrations", "drawing", "drawings",
+            "art", "design", "designs", "pic", "pics", "picture", "pictures"
+        ]
+
         # Define search patterns
         specific_image_keywords = [
             "images of", "image of", "drawings of", "drawing of",
@@ -317,10 +323,17 @@ async def query_endpoint(request: Request, query: Query) -> QueryResponse:
             "images", "image", "illustrations", "illustration", "drawings", "drawing", "art", "pics", "pictures"
         ]
 
+        # Words to ignore when building search terms
+        ignore_words = {
+            "show", "me", "get", "find", "display", "see", "view", "look", "at",
+            "the", "a", "an", "some", "any", "all", "your", "of", "for"
+        }
+
+        # Special phrases for showing all images
         all_image_phrases = [
             "show me all illustrations", "show all illustrations", "show me your illustrations",
             "show me all your art", "show me all images", "show me images", "show your art",
-            "all images", "all illustrations", "all art"
+            "all images", "all illustrations", "all art", "show me everything"
         ]
 
         # Route to specific image search
@@ -409,6 +422,44 @@ async def query_endpoint(request: Request, query: Query) -> QueryResponse:
                     processing_time=processing_time,
                     llm_used="image_search"
                 )
+
+        # General pattern matching for "<subject> images" or similar patterns
+        words = question.split()
+        for img_indicator in image_indicators:
+            if img_indicator in words:
+                # Get the index of the image indicator
+                idx = words.index(img_indicator)
+
+                # Extract words before and after the image indicator
+                words_before = words[:idx]
+                words_after = words[idx+1:]
+
+                # Filter out ignore words
+                search_terms_before = [w for w in words_before if w not in ignore_words]
+                search_terms_after = [w for w in words_after if w not in ignore_words]
+
+                # Combine the search terms
+                search_term = " ".join(search_terms_before + search_terms_after).strip()
+
+                if search_term:
+                    found_images = search_illustrations(search_term)
+                    if found_images:
+                        image_urls = [f"/illustrations/{img['file']}" for img in found_images]
+                        processing_time = time.time() - start_time
+                        logger.info(f"General image search completed in {processing_time:.3f}s for '{search_term}'")
+                        return QueryResponse(
+                            answer=f"Here are the illustrations I found for '{search_term}':",
+                            images=image_urls,
+                            processing_time=processing_time,
+                            llm_used="image_search"
+                        )
+                    else:
+                        processing_time = time.time() - start_time
+                        return QueryResponse(
+                            answer=f"Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to see all of my art.",
+                            processing_time=processing_time,
+                            llm_used="image_search"
+                        )
 
         # Default to AI-powered text response
         if not retriever:
