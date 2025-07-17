@@ -90,12 +90,16 @@ export default {
       isLoading.value = true;
 
       try {
-        const response = await fetch('http://localhost:8000/query', {
+       const response = await fetch('http://localhost:8000/query', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ question: question }),
+          // --- UPDATED: Send the chat history with the request ---
+          body: JSON.stringify({
+            question: question,
+            chat_history: messages.value.slice(0, -1) // Send all but the last message
+          }),
         });
 
         if (!response.ok) {

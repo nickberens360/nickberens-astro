@@ -9,3 +9,4 @@ langchain-community
 chromadb
 slowapi
 thefuzz[speed]
+langchain-anthropic

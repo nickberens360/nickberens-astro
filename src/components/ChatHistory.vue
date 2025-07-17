@@ -1,8 +1,9 @@
 <template>
   <div class="chat-history-drawer" :class="`theme-${theme}`">
     <button @click="createNewChat" class="new-chat-button">
-      + New Chat
+      ✏️ New Chat
     </button>
+    <p>Recent</p>
     <div class="history-list">
       <div
         v-for="chat in chatList"
@@ -87,7 +88,7 @@ export default {
   background-color: #e5e7eb;
 }
 .history-item.active {
-  background-color: #d1d5db;
+  /*background-color: #d1d5db;*/
   font-weight: bold;
   color: #1f2937;
 }
@@ -105,7 +106,7 @@ export default {
   background-color: #222222;
 }
 .theme-dark .history-item.active {
-  background-color: #333333;
+  /*background-color: #333333;*/
   color: #f9fafb;
 }
 </style>
