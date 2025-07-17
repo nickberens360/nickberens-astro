@@ -1,5 +1,8 @@
 <template>
-  <div class="welcome-container" :class="`theme-${theme}`">
+  <div
+    class="welcome-container"
+    :class="`theme-${theme}`"
+  >
     <div class="welcome-content">
       <pre class="welcome-content__ascii">░█▀█░▀█▀░█▀▀░█░█░█▀█░▀█▀
 ░█░█░░█░░█░░░█▀▄░█▀█░░█░
@@ -8,13 +11,16 @@
       <p>Try asking me some questions like:</p>
       <ul class="example-prompts">
         <li @click="selectPrompt('Show all illustrations')">
-          <span class="prompt-icon">→</span> Show all illustrations
+          <span class="prompt-icon">→</span>
+          Show all illustrations
         </li>
         <li @click="selectPrompt('Show me images of Doug')">
-          <span class="prompt-icon">→</span> Show me images of Doug
+          <span class="prompt-icon">→</span>
+          Show me images of Doug
         </li>
         <li @click="selectPrompt('Tell me about Nick')">
-          <span class="prompt-icon">→</span> Tell me about Nick
+          <span class="prompt-icon">→</span>
+          Tell me about Nick
         </li>
       </ul>
     </div>
@@ -60,9 +66,16 @@ export default {
   max-width: 500px;
   margin: 0 auto;
 }
+
 .welcome-content__ascii {
-  color: #61fc61;
+  background: linear-gradient(to right, #ff0000, #00ff00, #0000ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: bold;
+
 }
+
 h2 {
   margin-bottom: 1rem;
   font-size: 1.5rem;
