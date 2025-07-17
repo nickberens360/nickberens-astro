@@ -2,6 +2,7 @@ import { atom, map, computed } from 'nanostores';
 
 export const allChats = map({});
 export const activeChatId = atom(null);
+export const isChatHistoryVisible = atom(true); // Default to visible
 
 export const activeChat = computed([allChats, activeChatId], (chats, id) => {
   return id ? chats[id] : null;

@@ -13,9 +13,10 @@ export interface Props {
     favicon?: string;
     headerVariant?: string;
     hideFooter?: boolean;
+    hideTerminal?: boolean;
 }
 
-const {title, description, favicon, headerVariant = 'default', hideFooter = false} = Astro.props;
+const {title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false} = Astro.props;
 const gitBranch = await getGitBranch();
 const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
@@ -40,6 +41,7 @@ const repoUrl = getGitHubRepoUrl();
         "Welcome to Nick Berens' Terminal",
         "Type 'help' for available commands"
     ]}
+    hideTerminal={hideTerminal}
 ></TerminalWindow>
 </body>
 </html>

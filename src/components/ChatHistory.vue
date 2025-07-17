@@ -1,10 +1,35 @@
 <template>
-  <div class="chat-history-drawer" :class="`theme-${theme}`">
-    <button @click="createNewChat" class="new-chat-button">
-      ✏️ New Chat
-    </button>
-    <p>Recent</p>
-    <div class="history-list">
+  <div
+    class="chat-history-drawer"
+    :class="[`theme-${theme}`, { 'collapsed': !isVisible }]"
+  >
+    <div class="drawer-header">
+      <button
+        @click="toggleVisibility"
+        class="toggle-button"
+      >
+        {{ isVisible ? '◀' : '▶' }}
+      </button>
+      <button
+        v-if="isVisible"
+        @click="createNewChat"
+        class="new-chat-button"
+      >
+        ✏️ New Chat
+      </button>
+    </div>
+<!--    <button
+      v-if="!isVisible"
+      class="toggle-button"
+      @click="createNewChat"
+    >
+      ✏️
+    </button>-->
+    <p v-if="isVisible">Recent</p>
+    <div
+      v-if="isVisible"
+      class="history-list"
+    >
       <div
         v-for="chat in chatList"
         :key="chat.id"
@@ -19,7 +44,7 @@
 
 <script>
 import { useStore } from '@nanostores/vue';
-import { allChats, activeChatId, createNewChat, selectChat } from '../stores/ai.js';
+import { allChats, activeChatId, createNewChat, selectChat, isChatHistoryVisible } from '../stores/ai.js';
 import { computed } from 'vue';
 
 export default {
@@ -33,17 +58,24 @@ export default {
   setup() {
     const chats = useStore(allChats);
     const currentChatId = useStore(activeChatId);
+    const isVisible = useStore(isChatHistoryVisible);
 
     // Convert the map of chats into a sorted array for display (newest first).
     const chatList = computed(() => {
       return Object.values(chats.value).sort((a, b) => b.id.localeCompare(a.id));
     });
 
+    const toggleVisibility = () => {
+      isChatHistoryVisible.set(!isVisible.value);
+    };
+
     return {
       chatList,
       currentChatId,
       createNewChat,
       selectChat,
+      isVisible,
+      toggleVisibility
     };
   },
 };
@@ -59,7 +91,35 @@ export default {
   flex-direction: column;
   border-right: 1px solid #e5e7eb;
   flex-shrink: 0;
+  transition: width 0.3s ease;
 }
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.toggle-button {
+  background-color: #e5e7eb;
+  color: #1f2937;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.collapsed {
+  width: 50px;
+  padding: 1rem 0.5rem;
+}
+
 .new-chat-button {
   background-color: #3b82f6;
   color: white;
@@ -68,13 +128,16 @@ export default {
   padding: 0.75rem;
   font-size: 1rem;
   cursor: pointer;
-  margin-bottom: 1rem;
   text-align: center;
+  flex-grow: 1;
+  margin-left: 0.5rem;
 }
+
 .history-list {
   overflow-y: auto;
   flex-grow: 1;
 }
+
 .history-item {
   padding: 0.75rem;
   border-radius: 6px;
@@ -84,9 +147,11 @@ export default {
   text-overflow: ellipsis;
   transition: background-color 0.2s;
 }
+
 .history-item:hover {
   background-color: #e5e7eb;
 }
+
 .history-item.active {
   /*background-color: #d1d5db;*/
   font-weight: bold;
@@ -99,12 +164,20 @@ export default {
   color: #d1d5db;
   border-right-color: #333333;
 }
+
 .theme-dark .new-chat-button {
   background-color: #333333;
 }
+
+.theme-dark .toggle-button {
+  background-color: #333333;
+  color: #d1d5db;
+}
+
 .theme-dark .history-item:hover {
   background-color: #222222;
 }
+
 .theme-dark .history-item.active {
   /*background-color: #333333;*/
   color: #f9fafb;
