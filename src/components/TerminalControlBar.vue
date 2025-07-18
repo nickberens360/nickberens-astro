@@ -11,7 +11,8 @@
       />
       <div
         class="control minimize"
-        @click="$emit('minimize')"
+        :class="{ 'disabled': isMaximized }"
+        @click="!isMaximized && $emit('minimize')"
       />
       <div
         class="control maximize"
@@ -30,6 +31,10 @@ export default {
     title: {
       type: String,
       default: 'Terminal'
+    },
+    isMaximized: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['close', 'minimize', 'maximize', 'startDrag', 'stopDrag'],
@@ -90,6 +95,11 @@ export default {
 
 .maximize {
   background-color: #27c93f;
+}
+
+.control.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .terminal-title {

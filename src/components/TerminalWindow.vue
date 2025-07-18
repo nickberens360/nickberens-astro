@@ -17,6 +17,7 @@
     >
       <TerminalControlBar
         :title="title"
+        :isMaximized="isMaximized"
         @close="isTerminalHiddenStore.set(true);"
         @minimize="isTerminalMinimizedStore.set(true)"
         @maximize="toggleMaximize"
