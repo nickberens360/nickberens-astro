@@ -8,7 +8,10 @@
         @click="toggleVisibility"
         class="toggle-button"
       >
-        {{ isVisible ? '◀' : '▶' }}
+        <font-awesome-icon
+          :icon="['fas', 'bars']"
+          size="2x"
+        />
       </button>
       <button
         v-if="isVisible"
@@ -51,11 +54,13 @@
 </template>
 
 <script>
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { useStore } from '@nanostores/vue';
 import { allChats, activeChatId, createNewChat, selectChat, isChatHistoryVisible } from '../stores/ai.js';
 import { computed, onMounted, onUnmounted } from 'vue';
 
 export default {
+  components: { FontAwesomeIcon },
   props: {
     theme: {
       type: String,
@@ -148,7 +153,7 @@ export default {
 }
 
 .toggle-button {
-  background-color: #e5e7eb;
+  background: none;
   color: #1f2937;
   border: none;
   border-radius: 50%;
@@ -214,7 +219,7 @@ export default {
 }
 
 .theme-dark .toggle-button {
-  background-color: #333333;
+  /*background-color: #333333;*/
   color: #d1d5db;
 }
 

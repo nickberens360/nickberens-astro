@@ -1,22 +1,24 @@
 // Central icon registration file for Font Awesome icons
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { 
-    faGithub,
-    faTwitter,
-    faLinkedin,
+import {
+  faGithub,
+  faTwitter,
+  faLinkedin,
 
 } from '@fortawesome/free-brands-svg-icons';
 
 import {
-    faTerminal,
+  faTerminal,
+  faBars,
 } from '@fortawesome/free-solid-svg-icons';
 
 
 library.add(
-    faGithub,
-    faTwitter,
-    faLinkedin,
-    faTerminal,
+  faGithub,
+  faTwitter,
+  faLinkedin,
+  faTerminal,
+  faBars
 );
 
 export { library };
