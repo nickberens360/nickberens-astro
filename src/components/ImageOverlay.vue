@@ -81,10 +81,6 @@ export default {
   z-index: 10;
 }
 
-.close-button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
 /* Dark theme adjustments */
 :global(.theme-dark) .image-overlay {
   background-color: rgba(0, 0, 0, 0.95);
