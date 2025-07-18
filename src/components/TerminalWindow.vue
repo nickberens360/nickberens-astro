@@ -284,6 +284,8 @@ export default {
           size: { ...size.value }
         });
         isTerminalMaximizedStore.set(true);
+        // Set body overflow to hidden when maximized
+        document.body.style.overflow = 'hidden';
       } else {
         // Restore previous position and size
         if (previousTerminalState.value.position && previousTerminalState.value.size) {
@@ -291,6 +293,8 @@ export default {
           terminalSizeStore.set(previousTerminalState.value.size);
         }
         isTerminalMaximizedStore.set(false);
+        // Reset body overflow when un-maximized
+        document.body.style.overflow = '';
       }
     };
 
@@ -675,7 +679,7 @@ export default {
 }
 
 .terminal-content {
-  flex-grow: 1;
+  /*flex-grow: 1;*/
   display: flex;
   flex-direction: column;
   padding: 10px;
