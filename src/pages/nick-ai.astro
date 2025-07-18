@@ -2,9 +2,16 @@
 import Layout from '../layouts/Layout.astro';
 import ChatBot from '../components/ChatBot.vue';
 import ChatHistory from '../components/ChatHistory.vue';
+import { isTerminalHiddenStore } from '../stores/ui.js';
+
+// Set the terminal to be hidden initially when the page loads
+if (typeof window !== 'undefined') {
+  // Only run on client-side
+  isTerminalHiddenStore.set(true);
+}
 ---
 
-<Layout 
+<Layout
   title="Nick AI | A Chatbot for Nick's Portfolio"
   hideFooter={true}
   hideTerminal={true}
@@ -22,6 +29,14 @@ import ChatHistory from '../components/ChatHistory.vue';
     />
   </main>
 </Layout>
+
+<script>
+  // This script runs on the client side
+  import { isTerminalHiddenStore } from '../stores/ui.js';
+
+  // Set the terminal to be hidden when the page loads
+  isTerminalHiddenStore.set(true);
+</script>
 
 <style>
     .chat-layout {
