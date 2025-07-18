@@ -20,6 +20,8 @@ export const DEFAULT_TERMINAL = {
     '- theme: Toggle between light and dark theme',
     '- version: Show terminal version',
     '- ls: List navigation links',
+    '- cd [nav item name]: Navigate to a nav item',
+    '- cd / or cd home: Navigate to the index page',
     '- git log: Show commit history',
     '- git graph: Show code frequency chart',
   ],
@@ -30,29 +32,5 @@ export const DEFAULT_TERMINAL = {
 
 // Settings for maximized terminal window
 export const MAXIMIZED_TERMINAL = {
-  margin: 20, // 20px from all edges of the screen
+  margin: 0, // 20px from all edges of the screen
 }
-
-
-// export const DEFAULT_TERMINAL_SIZE = {
-//   width: 315,
-//   height: 290,
-// };
-//
-// export const DEFAULT_TERMINAL_MARGIN = 20;
-//
-// export const DEFAULT_HELP_OUTPUT = [
-//   'Available commands:',
-//   '- clear: Clear the terminal',
-//   '- bust-cache: Clear localStorage',
-//   '- help: Show this help message',
-//   '- theme: Toggle between light and dark theme',
-//   '- version: Show terminal version',
-//   '- ls: List navigation links',
-//   '- git log: Show commit history',
-//   '- git graph: Show code frequency chart',
-// ];
-//
-// export const DEFAULT_TERMINAL_OUTPUT = [
-//   'Type "help" for a list of commands.',
-// ];

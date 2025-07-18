@@ -398,6 +398,61 @@ export default {
         const links = navItems.get().map(item => ({ type: 'link', prefix: '- ', url: item.url, text: item.text }));
         updateHistoryItem(commandId, { textOutput: ['Navigation links:', ...links] });
       },
+      cd: (args, commandId) => {
+        if (!args.length) {
+          updateHistoryItem(commandId, {
+            textOutput: ['Usage: cd [nav item name]', 'Available nav items:',
+              ...navItems.get().map(item => `- ${item.text}`),
+              '- / or home: Navigate to the index page'
+            ]
+          });
+          return;
+        }
+
+        const targetName = args.join(' ').toLowerCase();
+
+        // Special case for home or root directory
+        if (targetName === '/' || targetName === 'home' || targetName === 'hoem') {
+          updateHistoryItem(commandId, {
+            textOutput: ['Navigating to home page...']
+          });
+
+          // Use setTimeout to allow the terminal to update before navigation
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 500);
+          return;
+        }
+
+        const navItemsList = navItems.get();
+        const matchedItem = navItemsList.find(item =>
+          item.text.toLowerCase() === targetName
+        );
+
+        if (matchedItem) {
+          updateHistoryItem(commandId, {
+            textOutput: [`Navigating to ${matchedItem.text}...`]
+          });
+
+          // Use setTimeout to allow the terminal to update before navigation
+          setTimeout(() => {
+            if (matchedItem.isExternal) {
+              window.open(matchedItem.url, '_blank', 'noopener,noreferrer');
+            } else {
+              window.location.href = matchedItem.url;
+            }
+          }, 500);
+        } else {
+          updateHistoryItem(commandId, {
+            textOutput: [
+              `Nav item not found: "${args.join(' ')}"`,
+              'Available nav items:',
+              ...navItemsList.map(item => `- ${item.text}`),
+              '- / or home: Navigate to the index page'
+            ]
+          });
+        }
+      },
       git: (args, commandId) => {
         const gitAction = {
           log: () => createAsyncGitHandler(commandId, getCommitHistory, data => ({ commitHistory: processCommitHistory(data) }), 'Fetching commit history...'),
@@ -415,36 +470,9 @@ export default {
         };
         (gitAction[args[0]?.toLowerCase()] || gitAction.default)();
       },
-      'bust-cache': (args, commandId) => {
+      'bust-cache': () => {
         localStorage.clear();
-        terminalSizeStore.set(DEFAULT_TERMINAL.size);
-
-        const terminalHeight = DEFAULT_TERMINAL.size.height;
-        terminalPositionStore.set({
-          x: DEFAULT_TERMINAL.margin,
-          y: window.innerHeight - terminalHeight - DEFAULT_TERMINAL.margin
-        });
-        isTerminalMinimizedStore.set(false);
-
-        commandHistoryStore.set([{
-          id: 1,
-          timestamp: Date.now(),
-          command: '',
-          textOutput: DEFAULT_TERMINAL.output,
-          isLoading: false,
-          loadingProgress: 0,
-          graphData: null,
-          commitData: null,
-          commitHistory: null
-        }]);
-
-        // Reset next command ID
-        nextCommandIdStore.set(2);
-
-        // Provide feedback
-        updateHistoryItem(commandId, {
-          textOutput: ['Cache busted! Nanostores and localStorage have been reset.']
-        });
+        window.location.reload();
       },
       default: (baseCommand, commandId) => {
         updateHistoryItem(commandId, { textOutput: [`Command not found: ${baseCommand}`] });
@@ -507,6 +535,14 @@ export default {
       isTerminalActive.set(false);
     };
 
+    // Handle keyboard events
+    const handleKeyDown = (event) => {
+      // Check if the escape key was pressed and the terminal is maximized
+      if (event.key === 'Escape' && isMaximized.value) {
+        toggleMaximize();
+      }
+    };
+
     // --- LIFECYCLE HOOKS ---
     onMounted(() => {
       // Set mounted flag to true
@@ -563,6 +599,9 @@ export default {
           terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
         }
       });
+
+      // Add keyboard event listener for escape key
+      document.addEventListener('keydown', handleKeyDown);
     });
 
     onUnmounted(() => {
@@ -578,6 +617,9 @@ export default {
         terminalWindow.value.removeEventListener('pointerdown', activateTerminal);
       }
       document.removeEventListener('pointerdown', deactivateTerminal);
+
+      // Remove keyboard event listener
+      document.removeEventListener('keydown', handleKeyDown);
     });
 
     return {

@@ -90,6 +90,17 @@ export default {
       }
     };
 
+    // Modified createNewChat function that also closes the drawer on mobile
+    const handleCreateNewChat = () => {
+      // Call the original createNewChat function
+      createNewChat();
+
+      // If on mobile, close the chat history drawer
+      if (isMobileSize()) {
+        isChatHistoryVisible.set(false);
+      }
+    };
+
     // Add resize event listener on component mount
     onMounted(() => {
       // Initial check
@@ -107,7 +118,7 @@ export default {
     return {
       chatList,
       currentChatId,
-      createNewChat,
+      createNewChat: handleCreateNewChat, // Replace with our wrapper function
       selectChat,
       isVisible,
       toggleVisibility
