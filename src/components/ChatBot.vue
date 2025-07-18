@@ -18,7 +18,15 @@
         :class="['message', message.sender]"
       >
         <div class="message-bubble">
-          <p v-if="message.text">{{ message.text }}</p>
+          <!-- User messages remain as plain text -->
+          <p v-if="message.text && message.sender === 'user'">{{ message.text }}</p>
+
+          <!-- Bot messages are rendered as markdown -->
+          <div
+            v-if="message.text && message.sender === 'bot'"
+            v-html="renderMarkdown(message.text)"
+            class="markdown-content"
+          ></div>
           <div
             v-if="message.images && message.images.length"
             class="image-gallery"
@@ -70,6 +78,7 @@
 <script>
 import { ref, nextTick, watch, onMounted } from 'vue';
 import { useStore } from '@nanostores/vue';
+import { marked } from 'marked'; // Import the marked library
 // --- UPDATED: Import the new updateChatTitle function ---
 import {
   activeChatId,
@@ -205,6 +214,11 @@ export default {
       openImageOverlay(src);
     };
 
+    // Add a function to render markdown
+    const renderMarkdown = (text) => {
+      return marked(text);
+    };
+
     return {
       userInput,
       messages,
@@ -212,7 +226,8 @@ export default {
       messagesWindow,
       sendMessage,
       handlePromptSelect,
-      handleImageClick
+      handleImageClick,
+      renderMarkdown // Add this to the return object
     };
   },
 };
@@ -437,5 +452,75 @@ export default {
     transform: translateY(-5px);
     opacity: 1;
   }
+}
+
+/* Add styles for markdown content */
+:deep(.markdown-content) {
+  /* This targets elements inside the scoped component */
+  line-height: 1.6;
+}
+
+:deep(.markdown-content h1) {
+  font-size: 1.5rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+:deep(.markdown-content h2) {
+  font-size: 1.25rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+:deep(.markdown-content h3) {
+  font-size: 1.1rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+:deep(.markdown-content p) {
+  margin-bottom: 0.75rem;
+}
+
+:deep(.markdown-content ul, .markdown-content ol) {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+:deep(.markdown-content li) {
+  margin-bottom: 0.25rem;
+}
+
+:deep(.markdown-content code) {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+:deep(.markdown-content pre) {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.75rem;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+:deep(.markdown-content a) {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+/* Adjust dark theme styles */
+.theme-dark :deep(.markdown-content code) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark :deep(.markdown-content pre) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark :deep(.markdown-content a) {
+  color: #60a5fa;
 }
 </style>

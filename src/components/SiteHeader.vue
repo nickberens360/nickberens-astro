@@ -17,10 +17,10 @@
         >
           <p class="site-header__name">nickberens
             <span class="git">git:
-            <span class="git-paren">(</span>
-            <span class="git-branch">{{ gitBranch }}</span>
-            <span class="git-paren">)</span>
-          </span>
+              <span class="git-paren">(</span>
+              <span class="git-branch">{{ gitBranch }}</span>
+              <span class="git-paren">)</span>
+            </span>
           </p>
         </a>
         <TerminalInput
