@@ -137,12 +137,7 @@ import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
 import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
-import {
-  DEFAULT_TERMINAL_SIZE,
-  DEFAULT_TERMINAL_MARGIN,
-  DEFAULT_HELP_OUTPUT,
-  DEFAULT_TERMINAL_OUTPUT
-} from '../config/terminalConfig.js'; // Adjust path if needed
+import { DEFAULT_TERMINAL } from '../config/terminalConfig.js'; // Adjust path if needed
 
 export default {
   name: 'TerminalWindow',
@@ -355,7 +350,7 @@ export default {
       },
       help: (args, commandId) => {
         updateHistoryItem(commandId, {
-          textOutput: DEFAULT_HELP_OUTPUT
+          textOutput: DEFAULT_TERMINAL.helpOutput
         });
       },
       theme: (args, commandId) => {
@@ -388,12 +383,12 @@ export default {
       },
       'bust-cache': (args, commandId) => {
         localStorage.clear();
-        terminalSizeStore.set(DEFAULT_TERMINAL_SIZE);
+        terminalSizeStore.set(DEFAULT_TERMINAL.size);
 
-        const terminalHeight = DEFAULT_TERMINAL_SIZE.height;
+        const terminalHeight = DEFAULT_TERMINAL.size.height;
         terminalPositionStore.set({
-          x: DEFAULT_TERMINAL_MARGIN,
-          y: window.innerHeight - terminalHeight - DEFAULT_TERMINAL_MARGIN
+          x: DEFAULT_TERMINAL.margin,
+          y: window.innerHeight - terminalHeight - DEFAULT_TERMINAL.margin
         });
         isTerminalMinimizedStore.set(false);
 
@@ -401,7 +396,7 @@ export default {
           id: 1,
           timestamp: Date.now(),
           command: '',
-          textOutput: DEFAULT_TERMINAL_OUTPUT,
+          textOutput: DEFAULT_TERMINAL.output,
           isLoading: false,
           loadingProgress: 0,
           graphData: null,

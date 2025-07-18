@@ -1,9 +1,5 @@
 import { atom } from 'nanostores';
-import {
-  DEFAULT_TERMINAL_SIZE,
-  DEFAULT_TERMINAL_MARGIN,
-  DEFAULT_TERMINAL_OUTPUT
-} from '../config/terminalConfig';
+import { DEFAULT_TERMINAL } from '../config/terminalConfig';
 
 // Helper to check if we're in a browser environment
 const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined';
@@ -21,7 +17,7 @@ const loadTerminalPosition = () => {
     }
   }
   // Return a simple, static default for SSR.
-  return { x: DEFAULT_TERMINAL_MARGIN, y: 100 };
+  return { x: DEFAULT_TERMINAL.margin, y: DEFAULT_TERMINAL.position.y };
 };
 
 // --- Load terminal window size from localStorage or use default ---
@@ -37,7 +33,7 @@ const loadTerminalSize = () => {
     }
   }
   // Use the imported default size
-  return DEFAULT_TERMINAL_SIZE;
+  return DEFAULT_TERMINAL.size;
 };
 
 // --- Terminal position and size stores with persisted data ---
@@ -89,7 +85,7 @@ const loadCommandHistory = () => {
     id: 1,
     timestamp: Date.now(),
     command: '',
-    textOutput: DEFAULT_TERMINAL_OUTPUT,
+    textOutput: DEFAULT_TERMINAL.output,
     isLoading: false,
     loadingProgress: 0,
     graphData: null,
