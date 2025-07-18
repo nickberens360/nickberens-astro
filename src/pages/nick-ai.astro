@@ -2,25 +2,29 @@
 import Layout from '../layouts/Layout.astro';
 import ChatBot from '../components/ChatBot.vue';
 import ChatHistory from '../components/ChatHistory.vue';
+import PageSection from '../components/PageSection.vue';
 ---
 
 <Layout
-  title="Nick AI | A Chatbot for Nick's Portfolio"
-  hideFooter={true}
-  hideTerminal={true}
+    title="Nick AI | A Chatbot for Nick's Portfolio"
+    hideFooter={true}
+    hideTerminal={true}
 >
-  <main
+  <PageSection
       data-section-color="black"
       background-color="black"
       data-section-theme="dark"
-      class="chat-layout"
+      full-height
+      full-width
   >
-    <ChatHistory client:only="vue" />
-    <ChatBot
-         client:only="vue"
-        theme="dark"
-    />
-  </main>
+    <div class="chat-layout">
+      <ChatHistory client:only="vue"/>
+      <ChatBot
+          client:only="vue"
+          theme="dark"
+      />
+    </div>
+  </PageSection>
 </Layout>
 
 <style>
