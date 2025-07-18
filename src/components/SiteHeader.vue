@@ -276,7 +276,7 @@ export default {
 }
 
 .theme-dark .terminal-icon {
-  background: white;
+  background: #00fe01;
   color: black;
 }
 

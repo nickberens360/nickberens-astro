@@ -17,13 +17,13 @@
           <span class="prompt-icon">→</span>
           Tell me about Nick
         </li>
+        <li @click="selectPrompt('Show me Nick\'s resume')">
+          <span class="prompt-icon">→</span>
+          Show me Nick's resume
+        </li>
         <li @click="selectPrompt('Show all illustrations')">
           <span class="prompt-icon">→</span>
-          Show all illustrations
-        </li>
-        <li @click="selectPrompt('Show me images of Doug')">
-          <span class="prompt-icon">→</span>
-          Show me images of Doug
+          Show Nick's illustrations
         </li>
       </ul>
     </div>
