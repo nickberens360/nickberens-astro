@@ -176,17 +176,8 @@ export default {
     // Add a flag to track component mounted state
     const isMounted = ref(false);
 
-    // Computed property that considers both the prop and the store
+    // Simplified computed property that only relies on the store value
     const isHidden = computed(() => {
-      // Check if we're on the nick-ai route
-      const isNickAiRoute = window.location.pathname.includes('/nick-ai');
-
-      // If we're on the nick-ai route and the component just mounted, prioritize the prop
-      if (isNickAiRoute && props.hideTerminal) {
-        return true;
-      }
-
-      // Otherwise use the store value (for user interactions)
       return isTerminalHidden.value;
     });
 

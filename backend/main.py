@@ -145,8 +145,9 @@ origins = [
     "https://www.nickberens.me",              # ← WWW VERSION
     "https://nickberens360.netlify.app",      # Netlify deployment
     "https://deploy-preview-14--nickberens360.netlify.app",
-    # Add wildcard for all Netlify previews:
+    "https://nickberens-astro.onrender.com",
     "https://*.netlify.app",
+    "https://*.onrender.com",
 ]
 
 
