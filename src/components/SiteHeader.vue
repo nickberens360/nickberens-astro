@@ -28,7 +28,7 @@
         />
       </div>
 
-      <div class="ml-auto" />
+      <div class="ml-auto"/>
       <button
         class="site-header__hamburger"
         :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
@@ -99,11 +99,11 @@
         </ul>
       </div>
       <font-awesome-icon
-          :icon="['fas', 'terminal']"
-          @click="toggleTerminal"
-          aria-label="Toggle terminal input"
-          class="terminal-icon ml-4"
-        />
+        :icon="['fas', 'terminal']"
+        @click="toggleTerminal"
+        aria-label="Toggle terminal input"
+        class="terminal-icon ml-4"
+      />
     </div>
   </header>
 </template>

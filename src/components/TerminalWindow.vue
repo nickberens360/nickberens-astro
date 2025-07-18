@@ -178,7 +178,14 @@ export default {
     const isMounted = ref(false);
 
     // Computed property that considers both the prop and the store
-    const isHidden = computed(() => props.hideTerminal || isTerminalHidden.value);
+    const isHidden = computed(() => {
+      // If the store value has been explicitly set (user clicked the icon), use that
+      if (typeof isTerminalHidden.value === 'boolean') {
+        return isTerminalHidden.value;
+      }
+      // Otherwise, use the prop's default value
+      return props.hideTerminal;
+    });
 
     const position = useStore(terminalPositionStore);
     const size = useStore(terminalSizeStore);
@@ -471,6 +478,11 @@ export default {
     onMounted(() => {
       // Set mounted flag to true
       isMounted.value = true;
+
+      // Only set the initial store value if it hasn't been explicitly set by the user
+      if (typeof isTerminalHidden.value !== 'boolean') {
+        isTerminalHiddenStore.set(props.hideTerminal);
+      }
 
       // Check if a position has been saved in localStorage. If not, set our default.
       const savedPosition = localStorage.getItem('terminalPosition');
