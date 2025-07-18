@@ -17,7 +17,7 @@
     >
       <TerminalControlBar
         :title="title"
-        @close="$emit('close')"
+        @close="isTerminalHiddenStore.set(true);"
         @minimize="isTerminalMinimizedStore.set(true)"
         @startDrag="startDrag"
         @stopDrag="stopDrag"
@@ -179,12 +179,16 @@ export default {
 
     // Computed property that considers both the prop and the store
     const isHidden = computed(() => {
-      // If the store value has been explicitly set (user clicked the icon), use that
-      if (typeof isTerminalHidden.value === 'boolean') {
-        return isTerminalHidden.value;
+      // Check if we're on the nick-ai route
+      const isNickAiRoute = window.location.pathname.includes('/nick-ai');
+
+      // If we're on the nick-ai route and the component just mounted, prioritize the prop
+      if (isNickAiRoute && props.hideTerminal) {
+        return true;
       }
-      // Otherwise, use the prop's default value
-      return props.hideTerminal;
+
+      // Otherwise use the store value (for user interactions)
+      return isTerminalHidden.value;
     });
 
     const position = useStore(terminalPositionStore);
@@ -479,8 +483,15 @@ export default {
       // Set mounted flag to true
       isMounted.value = true;
 
-      // Only set the initial store value if it hasn't been explicitly set by the user
-      if (typeof isTerminalHidden.value !== 'boolean') {
+      // Check if we're on the nick-ai route
+      const isNickAiRoute = window.location.pathname.includes('/nick-ai');
+
+      // If we're on the nick-ai route, always set the store to hidden initially
+      if (isNickAiRoute && props.hideTerminal) {
+        isTerminalHiddenStore.set(true);
+      }
+      // Only set the initial store value if it hasn't been explicitly set by the user and we're not on nick-ai route
+      else if (typeof isTerminalHidden.value !== 'boolean') {
         isTerminalHiddenStore.set(props.hideTerminal);
       }
 
@@ -561,7 +572,8 @@ export default {
       theme,
       activateTerminal,
       deactivateTerminal,
-      isMounted
+      isMounted,
+      isTerminalHiddenStore
     };
   }
 };

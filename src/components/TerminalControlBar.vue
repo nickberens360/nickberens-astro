@@ -5,17 +5,14 @@
     @pointerup="stopDrag"
   >
     <div class="terminal-controls">
-      <div class="tooltip-container">
-        <div
-          class="control close"
-          @click="$emit('minimize')"
-        ></div>
-        <span class="tooltip">Close functionality not implemented yet</span>
-      </div>
+      <div
+        class="control close"
+        @click="$emit('close')"
+      />
       <div
         class="control minimize"
         @click="$emit('minimize')"
-      ></div>
+      />
       <div class="tooltip-container">
         <div
           class="control maximize"
@@ -31,8 +28,7 @@
 <script>
 export default {
   name: 'TerminalControlBar',
-  components: {
-  },
+  components: {},
   props: {
     title: {
       type: String,
