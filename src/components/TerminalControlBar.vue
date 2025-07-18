@@ -31,6 +31,8 @@
 <script>
 export default {
   name: 'TerminalControlBar',
+  components: {
+  },
   props: {
     title: {
       type: String,

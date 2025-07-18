@@ -5,21 +5,23 @@ import icon from "astro-icon";
 
 export default defineConfig({
   integrations: [
-    vue(),
+    vue({
+      appEntrypoint: '/src/plugins/vue-app.js'
+    }),
     mdx(),
-    icon({
-      // Define the icon packs to include
-      include: {
-        'fa-brands': ['twitter', 'github', 'linkedin']
-      }
-    })
+    icon()
   ],
   vite: {
     // Ensure environment variables are properly loaded
     envPrefix: 'PUBLIC_',
     // Make non-prefixed env vars available to server-side code
     ssr: {
-      noExternal: ['@fortawesome/fontawesome-svg-core']
+      noExternal: [
+        '@fortawesome/fontawesome-svg-core',
+        '@fortawesome/free-brands-svg-icons',
+        '@fortawesome/free-solid-svg-icons',
+        '@fortawesome/vue-fontawesome'
+      ]
     }
   }
 });

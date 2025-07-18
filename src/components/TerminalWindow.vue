@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!hideTerminal">
+  <div v-if="!isHidden">
     <TerminalControlBar
       v-if="isMinimized"
       :title="title"
@@ -122,9 +122,6 @@
 
 <script>
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue';
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { faTerminal } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../utils/gitInfo.js';
 import {
   navItems,
@@ -133,7 +130,8 @@ import {
   terminalPositionStore,
   terminalSizeStore,
   isTerminalActive,
-  isTerminalMinimizedStore
+  isTerminalMinimizedStore,
+  isTerminalHiddenStore
 } from '../stores/ui.js';
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
@@ -146,12 +144,9 @@ import {
   DEFAULT_TERMINAL_OUTPUT
 } from '../config/terminalConfig.js'; // Adjust path if needed
 
-library.add(faTerminal);
-
 export default {
   name: 'TerminalWindow',
   components: {
-    FontAwesomeIcon,
     TerminalControlBar,
     TerminalGraphOutput,
     TerminalLogOutput,
@@ -173,6 +168,7 @@ export default {
   setup(props, { emit }) {
     // --- STATE AND STORE HOOKS ---
     const isMinimized = useStore(isTerminalMinimizedStore);
+    const isTerminalHidden = useStore(isTerminalHiddenStore);
     const theme = ref('dark');
     const inputValue = ref('');
     const terminalWindow = ref(null);
@@ -180,6 +176,9 @@ export default {
     const terminalOutput = ref(null);
     // Add a flag to track component mounted state
     const isMounted = ref(false);
+
+    // Computed property that considers both the prop and the store
+    const isHidden = computed(() => props.hideTerminal || isTerminalHidden.value);
 
     const position = useStore(terminalPositionStore);
     const size = useStore(terminalSizeStore);
@@ -377,13 +376,7 @@ export default {
         (gitAction[args[0]?.toLowerCase()] || gitAction.default)();
       },
       'bust-cache': (args, commandId) => {
-        // Clear localStorage items
-        localStorage.removeItem('terminalPosition');
-        localStorage.removeItem('terminalSize');
-        localStorage.removeItem('commandHistory');
-        localStorage.removeItem('nextCommandId');
-        localStorage.removeItem('isTerminalMinimized');
-
+        localStorage.clear();
         terminalSizeStore.set(DEFAULT_TERMINAL_SIZE);
 
         const terminalHeight = DEFAULT_TERMINAL_SIZE.height;
@@ -537,6 +530,7 @@ export default {
 
     return {
       isMinimized,
+      isHidden,
       isTerminalMinimizedStore,
       position,
       size,

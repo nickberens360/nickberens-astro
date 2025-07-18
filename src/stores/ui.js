@@ -188,6 +188,36 @@ isTerminalMinimizedStore.listen((value) => {
   }
 });
 
+// Load isTerminalHidden state from localStorage or use default
+const loadIsTerminalHidden = () => {
+  if (isBrowser()) {
+    try {
+      const savedState = localStorage.getItem('isTerminalHidden');
+      // Check for null to handle case where it's explicitly set to false
+      if (savedState !== null) {
+        return JSON.parse(savedState);
+      }
+    } catch (error) {
+      console.error('Error loading terminal hidden state:', error);
+    }
+  }
+  return false; // Default to showing the terminal
+};
+
+// Store for terminal hidden state with persisted data
+export const isTerminalHiddenStore = atom(loadIsTerminalHidden());
+
+// Subscribe to changes and save to localStorage
+isTerminalHiddenStore.listen((value) => {
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('isTerminalHidden', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving terminal hidden state:', error);
+    }
+  }
+});
+
 // Image overlay state
 export const imageOverlayStore = atom({
   isOpen: false,

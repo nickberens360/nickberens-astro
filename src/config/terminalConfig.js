@@ -12,6 +12,7 @@ export const DEFAULT_TERMINAL_MARGIN = 20;
 export const DEFAULT_HELP_OUTPUT = [
   'Available commands:',
   '- clear: Clear the terminal',
+  '- bust-cache: Clear localStorage',
   '- help: Show this help message',
   '- theme: Toggle between light and dark theme',
   '- version: Show terminal version',

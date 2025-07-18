@@ -28,7 +28,7 @@
         />
       </div>
 
-
+      <div class="ml-auto" />
       <button
         class="site-header__hamburger"
         :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
@@ -46,23 +46,38 @@
         ref="nav"
       >
         <ul class="site-header__nav-list">
-          <li v-for="item in navItemsStore" :key="item.url" class="site-header__nav-item">
+          <li
+            v-for="item in navItemsStore"
+            :key="item.url"
+            class="site-header__nav-item"
+          >
             <a
               :href="item.url"
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
             >
-              <font-awesome-icon v-if="item.icon" size="2x" :icon="item.icon" />
+              <font-awesome-icon
+                v-if="item.icon"
+                size="2x"
+                :icon="item.icon"
+              />
               <span v-else>{{ item.text }}</span>
             </a>
           </li>
         </ul>
       </nav>
-
-      <div class="site-header__mobile-nav" :class="{ 'is-active': isMobileMenuOpen }" :style="headerStyles">
+      <div
+        class="site-header__mobile-nav"
+        :class="{ 'is-active': isMobileMenuOpen }"
+        :style="headerStyles"
+      >
         <ul class="site-header__mobile-nav-list">
-          <li v-for="item in navItemsStore" :key="item.url" class="site-header__mobile-nav-item">
+          <li
+            v-for="item in navItemsStore"
+            :key="item.url"
+            class="site-header__mobile-nav-item"
+          >
             <a
               :href="item.url"
               :target="item.isExternal ? '_blank' : undefined"
@@ -70,34 +85,39 @@
               :aria-label="item.ariaLabel"
               @click="closeMobileMenu"
             >
-              <font-awesome-icon v-if="item.icon" :icon="item.icon" />
-              <span v-if="item.icon" style="margin-left: 0.5em;">{{ item.text }}</span>
+              <font-awesome-icon
+                v-if="item.icon"
+                :icon="item.icon"
+              />
+              <span
+                v-if="item.icon"
+                style="margin-left: 0.5em;"
+              >{{ item.text }}</span>
               <span v-else>{{ item.text }}</span>
             </a>
           </li>
         </ul>
       </div>
+      <font-awesome-icon
+          :icon="['fas', 'terminal']"
+          @click="toggleTerminal"
+          aria-label="Toggle terminal input"
+          class="terminal-icon ml-4"
+        />
     </div>
   </header>
 </template>
 
 <script>
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { faGithub } from '@fortawesome/free-brands-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+
 import TerminalInput from './TerminalInput.vue';
 import { useStore } from '@nanostores/vue';
-import { navItems } from '../stores/ui';
-// The unused ClientOnly import has been removed.
-
-library.add(faGithub)
+import { navItems, isTerminalHiddenStore } from '../stores/ui';
 
 export default {
   name: 'SiteHeader',
   components: {
     TerminalInput,
-    FontAwesomeIcon,
-    // ClientOnly has been removed from the components object.
   },
   props: {
     gitBranch: {
@@ -137,8 +157,10 @@ export default {
   },
   setup() {
     const navItemsStoreRaw = useStore(navItems);
+    const isTerminalHidden = useStore(isTerminalHiddenStore);
     return {
-      navItemsStoreRaw
+      navItemsStoreRaw,
+      isTerminalHidden
     };
   },
   mounted() {
@@ -149,6 +171,9 @@ export default {
     window.removeEventListener('scroll', this.handleScroll);
   },
   methods: {
+    toggleTerminal() {
+      isTerminalHiddenStore.set(!isTerminalHiddenStore.value);
+    },
     toggleMobileMenu() {
       this.isMobileMenuOpen = !this.isMobileMenuOpen;
       document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : '';
@@ -182,13 +207,14 @@ export default {
       this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
     }
   }
-}
+};
 </script>
 
 <style>
 .theme-dark .terminal-input:after {
   background-color: #fff;
 }
+
 .terminal-input::selection {
   background-color: white;
   color: black;
@@ -231,6 +257,20 @@ export default {
 .site-header__logo a {
   color: black;
   text-decoration: none;
+}
+
+.terminal-icon {
+  cursor: pointer;
+  background: black;
+  color: white;
+  border-radius: 8px;
+  padding: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.theme-dark .terminal-icon {
+  background: white;
+  color: black;
 }
 
 .theme-dark .site-header__logo a {
@@ -358,9 +398,11 @@ export default {
   .site-header__container {
     padding: 0 1rem;
   }
+
   .site-header__hamburger.pod {
     display: flex;
   }
+
   /* Hide desktop navigation */
   .site-header__nav {
     display: none;
