@@ -23,14 +23,6 @@ import ChatHistory from '../components/ChatHistory.vue';
   </main>
 </Layout>
 
-<script>
-  // This script runs on the client side
-  import { isTerminalHiddenStore } from '../stores/ui.js';
-
-  // Set the terminal to be hidden when the page loads
-  isTerminalHiddenStore.set(true);
-</script>
-
 <style>
     .chat-layout {
         display: flex;
