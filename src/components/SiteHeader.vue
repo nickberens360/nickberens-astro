@@ -112,7 +112,7 @@
 
 import TerminalInput from './TerminalInput.vue';
 import { useStore } from '@nanostores/vue';
-import { navItems, isTerminalHiddenStore } from '../stores/ui';
+import { navItems, isTerminalHiddenStore, isTerminalMinimizedStore } from '../stores/ui';
 
 export default {
   name: 'SiteHeader',
@@ -158,9 +158,11 @@ export default {
   setup() {
     const navItemsStoreRaw = useStore(navItems);
     const isTerminalHidden = useStore(isTerminalHiddenStore);
+    const isTerminalMinimized = useStore(isTerminalMinimizedStore);
     return {
       navItemsStoreRaw,
-      isTerminalHidden
+      isTerminalHidden,
+      isTerminalMinimized
     };
   },
   mounted() {
@@ -172,7 +174,12 @@ export default {
   },
   methods: {
     toggleTerminal() {
-      isTerminalHiddenStore.set(!isTerminalHiddenStore.value);
+      // If terminal is minimized, un-minimize it
+      if (this.isTerminalMinimized) {
+        isTerminalMinimizedStore.set(false);
+      } else {
+        isTerminalHiddenStore.set(!isTerminalHiddenStore.value);
+      }
     },
     toggleMobileMenu() {
       this.isMobileMenuOpen = !this.isMobileMenuOpen;
