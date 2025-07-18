@@ -114,10 +114,15 @@
         </div>
       </div>
 
-      <div
-        class="resize-handle"
-        @pointerdown="startResize"
-      ></div>
+      <!-- Resize handles -->
+      <div class="resize-handle resize-n" @pointerdown="startResize('n', $event)"></div>
+      <div class="resize-handle resize-e" @pointerdown="startResize('e', $event)"></div>
+      <div class="resize-handle resize-s" @pointerdown="startResize('s', $event)"></div>
+      <div class="resize-handle resize-w" @pointerdown="startResize('w', $event)"></div>
+      <div class="resize-handle resize-ne" @pointerdown="startResize('ne', $event)"></div>
+      <div class="resize-handle resize-se" @pointerdown="startResize('se', $event)"></div>
+      <div class="resize-handle resize-sw" @pointerdown="startResize('sw', $event)"></div>
+      <div class="resize-handle resize-nw" @pointerdown="startResize('nw', $event)"></div>
     </div>
   </div>
 </template>
@@ -192,7 +197,8 @@ export default {
     const isDragging = ref(false);
     const dragOffset = reactive({ x: 0, y: 0 });
     const isResizing = ref(false);
-    const resizeStartPos = reactive({ x: 0, y: 0 });
+    const resizeDirection = ref('');
+    const resizeStartPos = reactive({ x: 0, y: 0, startX: 0, startY: 0 });
     const resizeStartSize = reactive({ width: 0, height: 0 });
 
     const terminalStyle = computed(() => {
@@ -237,13 +243,21 @@ export default {
       document.removeEventListener('pointerup', stopDrag);
     };
 
-    const startResize = (event) => {
+    const startResize = (direction, event) => {
       if (event.isPrimary) {
         isResizing.value = true;
+        resizeDirection.value = direction;
         resizeStartPos.x = event.clientX;
         resizeStartPos.y = event.clientY;
         resizeStartSize.width = size.value.width;
         resizeStartSize.height = size.value.height;
+
+        // Also store the starting position
+        if (position.value) {
+          resizeStartPos.startX = position.value.x;
+          resizeStartPos.startY = position.value.y;
+        }
+
         document.addEventListener('pointermove', onResize);
         document.addEventListener('pointerup', stopResize);
         event.preventDefault();
@@ -254,14 +268,41 @@ export default {
       if (isResizing.value) {
         const deltaX = event.clientX - resizeStartPos.x;
         const deltaY = event.clientY - resizeStartPos.y;
-        terminalSizeStore.set({
-          width: Math.max(200, resizeStartSize.width + deltaX),
-          height: Math.max(74, resizeStartSize.height + deltaY),
-        });
+
+        let newWidth = resizeStartSize.width;
+        let newHeight = resizeStartSize.height;
+        let newX = position.value.x;
+        let newY = position.value.y;
+
+        // Handle different resize directions
+        const direction = resizeDirection.value;
+
+        // Handle horizontal resizing
+        if (direction.includes('e')) {
+          newWidth = Math.max(200, resizeStartSize.width + deltaX);
+        } else if (direction.includes('w')) {
+          const widthChange = Math.min(deltaX, resizeStartSize.width - 200);
+          newWidth = resizeStartSize.width - widthChange;
+          newX = resizeStartPos.startX + widthChange;
+        }
+
+        // Handle vertical resizing
+        if (direction.includes('s')) {
+          newHeight = Math.max(74, resizeStartSize.height + deltaY);
+        } else if (direction.includes('n')) {
+          const heightChange = Math.min(deltaY, resizeStartSize.height - 74);
+          newHeight = resizeStartSize.height - heightChange;
+          newY = resizeStartPos.startY + heightChange;
+        }
+
+        // Update position and size
+        terminalPositionStore.set({ x: newX, y: newY });
+        terminalSizeStore.set({ width: newWidth, height: newHeight });
       }
     };
     const stopResize = () => {
       isResizing.value = false;
+      resizeDirection.value = '';
       document.removeEventListener('pointermove', onResize);
       document.removeEventListener('pointerup', stopResize);
     };
@@ -646,7 +687,8 @@ export default {
       isMounted,
       isTerminalHiddenStore,
       isMaximized,
-      toggleMaximize
+      toggleMaximize,
+      resizeDirection
     };
   }
 };
@@ -853,18 +895,46 @@ export default {
   background-color: rgba(0, 0, 0, 0.2);
 }
 
+/* Base resize handle styles */
 .resize-handle {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 15px;
-  height: 15px;
-  cursor: nwse-resize;
   background: transparent;
   touch-action: none;
+  z-index: 10;
 }
 
-.resize-handle::before {
+/* Corner handles */
+.resize-ne, .resize-se, .resize-sw, .resize-nw {
+  width: 15px;
+  height: 15px;
+}
+
+/* Edge handles */
+.resize-n, .resize-s {
+  height: 8px;
+  left: 8px;
+  right: 8px;
+}
+
+.resize-e, .resize-w {
+  width: 8px;
+  top: 8px;
+  bottom: 8px;
+}
+
+/* Position the handles */
+.resize-n { top: 0; cursor: ns-resize; }
+.resize-e { right: 0; cursor: ew-resize; }
+.resize-s { bottom: 0; cursor: ns-resize; }
+.resize-w { left: 0; cursor: ew-resize; }
+
+.resize-ne { top: 0; right: 0; cursor: nesw-resize; }
+.resize-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.resize-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.resize-nw { top: 0; left: 0; cursor: nwse-resize; }
+
+/* Visual indicator for the corner handles */
+.resize-se::before {
   content: "";
   position: absolute;
   right: 3px;
@@ -875,9 +945,14 @@ export default {
   border-bottom: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-.theme-light .resize-handle::before {
+.theme-light .resize-se::before {
   border-right: 2px solid rgba(0, 0, 0, 0.3);
   border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+/* Hide all resize handles when maximized */
+.terminal-maximized .resize-handle {
+  display: none;
 }
 
 .terminal-link {
