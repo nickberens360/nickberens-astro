@@ -52,6 +52,7 @@ const loadChatHistoryVisibility = () => {
 export const allChats = map(loadChats());
 export const activeChatId = atom(loadActiveChatId());
 export const isChatHistoryVisible = atom(loadChatHistoryVisibility());
+export const isPendingNewChat = atom(false);
 
 // Subscribe to changes and save to localStorage
 allChats.listen((value) => {

@@ -56,7 +56,7 @@
 <script>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { useStore } from '@nanostores/vue';
-import { allChats, activeChatId, createNewChat, selectChat, isChatHistoryVisible } from '../stores/ai.js';
+import { allChats, activeChatId, createNewChat, selectChat, isChatHistoryVisible, isPendingNewChat } from '../stores/ai.js';
 import { computed, onMounted, onUnmounted } from 'vue';
 
 export default {
@@ -95,10 +95,21 @@ export default {
       }
     };
 
-    // Modified createNewChat function that also closes the drawer on mobile
+    // Modified createNewChat function that checks for empty messages and closes the drawer on mobile
     const handleCreateNewChat = () => {
-      // Call the original createNewChat function
-      createNewChat();
+      // Get the current active chat
+      const currentChat = chats.value[currentChatId.value];
+
+      // If there's no current chat or it has messages, set the pending state
+      if (!currentChat || currentChat.messages.length > 0) {
+        // Instead of creating a new chat immediately, set the pending state
+        isPendingNewChat.set(true);
+
+        // Clear the current chat if it has messages
+        if (currentChat && currentChat.messages.length > 0) {
+          activeChatId.set(null);
+        }
+      }
 
       // If on mobile, close the chat history drawer
       if (isMobileSize()) {

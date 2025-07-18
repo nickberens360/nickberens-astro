@@ -85,7 +85,8 @@ import {
   activeChatMessages,
   addMessageToActiveChat,
   createNewChat,
-  updateChatTitle
+  updateChatTitle,
+  isPendingNewChat
 } from '../stores/ai.js';
 import { openImageOverlay } from '../stores/ui.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
@@ -118,7 +119,7 @@ export default {
     };
 
     onMounted(() => {
-      if (!activeChatId.get()) {
+      if (!activeChatId.get() && !isPendingNewChat.get()) {
         createNewChat();
       }
     });
@@ -131,6 +132,14 @@ export default {
       if (userInput.value.trim() === '' || isLoading.value) return;
 
       const question = userInput.value;
+
+      // Check if we have a pending new chat
+      if (isPendingNewChat.get() || !activeChatId.get()) {
+        // Create a new chat before sending the message
+        createNewChat();
+        isPendingNewChat.set(false);
+      }
+
       const currentChatId = activeChatId.get();
       const currentMessages = activeChatMessages.get();
 
