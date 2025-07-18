@@ -145,7 +145,7 @@ origins = [
     "https://www.nickberens.me",              # ← WWW VERSION
     "https://nickberens360.netlify.app",      # Netlify deployment
     "https://deploy-preview-14--nickberens360.netlify.app",
-    "https://nickberens-astro.onrender.com/nick-ai",
+    "https://nickberens-astro.onrender.com",
     "https://*.netlify.app",
     "https://*.onrender.com",
 ]
