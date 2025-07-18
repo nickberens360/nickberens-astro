@@ -64,12 +64,12 @@ export default {
 
 .close-button {
   position: absolute;
-  top: -40px;
-  right: -40px;
+  top: 10px;
+  right: 10px;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgb(41, 41, 41);
   border: none;
   color: white;
   font-size: 24px;
@@ -78,6 +78,7 @@ export default {
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s;
+  z-index: 10;
 }
 
 .close-button:hover {

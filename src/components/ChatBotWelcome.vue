@@ -55,6 +55,7 @@ export default {
 
 <style scoped>
 .welcome-container {
+  /*background: radial-gradient(circle, rgba(230, 115, 115, 0.05), rgba(115, 230, 115, 0.05), rgba(115, 115, 230, 0.05));*/
   display: flex;
   flex-direction: column;
   align-items: center;
