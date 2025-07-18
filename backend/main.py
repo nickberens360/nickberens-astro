@@ -147,6 +147,7 @@ origins = [
     "https://deploy-preview-14--nickberens360.netlify.app",
     "https://nickberens-astro.onrender.com/nick-ai",
     "https://*.netlify.app",
+    "https://*.onrender.com",
 ]
 
 
