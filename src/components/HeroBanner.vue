@@ -6,7 +6,7 @@
           <h1>
             One time I said the word
             <span class="highlight">{{ inputValue}}</span>
-            during an interview&nbsp;🙀.
+            during an interview&nbsp;😥.
           </h1>
         </slot>
       </div>
