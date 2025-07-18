@@ -13,13 +13,10 @@
         class="control minimize"
         @click="$emit('minimize')"
       />
-      <div class="tooltip-container">
-        <div
-          class="control maximize"
-          @click="$emit('maximize')"
-        />
-        <span class="tooltip">Maximize functionality not implemented yet</span>
-      </div>
+      <div
+        class="control maximize"
+        @click="$emit('maximize')"
+      />
     </div>
     <div class="terminal-title">{{ title }}</div>
   </div>

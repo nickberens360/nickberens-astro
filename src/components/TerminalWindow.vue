@@ -10,7 +10,7 @@
     <div
       v-else
       class="terminal-window"
-      :class="`theme-${theme}`"
+      :class="[`theme-${theme}`, { 'terminal-maximized': isMaximized }]"
       :style="terminalStyle"
       ref="terminalWindow"
       @click="focusInput"
@@ -19,6 +19,7 @@
         :title="title"
         @close="isTerminalHiddenStore.set(true);"
         @minimize="isTerminalMinimizedStore.set(true)"
+        @maximize="toggleMaximize"
         @startDrag="startDrag"
         @stopDrag="stopDrag"
       />
@@ -131,13 +132,15 @@ import {
   terminalSizeStore,
   isTerminalActive,
   isTerminalMinimizedStore,
-  isTerminalHiddenStore
+  isTerminalHiddenStore,
+  isTerminalMaximizedStore,
+  previousTerminalStateStore
 } from '../stores/ui.js';
 import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
 import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
-import { DEFAULT_TERMINAL } from '../config/terminalConfig.js'; // Adjust path if needed
+import { DEFAULT_TERMINAL, MAXIMIZED_TERMINAL } from '../config/terminalConfig.js'; // Adjust path if needed
 
 export default {
   name: 'TerminalWindow',
@@ -190,6 +193,8 @@ export default {
     const size = useStore(terminalSizeStore);
     const commandHistory = useStore(commandHistoryStore);
     const nextCommandId = useStore(nextCommandIdStore);
+    const isMaximized = useStore(isTerminalMaximizedStore);
+    const previousTerminalState = useStore(previousTerminalStateStore);
 
     // --- DRAG & RESIZE LOGIC ---
     const isDragging = ref(false);
@@ -198,12 +203,26 @@ export default {
     const resizeStartPos = reactive({ x: 0, y: 0 });
     const resizeStartSize = reactive({ width: 0, height: 0 });
 
-    const terminalStyle = computed(() => ({
-      top: `${position.value?.y || 100}px`,
-      left: `${position.value?.x || 100}px`,
-      width: `${size.value?.width || 600}px`,
-      height: `${size.value?.height || 400}px`,
-    }));
+    const terminalStyle = computed(() => {
+      if (isMaximized.value) {
+        const margin = MAXIMIZED_TERMINAL.margin;
+        return {
+          top: `${margin}px`,
+          left: `${margin}px`,
+          right: `${margin}px`,
+          bottom: `${margin}px`,
+          width: `calc(100% - ${margin * 2}px)`,
+          height: `calc(100% - ${margin * 2}px)`
+        };
+      }
+
+      return {
+        top: `${position.value?.y || 100}px`,
+        left: `${position.value?.x || 100}px`,
+        width: `${size.value?.width || 600}px`,
+        height: `${size.value?.height || 400}px`,
+      };
+    });
 
     const startDrag = (event) => {
       if (terminalWindow.value && event.isPrimary) {
@@ -253,6 +272,25 @@ export default {
       isResizing.value = false;
       document.removeEventListener('pointermove', onResize);
       document.removeEventListener('pointerup', stopResize);
+    };
+
+    // Toggle maximize function
+    const toggleMaximize = () => {
+      if (!isMaximized.value) {
+        // Save current position and size before maximizing
+        previousTerminalStateStore.set({
+          position: { ...position.value },
+          size: { ...size.value }
+        });
+        isTerminalMaximizedStore.set(true);
+      } else {
+        // Restore previous position and size
+        if (previousTerminalState.value.position && previousTerminalState.value.size) {
+          terminalPositionStore.set(previousTerminalState.value.position);
+          terminalSizeStore.set(previousTerminalState.value.size);
+        }
+        isTerminalMaximizedStore.set(false);
+      }
     };
 
     // --- STATE UPDATE HELPERS ---
@@ -568,7 +606,9 @@ export default {
       activateTerminal,
       deactivateTerminal,
       isMounted,
-      isTerminalHiddenStore
+      isTerminalHiddenStore,
+      isMaximized,
+      toggleMaximize
     };
   }
 };
@@ -620,6 +660,17 @@ export default {
   display: flex;
   flex-direction: column;
   z-index: 1000;
+}
+
+.terminal-maximized {
+  position: fixed !important;
+  /* The actual positioning is handled by the terminalStyle computed property */
+  z-index: 1001 !important; /* Ensure it's above other elements */
+}
+
+/* Hide the resize handle when maximized */
+.terminal-maximized .resize-handle {
+  display: none;
 }
 
 .terminal-content {

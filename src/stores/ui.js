@@ -214,6 +214,42 @@ isTerminalHiddenStore.listen((value) => {
   }
 });
 
+// Load isTerminalMaximized state from localStorage or use default
+const loadIsTerminalMaximized = () => {
+  if (isBrowser()) {
+    try {
+      const savedState = localStorage.getItem('isTerminalMaximized');
+      // Check for null to handle case where it's explicitly set to false
+      if (savedState !== null) {
+        return JSON.parse(savedState);
+      }
+    } catch (error) {
+      console.error('Error loading terminal maximized state:', error);
+    }
+  }
+  return false; // Default to not maximized
+};
+
+// Store for terminal maximized state with persisted data
+export const isTerminalMaximizedStore = atom(loadIsTerminalMaximized());
+
+// Store for previous terminal position and size (before maximizing)
+export const previousTerminalStateStore = atom({
+  position: null,
+  size: null
+});
+
+// Subscribe to changes and save to localStorage
+isTerminalMaximizedStore.listen((value) => {
+  if (isBrowser()) {
+    try {
+      localStorage.setItem('isTerminalMaximized', JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving terminal maximized state:', error);
+    }
+  }
+});
+
 // Image overlay state
 export const imageOverlayStore = atom({
   isOpen: false,

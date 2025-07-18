@@ -28,6 +28,11 @@ export const DEFAULT_TERMINAL = {
   ],
 }
 
+// Settings for maximized terminal window
+export const MAXIMIZED_TERMINAL = {
+  margin: 20, // 20px from all edges of the screen
+}
+
 
 // export const DEFAULT_TERMINAL_SIZE = {
 //   width: 315,
@@ -51,5 +56,3 @@ export const DEFAULT_TERMINAL = {
 // export const DEFAULT_TERMINAL_OUTPUT = [
 //   'Type "help" for a list of commands.',
 // ];
-
-
