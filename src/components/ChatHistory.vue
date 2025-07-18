@@ -163,6 +163,7 @@ export default {
   margin-top: 16px;
   outline: none;
   color: white;
+  cursor: pointer;
 }
 
 .history-list {

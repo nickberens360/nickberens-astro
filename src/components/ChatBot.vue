@@ -407,6 +407,27 @@ export default {
   animation-delay: 0.4s;
 }
 
+@media (max-width: 768px) {
+
+  .messages-window {
+    padding: 0.5rem;
+  }
+
+  .input-form {
+    padding: 0.5rem;
+  }
+
+  .message-input {
+    font-size: 0.875rem;
+  }
+
+  .send-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+
 @keyframes typing {
   0%, 100% {
     transform: translateY(0);
