@@ -58,6 +58,7 @@
                   <a
                     :href="line.url"
                     class="terminal-link"
+                    @click="unmaximizeTerminal"
                   >{{ line.text }}
                   </a>
                   {{ line.suffix || '' }}
@@ -330,6 +331,21 @@ export default {
       }
     };
 
+    // Function to unmaximize the terminal
+    const unmaximizeTerminal = () => {
+      if (isMaximized.value) {
+        isTerminalMaximizedStore.set(false);
+        // Reset body overflow when un-maximized
+        document.body.style.overflow = '';
+
+        // Restore previous position and size if available
+        if (previousTerminalState.value.position && previousTerminalState.value.size) {
+          terminalPositionStore.set(previousTerminalState.value.position);
+          terminalSizeStore.set(previousTerminalState.value.size);
+        }
+      }
+    };
+
     // --- STATE UPDATE HELPERS ---
     const updateHistoryItem = (commandId, updates) => {
       const history = commandHistory.value;
@@ -448,6 +464,19 @@ export default {
             ]
           });
           return;
+        }
+
+        // Check if terminal is maximized and set it to false
+        if (isMaximized.value) {
+          isTerminalMaximizedStore.set(false);
+          // Reset body overflow when un-maximized
+          document.body.style.overflow = '';
+
+          // Restore previous position and size if available
+          if (previousTerminalState.value.position && previousTerminalState.value.size) {
+            terminalPositionStore.set(previousTerminalState.value.position);
+            terminalSizeStore.set(previousTerminalState.value.size);
+          }
         }
 
         const targetName = args.join(' ').toLowerCase();
@@ -688,6 +717,7 @@ export default {
       isTerminalHiddenStore,
       isMaximized,
       toggleMaximize,
+      unmaximizeTerminal,
       resizeDirection
     };
   }
