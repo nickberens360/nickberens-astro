@@ -63,7 +63,8 @@ export default {
   height: 100%;
   padding: 2rem;
   text-align: center;
-  background-color: #f9fafb;
+  background-color: #111111;
+  color: #f9fafb;
 }
 
 .welcome-content {
@@ -77,7 +78,6 @@ export default {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: bold;
-
 }
 
 h2 {
@@ -89,7 +89,7 @@ h2 {
 p {
   margin-bottom: 1.5rem;
   font-size: 1rem;
-  color: #4b5563;
+  color: #d1d5db;
 }
 
 .example-prompts {
@@ -103,17 +103,18 @@ p {
 
 .example-prompts li {
   padding: 0.75rem 1.25rem;
-  background-color: #e5e7eb;
+  background-color: #222222;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
   display: flex;
   align-items: center;
+  color: #f9fafb;
 }
 
 .example-prompts li:hover {
-  background-color: #d1d5db;
+  background-color: #333333;
   transform: translateY(-2px);
 }
 
@@ -122,24 +123,8 @@ p {
   font-weight: bold;
 }
 
-/* Dark theme styles */
-.theme-dark {
-  background-color: #111111;
-  color: #f9fafb;
-}
+/* Light theme styles would go here in the future with .theme-light prefix */
 
-.theme-dark p {
-  color: #d1d5db;
-}
-
-.theme-dark .example-prompts li {
-  background-color: #222222;
-  color: #f9fafb;
-}
-
-.theme-dark .example-prompts li:hover {
-  background-color: #333333;
-}
 @media (max-width: 768px) {
   .welcome-content__ascii {
     font-size: 8px;
