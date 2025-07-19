@@ -79,7 +79,6 @@
 import { ref, nextTick, watch, onMounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { marked } from 'marked'; // Import the marked library
-// --- UPDATED: Import the new updateChatTitle function ---
 import {
   activeChatId,
   activeChatMessages,
