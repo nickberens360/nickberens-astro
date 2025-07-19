@@ -156,6 +156,11 @@ export default {
         stopDrag,
         stopResize
       );
+
+      // Apply body scroll blocking if terminal is already maximized on page load
+      if (terminalState.isMaximized.value) {
+        document.body.style.overflow = 'hidden';
+      }
     });
 
     // Watch for changes in terminal visibility
