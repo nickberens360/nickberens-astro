@@ -244,6 +244,7 @@ export default {
 </script>
 
 <style scoped>
+/* Main container */
 .chatbot-container {
   max-width: none;
   margin: 0;
@@ -256,6 +257,56 @@ export default {
   overflow: hidden;
 }
 
+/* Messages window */
+.messages-window {
+  flex-grow: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background-color: #111111;
+}
+
+/* Message structure */
+.message {
+  display: flex;
+}
+
+.message-bubble {
+  padding: 0.75rem 1.25rem;
+  border-radius: 18px;
+  max-width: 85%;
+  line-height: 1.5;
+}
+
+.message-bubble p {
+  margin: 0;
+}
+
+/* User messages */
+.user {
+  justify-content: flex-end;
+}
+
+.user .message-bubble {
+  background-color: #457ef7;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+/* Bot messages */
+.bot {
+  justify-content: flex-start;
+}
+
+.bot .message-bubble {
+  background-color: #222222;
+  color: #f9fafb;
+  border-bottom-left-radius: 4px;
+}
+
+/* Image gallery */
 .image-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -276,58 +327,47 @@ export default {
   transform: scale(1.05);
 }
 
-.message-bubble p {
-  margin: 0;
-}
-
-.messages-window {
-  flex-grow: 1;
-  padding: 1rem;
-  overflow-y: auto;
+/* Typing indicator */
+.typing-indicator {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  background-color: #111111;
+  align-items: center;
+  gap: 5px;
 }
 
-.message {
-  display: flex;
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #666666;
+  animation: typing 1.2s infinite ease-in-out;
 }
 
-.message-bubble {
-  padding: 0.75rem 1.25rem;
-  border-radius: 18px;
-  max-width: 85%;
-  line-height: 1.5;
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
 }
 
-.user {
-  justify-content: flex-end;
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
 }
 
-.user .message-bubble {
-  background-color: #333333;
-  color: white;
-  border-bottom-right-radius: 4px;
+@keyframes typing {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
 }
 
-.bot {
-  justify-content: flex-start;
-}
-
-.bot .message-bubble {
-  background-color: #222222;
-  color: #f9fafb;
-  border-bottom-left-radius: 4px;
-}
-
+/* Input area */
 .input-form {
   display: flex;
   padding: 1rem;
   border-top: 1px solid #111111;
   background-color: #111111;
 }
-
 
 .input-container {
   display: flex;
@@ -383,63 +423,8 @@ export default {
   cursor: not-allowed;
 }
 
-.typing-indicator {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.typing-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #666666;
-  animation: typing 1.2s infinite ease-in-out;
-}
-
-.typing-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@media (max-width: 768px) {
-
-  .messages-window {
-    padding: 0.5rem;
-  }
-
-  .input-form {
-    padding: 0.5rem;
-  }
-
-  .message-input {
-    font-size: 0.875rem;
-  }
-
-  .send-button {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-  }
-}
-
-
-@keyframes typing {
-  0%, 100% {
-    transform: translateY(0);
-    opacity: 0.5;
-  }
-  40% {
-    transform: translateY(-5px);
-    opacity: 1;
-  }
-}
-
-/* Add styles for markdown content */
+/* Markdown content styling */
 :deep(.markdown-content) {
-  /* This targets elements inside the scoped component */
   line-height: 1.6;
 }
 
@@ -492,5 +477,25 @@ export default {
 :deep(.markdown-content a) {
   color: #60a5fa;
   text-decoration: underline;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .messages-window {
+    padding: 0.5rem;
+  }
+
+  .input-form {
+    padding: 0.5rem;
+  }
+
+  .message-input {
+    font-size: 0.875rem;
+  }
+
+  .send-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
 }
 </style>
