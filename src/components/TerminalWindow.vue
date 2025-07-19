@@ -14,6 +14,8 @@
       :style="terminalStyle"
       ref="terminalWindow"
       @click="focusInput"
+      @mouseenter="blockBodyScroll"
+      @mouseleave="restoreBodyScroll"
     >
       <TerminalControlBar
         :title="title"
@@ -25,136 +27,41 @@
         @stopDrag="stopDrag"
       />
 
-      <div
-        class="terminal-content"
-        @click="focusInput"
-      >
-        <div
-          class="terminal-output"
-          ref="terminalOutput"
-        >
-          <div
-            v-for="(item, index) in commandHistory"
-            :key="item.id"
-            class="command-history-item"
-          >
-            <div
-              v-if="item.command"
-              class="command-input"
-            >
-              <span class="prompt mr-2">~$</span>
-              <span>{{ item.command }}</span>
-            </div>
+      <TerminalContent
+        :theme="theme"
+        :command-history="commandHistory"
+        :input-value="inputValue"
+        @focus-input="focusInput"
+        @unmaximize="unmaximizeTerminal"
+        @update:input-value="inputValue = $event"
+        @submit-command="submitCommand"
+        ref="terminalContent"
+      />
 
-            <div class="command-output">
-              <div
-                v-for="(line, lineIndex) in item.textOutput"
-                :key="`text-${lineIndex}`"
-                class="output-line"
-              >
-                <template v-if="typeof line === 'string'">{{ line }}</template>
-                <template v-else-if="line.type === 'link'">
-                  {{ line.prefix }}
-                  <a
-                    :href="line.url"
-                    class="terminal-link"
-                    @click="unmaximizeTerminal"
-                  >{{ line.text }}
-                  </a>
-                  {{ line.suffix || '' }}
-                </template>
-                <terminal-graph-output
-                  v-else-if="line.type === 'graph-history' || line.type === 'latest-commit'"
-                  :line="line"
-                />
-              </div>
-
-              <terminal-graph-output
-                v-if="item.graphData && item.graphData.isVisible"
-                :graph-data="item.graphData"
-              />
-
-              <terminal-graph-output
-                v-if="item.commitData && item.commitData.isVisible"
-                :commit-data="item.commitData"
-              />
-
-              <terminal-log-output
-                v-if="item.commitHistory && item.commitHistory.isVisible"
-                :commit-history="item.commitHistory"
-                :theme="theme"
-              />
-
-              <div
-                v-if="item.isLoading"
-                class="loading-container"
-              >
-                <div class="progress-bar-container">
-                  <div
-                    class="progress-bar"
-                    :style="{ width: `${item.loadingProgress}%` }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="terminal-input-line">
-          <span class="prompt mr-2">~$</span>
-          <input
-            type="text"
-            class="terminal-input"
-            v-model="inputValue"
-            @keydown.enter="submitCommand"
-            ref="terminalInput"
-            placeholder=""
-            autocomplete="off"
-            autofocus
-          />
-        </div>
-      </div>
-
-      <!-- Resize handles -->
-      <div class="resize-handle resize-n" @pointerdown="startResize('n', $event)"></div>
-      <div class="resize-handle resize-e" @pointerdown="startResize('e', $event)"></div>
-      <div class="resize-handle resize-s" @pointerdown="startResize('s', $event)"></div>
-      <div class="resize-handle resize-w" @pointerdown="startResize('w', $event)"></div>
-      <div class="resize-handle resize-ne" @pointerdown="startResize('ne', $event)"></div>
-      <div class="resize-handle resize-se" @pointerdown="startResize('se', $event)"></div>
-      <div class="resize-handle resize-sw" @pointerdown="startResize('sw', $event)"></div>
-      <div class="resize-handle resize-nw" @pointerdown="startResize('nw', $event)"></div>
+      <TerminalResizeHandles
+        :is-maximized="isMaximized"
+        :theme="theme"
+        @start-resize="startResize"
+      />
     </div>
   </div>
 </template>
 
 <script>
-import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue';
-import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../utils/gitInfo.js';
-import {
-  navItems,
-  commandHistoryStore,
-  nextCommandIdStore,
-  terminalPositionStore,
-  terminalSizeStore,
-  isTerminalActive,
-  isTerminalMinimizedStore,
-  isTerminalHiddenStore,
-  isTerminalMaximizedStore,
-  previousTerminalStateStore
-} from '../stores/ui.js';
-import { useStore } from '@nanostores/vue';
+import { ref, onMounted, watch, onUnmounted } from 'vue';
 import TerminalControlBar from './TerminalControlBar.vue';
-import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
-import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
-import { DEFAULT_TERMINAL, MAXIMIZED_TERMINAL } from '../config/terminalConfig.js'; // Adjust path if needed
+import TerminalContent from './TerminalContent.vue';
+import TerminalResizeHandles from './TerminalResizeHandles.vue';
+import { useTerminalCommands } from '../composables/useTerminalCommands.js';
+import { useTerminalResize } from '../composables/useTerminalResize.js';
+import { useTerminalState } from '../composables/useTerminalState.js';
 
 export default {
   name: 'TerminalWindow',
   components: {
     TerminalControlBar,
-    TerminalGraphOutput,
-    TerminalLogOutput,
+    TerminalContent,
+    TerminalResizeHandles,
   },
   props: {
     title: {
@@ -170,576 +77,143 @@ export default {
       default: false,
     }
   },
-  setup(props, { emit }) {
-    // --- STATE AND STORE HOOKS ---
-    const isMinimized = useStore(isTerminalMinimizedStore);
-    const isTerminalHidden = useStore(isTerminalHiddenStore);
-    const theme = ref('dark');
-    const inputValue = ref('');
+  setup(props) {
+    // --- REFS ---
     const terminalWindow = ref(null);
+    const terminalContent = ref(null);
+
+    // Create direct refs that will be properly connected
     const terminalInput = ref(null);
     const terminalOutput = ref(null);
-    // Add a flag to track component mounted state
-    const isMounted = ref(false);
 
-    // Simplified computed property that only relies on the store value
-    const isHidden = computed(() => {
-      return isTerminalHidden.value;
-    });
+    // --- COMPOSABLES ---
+    const terminalState = useTerminalState(props, terminalInput, terminalOutput);
+    const { handleCommand, unmaximizeTerminal } = useTerminalCommands(terminalOutput, terminalState.isMounted);
 
-    const position = useStore(terminalPositionStore);
-    const size = useStore(terminalSizeStore);
-    const commandHistory = useStore(commandHistoryStore);
-    const nextCommandId = useStore(nextCommandIdStore);
-    const isMaximized = useStore(isTerminalMaximizedStore);
-    const previousTerminalState = useStore(previousTerminalStateStore);
-
-    // --- DRAG & RESIZE LOGIC ---
-    const isDragging = ref(false);
-    const dragOffset = reactive({ x: 0, y: 0 });
-    const isResizing = ref(false);
-    const resizeDirection = ref('');
-    const resizeStartPos = reactive({ x: 0, y: 0, startX: 0, startY: 0 });
-    const resizeStartSize = reactive({ width: 0, height: 0 });
-
-    const terminalStyle = computed(() => {
-      if (isMaximized.value) {
-        const margin = MAXIMIZED_TERMINAL.margin;
-        return {
-          top: `${margin}px`,
-          left: `${margin}px`,
-          right: `${margin}px`,
-          bottom: `${margin}px`,
-          width: `calc(100% - ${margin * 2}px)`,
-          height: `calc(100% - ${margin * 2}px)`
-        };
-      }
-
-      return {
-        top: `${position.value?.y || 100}px`,
-        left: `${position.value?.x || 100}px`,
-        width: `${size.value?.width || 600}px`,
-        height: `${size.value?.height || 400}px`,
-      };
-    });
-
-    const startDrag = (event) => {
-      if (terminalWindow.value && event.isPrimary) {
-        isDragging.value = true;
-        dragOffset.x = event.clientX - position.value.x;
-        dragOffset.y = event.clientY - position.value.y;
-        document.addEventListener('pointermove', onDrag);
-        document.addEventListener('pointerup', stopDrag);
-        event.preventDefault(); // Prevent scrolling on touch devices
-      }
-    };
-    const onDrag = (event) => {
-      if (isDragging.value) {
-        terminalPositionStore.set({ x: event.clientX - dragOffset.x, y: event.clientY - dragOffset.y });
-      }
-    };
-    const stopDrag = () => {
-      isDragging.value = false;
-      document.removeEventListener('pointermove', onDrag);
-      document.removeEventListener('pointerup', stopDrag);
-    };
-
-    const startResize = (direction, event) => {
-      if (event.isPrimary) {
-        isResizing.value = true;
-        resizeDirection.value = direction;
-        resizeStartPos.x = event.clientX;
-        resizeStartPos.y = event.clientY;
-        resizeStartSize.width = size.value.width;
-        resizeStartSize.height = size.value.height;
-
-        // Also store the starting position
-        if (position.value) {
-          resizeStartPos.startX = position.value.x;
-          resizeStartPos.startY = position.value.y;
-        }
-
-        document.addEventListener('pointermove', onResize);
-        document.addEventListener('pointerup', stopResize);
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    const onResize = (event) => {
-      if (isResizing.value) {
-        const deltaX = event.clientX - resizeStartPos.x;
-        const deltaY = event.clientY - resizeStartPos.y;
-
-        let newWidth = resizeStartSize.width;
-        let newHeight = resizeStartSize.height;
-        let newX = position.value.x;
-        let newY = position.value.y;
-
-        // Handle different resize directions
-        const direction = resizeDirection.value;
-
-        // Handle horizontal resizing
-        if (direction.includes('e')) {
-          newWidth = Math.max(200, resizeStartSize.width + deltaX);
-        } else if (direction.includes('w')) {
-          const widthChange = Math.min(deltaX, resizeStartSize.width - 200);
-          newWidth = resizeStartSize.width - widthChange;
-          newX = resizeStartPos.startX + widthChange;
-        }
-
-        // Handle vertical resizing
-        if (direction.includes('s')) {
-          newHeight = Math.max(74, resizeStartSize.height + deltaY);
-        } else if (direction.includes('n')) {
-          const heightChange = Math.min(deltaY, resizeStartSize.height - 74);
-          newHeight = resizeStartSize.height - heightChange;
-          newY = resizeStartPos.startY + heightChange;
-        }
-
-        // Update position and size
-        terminalPositionStore.set({ x: newX, y: newY });
-        terminalSizeStore.set({ width: newWidth, height: newHeight });
-      }
-    };
-    const stopResize = () => {
-      isResizing.value = false;
-      resizeDirection.value = '';
-      document.removeEventListener('pointermove', onResize);
-      document.removeEventListener('pointerup', stopResize);
-    };
-
-    // Toggle maximize function
-    const toggleMaximize = () => {
-      if (!isMaximized.value) {
-        // Save current position and size before maximizing
-        previousTerminalStateStore.set({
-          position: { ...position.value },
-          size: { ...size.value }
-        });
-        isTerminalMaximizedStore.set(true);
-        // Set body overflow to hidden when maximized
-        document.body.style.overflow = 'hidden';
-      } else {
-        // Restore previous position and size
-        if (previousTerminalState.value.position && previousTerminalState.value.size) {
-          terminalPositionStore.set(previousTerminalState.value.position);
-          terminalSizeStore.set(previousTerminalState.value.size);
-        }
-        isTerminalMaximizedStore.set(false);
-        // Reset body overflow when un-maximized
-        document.body.style.overflow = '';
-      }
-    };
-
-    // Function to unmaximize the terminal
-    const unmaximizeTerminal = () => {
-      if (isMaximized.value) {
-        isTerminalMaximizedStore.set(false);
-        // Reset body overflow when un-maximized
-        document.body.style.overflow = '';
-
-        // Restore previous position and size if available
-        if (previousTerminalState.value.position && previousTerminalState.value.size) {
-          terminalPositionStore.set(previousTerminalState.value.position);
-          terminalSizeStore.set(previousTerminalState.value.size);
-        }
-      }
-    };
-
-    // --- STATE UPDATE HELPERS ---
-    const updateHistoryItem = (commandId, updates) => {
-      const history = commandHistory.value;
-      const index = history.findIndex(item => item.id === commandId);
-      if (index === -1) return;
-
-      const newHistory = [...history];
-      const currentItem = newHistory[index];
-
-      newHistory[index] = {
-        ...currentItem,
-        ...updates,
-        textOutput: [...currentItem.textOutput, ...(updates.textOutput || [])],
-      };
-      commandHistoryStore.set(newHistory);
-    };
-
-    const ensureMinLoadingTime = async (promise, commandId, minTime = 1000) => {
-      // Initialize loading state
-      updateHistoryItem(commandId, { isLoading: true, loadingProgress: 0 });
-      const loadingStartTime = Date.now();
-
-      // Create a progress update function that runs in the background
-      const updateProgress = async () => {
-        let currentProgress = 0;
-
-        while (currentProgress < 90 && isMounted.value) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Check if the command still exists in history (could be cleared)
-          const historyItem = commandHistory.value.find(c => c.id === commandId);
-          if (!historyItem) break;
-
-          // Update progress with a small random increment
-          currentProgress = historyItem.loadingProgress || 0;
-          const newProgress = currentProgress + Math.random() * 3 + 1;
-          // Check if component is still mounted before updating state
-          if (isMounted.value) {
-            updateHistoryItem(commandId, { loadingProgress: Math.min(newProgress, 90) });
-          }
-        }
-      };
-
-      // Start the progress updates and the main promise in parallel
-      const progressPromise = updateProgress();
-      const result = await promise;
-
-      // Calculate elapsed time
-      const elapsedTime = Date.now() - loadingStartTime;
-
-      // Ensure minimum loading time
-      if (elapsedTime < minTime) {
-        await new Promise(resolve => setTimeout(resolve, minTime - elapsedTime));
-      }
-
-      // Complete the loading sequence - check if component is still mounted
-      if (isMounted.value) {
-        updateHistoryItem(commandId, { loadingProgress: 100 });
-        await new Promise(resolve => setTimeout(resolve, 200));
-        updateHistoryItem(commandId, { isLoading: false });
-      }
-
-      return result;
-    };
-
-    // --- ASYNC COMMAND ABSTRACTION ---
-    const createAsyncGitHandler = (commandId, fetchFn, processFn, initialText) => {
-      updateHistoryItem(commandId, { textOutput: [initialText] });
-      ensureMinLoadingTime(fetchFn(), commandId)
-        .then(data => {
-          // Check if component is still mounted before updating state
-          if (isMounted.value) {
-            updateHistoryItem(commandId, processFn(data));
-            nextTick(() => {
-              if (terminalOutput.value && isMounted.value) {
-                terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-              }
-            });
-          }
-        })
-        .catch(error => {
-          // Check if component is still mounted before updating state
-          if (isMounted.value) {
-            updateHistoryItem(commandId, { textOutput: [`Error retrieving data: ${error.message}`] });
-          }
-        });
-    };
-
-    // --- COMMAND MAP ---
-    const commands = {
-      clear: () => {
-        commandHistoryStore.set([]);
-      },
-      help: (args, commandId) => {
-        updateHistoryItem(commandId, {
-          textOutput: DEFAULT_TERMINAL.helpOutput
-        });
-      },
-      theme: (args, commandId) => {
-        theme.value = theme.value === 'dark' ? 'light' : 'dark';
-        updateHistoryItem(commandId, { textOutput: [`Theme switched to ${theme.value} mode`] });
-      },
-      version: (args, commandId) => {
-        updateHistoryItem(commandId, { textOutput: ['Terminal v1.0.0', 'Created by nickberens'] });
-      },
-      ls: (args, commandId) => {
-        const links = navItems.get().map(item => ({ type: 'link', prefix: '- ', url: item.url, text: item.text }));
-        updateHistoryItem(commandId, { textOutput: ['Navigation links:', ...links] });
-      },
-      cd: (args, commandId) => {
-        if (!args.length) {
-          updateHistoryItem(commandId, {
-            textOutput: ['Usage: cd [nav item name]', 'Available nav items:',
-              ...navItems.get().map(item => `- ${item.text}`),
-              '- / or home: Navigate to the index page'
-            ]
-          });
-          return;
-        }
-
-        // Check if terminal is maximized and set it to false
-        if (isMaximized.value) {
-          isTerminalMaximizedStore.set(false);
-          // Reset body overflow when un-maximized
-          document.body.style.overflow = '';
-
-          // Restore previous position and size if available
-          if (previousTerminalState.value.position && previousTerminalState.value.size) {
-            terminalPositionStore.set(previousTerminalState.value.position);
-            terminalSizeStore.set(previousTerminalState.value.size);
-          }
-        }
-
-        const targetName = args.join(' ').toLowerCase();
-
-        // Special case for home or root directory
-        if (targetName === '/' || targetName === 'home' || targetName === 'hoem') {
-          updateHistoryItem(commandId, {
-            textOutput: ['Navigating to home page...']
-          });
-
-          // Use setTimeout to allow the terminal to update before navigation
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 500);
-          return;
-        }
-
-        const navItemsList = navItems.get();
-        const matchedItem = navItemsList.find(item =>
-          item.text.toLowerCase() === targetName
-        );
-
-        if (matchedItem) {
-          updateHistoryItem(commandId, {
-            textOutput: [`Navigating to ${matchedItem.text}...`]
-          });
-
-          // Use setTimeout to allow the terminal to update before navigation
-          setTimeout(() => {
-            if (matchedItem.isExternal) {
-              window.open(matchedItem.url, '_blank', 'noopener,noreferrer');
-            } else {
-              window.location.href = matchedItem.url;
-            }
-          }, 500);
-        } else {
-          updateHistoryItem(commandId, {
-            textOutput: [
-              `Nav item not found: "${args.join(' ')}"`,
-              'Available nav items:',
-              ...navItemsList.map(item => `- ${item.text}`),
-              '- / or home: Navigate to the index page'
-            ]
-          });
-        }
-      },
-      git: (args, commandId) => {
-        const gitAction = {
-          log: () => createAsyncGitHandler(commandId, getCommitHistory, data => ({ commitHistory: processCommitHistory(data) }), 'Fetching commit history...'),
-          graph: () => createAsyncGitHandler(commandId, getCodeFrequency, data => ({
-            graphData: processCodeFrequencyData(data),
-            textOutput: ['Code Frequency (additions/deletions over time):']
-          }), 'Fetching code frequency data...'),
-          'latest-commit': () => createAsyncGitHandler(commandId, getLatestCommitMessage, data => ({
-            commitData: {
-              ...data,
-              isVisible: true
-            }
-          }), 'Fetching latest commit...'),
-          default: () => updateHistoryItem(commandId, { textOutput: ['Usage: git [log|graph|latest-commit]'] })
-        };
-        (gitAction[args[0]?.toLowerCase()] || gitAction.default)();
-      },
-      'bust-cache': () => {
-        localStorage.clear();
-        window.location.reload();
-      },
-      default: (baseCommand, commandId) => {
-        updateHistoryItem(commandId, { textOutput: [`Command not found: ${baseCommand}`] });
-      }
-    };
-
-    // --- CORE LOGIC ---
-    const focusInput = (event) => {
-      if (terminalInput.value && (!event || event.target.tagName !== 'A')) {
-        terminalInput.value.focus();
-      }
-    };
-
-    const handleCommand = (command, commandId) => {
-      const parts = command.split(' ');
-      const baseCommand = parts[0].toLowerCase();
-      const args = parts.slice(1);
-      const commandFn = commands[baseCommand] || (() => commands.default(baseCommand, commandId));
-      commandFn(args, commandId);
-    };
-
-    const submitCommand = () => {
-      const command = inputValue.value.trim();
-      if (!command) return;
-
-      inputValue.value = '';
-      const commandId = nextCommandId.value;
-      nextCommandIdStore.set(commandId + 1);
-
-      commandHistoryStore.set([
-        ...commandHistory.value,
-        {
-          id: commandId,
-          timestamp: Date.now(),
-          command: command,
-          textOutput: [],
-          isLoading: false,
-          loadingProgress: 0,
-          graphData: null,
-          commitData: null,
-          commitHistory: null
-        }
-      ]);
-
-      handleCommand(command, commandId);
-
-      nextTick(() => {
-        if (terminalOutput.value) {
-          terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-        }
-      });
-    };
-
-    // --- TERMINAL ACTIVE STATE HANDLERS ---
-    const activateTerminal = () => {
-      isTerminalActive.set(true);
-    };
-
-    const deactivateTerminal = () => {
-      isTerminalActive.set(false);
-    };
-
-    // Handle keyboard events
-    const handleKeyDown = (event) => {
-      // Check if the escape key was pressed and the terminal is maximized
-      if (event.key === 'Escape' && isMaximized.value) {
-        toggleMaximize();
-      }
-    };
-
-    // --- LIFECYCLE HOOKS ---
-    onMounted(() => {
-      // Set mounted flag to true
-      isMounted.value = true;
-
-      // Check if we're on the nick-ai route
-      const isNickAiRoute = window.location.pathname.includes('/nick-ai');
-
-      // If we're on the nick-ai route, always set the store to hidden initially
-      if (isNickAiRoute && props.hideTerminal) {
-        isTerminalHiddenStore.set(true);
-      }
-      // Only set the initial store value if it hasn't been explicitly set by the user and we're not on nick-ai route
-      else if (typeof isTerminalHidden.value !== 'boolean') {
-        isTerminalHiddenStore.set(props.hideTerminal);
-      }
-
-      // Check if a position has been saved in localStorage. If not, set our default.
-      const savedPosition = localStorage.getItem('terminalPosition');
-      if (!savedPosition) {
-        const margin = 20;
-        const terminalHeight = size.value.height; // Use the current height from the store
-        const newY = window.innerHeight - terminalHeight - margin;
-        terminalPositionStore.set({ x: margin, y: newY });
-      }
-
-      // Add initial output if history is empty
-      if (props.initialOutput && props.initialOutput.length > 0 && commandHistory.value.length === 0) {
-        commandHistoryStore.set([{
-          id: 1,
-          timestamp: Date.now(), command: '', textOutput: [...props.initialOutput],
-          isLoading: false, loadingProgress: 0, graphData: null, commitData: null, commitHistory: null
-        }]);
-        nextCommandIdStore.set(2);
-      }
-
-      document.addEventListener('pointerup', stopDrag);
-      document.addEventListener('pointerup', stopResize);
-      nextTick(focusInput);
-
-      // Add event listeners for terminal focus
-      if (terminalWindow.value) {
-        terminalWindow.value.addEventListener('pointerdown', activateTerminal);
-        document.addEventListener('pointerdown', (event) => {
-          if (terminalWindow.value && !terminalWindow.value.contains(event.target) && !isMinimized.value) {
-            deactivateTerminal();
-          }
-        });
-      }
-
-      // Ensure terminal is scrolled to bottom when mounted
-      nextTick(() => {
-        if (terminalOutput.value && isMounted.value) {
-          terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-        }
-      });
-
-      // Add keyboard event listener for escape key
-      document.addEventListener('keydown', handleKeyDown);
-    });
-
-    onUnmounted(() => {
-      // Set mounted flag to false
-      isMounted.value = false;
-
-      document.removeEventListener('pointerup', stopDrag);
-      document.removeEventListener('pointermove', onDrag);
-      document.removeEventListener('pointerup', stopResize);
-      document.removeEventListener('pointermove', onResize);
-
-      if (terminalWindow.value) {
-        terminalWindow.value.removeEventListener('pointerdown', activateTerminal);
-      }
-      document.removeEventListener('pointerdown', deactivateTerminal);
-
-      // Remove keyboard event listener
-      document.removeEventListener('keydown', handleKeyDown);
-    });
-
-    return {
-      isMinimized,
-      isHidden,
-      isTerminalMinimizedStore,
-      position,
-      size,
+    const {
       terminalStyle,
       startDrag,
       stopDrag,
       startResize,
       stopResize,
-      commandHistory,
-      inputValue,
-      submitCommand,
-      terminalWindow,
-      terminalInput,
-      terminalOutput,
-      focusInput,
-      theme,
-      activateTerminal,
-      deactivateTerminal,
-      isMounted,
-      isTerminalHiddenStore,
-      isMaximized,
       toggleMaximize,
+    } = useTerminalResize(
+      terminalWindow,
+      terminalState.position,
+      terminalState.size,
+      terminalState.isMaximized,
+      terminalState.previousTerminalState
+    );
+
+    // --- COMMAND SUBMISSION ---
+    const submitCommand = () => {
+      terminalState.submitCommand(handleCommand);
+    };
+
+    // --- FOCUS INPUT ---
+    const focusInput = (event) => {
+      if (!event || event.target.tagName !== 'A') {
+        terminalContent.value?.focusInput();
+      }
+    };
+
+    // --- BODY SCROLL CONTROL ---
+    const blockBodyScroll = () => {
+      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) { // Only apply if not already maximized
+        document.body.style.overflow = 'hidden';
+      }
+    };
+
+    const restoreBodyScroll = () => {
+      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) { // Only restore if not maximized
+        document.body.style.overflow = '';
+      }
+    };
+
+    // --- LIFECYCLE ---
+    onMounted(() => {
+      // Set up refs for the composables that need them
+      terminalInput.value = {
+        focus: () => terminalContent.value?.focusInput()
+      };
+      terminalOutput.value = {
+        get scrollTop() {
+          return terminalContent.value?.$refs.terminalOutput?.scrollTop || 0;
+        },
+        set scrollTop(value) {
+          if (terminalContent.value?.$refs.terminalOutput) {
+            terminalContent.value.$refs.terminalOutput.scrollTop = value;
+          }
+        },
+        get scrollHeight() {
+          return terminalContent.value?.$refs.terminalOutput?.scrollHeight || 0;
+        }
+      };
+
+      terminalState.cleanup.value = terminalState.initialize(
+        terminalWindow,
+        toggleMaximize,
+        stopDrag,
+        stopResize
+      );
+
+      // Apply body scroll blocking if terminal is already maximized on page load
+      if (terminalState.isMaximized.value) {
+        document.body.style.overflow = 'hidden';
+      }
+    });
+
+    // Watch for changes in terminal visibility
+    watch(terminalState.isHidden, (isHidden) => {
+      if (isHidden && terminalState.isMaximized.value) {
+        // If terminal is hidden while maximized, reset body overflow
+        document.body.style.overflow = '';
+      }
+    });
+
+    // Ensure body overflow is reset when component is unmounted
+    onUnmounted(() => {
+      if (terminalState.isMaximized.value) {
+        document.body.style.overflow = '';
+      }
+    });
+
+    return {
+      // Refs
+      terminalWindow,
+      terminalContent,
+
+      // From terminalState composable
+      theme: terminalState.theme,
+      inputValue: terminalState.inputValue,
+      isMounted: terminalState.isMounted,
+      isMinimized: terminalState.isMinimized,
+      isHidden: terminalState.isHidden,
+      isMaximized: terminalState.isMaximized,
+      commandHistory: terminalState.commandHistory,
+      isTerminalMinimizedStore: terminalState.isTerminalMinimizedStore,
+      isTerminalHiddenStore: terminalState.isTerminalHiddenStore,
+
+      // From useTerminalResize composable
+      terminalStyle,
+      startDrag,
+      stopDrag,
+      startResize,
+      stopResize,
+      toggleMaximize,
+
+      // Methods
+      submitCommand,
+      focusInput,
       unmaximizeTerminal,
-      resizeDirection
+      blockBodyScroll,
+      restoreBodyScroll,
     };
   }
 };
 </script>
 
 <style scoped>
-/* All styles remain the same */
-.command-history-item {
-  margin-bottom: 8px;
-}
-
-.command-input {
-  color: #63c5da;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.command-output {
-  margin-left: 8px;
-}
-
 .terminal-minimized {
   position: fixed;
   left: 20px;
@@ -754,11 +228,6 @@ export default {
 
 .terminal-minimized:hover {
   transform: scale(1.05);
-}
-
-.terminal-icon {
-  color: #fff;
-  font-size: 24px;
 }
 
 .terminal-window {
@@ -778,228 +247,19 @@ export default {
   z-index: 1001 !important;
 }
 
-/* Hide the resize handle when maximized */
-.terminal-maximized .resize-handle {
-  display: none;
-}
-
-.terminal-content {
-  /*flex-grow: 1;*/
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  overflow: hidden;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 14px;
-  color: #f8f8f8;
-}
-
-.terminal-output {
-  flex-grow: 1;
-  overflow-y: auto;
-  margin-bottom: 10px;
-}
-
-.output-line {
-  margin-bottom: 4px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-}
-
-.terminal-input-line {
-  display: flex;
-  align-items: center;
-}
-
-.prompt {
-  color: #f8f8f8;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 14px;
-  margin-right: 8px;
-}
-
-.terminal-input {
-  background: transparent;
-  border: none;
-  color: #f8f8f8;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 14px;
-  font-weight: bold;
-  outline: none;
-  flex-grow: 1;
-  caret-color: #f8f8f8;
-}
-
-.terminal-input::selection {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.theme-light .prompt, .theme-light .terminal-input {
-  color: #333;
-}
-
-.theme-light .terminal-input {
-  caret-color: #333;
-}
-
-.theme-light .terminal-input::selection {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
 .terminal-window.theme-light {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.terminal-window.theme-light .terminal-content {
+  background-color: rgba(240, 240, 240, 0.96);
   color: #333;
 }
 
 .terminal-window.theme-dark {
-  background-color: #1e1e1e;
+  background-color: rgba(30, 30, 30, 0.9);
   color: #f8f8f8;
-}
-
-.terminal-output::-webkit-scrollbar {
-  width: 8px;
-}
-
-.terminal-output::-webkit-scrollbar-track {
-  background: #1e1e1e;
-}
-
-.terminal-output::-webkit-scrollbar-thumb {
-  background: #555;
-  border-radius: 4px;
-}
-
-.terminal-output::-webkit-scrollbar-thumb:hover {
-  background: #777;
-}
-
-.theme-light .terminal-output::-webkit-scrollbar-track {
-  background: #f0f0f0;
-}
-
-.theme-light .terminal-output::-webkit-scrollbar-thumb {
-  background: #ccc;
-}
-
-.theme-light .terminal-output::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
 }
 
 @media (max-width: 768px) {
   .terminal-window {
     min-width: 90%;
-    /*min-height: 350px;*/
   }
-}
-
-.loading-container {
-  margin: 10px 0;
-  width: 100%;
-}
-
-.progress-bar-container {
-  width: 100%;
-  height: 20px;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 0;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background-color: #ffffff;
-  border-radius: 0;
-  transition: width 0.3s ease;
-}
-
-.theme-light .progress-bar {
-  background-color: #000000;
-}
-
-.theme-light .progress-bar-container {
-  background-color: rgba(0, 0, 0, 0.2);
-}
-
-/* Base resize handle styles */
-.resize-handle {
-  position: absolute;
-  background: transparent;
-  touch-action: none;
-  z-index: 10;
-}
-
-/* Corner handles */
-.resize-ne, .resize-se, .resize-sw, .resize-nw {
-  width: 15px;
-  height: 15px;
-}
-
-/* Edge handles */
-.resize-n, .resize-s {
-  height: 8px;
-  left: 8px;
-  right: 8px;
-}
-
-.resize-e, .resize-w {
-  width: 8px;
-  top: 8px;
-  bottom: 8px;
-}
-
-/* Position the handles */
-.resize-n { top: 0; cursor: ns-resize; }
-.resize-e { right: 0; cursor: ew-resize; }
-.resize-s { bottom: 0; cursor: ns-resize; }
-.resize-w { left: 0; cursor: ew-resize; }
-
-.resize-ne { top: 0; right: 0; cursor: nesw-resize; }
-.resize-se { bottom: 0; right: 0; cursor: nwse-resize; }
-.resize-sw { bottom: 0; left: 0; cursor: nesw-resize; }
-.resize-nw { top: 0; left: 0; cursor: nwse-resize; }
-
-/* Visual indicator for the corner handles */
-.resize-se::before {
-  content: "";
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 9px;
-  height: 9px;
-  border-right: 2px solid rgba(255, 255, 255, 0.5);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
-}
-
-.theme-light .resize-se::before {
-  border-right: 2px solid rgba(0, 0, 0, 0.3);
-  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
-}
-
-/* Hide all resize handles when maximized */
-.terminal-maximized .resize-handle {
-  display: none;
-}
-
-.terminal-link {
-  color: #3498db;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.terminal-link:hover {
-  color: #2980b9;
-}
-
-.theme-light .terminal-link {
-  color: #2980b9;
-}
-
-.theme-light .terminal-link:hover {
-  color: #1c6ea4;
 }
 </style>
