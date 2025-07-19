@@ -11,6 +11,7 @@
     <!-- Background layer -->
     <div
       class="parallax-section__background"
+      :class="{ 'floating-reversed': floatingBackground }"
       ref="backgroundRef"
       :style="{ transform: `translateY(${currentOffset}px)` }"
     >
@@ -44,10 +45,11 @@ export default {
     foregroundAlt: { type: String, default: 'Foreground image' },
     fullWidth: { type: Boolean, default: false },
     noPadding: { type: Boolean, default: false },
-    parallaxSpeed: { type: Number, default: 0.5 },
+    parallaxSpeed: { type: Number, default: 0.8 },
     foregroundMaxWidth: { type: String, default: '300px' },
     foregroundMaxWidthMobile: { type: String, default: '90%' },
     floatingForeground: { type: Boolean, default: false },
+    floatingBackground: { type: Boolean, default: false }
   },
   data() {
     return {
@@ -168,15 +170,34 @@ export default {
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-30px);
+    transform: translateY(-20px);
   }
   100% {
     transform: translateY(0px);
   }
 }
 
+@keyframes floatReversed {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+
 .floating {
-  animation: float 2.5s ease-in-out infinite;
+  animation: float 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.floating-reversed {
+  animation: floatReversed 3s ease-in-out infinite;
   will-change: transform;
 }
 
@@ -185,11 +206,11 @@ export default {
   .parallax-section__fg-image {
     max-width: v-bind(foregroundMaxWidthMobile);
   }
-  /*.parallax-section__background {
+  .parallax-section__background {
     top: 0;
     bottom: 0;
     height: 100%;
     transform: none !important;
-  }*/
+  }
 }
 </style>
