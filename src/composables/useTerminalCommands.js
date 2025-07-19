@@ -118,9 +118,24 @@ export function useTerminalCommands(terminalOutput, isMounted) {
     },
 
     theme: (args, commandId, theme) => {
-      const newTheme = theme.value === 'dark' ? 'light' : 'dark';
-      theme.setTheme(newTheme);
-      updateHistoryItem(commandId, { textOutput: [`Theme switched to ${newTheme} mode`] });
+      if (!args.length) {
+        updateHistoryItem(commandId, {
+          textOutput: ['Usage: theme [dark|light]', 'Please specify which theme you want to use.']
+        });
+        return;
+      }
+
+      const requestedTheme = args[0].toLowerCase();
+
+      if (requestedTheme !== 'dark' && requestedTheme !== 'light') {
+        updateHistoryItem(commandId, {
+          textOutput: [`Invalid theme: ${requestedTheme}`, 'Available themes: dark, light']
+        });
+        return;
+      }
+
+      theme.setTheme(requestedTheme);
+      updateHistoryItem(commandId, { textOutput: [`Theme switched to ${requestedTheme} mode`] });
     },
 
     version: (args, commandId) => {
