@@ -14,7 +14,9 @@ import {
 
 export function useTerminalState(props, terminalInput, terminalOutput) {
   // --- REACTIVE STATE ---
-  const theme = ref(localStorage.getItem('terminalTheme') || 'dark');
+  const savedTheme = localStorage.getItem('terminalTheme');
+  const validThemes = ['dark', 'light'];
+  const theme = ref(validThemes.includes(savedTheme) ? savedTheme : 'dark');
   const inputValue = ref('');
   const isMounted = ref(false);
 
