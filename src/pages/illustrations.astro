@@ -42,8 +42,9 @@ const illustrations = [
         backgroundImage: robotBackground,
         foregroundImage: robotForeground,
         foregroundMaxWidth: '400px',
+        floating: true,
+        foregroundMaxWidthMobile: '200px',
         imgAlt: 'Robot Illustration with Parallax',
-        imgStyle: 'max-width: 100%; height: auto;',
         fullWidth: true,
         noPadding: true,
         parallaxSpeed: 0.8,
@@ -231,6 +232,8 @@ const illustrations = [
                 noPadding={item.noPadding}
                 parallaxSpeed={item.parallaxSpeed || 0.8}
                 foregroundMaxWidth={item.foregroundMaxWidth}
+                foregroundMaxWidthMobile={item.foregroundMaxWidthMobile}
+                floatingForeground={item.floating}
                 class={item.class}
             />
         ) : (
