@@ -56,20 +56,22 @@
       </div>
     </div>
     <div class="input-form">
-      <input
-        v-model="userInput"
-        @keyup.enter="sendMessage"
-        placeholder="Ask about Nick's skills, projects, etc..."
-        class="message-input"
-        :disabled="isLoading"
-      />
-      <button
-        @click="sendMessage"
-        class="send-button"
-        :disabled="isLoading"
-      >
-        Send
-      </button>
+      <div class="input-container">
+        <input
+          v-model="userInput"
+          @keyup.enter="sendMessage"
+          placeholder="Ask about Nick's skills, projects, etc..."
+          class="message-input"
+          :disabled="isLoading"
+        />
+        <button
+          @click="sendMessage"
+          class="send-button"
+          :disabled="isLoading"
+        >
+          Send
+        </button>
+      </div>
     </div>
     <ImageOverlay />
   </div>
@@ -235,27 +237,25 @@ export default {
       sendMessage,
       handlePromptSelect,
       handleImageClick,
-      renderMarkdown // Add this to the return object
+      renderMarkdown
     };
   },
 };
 </script>
 
 <style scoped>
-/* NOTE: I've added flex-grow to the chatbot container and removed the fixed height */
 .chatbot-container {
-  max-width: none; /* Allow it to fill the space */
+  max-width: none;
   margin: 0;
   border: none;
   border-radius: 0;
   display: flex;
   flex-direction: column;
-  flex-grow: 1; /* This is key */
-  background-color: #f9fafb;
+  flex-grow: 1;
+  background-color: #111111;
   overflow: hidden;
 }
 
-/* --- All other styles from your previous version remain the same --- */
 .image-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -267,7 +267,7 @@ export default {
   width: 100%;
   height: auto;
   border-radius: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid #444444;
   cursor: pointer;
   transition: transform 0.2s ease;
 }
@@ -280,52 +280,6 @@ export default {
   margin: 0;
 }
 
-.theme-dark {
-  background-color: #111111;
-  border-color: #333333;
-}
-
-.theme-dark .messages-window {
-  background-color: #111111;
-}
-
-.theme-dark .input-form {
-  background-color: #000000;
-  border-top-color: #333333;
-}
-
-.theme-dark .message-input {
-  background-color: #222222;
-  border-color: #444444;
-  color: #f9fafb;
-}
-
-.theme-dark .message-input::placeholder {
-  color: #999999;
-}
-
-.theme-dark .message-input:focus {
-  border-color: #555555;
-  box-shadow: 0 0 0 2px rgba(85, 85, 85, 0.2);
-}
-
-.theme-dark .user .message-bubble {
-  background-color: #333333;
-}
-
-.theme-dark .bot .message-bubble {
-  background-color: #222222;
-  color: #f9fafb;
-}
-
-.theme-dark .typing-dot {
-  background-color: #666666;
-}
-
-.theme-dark .chat-image {
-  border-color: #444444;
-}
-
 .messages-window {
   flex-grow: 1;
   padding: 1rem;
@@ -333,6 +287,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  background-color: #111111;
 }
 
 .message {
@@ -351,7 +306,7 @@ export default {
 }
 
 .user .message-bubble {
-  background-color: #3b82f6;
+  background-color: #333333;
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -361,37 +316,57 @@ export default {
 }
 
 .bot .message-bubble {
-  background-color: #e5e7eb;
-  color: #1f2937;
+  background-color: #222222;
+  color: #f9fafb;
   border-bottom-left-radius: 4px;
 }
 
 .input-form {
   display: flex;
   padding: 1rem;
-  border-top: 1px solid #e5e7eb;
-  background-color: #ffffff;
+  border-top: 1px solid #111111;
+  background-color: #111111;
+}
+
+
+.input-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background-color: #111111;
+  border: 1px solid #afafaf;
+  color: #f9fafb;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 0.5rem;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .message-input {
   flex-grow: 1;
-  border: 1px solid #d1d5db;
   padding: 0.75rem;
-  border-radius: 8px;
   font-size: 1rem;
+  border: none !important;
+  background: none !important;
+  color: #f9fafb;
+}
+
+.message-input::placeholder {
+  color: #999999;
 }
 
 .message-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: #555555;
+  box-shadow: none !important;
 }
 
 .send-button {
   margin-left: 1rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.65rem 1.5rem;
   border: none;
-  background-color: #fb5252;
+  background-color: #457ef7;
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -400,11 +375,11 @@ export default {
 }
 
 .send-button:hover {
-  background-color: #da2828;
+  background-color: #3967ca;
 }
 
 .send-button:disabled {
-  background-color: #ff7d7d;
+  background-color: #5c709a;
   cursor: not-allowed;
 }
 
@@ -418,7 +393,7 @@ export default {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #9ca3af;
+  background-color: #666666;
   animation: typing 1.2s infinite ease-in-out;
 }
 
@@ -500,14 +475,14 @@ export default {
 }
 
 :deep(.markdown-content code) {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
   padding: 0.2rem 0.4rem;
   border-radius: 3px;
   font-family: monospace;
 }
 
 :deep(.markdown-content pre) {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
   padding: 0.75rem;
   border-radius: 5px;
   overflow-x: auto;
@@ -515,20 +490,7 @@ export default {
 }
 
 :deep(.markdown-content a) {
-  color: #3b82f6;
-  text-decoration: underline;
-}
-
-/* Adjust dark theme styles */
-.theme-dark :deep(.markdown-content code) {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.theme-dark :deep(.markdown-content pre) {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.theme-dark :deep(.markdown-content a) {
   color: #60a5fa;
+  text-decoration: underline;
 }
 </style>
