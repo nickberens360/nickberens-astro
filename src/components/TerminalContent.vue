@@ -1,5 +1,5 @@
 <template>
-  <div class="terminal-content" @click="$emit('focusInput')">
+  <div class="terminal-content" :class="`theme-${theme}`" @click="$emit('focusInput')">
     <div class="terminal-output" ref="terminalOutput">
       <div
         v-for="(item, index) in commandHistory"
@@ -60,6 +60,7 @@
 
     <terminal-input-line
       :input-value="inputValue"
+      :theme="theme"
       @update:input-value="$emit('update:inputValue', $event)"
       @submit="$emit('submitCommand')"
       ref="terminalInput"
@@ -158,6 +159,7 @@ export default {
 }
 
 .output-line {
+  color: #f8f8f8;
   margin-bottom: 4px;
   white-space: pre-wrap;
   word-break: break-all;
@@ -198,5 +200,41 @@ export default {
   color: #2980b9;
 }
 
-/* Theme variations would go here */
+/* Theme variations */
+.theme-light .prompt {
+  color: #333;
+}
+
+.theme-light .output-line {
+  color: #333;
+}
+
+.theme-light .command-input {
+  color: red;
+}
+
+
+.theme-light .terminal-output::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.theme-light .terminal-output::-webkit-scrollbar-thumb {
+  background: #ccc;
+}
+
+.theme-light .terminal-output::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+.theme-light .terminal-link {
+  color: blue;
+}
+
+.theme-light .terminal-link:hover {
+  color: blueviolet;
+}
+
+.terminal-content.theme-light .prompt {
+  color: #333;
+}
 </style>

@@ -38,6 +38,7 @@
 
       <TerminalResizeHandles
         :is-maximized="isMaximized"
+        :theme="theme"
         @start-resize="startResize"
       />
     </div>

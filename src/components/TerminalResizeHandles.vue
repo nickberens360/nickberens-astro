@@ -5,7 +5,7 @@
     <div class="resize-handle resize-s" @pointerdown="$emit('startResize', 's', $event)"></div>
     <div class="resize-handle resize-w" @pointerdown="$emit('startResize', 'w', $event)"></div>
     <div class="resize-handle resize-ne" @pointerdown="$emit('startResize', 'ne', $event)"></div>
-    <div class="resize-handle resize-se" @pointerdown="$emit('startResize', 'se', $event)"></div>
+    <div class="resize-handle resize-se" :class="`theme-${theme}`" @pointerdown="$emit('startResize', 'se', $event)"></div>
     <div class="resize-handle resize-sw" @pointerdown="$emit('startResize', 'sw', $event)"></div>
     <div class="resize-handle resize-nw" @pointerdown="$emit('startResize', 'nw', $event)"></div>
   </template>
@@ -18,6 +18,10 @@ export default {
     isMaximized: {
       type: Boolean,
       default: false
+    },
+    theme: {
+      type: String,
+      default: 'dark'
     }
   },
   emits: ['startResize']
@@ -68,5 +72,10 @@ export default {
   height: 9px;
   border-right: 2px solid rgba(255, 255, 255, 0.5);
   border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.resize-se.theme-light::before {
+  border-right: 2px solid rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
 }
 </style>

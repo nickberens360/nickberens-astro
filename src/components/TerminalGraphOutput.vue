@@ -321,10 +321,16 @@ export default {
 }
 
 .theme-light .terminal-link {
-  color: #2980b9;
+  color: blue;
 }
 
 .theme-light .terminal-link:hover {
-  color: #1c6ea4;
+  color: blueviolet;
+}
+.theme-light .latest-commit-hash {
+  color: orange; /* Lighter yellow for light theme */
+}
+.theme-light .latest-commit-message {
+  color: #333333; /* Darker text for light theme */
 }
 </style>

@@ -14,9 +14,15 @@ import {
 
 export function useTerminalState(props, terminalInput, terminalOutput) {
   // --- REACTIVE STATE ---
-  const theme = ref('dark');
+  const theme = ref(localStorage.getItem('terminalTheme') || 'dark');
   const inputValue = ref('');
   const isMounted = ref(false);
+
+  // --- THEME MANAGEMENT ---
+  const setTheme = (newTheme) => {
+    theme.value = newTheme;
+    localStorage.setItem('terminalTheme', newTheme);
+  };
 
   // --- STORE SUBSCRIPTIONS ---
   const isMinimized = useStore(isTerminalMinimizedStore);
@@ -117,7 +123,7 @@ export function useTerminalState(props, terminalInput, terminalOutput) {
       }
     ]);
 
-    handleCommand(command, commandId, theme);
+    handleCommand(command, commandId, { value: theme.value, setTheme });
     scrollToBottom();
   };
 
@@ -221,6 +227,7 @@ export function useTerminalState(props, terminalInput, terminalOutput) {
     activateTerminal,
     deactivateTerminal,
     initialize,
+    setTheme,
 
     // Store cleanup reference
     cleanup

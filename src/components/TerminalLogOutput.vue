@@ -200,15 +200,15 @@ export default {
 }
 
 .theme-light .commit-hash {
-  color: #f39c12;
+  color: orange;
 }
 
 .theme-light .terminal-link {
-  color: #2980b9;
+  color: blue;
 }
 
 .theme-light .terminal-link:hover {
-  color: #1c6ea4;
+  color: blueviolet;
 }
 
 .theme-light .commit-history-note {
@@ -218,4 +218,8 @@ export default {
 .theme-light .commit-history-error-message {
   color: #666666;
 }
+.theme-light .commit-message {
+  color: #333;
+}
+
 </style>

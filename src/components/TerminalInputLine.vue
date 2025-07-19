@@ -1,5 +1,5 @@
 <template>
-  <div class="terminal-input-line">
+  <div class="terminal-input-line" :class="`theme-${theme}`">
     <span class="prompt mr-2">~$</span>
     <input
       type="text"
@@ -22,6 +22,10 @@ export default {
     inputValue: {
       type: String,
       default: ''
+    },
+    theme: {
+      type: String,
+      default: 'dark'
     }
   },
   emits: ['update:inputValue', 'submit'],
@@ -60,5 +64,19 @@ export default {
 
 .terminal-input::selection {
   background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Light theme styles */
+.terminal-input-line.theme-light .prompt,
+.terminal-input-line.theme-light .terminal-input {
+  color: #333;
+}
+
+.terminal-input-line.theme-light .terminal-input {
+  caret-color: #333;
+}
+
+.terminal-input-line.theme-light .terminal-input::selection {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 </style>

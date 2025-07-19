@@ -119,8 +119,9 @@ export function useTerminalCommands(terminalOutput, isMounted) {
     },
 
     theme: (args, commandId, theme) => {
-      theme.value = theme.value === 'dark' ? 'light' : 'dark';
-      updateHistoryItem(commandId, { textOutput: [`Theme switched to ${theme.value} mode`] });
+      const newTheme = theme.value === 'dark' ? 'light' : 'dark';
+      theme.setTheme(newTheme);
+      updateHistoryItem(commandId, { textOutput: [`Theme switched to ${newTheme} mode`] });
     },
 
     version: (args, commandId) => {

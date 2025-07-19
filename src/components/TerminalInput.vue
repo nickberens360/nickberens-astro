@@ -1,165 +1,82 @@
 <template>
-  <div class="terminal-input-container d-flex align-center">
-    <span class="mr-2">~$</span>
-    <div
-      :contenteditable="true"
-      @input="updateValue"
-      @keydown="handleKeydown"
-      @focus="onFocus"
-      @blur="isFocused = false"
-      @click="onFocus"
-      @mouseup="onFocus"
+  <div class="terminal-input-line" :class="`theme-${theme}`">
+    <span class="prompt mr-2">~$</span>
+    <input
+      type="text"
       class="terminal-input"
-      ref="editableDiv"
-      :data-placeholder="placeholder"
-      :class="{ 'empty': isEmpty, 'focused': isFocused }"
-    ></div>
+      :value="inputValue"
+      @input="$emit('update:inputValue', $event.target.value)"
+      @keydown.enter="$emit('submit')"
+      ref="terminalInput"
+      placeholder=""
+      autocomplete="off"
+      autofocus
+    />
   </div>
 </template>
 
 <script>
-import { useStore } from '@nanostores/vue';
-import { terminalInputValue } from '../stores/ui';
-
 export default {
-  name: 'TerminalInput',
+  name: 'TerminalInputLine',
   props: {
-    placeholder: {
+    inputValue: {
       type: String,
       default: ''
     },
-    submitOnEnter: {
-      type: Boolean,
-      default: false
+    theme: {
+      type: String,
+      default: 'dark'
     }
   },
-  setup() {
-    const terminalInputValueStore = useStore(terminalInputValue);
-    return {
-      inputValue: terminalInputValueStore,
-    };
-  },
-  data() {
-    return {
-      isFocused: true
-    };
-  },
-  computed: {
-    isEmpty() {
-      return !this.inputValue;
-    }
-  },
-  mounted() {
-    const el = this.$refs.editableDiv;
-    el.textContent = this.inputValue;
-    el.focus();
-    this.setCaretToEnd(el);
-  },
-  watch: {
-    inputValue(newValue) {
-      const el = this.$refs.editableDiv;
-      if (el.textContent !== newValue) {
-        el.textContent = newValue;
-      }
-    }
-  },
+  emits: ['update:inputValue', 'submit'],
   methods: {
-    updateValue(event) {
-      terminalInputValue.set(event.target.textContent);
-    },
-    handleKeydown(event) {
-      if (event.key === 'Enter' && this.submitOnEnter) {
-        event.preventDefault();
-        this.$emit('submit', this.$refs.editableDiv.textContent);
-      }
-    },
     focus() {
-      const el = this.$refs.editableDiv;
-      el.focus();
-      this.setCaretToEnd(el);
-    },
-    clear() {
-      terminalInputValue.set('');
-      this.setCaretToEnd(this.$refs.editableDiv);
-    },
-    onFocus() {
-      this.isFocused = true;
-      setTimeout(() => {
-        this.setCaretToEnd(this.$refs.editableDiv);
-      }, 0);
-    },
-    setCaretToEnd(el) {
-      if (!el) return;
-      const range = document.createRange();
-      const selection = window.getSelection();
-      if (el.childNodes.length === 0) {
-        el.appendChild(document.createTextNode(''));
-      }
-      range.selectNodeContents(el);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
+      this.$refs.terminalInput?.focus();
     }
   }
 };
 </script>
 
 <style scoped>
-.terminal-input {
+.terminal-input-line {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: relative;
+  align-items: center;
+}
+
+.prompt {
+  color: #f8f8f8;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.terminal-input {
   background: transparent;
-  caret-color: transparent;
-  outline: none;
-  font-weight: bold;
-  white-space: pre-wrap;
-  height: 20px;
-}
-.terminal-input::selection {
-  background-color: black;
-  color: white;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.terminal-input:after {
-  content: '';
-  position: absolute;
-  display: inline-block;
-  z-index: -1;
-  top: 0;
-  right: -10px;
-  height: 100%;
-  width: 10px;
-  border: 1px solid black;
-  pointer-events: none;
-  animation: unset;
-}
-
-.focused.terminal-input:after {
-  animation: blink 1s infinite;
   border: none;
-  background-color: #000000;
-}
-
-.terminal-input:focus {
+  color: #f8f8f8;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: bold;
   outline: none;
+  flex-grow: 1;
+  caret-color: #f8f8f8;
 }
 
-.terminal-input.focused {
-  border-color: #00ff00;
+.terminal-input::selection {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
-.terminal-input.empty:before {
-  content: attr(data-placeholder);
-  color: #666;
-  opacity: 0.6;
-  position: absolute;
-  pointer-events: none;
+/* Theme styles */
+.terminal-input-line.theme-light .prompt,
+.terminal-input-line.theme-light .terminal-input {
+  color: #333;
+}
+
+.terminal-input-line.theme-light .terminal-input {
+  caret-color: #333;
+}
+
+.terminal-input-line.theme-light .terminal-input::selection {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 </style>
