@@ -18,238 +18,197 @@ import eatUsForFun from '../assets/images/eat-us-for-fun.jpg';
 import dont from '../assets/images/dont.jpg';
 import chair from '../assets/images/chair.jpg';
 import { Image } from 'astro:assets';
+
+const illustrations = [
+	{
+		dataSectionColor: '#cde3ff',
+		backgroundColor: '#cde3ff',
+		dataSectionTheme: 'light',
+		imgSrc: dumbDoug,
+		imgAlt: 'Kinda Dumb Doug Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true,
+		class: 'pt-16'
+	},
+	{
+		dataSectionColor: '#dcb1bb',
+		backgroundColor: '#dcb1bb',
+		dataSectionTheme: 'light',
+		imgSrc: flyingRobot,
+		imgAlt: 'Robot Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#97ddff',
+		backgroundColor: '#97ddff',
+		dataSectionTheme: 'light',
+		imgSrc: hazHug,
+		imgAlt: 'Haz Hug Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#cdcdcd',
+		backgroundColor: '#cdcdcd',
+		dataSectionTheme: 'light',
+		imgSrc: hideOut,
+		imgAlt: 'Hideout Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#ccebfe',
+		backgroundColor: '#ccebfe',
+		dataSectionTheme: 'light',
+		imgSrc: snakeFlying,
+		imgAlt: 'Snake Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#d4d4d4',
+		backgroundColor: '#d4d4d4',
+		dataSectionTheme: 'light',
+		imgSrc: carFlower,
+		imgAlt: 'Friend With Flower Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#c9d5fe',
+		backgroundColor: '#c9d5fe',
+		dataSectionTheme: 'light',
+		imgSrc: dougFightsBack,
+		imgAlt: 'Doug Fights Back Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#a1a1a1',
+		backgroundColor: '#a1a1a1',
+		dataSectionTheme: 'light',
+		imgSrc: poolShark,
+		imgAlt: 'Pool Shark Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#baeeff',
+		backgroundColor: '#baeeff',
+		dataSectionTheme: 'light',
+		imgSrc: vulture,
+		imgAlt: 'Vulture Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#e5e5e5',
+		backgroundColor: '#e5e5e5',
+		dataSectionTheme: 'light',
+		imgSrc: dopeGoose,
+		imgAlt: 'Dope Goose Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#a3f6ff',
+		backgroundColor: '#a3f6ff',
+		dataSectionTheme: 'light',
+		imgSrc: smalltime,
+		imgAlt: 'Smalltime Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#fff',
+		backgroundColor: '#fff',
+		dataSectionTheme: 'light',
+		imgSrc: winger,
+		imgAlt: 'Smalltime Wing Face Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#bfe4fe',
+		backgroundColor: '#bfe4fe',
+		dataSectionTheme: 'light',
+		imgSrc: eatUsForFun,
+		imgAlt: 'Eat Us For Fun Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#000',
+		dataSectionTheme: 'dark',
+		dataFooterColor: '#000',
+		backgroundColor: '#baeeff',
+		imgSrc: dont,
+		imgAlt: "Don't Illustration",
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#adbee3',
+		dataSectionTheme: 'light',
+		dataFooterColor: '#adbee3',
+		backgroundColor: '#baeeff',
+		imgSrc: chair,
+		imgAlt: 'Chair Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true
+	},
+	{
+		dataSectionColor: '#baeeff',
+		dataSectionTheme: 'light',
+		dataFooterColor: '#c07c69',
+		backgroundColor: '#baeeff',
+		imgSrc: snakeHug,
+		imgAlt: 'Snake Hug Illustration',
+		imgStyle: 'max-width: 100%; height: auto;',
+		fullWidth: true,
+		noPadding: true,
+		class: 'pt-16'
+	},
+]
+
 ---
 
 <Layout title="Illustrations" description="Illustrations - Nick Berens">
 
 
-	<PageSection
-		data-section-color="#cde3ff"
-		background-color="#cde3ff"
-		data-section-theme="light"
-		full-width
-		no-padding
-		class="pt-16"
-	>
-		<Image
-			src={dumbDoug}
-			alt="Kinda Dumb Doug Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#dcb1bb"
-		background-color="#dcb1bb"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={flyingRobot}
-			alt="Robot Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-
-	<PageSection
-		data-section-color="#97ddff"
-		background-color="#97ddff"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={hazHug}
-			alt="Haz Hug Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-
-
-
-
-	<PageSection
-		data-section-color="#cdcdcd"
-		background-color="#cdcdcd"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={hideOut}
-			alt="Hideout Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#ccebfe"
-		background-color="#ccebfe"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={snakeFlying}
-			alt="Snake Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#d4d4d4"
-		background-color="#d4d4d4"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={carFlower}
-			alt="Friend With Flower Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-
-	<PageSection
-		data-section-color="#c9d5fe"
-		background-color="#c9d5fe"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={dougFightsBack}
-			alt="Doug Fights Back Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-
-	<PageSection
-		data-section-color="#a1a1a1"
-		background-color="#a1a1a1"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={poolShark}
-			alt="Pool Shark Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#baeeff"
-		background-color="#baeeff"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={vulture}
-			alt="Vulture Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#e5e5e5"
-		background-color="#e5e5e5"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={dopeGoose}
-			alt="Dope Goose Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-
-
-
-
-
-
-	<PageSection
-		data-section-color="#a3f6ff"
-		background-color="#a3f6ff"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={smalltime}
-			alt="Smalltime Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#fff"
-		background-color="#fff"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={winger}
-			alt="Smalltime Wing Face Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#bfe4fe"
-		background-color="#bfe4fe"
-		data-section-theme="light"
-		full-width
-		no-padding
-	>
-		<Image
-			src={eatUsForFun}
-			alt="Eat Us For Fun Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#000"
-		data-section-theme="dark"
-		data-footer-color="#000"
-		background-color="#baeeff"
-		full-width
-		no-padding
-	>
-		<Image
-			src={dont}
-			alt="Don't Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-	<PageSection
-		data-section-color="#adbee3"
-		data-section-theme="light"
-		data-footer-color="#adbee3"
-		background-color="#baeeff"
-		full-width
-		no-padding
-	>
-		<Image
-			src={chair}
-			alt="Chair Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
-
-	<PageSection
-		data-section-color="#baeeff"
-		data-section-theme="light"
-		data-footer-color="#c07c69"
-		background-color="#baeeff"
-		full-width
-		no-padding
-		class="pt-16"
-	>
-		<Image
-			src={snakeHug}
-			alt="Snake Hug Illustration"
-			style="max-width: 100%; height: auto;"
-		/>
-	</PageSection>
+	{illustrations.map((item) => (
+		<PageSection
+			data-section-color={item.dataSectionColor}
+			background-color={item.backgroundColor}
+			data-section-theme={item.dataSectionTheme}
+			{...(item.dataFooterColor && { 'data-footer-color': item.dataFooterColor })}
+			full-width={item.fullWidth}
+			no-padding={item.noPadding}
+			class={item.class}
+		>
+			<Image
+				src={item.imgSrc}
+				alt={item.imgAlt}
+				style={item.imgStyle}
+			/>
+		</PageSection>
+	))}
 
 
 
