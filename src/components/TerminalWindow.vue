@@ -25,23 +25,14 @@
         @stopDrag="stopDrag"
       />
 
-      <div
-        class="terminal-content"
-        @click="focusInput"
-      >
-        <div
-          class="terminal-output"
-          ref="terminalOutput"
-        >
+      <div class="terminal-content" @click="focusInput">
+        <div class="terminal-output" ref="terminalOutput">
           <div
             v-for="(item, index) in commandHistory"
             :key="item.id"
             class="command-history-item"
           >
-            <div
-              v-if="item.command"
-              class="command-input"
-            >
+            <div v-if="item.command" class="command-input">
               <span class="prompt mr-2">~$</span>
               <span>{{ item.command }}</span>
             </div>
@@ -59,8 +50,7 @@
                     :href="line.url"
                     class="terminal-link"
                     @click="unmaximizeTerminal"
-                  >{{ line.text }}
-                  </a>
+                  >{{ line.text }}</a>
                   {{ line.suffix || '' }}
                 </template>
                 <terminal-graph-output
@@ -85,10 +75,7 @@
                 :theme="theme"
               />
 
-              <div
-                v-if="item.isLoading"
-                class="loading-container"
-              >
+              <div v-if="item.isLoading" class="loading-container">
                 <div class="progress-bar-container">
                   <div
                     class="progress-bar"
@@ -129,10 +116,9 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue';
-import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../utils/gitInfo.js';
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
+import { useStore } from '@nanostores/vue';
 import {
-  navItems,
   commandHistoryStore,
   nextCommandIdStore,
   terminalPositionStore,
@@ -143,11 +129,11 @@ import {
   isTerminalMaximizedStore,
   previousTerminalStateStore
 } from '../stores/ui.js';
-import { useStore } from '@nanostores/vue';
 import TerminalControlBar from './TerminalControlBar.vue';
-import TerminalGraphOutput, { processCodeFrequencyData } from './TerminalGraphOutput.vue';
-import TerminalLogOutput, { processCommitHistory } from './TerminalLogOutput.vue';
-import { DEFAULT_TERMINAL, MAXIMIZED_TERMINAL } from '../config/terminalConfig.js'; // Adjust path if needed
+import TerminalGraphOutput from './TerminalGraphOutput.vue';
+import TerminalLogOutput from './TerminalLogOutput.vue';
+import { useTerminalCommands } from '../composables/useTerminalCommands.js';
+import { useTerminalResize } from '../composables/useTerminalResize.js';
 
 export default {
   name: 'TerminalWindow',
@@ -170,23 +156,18 @@ export default {
       default: false,
     }
   },
-  setup(props, { emit }) {
-    // --- STATE AND STORE HOOKS ---
-    const isMinimized = useStore(isTerminalMinimizedStore);
-    const isTerminalHidden = useStore(isTerminalHiddenStore);
+  setup(props) {
+    // --- REFS AND REACTIVE STATE ---
     const theme = ref('dark');
     const inputValue = ref('');
     const terminalWindow = ref(null);
     const terminalInput = ref(null);
     const terminalOutput = ref(null);
-    // Add a flag to track component mounted state
     const isMounted = ref(false);
 
-    // Simplified computed property that only relies on the store value
-    const isHidden = computed(() => {
-      return isTerminalHidden.value;
-    });
-
+    // --- STORE SUBSCRIPTIONS ---
+    const isMinimized = useStore(isTerminalMinimizedStore);
+    const isTerminalHidden = useStore(isTerminalHiddenStore);
     const position = useStore(terminalPositionStore);
     const size = useStore(terminalSizeStore);
     const commandHistory = useStore(commandHistoryStore);
@@ -194,374 +175,32 @@ export default {
     const isMaximized = useStore(isTerminalMaximizedStore);
     const previousTerminalState = useStore(previousTerminalStateStore);
 
-    // --- DRAG & RESIZE LOGIC ---
-    const isDragging = ref(false);
-    const dragOffset = reactive({ x: 0, y: 0 });
-    const isResizing = ref(false);
-    const resizeDirection = ref('');
-    const resizeStartPos = reactive({ x: 0, y: 0, startX: 0, startY: 0 });
-    const resizeStartSize = reactive({ width: 0, height: 0 });
+    const isHidden = computed(() => isTerminalHidden.value);
 
-    const terminalStyle = computed(() => {
-      if (isMaximized.value) {
-        const margin = MAXIMIZED_TERMINAL.margin;
-        return {
-          top: `${margin}px`,
-          left: `${margin}px`,
-          right: `${margin}px`,
-          bottom: `${margin}px`,
-          width: `calc(100% - ${margin * 2}px)`,
-          height: `calc(100% - ${margin * 2}px)`
-        };
-      }
+    // --- COMPOSABLES ---
+    const { handleCommand, unmaximizeTerminal } = useTerminalCommands(terminalOutput, isMounted);
 
-      return {
-        top: `${position.value?.y || 100}px`,
-        left: `${position.value?.x || 100}px`,
-        width: `${size.value?.width || 600}px`,
-        height: `${size.value?.height || 400}px`,
-      };
-    });
+    const {
+      terminalStyle,
+      startDrag,
+      stopDrag,
+      startResize,
+      stopResize,
+      toggleMaximize,
+      resizeDirection
+    } = useTerminalResize(
+      terminalWindow,
+      position,
+      size,
+      isMaximized,
+      previousTerminalState
+    );
 
-    const startDrag = (event) => {
-      if (terminalWindow.value && event.isPrimary) {
-        isDragging.value = true;
-        dragOffset.x = event.clientX - position.value.x;
-        dragOffset.y = event.clientY - position.value.y;
-        document.addEventListener('pointermove', onDrag);
-        document.addEventListener('pointerup', stopDrag);
-        event.preventDefault(); // Prevent scrolling on touch devices
-      }
-    };
-    const onDrag = (event) => {
-      if (isDragging.value) {
-        terminalPositionStore.set({ x: event.clientX - dragOffset.x, y: event.clientY - dragOffset.y });
-      }
-    };
-    const stopDrag = () => {
-      isDragging.value = false;
-      document.removeEventListener('pointermove', onDrag);
-      document.removeEventListener('pointerup', stopDrag);
-    };
-
-    const startResize = (direction, event) => {
-      if (event.isPrimary) {
-        isResizing.value = true;
-        resizeDirection.value = direction;
-        resizeStartPos.x = event.clientX;
-        resizeStartPos.y = event.clientY;
-        resizeStartSize.width = size.value.width;
-        resizeStartSize.height = size.value.height;
-
-        // Also store the starting position
-        if (position.value) {
-          resizeStartPos.startX = position.value.x;
-          resizeStartPos.startY = position.value.y;
-        }
-
-        document.addEventListener('pointermove', onResize);
-        document.addEventListener('pointerup', stopResize);
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    const onResize = (event) => {
-      if (isResizing.value) {
-        const deltaX = event.clientX - resizeStartPos.x;
-        const deltaY = event.clientY - resizeStartPos.y;
-
-        let newWidth = resizeStartSize.width;
-        let newHeight = resizeStartSize.height;
-        let newX = position.value.x;
-        let newY = position.value.y;
-
-        // Handle different resize directions
-        const direction = resizeDirection.value;
-
-        // Handle horizontal resizing
-        if (direction.includes('e')) {
-          newWidth = Math.max(200, resizeStartSize.width + deltaX);
-        } else if (direction.includes('w')) {
-          const widthChange = Math.min(deltaX, resizeStartSize.width - 200);
-          newWidth = resizeStartSize.width - widthChange;
-          newX = resizeStartPos.startX + widthChange;
-        }
-
-        // Handle vertical resizing
-        if (direction.includes('s')) {
-          newHeight = Math.max(74, resizeStartSize.height + deltaY);
-        } else if (direction.includes('n')) {
-          const heightChange = Math.min(deltaY, resizeStartSize.height - 74);
-          newHeight = resizeStartSize.height - heightChange;
-          newY = resizeStartPos.startY + heightChange;
-        }
-
-        // Update position and size
-        terminalPositionStore.set({ x: newX, y: newY });
-        terminalSizeStore.set({ width: newWidth, height: newHeight });
-      }
-    };
-    const stopResize = () => {
-      isResizing.value = false;
-      resizeDirection.value = '';
-      document.removeEventListener('pointermove', onResize);
-      document.removeEventListener('pointerup', stopResize);
-    };
-
-    // Toggle maximize function
-    const toggleMaximize = () => {
-      if (!isMaximized.value) {
-        // Save current position and size before maximizing
-        previousTerminalStateStore.set({
-          position: { ...position.value },
-          size: { ...size.value }
-        });
-        isTerminalMaximizedStore.set(true);
-        // Set body overflow to hidden when maximized
-        document.body.style.overflow = 'hidden';
-      } else {
-        // Restore previous position and size
-        if (previousTerminalState.value.position && previousTerminalState.value.size) {
-          terminalPositionStore.set(previousTerminalState.value.position);
-          terminalSizeStore.set(previousTerminalState.value.size);
-        }
-        isTerminalMaximizedStore.set(false);
-        // Reset body overflow when un-maximized
-        document.body.style.overflow = '';
-      }
-    };
-
-    // Function to unmaximize the terminal
-    const unmaximizeTerminal = () => {
-      if (isMaximized.value) {
-        isTerminalMaximizedStore.set(false);
-        // Reset body overflow when un-maximized
-        document.body.style.overflow = '';
-
-        // Restore previous position and size if available
-        if (previousTerminalState.value.position && previousTerminalState.value.size) {
-          terminalPositionStore.set(previousTerminalState.value.position);
-          terminalSizeStore.set(previousTerminalState.value.size);
-        }
-      }
-    };
-
-    // --- STATE UPDATE HELPERS ---
-    const updateHistoryItem = (commandId, updates) => {
-      const history = commandHistory.value;
-      const index = history.findIndex(item => item.id === commandId);
-      if (index === -1) return;
-
-      const newHistory = [...history];
-      const currentItem = newHistory[index];
-
-      newHistory[index] = {
-        ...currentItem,
-        ...updates,
-        textOutput: [...currentItem.textOutput, ...(updates.textOutput || [])],
-      };
-      commandHistoryStore.set(newHistory);
-    };
-
-    const ensureMinLoadingTime = async (promise, commandId, minTime = 1000) => {
-      // Initialize loading state
-      updateHistoryItem(commandId, { isLoading: true, loadingProgress: 0 });
-      const loadingStartTime = Date.now();
-
-      // Create a progress update function that runs in the background
-      const updateProgress = async () => {
-        let currentProgress = 0;
-
-        while (currentProgress < 90 && isMounted.value) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Check if the command still exists in history (could be cleared)
-          const historyItem = commandHistory.value.find(c => c.id === commandId);
-          if (!historyItem) break;
-
-          // Update progress with a small random increment
-          currentProgress = historyItem.loadingProgress || 0;
-          const newProgress = currentProgress + Math.random() * 3 + 1;
-          // Check if component is still mounted before updating state
-          if (isMounted.value) {
-            updateHistoryItem(commandId, { loadingProgress: Math.min(newProgress, 90) });
-          }
-        }
-      };
-
-      // Start the progress updates and the main promise in parallel
-      const progressPromise = updateProgress();
-      const result = await promise;
-
-      // Calculate elapsed time
-      const elapsedTime = Date.now() - loadingStartTime;
-
-      // Ensure minimum loading time
-      if (elapsedTime < minTime) {
-        await new Promise(resolve => setTimeout(resolve, minTime - elapsedTime));
-      }
-
-      // Complete the loading sequence - check if component is still mounted
-      if (isMounted.value) {
-        updateHistoryItem(commandId, { loadingProgress: 100 });
-        await new Promise(resolve => setTimeout(resolve, 200));
-        updateHistoryItem(commandId, { isLoading: false });
-      }
-
-      return result;
-    };
-
-    // --- ASYNC COMMAND ABSTRACTION ---
-    const createAsyncGitHandler = (commandId, fetchFn, processFn, initialText) => {
-      updateHistoryItem(commandId, { textOutput: [initialText] });
-      ensureMinLoadingTime(fetchFn(), commandId)
-        .then(data => {
-          // Check if component is still mounted before updating state
-          if (isMounted.value) {
-            updateHistoryItem(commandId, processFn(data));
-            nextTick(() => {
-              if (terminalOutput.value && isMounted.value) {
-                terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-              }
-            });
-          }
-        })
-        .catch(error => {
-          // Check if component is still mounted before updating state
-          if (isMounted.value) {
-            updateHistoryItem(commandId, { textOutput: [`Error retrieving data: ${error.message}`] });
-          }
-        });
-    };
-
-    // --- COMMAND MAP ---
-    const commands = {
-      clear: () => {
-        commandHistoryStore.set([]);
-      },
-      help: (args, commandId) => {
-        updateHistoryItem(commandId, {
-          textOutput: DEFAULT_TERMINAL.helpOutput
-        });
-      },
-      theme: (args, commandId) => {
-        theme.value = theme.value === 'dark' ? 'light' : 'dark';
-        updateHistoryItem(commandId, { textOutput: [`Theme switched to ${theme.value} mode`] });
-      },
-      version: (args, commandId) => {
-        updateHistoryItem(commandId, { textOutput: ['Terminal v1.0.0', 'Created by nickberens'] });
-      },
-      ls: (args, commandId) => {
-        const links = navItems.get().map(item => ({ type: 'link', prefix: '- ', url: item.url, text: item.text }));
-        updateHistoryItem(commandId, { textOutput: ['Navigation links:', ...links] });
-      },
-      cd: (args, commandId) => {
-        if (!args.length) {
-          updateHistoryItem(commandId, {
-            textOutput: ['Usage: cd [nav item name]', 'Available nav items:',
-              ...navItems.get().map(item => `- ${item.text}`),
-              '- / or home: Navigate to the index page'
-            ]
-          });
-          return;
-        }
-
-        // Check if terminal is maximized and set it to false
-        if (isMaximized.value) {
-          isTerminalMaximizedStore.set(false);
-          // Reset body overflow when un-maximized
-          document.body.style.overflow = '';
-
-          // Restore previous position and size if available
-          if (previousTerminalState.value.position && previousTerminalState.value.size) {
-            terminalPositionStore.set(previousTerminalState.value.position);
-            terminalSizeStore.set(previousTerminalState.value.size);
-          }
-        }
-
-        const targetName = args.join(' ').toLowerCase();
-
-        // Special case for home or root directory
-        if (targetName === '/' || targetName === 'home' || targetName === 'hoem') {
-          updateHistoryItem(commandId, {
-            textOutput: ['Navigating to home page...']
-          });
-
-          // Use setTimeout to allow the terminal to update before navigation
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 500);
-          return;
-        }
-
-        const navItemsList = navItems.get();
-        const matchedItem = navItemsList.find(item =>
-          item.text.toLowerCase() === targetName
-        );
-
-        if (matchedItem) {
-          updateHistoryItem(commandId, {
-            textOutput: [`Navigating to ${matchedItem.text}...`]
-          });
-
-          // Use setTimeout to allow the terminal to update before navigation
-          setTimeout(() => {
-            if (matchedItem.isExternal) {
-              window.open(matchedItem.url, '_blank', 'noopener,noreferrer');
-            } else {
-              window.location.href = matchedItem.url;
-            }
-          }, 500);
-        } else {
-          updateHistoryItem(commandId, {
-            textOutput: [
-              `Nav item not found: "${args.join(' ')}"`,
-              'Available nav items:',
-              ...navItemsList.map(item => `- ${item.text}`),
-              '- / or home: Navigate to the index page'
-            ]
-          });
-        }
-      },
-      git: (args, commandId) => {
-        const gitAction = {
-          log: () => createAsyncGitHandler(commandId, getCommitHistory, data => ({ commitHistory: processCommitHistory(data) }), 'Fetching commit history...'),
-          graph: () => createAsyncGitHandler(commandId, getCodeFrequency, data => ({
-            graphData: processCodeFrequencyData(data),
-            textOutput: ['Code Frequency (additions/deletions over time):']
-          }), 'Fetching code frequency data...'),
-          'latest-commit': () => createAsyncGitHandler(commandId, getLatestCommitMessage, data => ({
-            commitData: {
-              ...data,
-              isVisible: true
-            }
-          }), 'Fetching latest commit...'),
-          default: () => updateHistoryItem(commandId, { textOutput: ['Usage: git [log|graph|latest-commit]'] })
-        };
-        (gitAction[args[0]?.toLowerCase()] || gitAction.default)();
-      },
-      'bust-cache': () => {
-        localStorage.clear();
-        window.location.reload();
-      },
-      default: (baseCommand, commandId) => {
-        updateHistoryItem(commandId, { textOutput: [`Command not found: ${baseCommand}`] });
-      }
-    };
-
-    // --- CORE LOGIC ---
+    // --- CORE FUNCTIONALITY ---
     const focusInput = (event) => {
       if (terminalInput.value && (!event || event.target.tagName !== 'A')) {
         terminalInput.value.focus();
       }
-    };
-
-    const handleCommand = (command, commandId) => {
-      const parts = command.split(' ');
-      const baseCommand = parts[0].toLowerCase();
-      const args = parts.slice(1);
-      const commandFn = commands[baseCommand] || (() => commands.default(baseCommand, commandId));
-      commandFn(args, commandId);
     };
 
     const submitCommand = () => {
@@ -587,7 +226,7 @@ export default {
         }
       ]);
 
-      handleCommand(command, commandId);
+      handleCommand(command, commandId, theme);
 
       nextTick(() => {
         if (terminalOutput.value) {
@@ -596,7 +235,7 @@ export default {
       });
     };
 
-    // --- TERMINAL ACTIVE STATE HANDLERS ---
+    // --- EVENT HANDLERS ---
     const activateTerminal = () => {
       isTerminalActive.set(true);
     };
@@ -605,127 +244,128 @@ export default {
       isTerminalActive.set(false);
     };
 
-    // Handle keyboard events
     const handleKeyDown = (event) => {
-      // Check if the escape key was pressed and the terminal is maximized
       if (event.key === 'Escape' && isMaximized.value) {
         toggleMaximize();
       }
     };
 
-    // --- LIFECYCLE HOOKS ---
+    const handleOutsideClick = (event) => {
+      if (terminalWindow.value && !terminalWindow.value.contains(event.target) && !isMinimized.value) {
+        deactivateTerminal();
+      }
+    };
+
+    // --- LIFECYCLE ---
     onMounted(() => {
-      // Set mounted flag to true
       isMounted.value = true;
 
-      // Check if we're on the nick-ai route
+      // Handle nick-ai route special case
       const isNickAiRoute = window.location.pathname.includes('/nick-ai');
-
-      // If we're on the nick-ai route, always set the store to hidden initially
       if (isNickAiRoute && props.hideTerminal) {
         isTerminalHiddenStore.set(true);
-      }
-      // Only set the initial store value if it hasn't been explicitly set by the user and we're not on nick-ai route
-      else if (typeof isTerminalHidden.value !== 'boolean') {
+      } else if (typeof isTerminalHidden.value !== 'boolean') {
         isTerminalHiddenStore.set(props.hideTerminal);
       }
 
-      // Check if a position has been saved in localStorage. If not, set our default.
+      // Set initial position if not saved
       const savedPosition = localStorage.getItem('terminalPosition');
       if (!savedPosition) {
         const margin = 20;
-        const terminalHeight = size.value.height; // Use the current height from the store
+        const terminalHeight = size.value.height;
         const newY = window.innerHeight - terminalHeight - margin;
         terminalPositionStore.set({ x: margin, y: newY });
       }
 
-      // Add initial output if history is empty
+      // Set initial output if history is empty
       if (props.initialOutput && props.initialOutput.length > 0 && commandHistory.value.length === 0) {
         commandHistoryStore.set([{
           id: 1,
-          timestamp: Date.now(), command: '', textOutput: [...props.initialOutput],
-          isLoading: false, loadingProgress: 0, graphData: null, commitData: null, commitHistory: null
+          timestamp: Date.now(),
+          command: '',
+          textOutput: [...props.initialOutput],
+          isLoading: false,
+          loadingProgress: 0,
+          graphData: null,
+          commitData: null,
+          commitHistory: null
         }]);
         nextCommandIdStore.set(2);
       }
 
+      // Event listeners
       document.addEventListener('pointerup', stopDrag);
       document.addEventListener('pointerup', stopResize);
-      nextTick(focusInput);
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('pointerdown', handleOutsideClick);
 
-      // Add event listeners for terminal focus
       if (terminalWindow.value) {
         terminalWindow.value.addEventListener('pointerdown', activateTerminal);
-        document.addEventListener('pointerdown', (event) => {
-          if (terminalWindow.value && !terminalWindow.value.contains(event.target) && !isMinimized.value) {
-            deactivateTerminal();
-          }
-        });
       }
 
-      // Ensure terminal is scrolled to bottom when mounted
+      // Focus input and scroll to bottom
       nextTick(() => {
+        focusInput();
         if (terminalOutput.value && isMounted.value) {
           terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
         }
       });
-
-      // Add keyboard event listener for escape key
-      document.addEventListener('keydown', handleKeyDown);
     });
 
     onUnmounted(() => {
-      // Set mounted flag to false
       isMounted.value = false;
 
+      // Cleanup event listeners
       document.removeEventListener('pointerup', stopDrag);
-      document.removeEventListener('pointermove', onDrag);
       document.removeEventListener('pointerup', stopResize);
-      document.removeEventListener('pointermove', onResize);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handleOutsideClick);
 
       if (terminalWindow.value) {
         terminalWindow.value.removeEventListener('pointerdown', activateTerminal);
       }
-      document.removeEventListener('pointerdown', deactivateTerminal);
-
-      // Remove keyboard event listener
-      document.removeEventListener('keydown', handleKeyDown);
     });
 
     return {
+      // Reactive state
+      theme,
+      inputValue,
+      isMounted,
+
+      // Refs
+      terminalWindow,
+      terminalInput,
+      terminalOutput,
+
+      // Store values
       isMinimized,
       isHidden,
+      isMaximized,
+      commandHistory,
       isTerminalMinimizedStore,
-      position,
-      size,
+      isTerminalHiddenStore,
+
+      // Computed
       terminalStyle,
+      resizeDirection,
+
+      // Methods
+      focusInput,
+      submitCommand,
+      unmaximizeTerminal,
+
+      // Drag & resize
       startDrag,
       stopDrag,
       startResize,
       stopResize,
-      commandHistory,
-      inputValue,
-      submitCommand,
-      terminalWindow,
-      terminalInput,
-      terminalOutput,
-      focusInput,
-      theme,
-      activateTerminal,
-      deactivateTerminal,
-      isMounted,
-      isTerminalHiddenStore,
-      isMaximized,
       toggleMaximize,
-      unmaximizeTerminal,
-      resizeDirection
     };
   }
 };
 </script>
 
 <style scoped>
-/* All styles remain the same */
 .command-history-item {
   margin-bottom: 8px;
 }
@@ -756,11 +396,6 @@ export default {
   transform: scale(1.05);
 }
 
-.terminal-icon {
-  color: #fff;
-  font-size: 24px;
-}
-
 .terminal-window {
   position: fixed;
   background-color: #1e1e1e;
@@ -778,13 +413,11 @@ export default {
   z-index: 1001 !important;
 }
 
-/* Hide the resize handle when maximized */
 .terminal-maximized .resize-handle {
   display: none;
 }
 
 .terminal-content {
-  /*flex-grow: 1;*/
   display: flex;
   flex-direction: column;
   padding: 10px;
@@ -835,7 +468,8 @@ export default {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
-.theme-light .prompt, .theme-light .terminal-input {
+.theme-light .prompt,
+.theme-light .terminal-input {
   color: #333;
 }
 
@@ -893,7 +527,6 @@ export default {
 @media (max-width: 768px) {
   .terminal-window {
     min-width: 90%;
-    /*min-height: 350px;*/
   }
 }
 
@@ -925,7 +558,7 @@ export default {
   background-color: rgba(0, 0, 0, 0.2);
 }
 
-/* Base resize handle styles */
+/* Resize handle styles */
 .resize-handle {
   position: absolute;
   background: transparent;
@@ -933,13 +566,11 @@ export default {
   z-index: 10;
 }
 
-/* Corner handles */
 .resize-ne, .resize-se, .resize-sw, .resize-nw {
   width: 15px;
   height: 15px;
 }
 
-/* Edge handles */
 .resize-n, .resize-s {
   height: 8px;
   left: 8px;
@@ -952,18 +583,15 @@ export default {
   bottom: 8px;
 }
 
-/* Position the handles */
 .resize-n { top: 0; cursor: ns-resize; }
 .resize-e { right: 0; cursor: ew-resize; }
 .resize-s { bottom: 0; cursor: ns-resize; }
 .resize-w { left: 0; cursor: ew-resize; }
-
 .resize-ne { top: 0; right: 0; cursor: nesw-resize; }
 .resize-se { bottom: 0; right: 0; cursor: nwse-resize; }
 .resize-sw { bottom: 0; left: 0; cursor: nesw-resize; }
 .resize-nw { top: 0; left: 0; cursor: nwse-resize; }
 
-/* Visual indicator for the corner handles */
 .resize-se::before {
   content: "";
   position: absolute;
@@ -980,7 +608,6 @@ export default {
   border-bottom: 2px solid rgba(0, 0, 0, 0.3);
 }
 
-/* Hide all resize handles when maximized */
 .terminal-maximized .resize-handle {
   display: none;
 }
