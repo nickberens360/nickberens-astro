@@ -70,8 +70,21 @@ export function useTerminalState(props, terminalInput, terminalOutput) {
     if (!savedPosition) {
       const margin = 20;
       const terminalHeight = size.value.height;
-      const newY = window.innerHeight - terminalHeight - margin;
-      terminalPositionStore.set({ x: margin, y: newY });
+      const terminalWidth = size.value.width;
+
+      // Calculate initial position (bottom left with margin)
+      let newY = window.innerHeight - terminalHeight - margin;
+      let newX = margin;
+
+      // Ensure X stays within window boundaries
+      newX = Math.max(margin, newX); // Not below left edge
+      newX = Math.min(newX, window.innerWidth - terminalWidth - margin); // Not beyond right edge
+
+      // Ensure Y stays within window boundaries
+      newY = Math.max(margin, newY); // Not above top edge
+      newY = Math.min(newY, window.innerHeight - terminalHeight - margin); // Not below bottom edge
+
+      terminalPositionStore.set({ x: newX, y: newY });
     }
   };
 

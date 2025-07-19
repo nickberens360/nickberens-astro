@@ -54,9 +54,27 @@ export function useTerminalResize(terminalWindow, position, size, isMaximized, p
 
   const onDrag = (event) => {
     if (isDragging.value) {
+      const margin = 20;
+
+      // Calculate new position
+      let newX = event.clientX - dragOffset.x;
+      let newY = event.clientY - dragOffset.y;
+
+      // Get current terminal dimensions
+      const terminalWidth = size.value.width;
+      const terminalHeight = size.value.height;
+
+      // Ensure X stays within window boundaries
+      newX = Math.max(margin, newX); // Not below left edge
+      newX = Math.min(newX, window.innerWidth - terminalWidth - margin); // Not beyond right edge
+
+      // Ensure Y stays within window boundaries
+      newY = Math.max(margin, newY); // Not above top edge
+      newY = Math.min(newY, window.innerHeight - terminalHeight - margin); // Not below bottom edge
+
       terminalPositionStore.set({
-        x: event.clientX - dragOffset.x,
-        y: event.clientY - dragOffset.y
+        x: newX,
+        y: newY
       });
     }
   };

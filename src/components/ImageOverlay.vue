@@ -1,6 +1,6 @@
 <template>
-  <div 
-    v-if="isOpen" 
+  <div
+    v-if="isOpen"
     class="image-overlay"
     @click="closeOverlay"
   >
@@ -79,10 +79,5 @@ export default {
   cursor: pointer;
   transition: background-color 0.2s;
   z-index: 10;
-}
-
-/* Dark theme adjustments */
-:global(.theme-dark) .image-overlay {
-  background-color: rgba(0, 0, 0, 0.95);
 }
 </style>
