@@ -3,6 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import PageSection from '../components/PageSection.vue';
 import ParallaxSection from '../components/ParallaxSection.vue';
 import snakeFlying from '../assets/images/snake-flying.png';
+import snakeForeground from '../assets/images/snake-foreground.png';
+import snakeBackground from '../assets/images/snake-background.png';
 import robotBackground from '../assets/images/robot-background.jpg';
 import robotForeground from '../assets/images/robot-foreground.png';
 import vulture from '../assets/images/vulture.png';
@@ -16,12 +18,26 @@ import hazHug from '../assets/images/haz-hug.png';
 import dumbDoug from '../assets/images/dumb-doug.jpg';
 import poolShark from '../assets/images/pool-shark.jpg';
 import dougFightsBack from '../assets/images/doug-fights-back.jpg';
+import dougFightsBackBackground from '../assets/images/doug-fights-back-background.png';
+import dougFightsBackForeground from '../assets/images/doug-fights-back-foreground.png';
 import eatUsForFun from '../assets/images/eat-us-for-fun.jpg';
 import dont from '../assets/images/dont.jpg';
 import chair from '../assets/images/chair.jpg';
 import { Image } from 'astro:assets';
 
 const illustrations = [
+    {
+        dataSectionColor: '#cde3ff',
+        backgroundColor: '#cde3ff',
+        dataSectionTheme: 'light',
+        imgSrc: dumbDoug,
+        imgAlt: 'Kinda Dumb Doug Illustration',
+        imgStyle: 'max-width: 100%; height: auto;',
+        fullWidth: true,
+        noPadding: true,
+        class: 'pt-16',
+        hasParallax: false
+    },
     {
         dataSectionColor: '#dcb1bb',
         backgroundColor: '#dcb1bb',
@@ -36,18 +52,6 @@ const illustrations = [
         noPadding: true,
         parallaxSpeed: 1.25,
         hasParallax: true,
-    },
-    {
-        dataSectionColor: '#cde3ff',
-        backgroundColor: '#cde3ff',
-        dataSectionTheme: 'light',
-        imgSrc: dumbDoug,
-        imgAlt: 'Kinda Dumb Doug Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
-        fullWidth: true,
-        noPadding: true,
-        class: 'pt-16',
-        hasParallax: false
     },
     {
         dataSectionColor: '#97ddff',
@@ -75,12 +79,16 @@ const illustrations = [
         dataSectionColor: '#ccebfe',
         backgroundColor: '#ccebfe',
         dataSectionTheme: 'light',
-        imgSrc: snakeFlying,
+        hasParallax: true,
+        backgroundImage: snakeBackground,
+        foregroundImage: snakeForeground,
+        foregroundMaxWidth: '1200px',
+        floating: true,
         imgAlt: 'Snake Illustration',
         imgStyle: 'max-width: 100%; height: auto;',
         fullWidth: true,
         noPadding: true,
-        hasParallax: false
+        class: 'px-4',
     },
     {
         dataSectionColor: '#d4d4d4',
@@ -97,12 +105,15 @@ const illustrations = [
         dataSectionColor: '#c9d5fe',
         backgroundColor: '#c9d5fe',
         dataSectionTheme: 'light',
-        imgSrc: dougFightsBack,
+        hasParallax: true,
+        backgroundImage: dougFightsBackBackground,
+        foregroundImage: dougFightsBackForeground,
+        foregroundMaxWidth: '900px',
+        floating: true,
         imgAlt: 'Doug Fights Back Illustration',
         imgStyle: 'max-width: 100%; height: auto;',
         fullWidth: true,
         noPadding: true,
-        hasParallax: false
     },
     {
         dataSectionColor: '#a1a1a1',

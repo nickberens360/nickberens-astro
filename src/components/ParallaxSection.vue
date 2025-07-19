@@ -46,7 +46,7 @@ export default {
     noPadding: { type: Boolean, default: false },
     parallaxSpeed: { type: Number, default: 0.5 },
     foregroundMaxWidth: { type: String, default: '300px' },
-    foregroundMaxWidthMobile: { type: String, default: '200px' },
+    foregroundMaxWidthMobile: { type: String, default: '90%' },
     floatingForeground: { type: Boolean, default: false },
   },
   data() {
