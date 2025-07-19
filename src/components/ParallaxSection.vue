@@ -114,6 +114,7 @@ export default {
   padding: 4rem 1.5rem;
   overflow: hidden;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .parallax-section--full-width {
