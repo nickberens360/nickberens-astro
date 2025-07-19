@@ -10,8 +10,7 @@ import {
   terminalSizeStore
 } from '../stores/ui.js';
 import { DEFAULT_TERMINAL } from '../config/terminalConfig.js';
-import { processCodeFrequencyData } from '../components/TerminalGraphOutput.vue';
-import { processCommitHistory } from '../components/TerminalLogOutput.vue';
+import { processCodeFrequencyData, processCommitHistory } from '../utils/dataProcessing.js';
 
 export function useTerminalCommands(terminalOutput, isMounted) {
   // Helper function to update a specific history item
