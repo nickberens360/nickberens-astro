@@ -109,7 +109,7 @@ export function useTerminalState(props, terminalInput, terminalOutput) {
   const scrollToBottom = () => {
     nextTick(() => {
       if (terminalOutput.value && isMounted.value) {
-        terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+        terminalOutput.value.scrollTo(terminalOutput.value.getScrollHeight());
       }
     });
   };

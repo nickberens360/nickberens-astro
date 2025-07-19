@@ -136,18 +136,14 @@ export default {
       terminalInput.value = {
         focus: () => terminalContent.value?.focusInput()
       };
+      // Create a simpler ref object with methods
       terminalOutput.value = {
-        get scrollTop() {
-          return terminalContent.value?.$refs.terminalOutput?.scrollTop || 0;
+        scrollTo: (position) => {
+          const outputEl = terminalContent.value?.$refs.terminalOutput;
+          if (outputEl) outputEl.scrollTop = position;
         },
-        set scrollTop(value) {
-          if (terminalContent.value?.$refs.terminalOutput) {
-            terminalContent.value.$refs.terminalOutput.scrollTop = value;
-          }
-        },
-        get scrollHeight() {
-          return terminalContent.value?.$refs.terminalOutput?.scrollHeight || 0;
-        }
+        getScrollHeight: () => terminalContent.value?.$refs.terminalOutput?.scrollHeight || 0,
+        getScrollTop: () => terminalContent.value?.$refs.terminalOutput?.scrollTop || 0
       };
 
       terminalState.cleanup.value = terminalState.initialize(
