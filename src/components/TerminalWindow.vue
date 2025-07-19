@@ -248,7 +248,7 @@ export default {
 }
 
 .terminal-window.theme-light {
-  background-color: #f0f0f0;
+  background-color: rgba(240, 240, 240, 0.96);
   color: #333;
 }
 
