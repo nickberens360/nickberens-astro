@@ -119,13 +119,13 @@ export default {
 
     // --- BODY SCROLL CONTROL ---
     const blockBodyScroll = () => {
-      if (!terminalState.isMaximized.value) { // Only apply if not already maximized
+      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) { // Only apply if not already maximized
         document.body.style.overflow = 'hidden';
       }
     };
 
     const restoreBodyScroll = () => {
-      if (!terminalState.isMaximized.value) { // Only restore if not maximized
+      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) { // Only restore if not maximized
         document.body.style.overflow = '';
       }
     };
