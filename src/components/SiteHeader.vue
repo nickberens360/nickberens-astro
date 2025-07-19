@@ -314,6 +314,7 @@ export default {
 .site-header__nav-item a {
   text-decoration: none;
   color: inherit;
+  font-weight: bold;
   transition: color 0.3s ease;
 }
 
@@ -361,6 +362,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   background-color: #fff;
   padding-top: 80px;
   transform: translateY(-100%);

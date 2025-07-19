@@ -165,9 +165,20 @@ export default {
 
     // Watch for changes in terminal visibility
     watch(terminalState.isHidden, (isHidden) => {
-      if (isHidden && terminalState.isMaximized.value) {
-        // If terminal is hidden while maximized, reset body overflow
+      if (isHidden) {
+        // If terminal is hidden, reset body overflow
         document.body.style.overflow = '';
+      }
+    });
+
+    // Watch for changes in terminal minimized state
+    watch(terminalState.isMinimized, (isMinimized) => {
+      if (isMinimized) {
+        // If terminal is minimized, restore body scrolling
+        document.body.style.overflow = '';
+      } else if (terminalState.isMaximized.value) {
+        // If terminal is un-minimized and is maximized, block scrolling again
+        document.body.style.overflow = 'hidden';
       }
     });
 
