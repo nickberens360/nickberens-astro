@@ -1,0 +1,95 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageSection from '../components/PageSection.vue';
+import { Image } from 'astro:assets';
+// Import your background and foreground images
+// For example:
+// import backgroundImage from '../assets/images/background.jpg';
+// import foregroundContent from '../assets/images/foreground.png';
+
+// You can use any of the existing images from the illustrations page
+import snakeFlying from '../assets/images/snake-flying.png';
+import flyingRobot from '../assets/images/flying-robot.png';
+---
+
+<Layout title="Parallax Example" description="Example of PageSection with Parallax Effect">
+  <PageSection
+    parallax
+    :parallaxSpeed={0.5}
+    fullHeight
+    backgroundColor="#cde3ff"
+    data-section-theme="light"
+  >
+    <div slot="background">
+      <!-- Background image that will have parallax effect -->
+      <Image
+        src={snakeFlying}
+        alt="Background"
+        style="width: 100%; height: 100%; object-fit: cover;"
+      />
+    </div>
+
+    <div slot="foreground" class="content">
+      <!-- Content that will be displayed on top of the background -->
+      <h1>Parallax Effect Example</h1>
+      <p>This demonstrates the parallax effect with the PageSection component.</p>
+      <p>Scroll down to see the effect in action!</p>
+    </div>
+  </PageSection>
+
+  <!-- Regular section for comparison -->
+  <PageSection
+    backgroundColor="#dcb1bb"
+    data-section-theme="light"
+    fullHeight
+  >
+    <h2>Regular Section (No Parallax)</h2>
+    <p>This is a regular section without parallax effect for comparison.</p>
+    <Image
+      src={flyingRobot}
+      alt="Robot Illustration"
+      style="max-width: 50%; height: auto;"
+    />
+  </PageSection>
+
+  <!-- Another parallax section -->
+  <PageSection
+    parallax
+    :parallaxSpeed={0.3}
+    fullHeight
+    backgroundColor="#97ddff"
+    data-section-theme="light"
+  >
+    <div slot="background">
+      <Image
+        src={flyingRobot}
+        alt="Background"
+        style="width: 100%; height: 100%; object-fit: cover;"
+      />
+    </div>
+
+    <div slot="foreground" class="content">
+      <h2>Another Parallax Example</h2>
+      <p>This one uses a different parallax speed (0.3).</p>
+    </div>
+  </PageSection>
+</Layout>
+
+<style>
+  .content {
+    padding: 2rem;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  h1, h2 {
+    margin-bottom: 1rem;
+  }
+
+  p {
+    margin-bottom: 1rem;
+  }
+</style>
