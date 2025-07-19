@@ -240,9 +240,19 @@ export function useTerminalCommands(terminalOutput, isMounted) {
       action();
     },
 
-    'bust-cache': () => {
-      localStorage.clear();
-      window.location.reload();
+    'bust-cache': (args, commandId) => {
+      const userConfirmed = confirm('Are you sure you want to clear the cache and reload the page?');
+
+      if (userConfirmed) {
+        // User confirmed, proceed with clearing cache and reloading
+        localStorage.clear();
+        window.location.reload();
+      } else {
+        // User canceled, update history with a message
+        updateHistoryItem(commandId, {
+          textOutput: ['Cache clearing canceled by user.']
+        });
+      }
     },
 
     default: (baseCommand, commandId) => {
