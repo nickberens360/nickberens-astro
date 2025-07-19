@@ -133,7 +133,7 @@ export default {
 }
 
 .command-input {
-  color: #63c5da;
+  color: lawngreen;
   font-weight: bold;
   margin-bottom: 4px;
 }
