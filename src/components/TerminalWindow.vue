@@ -105,6 +105,10 @@ export default {
     // --- COMMAND SUBMISSION ---
     const submitCommand = () => {
       terminalState.submitCommand(handleCommand);
+      // Ensure scroll to bottom after command submission
+      setTimeout(() => {
+        terminalContent.value?.scrollToBottom();
+      }, 50);
     };
 
     // --- FOCUS INPUT ---
@@ -120,7 +124,21 @@ export default {
       terminalInput.value = {
         focus: () => terminalContent.value?.focusInput()
       };
-      terminalOutput.value = terminalContent.value?.$refs.terminalOutput;
+      terminalOutput.value = {
+        scrollTop: 0,
+        scrollHeight: 0,
+        get scrollTop() {
+          return terminalContent.value?.$refs.terminalOutput?.scrollTop || 0;
+        },
+        set scrollTop(value) {
+          if (terminalContent.value?.$refs.terminalOutput) {
+            terminalContent.value.$refs.terminalOutput.scrollTop = value;
+          }
+        },
+        get scrollHeight() {
+          return terminalContent.value?.$refs.terminalOutput?.scrollHeight || 0;
+        }
+      };
 
       terminalState.cleanup.value = terminalState.initialize(
         terminalWindow,

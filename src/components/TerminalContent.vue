@@ -81,6 +81,19 @@ export default {
     TerminalInputLine,
     TerminalProgressBar,
   },
+  mounted() {
+    // Scroll to bottom on initial mount
+    this.scrollToBottom();
+  },
+  watch: {
+    // Auto-scroll when command history changes
+    commandHistory: {
+      handler() {
+        this.scrollToBottom();
+      },
+      deep: true
+    }
+  },
   props: {
     theme: {
       type: String,
@@ -100,6 +113,14 @@ export default {
     // Expose focus method for parent component
     focusInput() {
       this.$refs.terminalInput?.focus();
+    },
+    // Expose scroll method for parent component
+    scrollToBottom() {
+      this.$nextTick(() => {
+        if (this.$refs.terminalOutput) {
+          this.$refs.terminalOutput.scrollTop = this.$refs.terminalOutput.scrollHeight;
+        }
+      });
     }
   }
 };
