@@ -79,7 +79,7 @@ export function useTerminalCommands(terminalOutput, isMounted) {
           updateHistoryItem(commandId, processFn(data));
           nextTick(() => {
             if (terminalOutput.value && isMounted.value) {
-              terminalOutput.value.scrollTo(terminalOutput.value.getScrollHeight());
+              terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
             }
           });
         }
