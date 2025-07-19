@@ -194,7 +194,7 @@ export default {
       if (!headerEl) return;
       const headerRect = headerEl.getBoundingClientRect();
       const checkX = window.innerWidth / 2;
-      const checkY = headerRect.top + (headerRect.height / 2);
+      const checkY = headerRect.top + (headerRect.height / 2) + 34;
       headerEl.style.pointerEvents = 'none';
       const elementUnder = document.elementFromPoint(checkX, checkY);
       headerEl.style.pointerEvents = 'auto';
