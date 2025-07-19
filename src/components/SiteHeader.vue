@@ -319,7 +319,7 @@ export default {
 }
 
 .site-header.theme-light .site-header__nav-item a:hover {
-  color: #666;
+  color: #434343;
 }
 
 /* Hamburger Menu Button - Hidden on desktop */
