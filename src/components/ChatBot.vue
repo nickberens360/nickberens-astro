@@ -392,7 +392,7 @@ export default {
   margin-left: 1rem;
   padding: 0.75rem 1.5rem;
   border: none;
-  background-color: #ff8282;
+  background-color: #fb5252;
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -401,11 +401,11 @@ export default {
 }
 
 .send-button:hover {
-  background-color: #2563eb;
+  background-color: #da2828;
 }
 
 .send-button:disabled {
-  background-color: #9ca3af;
+  background-color: #ff7d7d;
   cursor: not-allowed;
 }
 
