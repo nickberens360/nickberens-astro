@@ -37,50 +37,8 @@
 </template>
 
 <script>
-// Export the function separately
-export function processCommitHistory(commits) {
-  if (commits && commits.error) {
-    return {
-      title: 'Git Commit History',
-      commits: [],
-      message: commits.message,
-      isVisible: true,
-      error: true
-    };
-  }
-
-  if (!Array.isArray(commits)) {
-    return {
-      title: 'Git Commit History',
-      commits: [],
-      message: 'Invalid data format received',
-      isVisible: true,
-      error: true
-    };
-  }
-
-  if (commits.length === 0) {
-    return {
-      title: 'Git Commit History',
-      commits: [],
-      message: 'No commit history available.',
-      isVisible: true,
-      error: true
-    };
-  }
-
-  return {
-    title: 'Git Commit History',
-    commits: commits.map(commit => ({
-      hash: commit.hash,
-      message: commit.message,
-      url: commit.url
-    })),
-    note: `Showing ${commits.length} most recent commits`,
-    isVisible: true,
-    error: false
-  };
-}
+// Import the function from the utility file
+import { processCommitHistory } from '../utils/dataProcessing.js';
 
 export default {
   name: 'TerminalLogOutput',
@@ -200,15 +158,15 @@ export default {
 }
 
 .theme-light .commit-hash {
-  color: #f39c12;
+  color: orange;
 }
 
 .theme-light .terminal-link {
-  color: #2980b9;
+  color: blue;
 }
 
 .theme-light .terminal-link:hover {
-  color: #1c6ea4;
+  color: blueviolet;
 }
 
 .theme-light .commit-history-note {
@@ -218,4 +176,8 @@ export default {
 .theme-light .commit-history-error-message {
   color: #666666;
 }
+.theme-light .commit-message {
+  color: #333;
+}
+
 </style>

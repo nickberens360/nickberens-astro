@@ -66,7 +66,7 @@ export default {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Theme styles */
+/* Light theme styles */
 .terminal-input-line.theme-light .prompt,
 .terminal-input-line.theme-light .terminal-input {
   color: #333;
