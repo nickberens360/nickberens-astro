@@ -147,9 +147,14 @@ export function useTerminalState(props, terminalInput, terminalOutput) {
     const outsideClickHandler = handleOutsideClick(terminalWindow);
     const keyDownHandler = (event) => handleKeyDown(event, toggleMaximize);
 
-    // Add event listeners
-    document.addEventListener('pointerup', stopDrag);
-    document.addEventListener('pointerup', stopResize);
+    // Create a combined handler for pointerup events
+    const combinedPointerUpHandler = (event) => {
+      stopDrag(event);
+      stopResize(event);
+    };
+
+    // Add event listeners with the combined handler
+    document.addEventListener('pointerup', combinedPointerUpHandler);
     document.addEventListener('keydown', keyDownHandler);
     document.addEventListener('pointerdown', outsideClickHandler);
 
@@ -157,10 +162,9 @@ export function useTerminalState(props, terminalInput, terminalOutput) {
       terminalWindow.value.addEventListener('pointerdown', activateTerminal);
     }
 
-    // Return cleanup function
+    // Return cleanup function with the combined handler
     return () => {
-      document.removeEventListener('pointerup', stopDrag);
-      document.removeEventListener('pointerup', stopResize);
+      document.removeEventListener('pointerup', combinedPointerUpHandler);
       document.removeEventListener('keydown', keyDownHandler);
       document.removeEventListener('pointerdown', outsideClickHandler);
 
