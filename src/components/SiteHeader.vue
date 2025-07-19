@@ -314,7 +314,7 @@ export default {
 .site-header__nav-item a {
   text-decoration: none;
   color: inherit;
-  font-weight: bold;
+  font-weight: 500;
   transition: color 0.3s ease;
 }
 
