@@ -2,9 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import PageSection from '../components/PageSection.vue';
 import ParallaxSection from '../components/ParallaxSection.vue';
-import snakeFlying from '../assets/images/snake-flying.png';
 import snakeForeground from '../assets/images/snake-foreground.png';
-import snakeBackground from '../assets/images/snake-background.png';
 import robotBackground from '../assets/images/robot-background.jpg';
 import robotForeground from '../assets/images/robot-foreground.png';
 import vulture from '../assets/images/vulture.png';
@@ -17,8 +15,7 @@ import snakeHug from '../assets/images/snake-hug.jpg';
 import hazHug from '../assets/images/haz-hug.png';
 import dumbDoug from '../assets/images/dumb-doug.jpg';
 import poolShark from '../assets/images/pool-shark.jpg';
-import dougFightsBack from '../assets/images/doug-fights-back.jpg';
-import dougFightsBackBackground from '../assets/images/doug-fights-back-background.png';
+import dougFightsBackBackground from '../assets/images/default-clouds-background.png';
 import dougFightsBackForeground from '../assets/images/doug-fights-back-foreground.png';
 import eatUsForFun from '../assets/images/eat-us-for-fun.jpg';
 import dont from '../assets/images/dont.jpg';
@@ -45,7 +42,7 @@ const illustrations = [
         backgroundImage: robotBackground,
         foregroundImage: robotForeground,
         foregroundMaxWidth: '500px',
-        foregroundMaxWidthMobile: '200px',
+        foregroundMaxWidthMobile: '400px',
         floating: true,
         imgAlt: 'Robot Illustration with Parallax',
         fullWidth: true,
@@ -80,7 +77,7 @@ const illustrations = [
         backgroundColor: '#ccebfe',
         dataSectionTheme: 'light',
         hasParallax: true,
-        backgroundImage: snakeBackground,
+        backgroundImage: dougFightsBackBackground,
         foregroundImage: snakeForeground,
         foregroundMaxWidth: '1200px',
         floating: true,
@@ -270,6 +267,6 @@ const illustrations = [
 <style>
     .page-section,
     .parallax-section {
-        margin-bottom: -5px;
+        margin-bottom: -10px;
     }
 </style>
