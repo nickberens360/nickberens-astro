@@ -108,10 +108,6 @@ export default {
     // --- COMMAND SUBMISSION ---
     const submitCommand = () => {
       terminalState.submitCommand(handleCommand);
-      // Ensure scroll to bottom after command submission
-      setTimeout(() => {
-        terminalContent.value?.scrollToBottom();
-      }, 50);
     };
 
     // --- FOCUS INPUT ---

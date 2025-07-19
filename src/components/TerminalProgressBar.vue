@@ -1,6 +1,13 @@
 <template>
   <div class="loading-container">
-    <div class="progress-bar-container" :class="themeClass">
+    <div
+      class="progress-bar-container"
+      :class="themeClass"
+      role="progressbar"
+      :aria-valuemin="0"
+      :aria-valuemax="100"
+      :aria-valuenow="progress"
+    >
       <div
         class="progress-bar"
         :class="themeClass"

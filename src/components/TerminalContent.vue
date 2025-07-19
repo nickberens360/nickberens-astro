@@ -233,8 +233,4 @@ export default {
 .theme-light .terminal-link:hover {
   color: blueviolet;
 }
-
-.terminal-content.theme-light .prompt {
-  color: #333;
-}
 </style>
