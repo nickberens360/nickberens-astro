@@ -29,18 +29,9 @@
       </div>
 
       <div class="ml-auto"/>
-      <button
-        class="site-header__hamburger"
-        :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
-        @click="toggleMobileMenu"
-        aria-label="Toggle menu"
-        :style="variant === 'pod' ? headerStyles : {}"
-      >
-        🍔
-      </button>
 
       <nav
-        class="site-header__nav"
+        class="site-header__nav mr-4"
         :class="[variant === 'pod' ? 'pod' : '']"
         :style="variant === 'pod' ? headerStyles : {}"
         ref="nav"
@@ -102,8 +93,17 @@
         :icon="['fas', 'terminal']"
         @click="toggleTerminal"
         aria-label="Toggle terminal input"
-        class="terminal-icon ml-4"
+        class="terminal-icon"
       />
+      <button
+        class="site-header__hamburger ml-2"
+        :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
+        @click="toggleMobileMenu"
+        aria-label="Toggle menu"
+        :style="variant === 'pod' ? headerStyles : {}"
+      >
+        🍔
+      </button>
     </div>
   </header>
 </template>
