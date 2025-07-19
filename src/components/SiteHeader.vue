@@ -429,6 +429,11 @@ export default {
   }
 }
 
+@media (max-width: 768px) {
+
+}
+
+
 /* Theme-based Styling for Text */
 .site-header.theme-light {
   color: #000000;
