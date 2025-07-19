@@ -10,7 +10,6 @@
       >
         <font-awesome-icon
           :icon="['fas', 'bars']"
-          size="2x"
         />
       </button>
       <button

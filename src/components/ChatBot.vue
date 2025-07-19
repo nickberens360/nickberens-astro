@@ -244,7 +244,6 @@ export default {
 </script>
 
 <style scoped>
-/* Main container */
 .chatbot-container {
   max-width: none;
   margin: 0;
