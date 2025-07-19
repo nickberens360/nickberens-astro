@@ -46,7 +46,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, onUnmounted } from 'vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalContent from './TerminalContent.vue';
 import TerminalResizeHandles from './TerminalResizeHandles.vue';
@@ -149,6 +149,21 @@ export default {
       );
     });
 
+    // Watch for changes in terminal visibility
+    watch(terminalState.isHidden, (isHidden) => {
+      if (isHidden && terminalState.isMaximized.value) {
+        // If terminal is hidden while maximized, reset body overflow
+        document.body.style.overflow = '';
+      }
+    });
+
+    // Ensure body overflow is reset when component is unmounted
+    onUnmounted(() => {
+      if (terminalState.isMaximized.value) {
+        document.body.style.overflow = '';
+      }
+    });
+
     return {
       // Refs
       terminalWindow,
@@ -222,7 +237,7 @@ export default {
 }
 
 .terminal-window.theme-dark {
-  background-color: #1e1e1e;
+  background-color: rgba(30, 30, 30, 0.9);
   color: #f8f8f8;
 }
 
