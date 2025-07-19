@@ -273,6 +273,7 @@ export default {
   border-radius: 8px;
   padding: 0.5rem;
   transition: color 0.3s ease;
+  z-index: 1001;
 }
 
 .theme-dark .terminal-icon {

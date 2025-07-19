@@ -774,8 +774,8 @@ export default {
 
 .terminal-maximized {
   position: fixed !important;
-  /* The actual positioning is handled by the terminalStyle computed property */
-  z-index: 1001 !important; /* Ensure it's above other elements */
+  border-radius: 0 !important;
+  z-index: 1001 !important;
 }
 
 /* Hide the resize handle when maximized */
