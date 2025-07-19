@@ -41,7 +41,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         backgroundImage: robotBackground,
         foregroundImage: robotForeground,
-        foreGroundMaxWidth: '400px',
+        foregroundMaxWidth: '400px',
         imgAlt: 'Robot Illustration with Parallax',
         imgStyle: 'max-width: 100%; height: auto;',
         fullWidth: true,
@@ -210,7 +210,11 @@ const illustrations = [
 ]
 ---
 
-<Layout title="Illustrations" description="Illustrations - Nick Berens">
+<Layout
+    title="Illustrations"
+    description="Illustrations - Nick Berens"
+    headerVariant="pod"
+>
     {illustrations.map((item, index) => (
         item.hasParallax ? (
             <ParallaxSection
@@ -226,7 +230,7 @@ const illustrations = [
                 fullWidth={item.fullWidth}
                 noPadding={item.noPadding}
                 parallaxSpeed={item.parallaxSpeed || 0.8}
-                foregroundMaxWidth={item.foreGroundMaxWidth}
+                foregroundMaxWidth={item.foregroundMaxWidth}
                 class={item.class}
             />
         ) : (
