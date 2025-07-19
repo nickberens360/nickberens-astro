@@ -116,24 +116,13 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
-import { useStore } from '@nanostores/vue';
-import {
-  commandHistoryStore,
-  nextCommandIdStore,
-  terminalPositionStore,
-  terminalSizeStore,
-  isTerminalActive,
-  isTerminalMinimizedStore,
-  isTerminalHiddenStore,
-  isTerminalMaximizedStore,
-  previousTerminalStateStore
-} from '../stores/ui.js';
+import { ref, onMounted } from 'vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalGraphOutput from './TerminalGraphOutput.vue';
 import TerminalLogOutput from './TerminalLogOutput.vue';
 import { useTerminalCommands } from '../composables/useTerminalCommands.js';
 import { useTerminalResize } from '../composables/useTerminalResize.js';
+import { useTerminalState } from '../composables/useTerminalState.js';
 
 export default {
   name: 'TerminalWindow',
@@ -157,28 +146,14 @@ export default {
     }
   },
   setup(props) {
-    // --- REFS AND REACTIVE STATE ---
-    const theme = ref('dark');
-    const inputValue = ref('');
+    // --- REFS ---
     const terminalWindow = ref(null);
     const terminalInput = ref(null);
     const terminalOutput = ref(null);
-    const isMounted = ref(false);
-
-    // --- STORE SUBSCRIPTIONS ---
-    const isMinimized = useStore(isTerminalMinimizedStore);
-    const isTerminalHidden = useStore(isTerminalHiddenStore);
-    const position = useStore(terminalPositionStore);
-    const size = useStore(terminalSizeStore);
-    const commandHistory = useStore(commandHistoryStore);
-    const nextCommandId = useStore(nextCommandIdStore);
-    const isMaximized = useStore(isTerminalMaximizedStore);
-    const previousTerminalState = useStore(previousTerminalStateStore);
-
-    const isHidden = computed(() => isTerminalHidden.value);
 
     // --- COMPOSABLES ---
-    const { handleCommand, unmaximizeTerminal } = useTerminalCommands(terminalOutput, isMounted);
+    const terminalState = useTerminalState(props, terminalInput, terminalOutput);
+    const { handleCommand, unmaximizeTerminal } = useTerminalCommands(terminalOutput, terminalState.isMounted);
 
     const {
       terminalStyle,
@@ -190,176 +165,57 @@ export default {
       resizeDirection
     } = useTerminalResize(
       terminalWindow,
-      position,
-      size,
-      isMaximized,
-      previousTerminalState
+      terminalState.position,
+      terminalState.size,
+      terminalState.isMaximized,
+      terminalState.previousTerminalState
     );
 
-    // --- CORE FUNCTIONALITY ---
-    const focusInput = (event) => {
-      if (terminalInput.value && (!event || event.target.tagName !== 'A')) {
-        terminalInput.value.focus();
-      }
-    };
-
+    // --- COMMAND SUBMISSION ---
     const submitCommand = () => {
-      const command = inputValue.value.trim();
-      if (!command) return;
-
-      inputValue.value = '';
-      const commandId = nextCommandId.value;
-      nextCommandIdStore.set(commandId + 1);
-
-      commandHistoryStore.set([
-        ...commandHistory.value,
-        {
-          id: commandId,
-          timestamp: Date.now(),
-          command: command,
-          textOutput: [],
-          isLoading: false,
-          loadingProgress: 0,
-          graphData: null,
-          commitData: null,
-          commitHistory: null
-        }
-      ]);
-
-      handleCommand(command, commandId, theme);
-
-      nextTick(() => {
-        if (terminalOutput.value) {
-          terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-        }
-      });
-    };
-
-    // --- EVENT HANDLERS ---
-    const activateTerminal = () => {
-      isTerminalActive.set(true);
-    };
-
-    const deactivateTerminal = () => {
-      isTerminalActive.set(false);
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && isMaximized.value) {
-        toggleMaximize();
-      }
-    };
-
-    const handleOutsideClick = (event) => {
-      if (terminalWindow.value && !terminalWindow.value.contains(event.target) && !isMinimized.value) {
-        deactivateTerminal();
-      }
+      terminalState.submitCommand(handleCommand);
     };
 
     // --- LIFECYCLE ---
     onMounted(() => {
-      isMounted.value = true;
-
-      // Handle nick-ai route special case
-      const isNickAiRoute = window.location.pathname.includes('/nick-ai');
-      if (isNickAiRoute && props.hideTerminal) {
-        isTerminalHiddenStore.set(true);
-      } else if (typeof isTerminalHidden.value !== 'boolean') {
-        isTerminalHiddenStore.set(props.hideTerminal);
-      }
-
-      // Set initial position if not saved
-      const savedPosition = localStorage.getItem('terminalPosition');
-      if (!savedPosition) {
-        const margin = 20;
-        const terminalHeight = size.value.height;
-        const newY = window.innerHeight - terminalHeight - margin;
-        terminalPositionStore.set({ x: margin, y: newY });
-      }
-
-      // Set initial output if history is empty
-      if (props.initialOutput && props.initialOutput.length > 0 && commandHistory.value.length === 0) {
-        commandHistoryStore.set([{
-          id: 1,
-          timestamp: Date.now(),
-          command: '',
-          textOutput: [...props.initialOutput],
-          isLoading: false,
-          loadingProgress: 0,
-          graphData: null,
-          commitData: null,
-          commitHistory: null
-        }]);
-        nextCommandIdStore.set(2);
-      }
-
-      // Event listeners
-      document.addEventListener('pointerup', stopDrag);
-      document.addEventListener('pointerup', stopResize);
-      document.addEventListener('keydown', handleKeyDown);
-      document.addEventListener('pointerdown', handleOutsideClick);
-
-      if (terminalWindow.value) {
-        terminalWindow.value.addEventListener('pointerdown', activateTerminal);
-      }
-
-      // Focus input and scroll to bottom
-      nextTick(() => {
-        focusInput();
-        if (terminalOutput.value && isMounted.value) {
-          terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-        }
-      });
-    });
-
-    onUnmounted(() => {
-      isMounted.value = false;
-
-      // Cleanup event listeners
-      document.removeEventListener('pointerup', stopDrag);
-      document.removeEventListener('pointerup', stopResize);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('pointerdown', handleOutsideClick);
-
-      if (terminalWindow.value) {
-        terminalWindow.value.removeEventListener('pointerdown', activateTerminal);
-      }
+      terminalState.cleanup.value = terminalState.initialize(
+        terminalWindow,
+        toggleMaximize,
+        stopDrag,
+        stopResize
+      );
     });
 
     return {
-      // Reactive state
-      theme,
-      inputValue,
-      isMounted,
-
       // Refs
       terminalWindow,
       terminalInput,
       terminalOutput,
 
-      // Store values
-      isMinimized,
-      isHidden,
-      isMaximized,
-      commandHistory,
-      isTerminalMinimizedStore,
-      isTerminalHiddenStore,
+      // From terminalState composable
+      theme: terminalState.theme,
+      inputValue: terminalState.inputValue,
+      isMounted: terminalState.isMounted,
+      isMinimized: terminalState.isMinimized,
+      isHidden: terminalState.isHidden,
+      isMaximized: terminalState.isMaximized,
+      commandHistory: terminalState.commandHistory,
+      isTerminalMinimizedStore: terminalState.isTerminalMinimizedStore,
+      isTerminalHiddenStore: terminalState.isTerminalHiddenStore,
+      focusInput: terminalState.focusInput,
 
-      // Computed
+      // From useTerminalResize composable
       terminalStyle,
       resizeDirection,
-
-      // Methods
-      focusInput,
-      submitCommand,
-      unmaximizeTerminal,
-
-      // Drag & resize
       startDrag,
       stopDrag,
       startResize,
       stopResize,
       toggleMaximize,
+
+      // Methods
+      submitCommand,
+      unmaximizeTerminal,
     };
   }
 };
