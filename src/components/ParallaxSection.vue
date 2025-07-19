@@ -175,7 +175,7 @@ export default {
 }
 
 .floating {
-  animation: float 3s ease-in-out infinite;
+  animation: float 2.5s ease-in-out infinite;
   will-change: transform;
 }
 

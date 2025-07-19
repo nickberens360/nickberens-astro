@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import PageSection from '../components/PageSection.vue';
 import ParallaxSection from '../components/ParallaxSection.vue';
 import snakeFlying from '../assets/images/snake-flying.png';
-import flyingRobot from '../assets/images/flying-robot.png';
 import robotBackground from '../assets/images/robot-background.jpg';
 import robotForeground from '../assets/images/robot-foreground.png';
 import vulture from '../assets/images/vulture.png';
@@ -24,6 +23,21 @@ import { Image } from 'astro:assets';
 
 const illustrations = [
     {
+        dataSectionColor: '#dcb1bb',
+        backgroundColor: '#dcb1bb',
+        dataSectionTheme: 'light',
+        backgroundImage: robotBackground,
+        foregroundImage: robotForeground,
+        foregroundMaxWidth: '500px',
+        foregroundMaxWidthMobile: '200px',
+        floating: true,
+        imgAlt: 'Robot Illustration with Parallax',
+        fullWidth: true,
+        noPadding: true,
+        parallaxSpeed: 1.25,
+        hasParallax: true,
+    },
+    {
         dataSectionColor: '#cde3ff',
         backgroundColor: '#cde3ff',
         dataSectionTheme: 'light',
@@ -34,21 +48,6 @@ const illustrations = [
         noPadding: true,
         class: 'pt-16',
         hasParallax: false
-    },
-    {
-        dataSectionColor: '#dcb1bb',
-        backgroundColor: '#dcb1bb',
-        dataSectionTheme: 'light',
-        backgroundImage: robotBackground,
-        foregroundImage: robotForeground,
-        foregroundMaxWidth: '400px',
-        floating: true,
-        foregroundMaxWidthMobile: '200px',
-        imgAlt: 'Robot Illustration with Parallax',
-        fullWidth: true,
-        noPadding: true,
-        parallaxSpeed: 0.8,
-        hasParallax: true,
     },
     {
         dataSectionColor: '#97ddff',
