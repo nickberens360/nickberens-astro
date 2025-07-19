@@ -430,7 +430,17 @@ export default {
 }
 
 @media (max-width: 768px) {
-
+  .site-header__container {
+    padding: 0 .75rem;
+  }
+  .pod {
+    height: 65%;
+    padding: 0 .75rem;
+  }
+  .site-header__hamburger.pod {
+    height: 45px;
+    width: 45px;
+  }
 }
 
 
