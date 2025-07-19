@@ -17,7 +17,7 @@
         @click="createNewChat"
         class="new-chat-button"
       >
-        ✏️ New Chat
+        New Chat
       </button>
     </div>
     <button
@@ -197,7 +197,7 @@ export default {
   background: none !important;
   font-weight: bold;
   font-size: 18px;
-  margin-top: 16px;
+  margin-top: 34px;
   outline: none;
   color: white;
   cursor: pointer;
