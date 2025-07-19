@@ -14,6 +14,8 @@
       :style="terminalStyle"
       ref="terminalWindow"
       @click="focusInput"
+      @mouseenter="blockBodyScroll"
+      @mouseleave="restoreBodyScroll"
     >
       <TerminalControlBar
         :title="title"
@@ -119,6 +121,19 @@ export default {
       }
     };
 
+    // --- BODY SCROLL CONTROL ---
+    const blockBodyScroll = () => {
+      if (!terminalState.isMaximized.value) { // Only apply if not already maximized
+        document.body.style.overflow = 'hidden';
+      }
+    };
+
+    const restoreBodyScroll = () => {
+      if (!terminalState.isMaximized.value) { // Only restore if not maximized
+        document.body.style.overflow = '';
+      }
+    };
+
     // --- LIFECYCLE ---
     onMounted(() => {
       // Set up refs for the composables that need them
@@ -126,8 +141,6 @@ export default {
         focus: () => terminalContent.value?.focusInput()
       };
       terminalOutput.value = {
-        scrollTop: 0,
-        scrollHeight: 0,
         get scrollTop() {
           return terminalContent.value?.$refs.terminalOutput?.scrollTop || 0;
         },
@@ -192,6 +205,8 @@ export default {
       submitCommand,
       focusInput,
       unmaximizeTerminal,
+      blockBodyScroll,
+      restoreBodyScroll,
     };
   }
 };
