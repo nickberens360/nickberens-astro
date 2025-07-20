@@ -58,7 +58,7 @@ export default {
       ticking: false,
       // Damping factor to control the intensity of parallax effect
       // Lower values create a more subtle effect
-      PARALLAX_DAMPING_FACTOR: -0.3
+      parallaxFactor: -0.3
     };
   },
   mounted() {
@@ -98,7 +98,7 @@ export default {
         const elementCenter = rect.top + rect.height / 2;
         const viewportCenter = vh / 2;
         const distance = elementCenter - viewportCenter;
-        this.currentOffset = distance * this.parallaxSpeed * this.PARALLAX_DAMPING_FACTOR;
+        this.currentOffset = distance * this.parallaxSpeed * this.parallaxFactor;
       }
     }
   }
@@ -209,6 +209,15 @@ export default {
     bottom: 0;
     height: 100%;
     transform: none !important;
+  }
+  .floating {
+    animation: unset;
+    will-change: auto;
+  }
+
+  .floating-reversed {
+    animation: unset;
+    will-change: auto;
   }
 }
 </style>
