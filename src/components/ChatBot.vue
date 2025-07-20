@@ -558,10 +558,14 @@ export default {
   padding: 1rem;
   overflow-y: auto;
   background-color: #111111;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .messages-content {
   max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   flex-grow: 1;
   display: flex;
