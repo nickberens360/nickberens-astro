@@ -143,17 +143,37 @@ class IllustrationService:
                 logger.warning("No searchable content found in illustrations")
                 return []
 
-            # Use fuzzy matching
-            found_matches = process.extract(term, choices, limit=15)
+            # Handle singular/plural forms
+            search_terms = [term]
+            if term.endswith('s'):
+                # Add singular form (remove trailing 's')
+                search_terms.append(term[:-1])
+            else:
+                # Add plural form (add 's')
+                search_terms.append(term + 's')
 
-            # Filter by threshold and log match quality
-            high_quality_matches = []
-            for match_text, score, file_key in found_matches:
-                if score >= self.search_threshold:
-                    high_quality_matches.append(file_key)
-                    logger.debug(f"Match: {file_key} (score: {score})")
+            logger.debug(f"Searching with terms: {search_terms}")
 
-            logger.info(f"Found {len(high_quality_matches)} matches above threshold {self.search_threshold}")
+            all_matches = []
+            for search_term in search_terms:
+                # Use fuzzy matching
+                found_matches = process.extract(search_term, choices, limit=15)
+
+                # Filter by threshold
+                for match_text, score, file_key in found_matches:
+                    if score >= self.search_threshold:
+                        all_matches.append((file_key, score))
+                        logger.debug(f"Match: {file_key} (score: {score})")
+
+            # Remove duplicates while keeping highest score
+            unique_matches = {}
+            for file_key, score in all_matches:
+                if file_key not in unique_matches or score > unique_matches[file_key]:
+                    unique_matches[file_key] = score
+
+            high_quality_matches = list(unique_matches.keys())
+
+            logger.info(f"Found {len(high_quality_matches)} unique matches above threshold {self.search_threshold}")
             return high_quality_matches
 
         except Exception as e:

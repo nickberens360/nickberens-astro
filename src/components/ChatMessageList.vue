@@ -180,7 +180,7 @@ export default {
 
 .message-bubble {
   padding: 0.75rem 1.25rem;
-  border-radius: 18px;
+  border-radius: 100px;
   max-width: 100%;
   line-height: 1.5;
 }
