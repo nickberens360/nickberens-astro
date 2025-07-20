@@ -45,6 +45,7 @@ import ChatInput from './ChatInput.vue';
 import ImageOverlay from './ImageOverlay.vue';
 
 export default {
+  name: 'ChatBot',
   components: {
     ChatMessagesWindow,
     ChatInput,
@@ -119,6 +120,7 @@ export default {
     // Clear lastStoppedPrompt when user starts typing manually
     watch(userInput, (newValue) => {
       if (newValue.trim() && lastStoppedPrompt.value) {
+        console.log('Clearing lastStoppedPrompt due to user typing');
         lastStoppedPrompt.value = '';
       }
     });
@@ -126,13 +128,18 @@ export default {
     const sendMessage = async () => {
       // Check if input is empty and we have a stopped prompt to retry
       if (userInput.value.trim() === '' && lastStoppedPrompt.value) {
+        console.log('Using lastStoppedPrompt for retry:', lastStoppedPrompt.value);
         userInput.value = lastStoppedPrompt.value;
         lastStoppedPrompt.value = ''; // Clear after using
       }
 
-      if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) return;
+      if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) {
+        console.log('Cannot send message - invalid state');
+        return;
+      }
 
       const question = userInput.value;
+      console.log('Sending message:', question);
 
       // Check if we have a pending new chat or no active chat
       let currentChatId = activeChatId.get();
@@ -197,17 +204,33 @@ export default {
     };
 
     const stopCurrentAction = () => {
-      if (hasTypingMessage.value) {
-        // Store the prompt that's being stopped for potential retry
-        const currentMessages = activeChatMessages.get();
-        if (currentMessages.length >= 2) {
+      console.log('Stopping current action');
+
+      // Store the prompt that's being stopped for potential retry
+      const currentMessages = activeChatMessages.get();
+      if (currentMessages.length >= 1) {
+        const userMessage = currentMessages[currentMessages.length - 1];
+        if (userMessage && userMessage.sender === 'user') {
+          lastStoppedPrompt.value = userMessage.text;
+          console.log('Stored stopped prompt:', lastStoppedPrompt.value);
+        } else if (currentMessages.length >= 2) {
+          // If the last message is a bot message, look for the user message before it
           const userMessage = currentMessages[currentMessages.length - 2];
           if (userMessage && userMessage.sender === 'user') {
             lastStoppedPrompt.value = userMessage.text;
+            console.log('Stored stopped prompt from previous user message:', lastStoppedPrompt.value);
           }
         }
+      }
 
-        // Find the currently typing message and stop it
+      if (isLoading.value) {
+        // If we're in the loading phase, abort the API request
+        console.log('Stopping loading phase');
+        stopLoading();
+        isLoading.value = false;
+      } else if (hasTypingMessage.value) {
+        // If we're in the typing phase, stop the typing
+        console.log('Stopping typing phase');
         const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
         if (typingMessageIndex !== -1) {
           stopTyping(typingMessageIndex);

@@ -239,13 +239,14 @@ export default {
   flex-direction: column;
   justify-content: center;
   text-align: center;
-  color: #9ba6b6;
+  color: #c0c9d4;
   cursor: pointer;
   height: 30px;
   width: 30px;
   border-radius: 50%;
   background-color: #213e6b;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: bold;
   position: relative;
 }
 

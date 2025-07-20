@@ -2,13 +2,14 @@
   <div class="d-flex justify-between items-center w-full pt-2">
     <ChatModelSelector
       :selected-model="selectedModel"
-      :disabled="isLoading || hasTypingMessage"
+      :disabled="hasTypingMessage"
       @update:selected-model="$emit('update:selected-model', $event)"
     />
     <ChatSendButton
       :has-typing-message="hasTypingMessage"
       :show-retry="showRetry"
-      :disabled="isLoading && !hasTypingMessage"
+      :disabled="false"
+      :is-loading="isLoading"
       @send="$emit('send')"
       @stop="$emit('stop')"
     />
@@ -20,6 +21,7 @@ import ChatModelSelector from './ChatModelSelector.vue';
 import ChatSendButton from './ChatSendButton.vue';
 
 export default {
+  name: 'ChatInputControls',
   components: {
     ChatModelSelector,
     ChatSendButton

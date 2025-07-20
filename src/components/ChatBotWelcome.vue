@@ -63,7 +63,6 @@ export default {
   height: 100%;
   padding: 2rem;
   text-align: center;
-  background-color: #111111;
   color: #f9fafb;
 }
 

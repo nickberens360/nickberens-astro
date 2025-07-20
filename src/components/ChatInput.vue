@@ -4,7 +4,7 @@
       <ChatMessageInput
         :model-value="userInput"
         :placeholder="inputPlaceholder"
-        :disabled="isLoading && !hasTypingMessage"
+        :disabled="hasTypingMessage"
         @update:model-value="$emit('update:userInput', $event)"
         @send="$emit('send-message')"
       />
@@ -13,7 +13,7 @@
         :is-loading="isLoading"
         :has-typing-message="hasTypingMessage"
         :show-retry="showRetry"
-        @update:selectedModel="$emit('update:selectedModel', $event)"
+        @update:selected-model="$emit('update:selectedModel', $event)"
         @send="$emit('send-message')"
         @stop="$emit('stop-action')"
       />
@@ -27,6 +27,7 @@ import ChatMessageInput from './ChatMessageInput.vue';
 import ChatInputControls from './ChatInputControls.vue';
 
 export default {
+  name: 'ChatInput',
   components: {
     ChatMessageInput,
     ChatInputControls
@@ -68,7 +69,12 @@ export default {
 
     const showRetry = computed(() => {
       // Show retry when we have a stopped prompt AND the input is empty
-      return Boolean(props.lastStoppedPrompt && !props.userInput.trim());
+      // AND we're not currently typing (loading is OK - we want stop during loading)
+      return Boolean(
+        props.lastStoppedPrompt &&
+        !props.userInput.trim() &&
+        !props.hasTypingMessage
+      );
     });
 
     return {

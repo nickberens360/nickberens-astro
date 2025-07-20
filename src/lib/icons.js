@@ -10,6 +10,9 @@ import {
 import {
   faTerminal,
   faBars,
+  faArrowUp,
+  faStop,
+  faRotateRight,
 } from '@fortawesome/free-solid-svg-icons';
 
 
@@ -18,7 +21,10 @@ library.add(
   faTwitter,
   faLinkedin,
   faTerminal,
-  faBars
+  faBars,
+  faArrowUp,
+  faStop,
+  faRotateRight,
 );
 
 export { library };

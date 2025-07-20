@@ -36,6 +36,7 @@ export function useMessageState() {
 
   const updateMessageTyping = (messageIndex, fullText) => {
     return new Promise((resolve) => {
+      console.log(`Starting typing animation for message ${messageIndex}`);
       typingMessages.value.add(messageIndex);
       let currentText = '';
       let currentIndex = 0;
@@ -43,6 +44,7 @@ export function useMessageState() {
       const typeChar = () => {
         // Check if typing was stopped
         if (!typingMessages.value.has(messageIndex)) {
+          console.log(`Typing stopped for message ${messageIndex}`);
           resolve();
           return;
         }
@@ -79,8 +81,10 @@ export function useMessageState() {
           typingTimeouts.value.set(messageIndex, timeoutId);
         } else {
           // Typing complete naturally (not stopped)
+          console.log(`Typing completed naturally for message ${messageIndex}`);
           typingMessages.value.delete(messageIndex);
           typingTimeouts.value.delete(messageIndex);
+
           const currentMessages = activeChatMessages.get();
           const updatedMessages = [...currentMessages];
           if (updatedMessages[messageIndex]) {
@@ -110,6 +114,8 @@ export function useMessageState() {
   };
 
   const stopTyping = (messageIndex) => {
+    console.log(`Stopping typing for message ${messageIndex}`);
+
     // Clear the timeout for this message
     if (typingTimeouts.value.has(messageIndex)) {
       clearTimeout(typingTimeouts.value.get(messageIndex));
