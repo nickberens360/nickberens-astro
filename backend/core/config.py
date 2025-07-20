@@ -55,8 +55,6 @@ class AppConfig:
             "https://nickberens360.netlify.app",
             "https://deploy-preview-14--nickberens360.netlify.app",
             "https://nickberens-astro.onrender.com",
-            "https://*.netlify.app",
-            "https://*.onrender.com",
         ]
 
         return default_origins
