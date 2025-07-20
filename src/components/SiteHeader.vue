@@ -166,6 +166,11 @@ export default {
     };
   },
   mounted() {
+    // Ensure body scroll is enabled when component mounts
+    this.isMobileMenuOpen = false;
+    document.body.style.overflow = '';
+
+    // Existing code
     window.addEventListener('scroll', this.handleScroll, { passive: true });
     this.handleScroll();
   },
