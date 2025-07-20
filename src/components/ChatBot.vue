@@ -567,7 +567,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 5px 10px -5px rgba(0, 0, 0, 0.5) inset;
 }
 
 /* Message structure */
