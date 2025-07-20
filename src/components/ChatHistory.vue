@@ -213,12 +213,12 @@ export default {
 <style scoped>
 .chat-history-drawer {
   width: 280px;
-  background-color: #f9fafb;
-  color: #1f2937;
+  background-color: #111111;
+  color: #d1d5db;
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid #333333;
   flex-shrink: 0;
   transition: width 0.3s ease;
 }
@@ -239,7 +239,7 @@ export default {
 
 .toggle-button {
   background: none;
-  color: #1f2937;
+  color: #d1d5db;
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -265,7 +265,7 @@ export default {
   position: relative;
   left: 4px;
   border: none;
-  background: none !important;
+  background: none !important; /* Keeping !important from original rule */
   margin-top: 34px;
   outline: none;
   color: white;
@@ -275,6 +275,7 @@ export default {
 
 .new-chat-button:disabled,
 .new-chat-button.disabled {
+  background-color: #333333;
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -302,13 +303,13 @@ export default {
 }
 
 .history-item:hover {
-  background-color: #e5e7eb;
+  background-color: #222222;
 }
 
 .history-item.active {
   background-color: #1c2539;
   font-weight: bold;
-  color: #1f2937;
+  color: #f9fafb;
   padding-left: 1rem;
 }
 
@@ -339,36 +340,5 @@ export default {
   right: -3px;
   top: 50%;
   transform: translateY(0) rotate(30deg);
-}
-
-/* Dark theme styles */
-.theme-dark {
-  background-color: #111111;
-  color: #d1d5db;
-  border-right-color: #333333;
-}
-
-.theme-dark .new-chat-button {
-  background-color: #333333;
-}
-
-.theme-dark .new-chat-button:disabled,
-.theme-dark .new-chat-button.disabled {
-  background-color: #333333;
-  opacity: 0.5;
-}
-
-.theme-dark .toggle-button {
-  /*background-color: #333333;*/
-  color: #d1d5db;
-}
-
-.theme-dark .history-item:hover {
-  background-color: #222222;
-}
-
-.theme-dark .history-item.active {
-  /*background-color: #333333;*/
-  color: #f9fafb;
 }
 </style>
