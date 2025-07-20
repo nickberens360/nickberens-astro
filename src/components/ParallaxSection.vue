@@ -55,7 +55,6 @@ export default {
     return {
       currentOffset: 0,
       inViewport: false,
-      isScrolling: false,
       ticking: false
     };
   },
@@ -74,19 +73,6 @@ export default {
     window.removeEventListener('resize', this.onResize);
   },
   methods: {
-    onScroll() {
-      this.isScrolling = true;
-      if (!this.ticking) {
-        requestAnimationFrame(() => {
-          this.calculateParallax();
-          this.ticking = false;
-          setTimeout(() => {
-            this.isScrolling = false;
-          }, 100);
-        });
-        this.ticking = true;
-      }
-    },
     onResize() {
       this.calculateParallax();
     },
