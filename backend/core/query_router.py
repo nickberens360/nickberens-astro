@@ -107,18 +107,16 @@ class QueryRouter:
 
     def _extract_search_term_from_show_pattern(self, remaining_text: str, img_indicator: str) -> Optional[str]:
         """Extract search term from 'show me X images' pattern."""
-        # Extract the search term (everything before the image indicator)
-        parts = remaining_text.split(img_indicator)
-        if len(parts) > 1:
-            search_term = parts[0].strip()
-        else:
-            # Handle cases like "show me doug images" where the term comes before
-            words = remaining_text.split()
-            if img_indicator in words:
-                idx = words.index(img_indicator)
-                search_term = " ".join(words[:idx]).strip()
-            else:
-                search_term = remaining_text.replace(img_indicator, "").strip()
+        # This logic handles terms appearing before or after the image indicator.
+        search_term = ' '.join(remaining_text.split(img_indicator)).strip()
+
+        if not search_term:
+            return None
+
+        # For better accuracy, filter out common words that are not part of the search term.
+        words = search_term.split()
+        filtered_words = [word for word in words if word not in self.ignore_words]
+        search_term = ' '.join(filtered_words).strip()
 
         return search_term if search_term else None
 

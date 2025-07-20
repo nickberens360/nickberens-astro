@@ -119,7 +119,6 @@ export default {
       for (const chatId in allChatsData) {
         const chat = allChatsData[chatId];
         if (chat.messages && chat.messages.some(msg => msg.isTyping)) {
-          console.log(`Found typing message in chat ${chatId}`);
           return true;
         }
       }
