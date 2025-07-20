@@ -31,9 +31,11 @@
       <button
         @click="handleCreateNewChat"
         class="new-chat-button"
-        :disabled="hasTypingMessage"
-        :class="{ 'disabled': hasTypingMessage }"
-        :title="hasTypingMessage ? 'Cannot create new chat while message is typing' : 'Create new chat'"
+        :disabled="hasTypingMessage || currentChatHasNoMessages"
+        :class="{ 'disabled': hasTypingMessage || currentChatHasNoMessages }"
+        :title="hasTypingMessage ? 'Cannot create new chat while message is typing' :
+                currentChatHasNoMessages ? 'Cannot create new chat when welcome screen is displayed' :
+                'Create new chat'"
       >
         <font-awesome-icon
           icon="pen-to-square"
@@ -122,6 +124,18 @@ export default {
       return false;
     });
 
+    // Add computed property to check if the current chat has no messages
+    const currentChatHasNoMessages = computed(() => {
+      // If there's no current chat ID, return true (welcome screen is shown)
+      if (!currentChatId.value) return true;
+
+      // Get the current chat
+      const currentChat = chats.value[currentChatId.value];
+
+      // If the chat doesn't exist or has no messages, return true
+      return !currentChat || !currentChat.messages || currentChat.messages.length === 0;
+    });
+
     // Convert the map of chats into a sorted array for display (newest first).
     const chatList = computed(() => {
       return Object.values(chats.value).sort((a, b) => b.id.localeCompare(a.id));
@@ -200,6 +214,7 @@ export default {
     return {
       chatList,
       currentChatId,
+      currentChatHasNoMessages,
       hasTypingMessage,
       handleCreateNewChat,
       handleSelectChat,
