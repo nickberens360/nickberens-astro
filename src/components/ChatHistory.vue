@@ -4,29 +4,47 @@
     :class="[`theme-${theme}`, { 'collapsed': !isVisible }]"
   >
     <div class="drawer-header">
+      <div
+        class="button-group"
+        :class="{ 'button-group--stacked': !isVisible }"
+      >
+        <button
+          @click="toggleVisibility"
+          class="toggle-button"
+        >
+          <font-awesome-icon
+            class="base-icon"
+            icon="bars"
+          />
+        </button>
+        <a href="/"
+          @click="toggleVisibility"
+          class="toggle-button"
+        >
+          <font-awesome-icon
+            icon="house-chimney"
+            class="base-icon"
+          />
+        </a>
+
+      </div>
       <button
-        @click="toggleVisibility"
-        class="toggle-button"
+        @click="handleCreateNewChat"
+        class="new-chat-button"
+        :disabled="hasTypingMessage"
+        :class="{ 'disabled': hasTypingMessage }"
+        :title="hasTypingMessage ? 'Cannot create new chat while message is typing' : 'Create new chat'"
       >
         <font-awesome-icon
-          :icon="['fas', 'bars']"
+          icon="pen-to-square"
+          class="base-icon"
         />
-      </button>
-      <button
-        v-if="isVisible"
-        @click="createNewChat"
-        class="new-chat-button"
-      >
-        New Chat
+        <span
+          v-if="isVisible"
+          class="ml-2"
+        >New Chat</span>
       </button>
     </div>
-    <button
-      v-if="!isVisible"
-      class="toggle-button"
-      @click="createNewChat"
-    >
-      ✏️
-    </button>
     <p v-if="isVisible">Recent</p>
     <div
       v-if="isVisible"
@@ -36,7 +54,7 @@
         v-for="chat in chatList"
         :key="chat.id"
         :class="['history-item', { 'active': chat.id === currentChatId }]"
-        @click="selectChat(chat.id)"
+        @click="handleSelectChat(chat.id)"
       >
         {{ chat.title }}
       </div>
@@ -46,16 +64,16 @@
         class="history-item-mobile mt-4"
         @click="toggleVisibility"
       >
-        {{chatList.length}}
+        {{ chatList.length }}
       </div>
-<!--      <div
-        v-for="chat in chatList"
-        :key="chat.id"
-        class="history-item-mobile"
-        @click="toggleVisibility"
-      >
-        ...
-      </div>-->
+      <!--      <div
+              v-for="chat in chatList"
+              :key="chat.id"
+              class="history-item-mobile"
+              @click="toggleVisibility"
+            >
+              ...
+            </div>-->
     </div>
   </div>
 </template>
@@ -63,10 +81,18 @@
 <script>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { useStore } from '@nanostores/vue';
-import { allChats, activeChatId, createNewChat, selectChat, isChatHistoryVisible, isPendingNewChat } from '../stores/ai.js';
+import {
+  allChats,
+  activeChatId,
+  createNewChat,
+  selectChat,
+  isChatHistoryVisible,
+  isPendingNewChat
+} from '../stores/ai.js';
 import { computed, onMounted, onUnmounted } from 'vue';
 
 export default {
+  name: 'ChatHistory',
   components: { FontAwesomeIcon },
   props: {
     theme: {
@@ -79,6 +105,22 @@ export default {
     const chats = useStore(allChats);
     const currentChatId = useStore(activeChatId);
     const isVisible = useStore(isChatHistoryVisible);
+
+    // Check if any message across ALL chats is currently typing
+    const hasTypingMessage = computed(() => {
+      const allChatsData = chats.value;
+
+      // Check all chats for typing messages
+      for (const chatId in allChatsData) {
+        const chat = allChatsData[chatId];
+        if (chat.messages && chat.messages.some(msg => msg.isTyping)) {
+          console.log(`Found typing message in chat ${chatId}`);
+          return true;
+        }
+      }
+
+      return false;
+    });
 
     // Convert the map of chats into a sorted array for display (newest first).
     const chatList = computed(() => {
@@ -104,6 +146,12 @@ export default {
 
     // Modified createNewChat function that checks for empty messages and closes the drawer on mobile
     const handleCreateNewChat = () => {
+      // Don't allow new chat creation if there's a typing message
+      if (hasTypingMessage.value) {
+        console.log('Cannot create new chat while message is typing');
+        return;
+      }
+
       // Get the current active chat
       const currentChat = chats.value[currentChatId.value];
 
@@ -152,8 +200,9 @@ export default {
     return {
       chatList,
       currentChatId,
-      createNewChat: handleCreateNewChat, // Replace with our wrapper function
-      selectChat: handleSelectChat, // Use our wrapper function instead of the original
+      hasTypingMessage,
+      handleCreateNewChat,
+      handleSelectChat,
       isVisible,
       toggleVisibility
     };
@@ -178,6 +227,16 @@ export default {
   margin-bottom: 1rem;
 }
 
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.button-group--stacked {
+  flex-direction: column;
+}
+
 .toggle-button {
   background: none;
   color: #1f2937;
@@ -192,20 +251,37 @@ export default {
   font-size: 12px;
 }
 
+.base-icon {
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
 .collapsed {
   width: 50px;
   padding: 1rem 0.5rem;
 }
 
 .new-chat-button {
+  position: relative;
+  left: 4px;
   border: none;
   background: none !important;
-  font-weight: bold;
-  font-size: 18px;
   margin-top: 34px;
   outline: none;
   color: white;
   cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.new-chat-button:disabled,
+.new-chat-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.new-chat-button:disabled:hover,
+.new-chat-button.disabled:hover {
+  opacity: 0.5;
 }
 
 .history-list {
@@ -233,7 +309,9 @@ export default {
   background-color: #1c2539;
   font-weight: bold;
   color: #1f2937;
+  padding-left: 1rem;
 }
+
 .history-item-mobile {
   display: flex;
   flex-direction: column;
@@ -272,6 +350,12 @@ export default {
 
 .theme-dark .new-chat-button {
   background-color: #333333;
+}
+
+.theme-dark .new-chat-button:disabled,
+.theme-dark .new-chat-button.disabled {
+  background-color: #333333;
+  opacity: 0.5;
 }
 
 .theme-dark .toggle-button {

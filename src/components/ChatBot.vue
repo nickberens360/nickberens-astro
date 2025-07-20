@@ -148,6 +148,10 @@ export default {
         isPendingNewChat.set(false);
       }
 
+      // Store the chat ID for this specific message session
+      const messageChatId = currentChatId;
+      console.log('Message will be associated with chat:', messageChatId);
+
       const currentMessages = activeChatMessages.get();
 
       // If this is the very first message in the chat, update the title
@@ -183,8 +187,8 @@ export default {
         // Stop loading indicator since we're now typing
         isLoading.value = false;
 
-        // Start realistic typing effect via message state
-        await updateMessageTyping(messageIndex, data.answer);
+        // Start realistic typing effect via message state - bound to specific chat
+        await updateMessageTyping(messageIndex, data.answer, messageChatId);
 
       } catch (error) {
         if (error.name === 'AbortError') {
@@ -205,6 +209,9 @@ export default {
 
     const stopCurrentAction = () => {
       console.log('Stopping current action');
+
+      // Get the current chat ID for stopping
+      const currentChatId = activeChatId.get();
 
       // Store the prompt that's being stopped for potential retry
       const currentMessages = activeChatMessages.get();
@@ -229,11 +236,11 @@ export default {
         stopLoading();
         isLoading.value = false;
       } else if (hasTypingMessage.value) {
-        // If we're in the typing phase, stop the typing
+        // If we're in the typing phase, stop the typing for the specific chat
         console.log('Stopping typing phase');
         const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
         if (typingMessageIndex !== -1) {
-          stopTyping(typingMessageIndex);
+          stopTyping(typingMessageIndex, currentChatId);
         }
       }
     };

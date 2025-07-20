@@ -109,8 +109,8 @@ export default {
   margin-left: 1rem;
   margin-right: 0.5rem;
   border: none;
-  background-color: #3159af;
-  color: white;
+  background-color: rgba(87, 115, 174, 0.41);
+  color: #9cbcf9;
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s ease;
@@ -123,23 +123,25 @@ export default {
 }
 
 .send-button:hover:not(:disabled) {
-  background-color: #2b3751;
+  background-color: rgba(49, 89, 175, 0.41);
 }
 
 .send-button.stop-mode {
-  background-color: #dc2626; /* Red color for stop */
+  background-color: rgba(248, 128, 128, 0.41);
+  color: #fec5c5;
 }
 
 .send-button.stop-mode:hover:not(:disabled) {
-  background-color: #b91c1c;
+  background-color: rgba(252, 69, 69, 0.41);
 }
 
 .send-button.retry-mode {
-  background-color: #f59e0b; /* Orange/amber color for retry */
+  background-color: rgba(245, 204, 140, 0.27);
+  color: #f59e0b;
 }
 
 .send-button.retry-mode:hover:not(:disabled) {
-  background-color: #d97706;
+  background-color: rgba(217, 119, 6, 0.42);
 }
 
 .send-button:disabled {

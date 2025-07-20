@@ -13,6 +13,8 @@ import {
   faArrowUp,
   faStop,
   faRotateRight,
+  faPenToSquare,
+  faHouseChimney,
 } from '@fortawesome/free-solid-svg-icons';
 
 
@@ -25,6 +27,8 @@ library.add(
   faArrowUp,
   faStop,
   faRotateRight,
+  faPenToSquare,
+  faHouseChimney,
 );
 
 export { library };

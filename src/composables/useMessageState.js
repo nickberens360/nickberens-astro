@@ -5,6 +5,7 @@ import { activeChatMessages, activeChatId, allChats } from '../stores/ai.js';
 export function useMessageState() {
   const typingMessages = ref(new Set());
   const typingTimeouts = ref(new Map());
+  const typingMessageChats = ref(new Map()); // Track which chat each typing message belongs to
 
   const hasTypingMessage = computed(() => {
     return activeChatMessages.get().some(msg => msg.isTyping);
@@ -34,10 +35,11 @@ export function useMessageState() {
     return Math.max(13, baseSpeed + randomVariation);
   };
 
-  const updateMessageTyping = (messageIndex, fullText) => {
+  const updateMessageTyping = (messageIndex, fullText, targetChatId) => {
     return new Promise((resolve) => {
-      console.log(`Starting typing animation for message ${messageIndex}`);
+      console.log(`Starting typing animation for message ${messageIndex} in chat ${targetChatId}`);
       typingMessages.value.add(messageIndex);
+      typingMessageChats.value.set(messageIndex, targetChatId); // Track the chat for this message
       let currentText = '';
       let currentIndex = 0;
 
@@ -55,24 +57,20 @@ export function useMessageState() {
 
           currentText += char;
 
-          // Update the message in the store
-          const currentMessages = activeChatMessages.get();
-          const updatedMessages = [...currentMessages];
-          if (updatedMessages[messageIndex]) {
+          // Update the message in the SPECIFIC chat (not necessarily the active one)
+          const targetChat = allChats.get()[targetChatId];
+          if (targetChat && targetChat.messages[messageIndex]) {
+            const updatedMessages = [...targetChat.messages];
             updatedMessages[messageIndex] = {
               ...updatedMessages[messageIndex],
               text: currentText,
               isTyping: true
             };
 
-            const currentChatId = activeChatId.get();
-            const currentChat = allChats.get()[currentChatId];
-            if (currentChat) {
-              allChats.setKey(currentChatId, {
-                ...currentChat,
-                messages: updatedMessages
-              });
-            }
+            allChats.setKey(targetChatId, {
+              ...targetChat,
+              messages: updatedMessages
+            });
           }
 
           currentIndex++;
@@ -84,24 +82,21 @@ export function useMessageState() {
           console.log(`Typing completed naturally for message ${messageIndex}`);
           typingMessages.value.delete(messageIndex);
           typingTimeouts.value.delete(messageIndex);
+          typingMessageChats.value.delete(messageIndex); // Clean up chat tracking
 
-          const currentMessages = activeChatMessages.get();
-          const updatedMessages = [...currentMessages];
-          if (updatedMessages[messageIndex]) {
+          const targetChat = allChats.get()[targetChatId];
+          if (targetChat && targetChat.messages[messageIndex]) {
+            const updatedMessages = [...targetChat.messages];
             updatedMessages[messageIndex] = {
               ...updatedMessages[messageIndex],
               isTyping: false,
               wasStopped: false
             };
 
-            const currentChatId = activeChatId.get();
-            const currentChat = allChats.get()[currentChatId];
-            if (currentChat) {
-              allChats.setKey(currentChatId, {
-                ...currentChat,
-                messages: updatedMessages
-              });
-            }
+            allChats.setKey(targetChatId, {
+              ...targetChat,
+              messages: updatedMessages
+            });
           }
           resolve();
         }
@@ -113,8 +108,8 @@ export function useMessageState() {
     });
   };
 
-  const stopTyping = (messageIndex) => {
-    console.log(`Stopping typing for message ${messageIndex}`);
+  const stopTyping = (messageIndex, targetChatId) => {
+    console.log(`Stopping typing for message ${messageIndex} in chat ${targetChatId}`);
 
     // Clear the timeout for this message
     if (typingTimeouts.value.has(messageIndex)) {
@@ -122,33 +117,31 @@ export function useMessageState() {
       typingTimeouts.value.delete(messageIndex);
     }
 
-    // Remove from typing messages set
+    // Remove from typing messages set and clean up chat tracking
     typingMessages.value.delete(messageIndex);
+    typingMessageChats.value.delete(messageIndex);
 
-    // Update the message to show it's no longer typing and was stopped
-    const currentMessages = activeChatMessages.get();
-    const updatedMessages = [...currentMessages];
-    if (updatedMessages[messageIndex]) {
+    // Update the message in the SPECIFIC chat to show it's no longer typing and was stopped
+    const targetChat = allChats.get()[targetChatId];
+    if (targetChat && targetChat.messages[messageIndex]) {
+      const updatedMessages = [...targetChat.messages];
       updatedMessages[messageIndex] = {
         ...updatedMessages[messageIndex],
         isTyping: false,
         wasStopped: true
       };
 
-      const currentChatId = activeChatId.get();
-      const currentChat = allChats.get()[currentChatId];
-      if (currentChat) {
-        allChats.setKey(currentChatId, {
-          ...currentChat,
-          messages: updatedMessages
-        });
-      }
+      allChats.setKey(targetChatId, {
+        ...targetChat,
+        messages: updatedMessages
+      });
     }
   };
 
   return {
     typingMessages,
     typingTimeouts,
+    typingMessageChats,
     hasTypingMessage,
     updateMessageTyping,
     stopTyping
