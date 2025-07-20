@@ -134,52 +134,48 @@ export default {
 
       const question = userInput.value;
 
-      // Check if we have a pending new chat
-      if (isPendingNewChat.get() || !activeChatId.get()) {
-        // Create a new chat before sending the message
-        createNewChat();
+      // Check if we have a pending new chat or no active chat
+      let currentChatId = activeChatId.get();
+      if (isPendingNewChat.get() || !currentChatId) {
+        currentChatId = createNewChat();
         isPendingNewChat.set(false);
       }
 
-      const currentChatId = activeChatId.get();
       const currentMessages = activeChatMessages.get();
 
-      // --- NEW: Logic to update chat title ---
-      // If this is the very first message in the chat, update the title.
+      // If this is the very first message in the chat, update the title
       if (currentMessages.length === 0) {
         updateChatTitle(currentChatId, question);
       }
+
+      // Get chat history BEFORE adding the new user message
+      const chatHistoryForAPI = currentMessages.slice();
 
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';
       isLoading.value = true;
 
       try {
-        // Replace the hardcoded line with this:
         const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
         const apiUrl = isDev
           ? 'http://localhost:8000'
           : 'https://nickberens-astro-api.onrender.com';
 
-        console.log(`Environment: ${isDev ? 'development' : 'production'}, API URL: ${apiUrl}`);
         const response = await fetch(`${apiUrl}/query`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          // --- UPDATED: Send the chat history with the request ---
           body: JSON.stringify({
             question: question,
-            chat_history: messages.value.slice(0, -1) // Send all but the last message
+            chat_history: chatHistoryForAPI
           }),
         });
 
         if (!response.ok) {
-          // Extract error details from the response when possible
           let errorMessage = `Error: ${response.status} ${response.statusText}`;
 
           try {
-            // Try to get detailed error message from response body
             const errorData = await response.json();
             if (errorData.detail) {
               errorMessage = errorData.detail;
@@ -188,7 +184,6 @@ export default {
             // If we can't parse the JSON, just use the status message
           }
 
-          // Handle rate limit (429) errors specifically
           if (response.status === 429) {
             errorMessage = 'Rate limit exceeded. Please wait a moment before sending more messages.';
           }
@@ -205,7 +200,6 @@ export default {
 
       } catch (error) {
         console.error('Error fetching response:', error);
-        // Display the specific error message instead of a generic one
         addMessageToActiveChat({
           text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`,
           sender: 'bot'
