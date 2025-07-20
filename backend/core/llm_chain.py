@@ -69,6 +69,8 @@ def create_full_retrieval_chain(docs):
         raise
 
 
+# In your llm_chain.py file, find the get_llm_instances() function and update the Gemini initialization:
+
 def get_llm_instances():
     """Initialize LLM instances with proper error handling, Claude first."""
     llms = {}
@@ -85,12 +87,12 @@ def get_llm_instances():
         logger.warning(f"Failed to initialize Claude (primary): {e}")
         llms['claude'] = None
 
-    # Initialize Gemini as fallback
+    # Initialize Gemini as fallback - FIX: Use 'timeout' instead of 'request_timeout'
     try:
         llms['gemini'] = ChatGoogleGenerativeAI(
             model=GEMINI_MODEL,
             temperature=0.7,
-            request_timeout=REQUEST_TIMEOUT
+            timeout=REQUEST_TIMEOUT  # Changed from request_timeout to timeout
         )
         logger.info(f"Gemini model {GEMINI_MODEL} initialized successfully (FALLBACK)")
     except Exception as e:

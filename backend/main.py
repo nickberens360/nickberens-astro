@@ -10,9 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-# Import the fuzzy matching library
-from thefuzz import process
-
 # Import rate limiting components
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -21,6 +18,7 @@ from slowapi.errors import RateLimitExceeded
 # Import your custom modules
 from .core.data_loader import load_all_documents
 from .core.llm_chain import create_full_retrieval_chain, invoke_with_fallback
+from .core.illustration_service import IllustrationService
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Load environment variables
@@ -87,22 +85,20 @@ class QueryResponse(BaseModel):
     llm_used: Optional[str] = None
 
 
-def load_illustrations() -> List[Dict[str, Any]]:
-    """Load illustrations data from JSON file with error handling."""
+def initialize_illustration_service():
+    """Initialize the illustration service."""
     try:
-        with open(ILLUSTRATIONS_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            logger.info(f"Loaded {len(data)} illustrations")
-            return data
-    except FileNotFoundError:
-        logger.warning(f"Illustrations file not found at {ILLUSTRATIONS_PATH}")
-        return []
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in illustrations file: {e}")
-        return []
+        service = IllustrationService(
+            illustrations_path=ILLUSTRATIONS_PATH,
+            search_threshold=SEARCH_THRESHOLD,
+            max_results=MAX_RESULTS
+        )
+        is_valid, message = service.validate_data()
+        logger.info(message)
+        return service
     except Exception as e:
-        logger.error(f"Unexpected error loading illustrations: {e}")
-        return []
+        logger.error(f"Failed to initialize illustration service: {e}")
+        return None
 
 
 def initialize_app_state():
@@ -118,11 +114,11 @@ def initialize_app_state():
         logger.info("Creating retrieval chain...")
         retriever = create_full_retrieval_chain(all_docs)
 
-        logger.info("Loading illustrations...")
-        illustrations_data = load_illustrations()
+        logger.info("Initializing illustration service...")
+        illustration_service = initialize_illustration_service()
 
         logger.info("Application initialization complete")
-        return retriever, illustrations_data
+        return retriever, illustration_service
     except Exception as e:
         logger.error(f"Failed to initialize app state: {e}")
         raise
@@ -130,11 +126,11 @@ def initialize_app_state():
 
 # Initialize app state
 try:
-    retriever, illustrations_data = initialize_app_state()
+    retriever, illustration_service = initialize_app_state()
     app_initialized = True
 except Exception as e:
     logger.critical(f"Application startup failed: {e}")
-    retriever, illustrations_data = None, []
+    retriever, illustration_service = None, None
     app_initialized = False
 
 origins = [
@@ -161,66 +157,11 @@ app.add_middleware(
 
 
 def search_illustrations(search_term: str) -> List[Dict[str, str]]:
-    """
-    Search illustrations using fuzzy matching with improved error handling.
-
-    Args:
-        search_term: The search term to match against illustrations
-
-    Returns:
-        List of dictionaries containing file paths of matching illustrations
-    """
-    try:
-        if not illustrations_data:
-            logger.warning("No illustrations data available")
-            return []
-
-        if not search_term or search_term.lower() == "all":
-            return [{"file": img["file"]} for img in illustrations_data]
-
-        search_term = search_term.strip()
-
-        # Handle multiple search terms joined by "and"
-        if " and " in search_term.lower():
-            terms = [term.strip() for term in search_term.lower().split(" and ") if term.strip()]
-            all_matches = []
-
-            for term in terms:
-                choices = {
-                    img["file"]: f"{img.get('title', '')} {' '.join(img.get('tags', []))}"
-                    for img in illustrations_data
-                    if isinstance(img, dict) and 'file' in img
-                }
-
-                if choices:
-                    found_matches = process.extract(term, choices, limit=10)
-                    term_matches = [key for match, score, key in found_matches if score >= SEARCH_THRESHOLD]
-                    all_matches.extend(term_matches)
-
-            # Deduplicate results while preserving order
-            unique_files = list(dict.fromkeys(all_matches))
-            return [{"file": file} for file in unique_files[:MAX_RESULTS]]
-        else:
-            # Single-term search logic
-            choices = {
-                img["file"]: f"{img.get('title', '')} {' '.join(img.get('tags', []))}"
-                for img in illustrations_data
-                if isinstance(img, dict) and 'file' in img
-            }
-
-            if not choices:
-                return []
-
-            found_matches = process.extract(search_term, choices, limit=10)
-            high_quality_matches = [
-                {"file": key} for match, score, key in found_matches
-                if score >= SEARCH_THRESHOLD
-            ]
-            return high_quality_matches[:MAX_RESULTS]
-
-    except Exception as e:
-        logger.error(f"Error searching illustrations: {e}")
+    """Search illustrations using the service."""
+    if not illustration_service:
+        logger.warning("Illustration service not available")
         return []
+    return illustration_service.search(search_term)
 
 
 # --- API Endpoints ---
@@ -239,13 +180,15 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Detailed health check."""
+    illustration_count = illustration_service.get_count() if illustration_service else 0
+
     return {
         "status": "healthy" if app_initialized else "degraded",
         "app_initialized": app_initialized,
         "components": {
             "retriever": retriever is not None,
-            "illustrations": len(illustrations_data) > 0,
-            "illustrations_count": len(illustrations_data)
+            "illustrations": illustration_count > 0,
+            "illustrations_count": illustration_count
         },
         "configuration": {
             "primary_llm": PRIMARY_LLM,
@@ -543,7 +486,11 @@ async def startup_event():
     logger.info("=== Nick Berens Portfolio API Starting ===")
     logger.info(f"Primary LLM: {PRIMARY_LLM}")
     logger.info(f"App initialized: {app_initialized}")
-    logger.info(f"Illustrations loaded: {len(illustrations_data)}")
+
+    # The validation is now done in the service initialization
+    if illustration_service:
+        logger.info(f"Illustration service initialized with {illustration_service.get_count()} illustrations")
+
     logger.info("=== Startup Complete ===")
 
 
