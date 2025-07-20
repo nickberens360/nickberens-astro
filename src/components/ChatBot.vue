@@ -7,88 +7,95 @@
       class="messages-window"
       ref="messagesWindow"
     >
-      <ChatBotWelcome
-        v-if="messages.length === 0"
-        :theme="theme"
-        @select-prompt="handlePromptSelect"
-      />
-      <div
-        v-for="(message, index) in messages"
-        :key="index"
-        :class="['message', message.sender]"
-      >
-        <div class="message-bubble">
-          <!-- User messages remain as plain text -->
-          <p v-if="message.text && message.sender === 'user'">{{ message.text }}</p>
+      <div class="messages-content">
+        <ChatBotWelcome
+          v-if="messages.length === 0"
+          :theme="theme"
+          @select-prompt="handlePromptSelect"
+        />
+        <div
+          v-for="(message, index) in messages"
+          :key="index"
+          :class="['message', message.sender]"
+        >
+          <div class="message-bubble">
+            <!-- User messages remain as plain text -->
+            <p v-if="message.text && message.sender === 'user'">{{ message.text }}</p>
 
-          <!-- Bot messages with typing effect -->
-          <div v-if="message.sender === 'bot'" class="bot-message-wrapper">
-            <div
-              v-if="message.text"
-              class="markdown-content-wrapper"
-            >
+            <!-- Bot messages with typing effect -->
+            <div v-if="message.sender === 'bot'" class="bot-message-wrapper">
+              <div
+                v-if="message.text"
+                class="markdown-content-wrapper"
+              >
               <span
                 v-html="renderMarkdown(message.text)"
                 class="markdown-content"
               ></span><span
-              v-if="message.isTyping"
-              class="typing-cursor"
-            >|</span>
+                v-if="message.isTyping"
+                class="typing-cursor"
+              >|</span>
+              </div>
+
+              <!-- Stopped message indicator -->
+              <div v-if="message.wasStopped && !message.isTyping" class="stopped-indicator">
+                <span class="stopped-icon">⏹</span>
+                You stopped this response
+              </div>
+
+              <!-- Model indicator for bot messages -->
+              <div v-if="message.model && !message.isTyping" class="model-indicator">
+                <span class="model-badge">{{ message.model }}</span>
+              </div>
             </div>
 
-            <!-- Stopped message indicator -->
-            <div v-if="message.wasStopped && !message.isTyping" class="stopped-indicator">
-              <span class="stopped-icon">⏹</span>
-              You stopped this response
+            <!-- Images (only show after typing is complete) -->
+            <div
+              v-if="message.images && message.images.length && !message.isTyping"
+              class="image-gallery fade-in"
+            >
+              <img
+                v-for="src in message.images"
+                :key="src"
+                :src="src"
+                alt="Illustration"
+                class="chat-image"
+                @click="handleImageClick(src)"
+              />
             </div>
-          </div>
 
-          <!-- Images (only show after typing is complete) -->
-          <div
-            v-if="message.images && message.images.length && !message.isTyping"
-            class="image-gallery fade-in"
-          >
-            <img
-              v-for="src in message.images"
-              :key="src"
-              :src="src"
-              alt="Illustration"
-              class="chat-image"
-              @click="handleImageClick(src)"
-            />
-          </div>
-
-          <!-- Follow-up questions (only show after typing is complete) -->
-          <div
-            v-if="message.followup_questions && message.followup_questions.length && message.sender === 'bot' && !message.isTyping && false"
-            class="followup-container fade-in"
-          >
-            <p class="followup-label">💡 You might also want to ask:</p>
-            <div class="followup-buttons">
-              <button
-                v-for="(question, qIndex) in message.followup_questions"
-                :key="qIndex"
-                @click="handleFollowupClick(question)"
-                class="followup-button"
-                :disabled="isLoading || hasTypingMessage"
-              >
-                {{ question }}
-              </button>
+            <!-- Follow-up questions (only show after typing is complete) -->
+            <div
+              v-if="message.followup_questions && message.followup_questions.length && message.sender === 'bot' && !message.isTyping && false"
+              class="followup-container fade-in"
+            >
+              <p class="followup-label">💡 You might also want to ask:</p>
+              <div class="followup-buttons">
+                <button
+                  v-for="(question, qIndex) in message.followup_questions"
+                  :key="qIndex"
+                  @click="handleFollowupClick(question)"
+                  class="followup-button"
+                  :disabled="isLoading || hasTypingMessage"
+                >
+                  {{ question }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Loading indicator (only show when no message is being typed) -->
-      <div
-        v-if="isLoading && !hasTypingMessage"
-        class="message bot"
-      >
-        <div class="message-bubble">
-          <div class="typing-indicator">
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
+        <!-- Loading indicator (only show when no message is being typed) -->
+        <div
+          v-if="isLoading && !hasTypingMessage"
+          class="message bot"
+        >
+          <div class="message-bubble">
+            <div class="typing-indicator">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -102,21 +109,35 @@
           class="message-input"
           :disabled="isLoading && !hasTypingMessage"
         />
-        <button
-          @click="hasTypingMessage ? stopCurrentAction() : sendMessage()"
-          class="send-button"
-          :class="{ 'stop-mode': hasTypingMessage }"
-          :disabled="isLoading && !hasTypingMessage"
-        >
+        <div class="d-flex justify-between items-center w-full pt-2">
+          <div class="model-selector-bar">
+            <div class="model-selector-container">
+              <select
+                v-model="selectedModel"
+                class="model-selector"
+                :disabled="isLoading || hasTypingMessage"
+              >
+                <option value="claude">Claude (Recommended)</option>
+                <option value="gemini">Gemini (Fast)</option>
+              </select>
+            </div>
+          </div>
+          <button
+            @click="hasTypingMessage ? stopCurrentAction() : sendMessage()"
+            class="send-button"
+            :class="{ 'stop-mode': hasTypingMessage }"
+            :disabled="isLoading && !hasTypingMessage"
+          >
           <span v-if="hasTypingMessage" class="stop-content">
             <span class="stop-icon">⏹</span>
             Stop
           </span>
-          <span v-else-if="lastStoppedPrompt && !userInput.trim()">
+            <span v-else-if="lastStoppedPrompt && !userInput.trim()">
             Retry
           </span>
-          <span v-else>Send</span>
-        </button>
+            <span v-else>Send</span>
+          </button>
+        </div>
       </div>
     </div>
     <ImageOverlay />
@@ -161,6 +182,13 @@ export default {
     const typingTimeouts = ref(new Map()); // Track typing timeouts for cancellation
     const abortController = ref(null); // For cancelling API requests
     const lastStoppedPrompt = ref(''); // Track the last stopped prompt for retry
+    const selectedModel = ref('claude'); // Default to Claude
+
+    // Model descriptions
+    const modelDescriptions = {
+      claude: 'Best quality responses, slower',
+      gemini: 'Faster responses, good quality'
+    };
 
     // Check if any message is currently typing
     const hasTypingMessage = computed(() => {
@@ -250,27 +278,27 @@ export default {
     // Realistic typing effect composable with stop functionality
     const useRealisticTyping = () => {
       const getTypingSpeed = (char, prevChar) => {
-        const baseSpeed = 25; // Base typing speed in ms
+        const baseSpeed = 10; // Base typing speed in ms (reduced from 15ms for 50% faster typing)
 
         // Slower for punctuation (thinking pauses)
-        if (['.', '!', '?', ':'].includes(char)) return baseSpeed + 400;
-        if ([',', ';'].includes(char)) return baseSpeed + 200;
+        if (['.', '!', '?', ':'].includes(char)) return baseSpeed + 133; // Reduced from +200ms
+        if ([',', ';'].includes(char)) return baseSpeed + 67; // Reduced from +100ms
 
         // Slower after punctuation (pause after sentences)
-        if (prevChar && ['.', '!', '?'].includes(prevChar)) return baseSpeed + 300;
-        if (prevChar && [',', ';'].includes(prevChar)) return baseSpeed + 150;
+        if (prevChar && ['.', '!', '?'].includes(prevChar)) return baseSpeed + 100; // Reduced from +150ms
+        if (prevChar && [',', ';'].includes(prevChar)) return baseSpeed + 50; // Reduced from +75ms
 
         // Faster for common letter combinations
         const commonCombos = ['th', 'he', 'in', 'er', 'an', 're', 'ed', 'nd', 'ha', 'at'];
-        if (prevChar && commonCombos.includes(prevChar + char)) return baseSpeed - 15;
+        if (prevChar && commonCombos.includes(prevChar + char)) return baseSpeed - 10; // Reduced from -15ms
 
         // Slower for uppercase letters (shift key)
-        if (char === char.toUpperCase() && char !== char.toLowerCase()) return baseSpeed + 20;
+        if (char === char.toUpperCase() && char !== char.toLowerCase()) return baseSpeed + 13; // Reduced from +20ms
 
         // Add some randomness for natural feel
-        const randomVariation = Math.random() * 25 - 12.5; // ±12.5ms
+        const randomVariation = Math.random() * 10 - 5; // Reduced from ±12.5ms to ±5ms
 
-        return Math.max(20, baseSpeed + randomVariation);
+        return Math.max(13, baseSpeed + randomVariation); // Reduced minimum from 20ms to 13ms
       };
 
       const typeMessageRealistic = (messageIndex, fullText) => {
@@ -343,7 +371,7 @@ export default {
           };
 
           // Start typing after a brief pause (simulating thinking)
-          const initialTimeoutId = setTimeout(typeChar, 500);
+          const initialTimeoutId = setTimeout(typeChar, 333); // Reduced from 500ms for 50% faster typing
           typingTimeouts.value.set(messageIndex, initialTimeoutId);
         });
       };
@@ -401,7 +429,8 @@ export default {
           },
           body: JSON.stringify({
             question: question,
-            chat_history: chatHistoryForAPI
+            chat_history: chatHistoryForAPI,
+            preferred_model: selectedModel.value // Send preferred model
           }),
           signal: abortController.value.signal
         });
@@ -434,7 +463,8 @@ export default {
           images: data.images || [],
           followup_questions: data.followup_questions || [],
           isTyping: true,
-          wasStopped: false
+          wasStopped: false,
+          model: data.model_used || data.llm_used || selectedModel.value // Track which model was used
         });
 
         // Get the index of the message we just added
@@ -456,7 +486,8 @@ export default {
         console.error('Error fetching response:', error);
         addMessageToActiveChat({
           text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`,
-          sender: 'bot'
+          sender: 'bot',
+          model: 'error'
         });
       } finally {
         isLoading.value = false;
@@ -491,6 +522,9 @@ export default {
       isLoading,
       messagesWindow,
       hasTypingMessage,
+      selectedModel,
+      modelDescriptions,
+      lastStoppedPrompt,
       sendMessage,
       handlePromptSelect,
       handleFollowupClick,
@@ -517,15 +551,23 @@ export default {
   overflow: hidden;
 }
 
+
+
 /* Messages window */
 .messages-window {
-  flex-grow: 1;
   padding: 1rem;
   overflow-y: auto;
+  background-color: #111111;
+}
+
+.messages-content {
+  max-width: 800px;
+  margin: 0 auto;
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background-color: #111111;
+  box-shadow: 0 5px 10px -5px rgba(0, 0, 0, 0.5) inset;
 }
 
 /* Message structure */
@@ -536,7 +578,7 @@ export default {
 .message-bubble {
   padding: 0.75rem 1.25rem;
   border-radius: 18px;
-  max-width: 85%;
+  max-width: 100%;
   line-height: 1.5;
 }
 
@@ -553,6 +595,7 @@ export default {
   background-color: #457ef7;
   color: white;
   border-bottom-right-radius: 4px;
+  font-size: 0.95rem;
 }
 
 /* Bot messages */
@@ -561,7 +604,8 @@ export default {
 }
 
 .bot .message-bubble {
-  background-color: #222222;
+  background-color: transparent;
+  /*background-color: #222222;*/
   color: #f9fafb;
   border-bottom-left-radius: 4px;
 }
@@ -757,27 +801,75 @@ export default {
 /* Input area */
 .input-form {
   display: flex;
-  padding: 1rem;
+  padding: 0 1rem 1rem;
   border-top: 1px solid #111111;
   background-color: #111111;
 }
 
 .input-container {
-  display: flex;
-  align-items: center;
+  box-shadow: 0 -8px 20px 10px rgba(17, 17, 17, .9);
   width: 100%;
-  background-color: #111111;
   border: 1px solid #afafaf;
+  background-color: #111111;
   color: #f9fafb;
   border-radius: 8px;
-  overflow: hidden;
   padding: 0.5rem;
   max-width: 800px;
   margin: 0 auto;
 }
 
+/* Model Selector Bar */
+.model-selector-bar {
+  padding-left: .5rem;
+}
+
+.model-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.model-selector {
+  background-color: #222222;
+  border: 1px solid #444444;
+  border-radius: 6px;
+  color: #b8ccfb;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.model-selector:focus {
+  outline: none;
+}
+
+.model-selector:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.model-indicator {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.model-badge {
+  background-color: rgba(69, 126, 247, 0.1);
+  border: 1px solid rgba(69, 126, 247, 0.3);
+  color: #60a5fa;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
 .message-input {
-  flex-grow: 1;
+  flex-grow: 0;
   padding: 0.75rem;
   font-size: 1rem;
   border: none !important;
@@ -838,6 +930,7 @@ export default {
 
 /* Markdown content styling */
 :deep(.markdown-content) {
+  font-size: .90rem;
   line-height: 1.6;
 }
 
@@ -894,6 +987,16 @@ export default {
 
 /* Responsive styles */
 @media (max-width: 768px) {
+  .model-selector-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .model-selector {
+    min-width: 100%;
+  }
+
   .messages-window {
     padding: 0.5rem;
   }
@@ -926,6 +1029,14 @@ export default {
 
   .stop-icon {
     font-size: 0.75em;
+  }
+
+  .model-selector-bar {
+    padding: 0.5rem;
+  }
+
+  .model-badge {
+    font-size: 0.625rem;
   }
 }
 </style>

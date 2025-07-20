@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_anthropic import ChatAnthropic
 from langchain_community.vectorstores import Chroma
@@ -223,36 +223,47 @@ def is_rate_limit_error(error):
     return any(indicator in error_str for indicator in rate_limit_indicators)
 
 
-def invoke_with_fallback(retriever, chat_history: List[BaseMessage], user_input: str) -> str:
+def invoke_with_fallback(retriever, chat_history: List[BaseMessage], user_input: str, preferred_model: Optional[str] = None) -> Tuple[str, str]:
     """
-    Claude-first approach with Gemini fallback.
-    Enhanced with caching and better error handling.
+    Enhanced fallback with user model preference.
+    Returns: (answer, model_used)
     """
     if not retriever:
         logger.error("No retriever provided")
-        return "I'm sorry, the AI service is temporarily unavailable."
+        return "I'm sorry, the AI service is temporarily unavailable.", "error"
 
     # Check cache first
     cache_key = get_cache_key(user_input, chat_history)
     cached_response = get_cached_response(cache_key)
     if cached_response:
-        return cached_response
+        return cached_response, "cached"
 
     # Get LLM instances
     try:
         llms = get_llm_instances()
     except Exception as e:
         logger.error(f"Failed to initialize LLM instances: {e}")
-        return "I'm sorry, the AI service is temporarily unavailable. Please try again later."
+        return "I'm sorry, the AI service is temporarily unavailable. Please try again later.", "error"
 
     # Create prompts
     contextualize_q_prompt, qa_prompt = create_prompts()
 
-    # Define the order of LLM attempts based on PRIMARY_LLM setting
-    if PRIMARY_LLM.lower() == "claude":
-        llm_order = [('claude', CLAUDE_RETRY_DELAY), ('gemini', GEMINI_RETRY_DELAY)]
-    else:
+    # Determine LLM order based on user preference
+    if preferred_model == "gemini" and llms.get('gemini'):
         llm_order = [('gemini', GEMINI_RETRY_DELAY), ('claude', CLAUDE_RETRY_DELAY)]
+        logger.info("User requested Gemini model")
+    elif preferred_model == "claude" and llms.get('claude'):
+        llm_order = [('claude', CLAUDE_RETRY_DELAY), ('gemini', GEMINI_RETRY_DELAY)]
+        logger.info("User requested Claude model")
+    else:
+        # Fall back to default order if preference not available or invalid
+        if PRIMARY_LLM.lower() == "claude":
+            llm_order = [('claude', CLAUDE_RETRY_DELAY), ('gemini', GEMINI_RETRY_DELAY)]
+        else:
+            llm_order = [('gemini', GEMINI_RETRY_DELAY), ('claude', CLAUDE_RETRY_DELAY)]
+
+        if preferred_model:
+            logger.warning(f"User requested '{preferred_model}' but model not available, using default order")
 
     # Try each LLM in order
     for llm_name, retry_delay in llm_order:
@@ -269,12 +280,11 @@ def invoke_with_fallback(retriever, chat_history: List[BaseMessage], user_input:
                     qa_prompt, user_input, chat_history
                 )
 
-                logger.info(f"{llm_name.title()} response successful")
-
                 # Cache the successful response
                 cache_response(cache_key, response)
 
-                return response
+                logger.info(f"{llm_name.title()} response successful")
+                return response, llm_name
 
             except exceptions.ResourceExhausted as e:
                 logger.warning(f"{llm_name.title()} rate limit reached: {e}")
@@ -311,7 +321,7 @@ def invoke_with_fallback(retriever, chat_history: List[BaseMessage], user_input:
     return (
         "I'm sorry, I'm currently experiencing technical difficulties. "
         "This might be due to high demand or service issues. Please try again in a few minutes."
-    )
+    ), "fallback"
 
 
 def get_cache_stats() -> Dict[str, Any]:
@@ -333,7 +343,7 @@ def get_cache_stats() -> Dict[str, Any]:
 
 
 # Alternative simple fallback function for emergencies
-def simple_fallback_response(user_input: str) -> str:
+def simple_fallback_response(user_input: str) -> Tuple[str, str]:
     """Provide a simple response when all AI services fail."""
     keywords_responses = {
         "hello": "Hello! I'm Nick Berens' AI assistant. How can I help you today?",
@@ -350,9 +360,9 @@ def simple_fallback_response(user_input: str) -> str:
     user_lower = user_input.lower()
     for keyword, response in keywords_responses.items():
         if keyword in user_lower:
-            return response
+            return response, "fallback"
 
     return (
         "I'm currently experiencing technical difficulties, but I'm here to help you learn about Nick Berens. "
         "Could you try rephrasing your question or ask something specific about his work, experience, or projects?"
-    )
+    ), "fallback"

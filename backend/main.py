@@ -1,6 +1,7 @@
+# backend/main.py
 import logging
 import time
-from typing import List
+from typing import List, Optional
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -74,6 +75,7 @@ class Message(BaseModel):
 class Query(BaseModel):
     question: str = Field(..., min_length=1, description="The user's question")
     chat_history: List[Message] = Field(default=[], description="Previous conversation history")
+    preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
 
 
 def initialize_illustration_service():
@@ -197,12 +199,16 @@ def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
 
     # Get AI response with enhanced error handling
     try:
-        answer = invoke_with_fallback(retriever, formatted_chat_history, query.question)
-        llm_used = AppConfig.PRIMARY_LLM
+        answer, model_used = invoke_with_fallback(
+            retriever,
+            formatted_chat_history,
+            query.question,
+            query.preferred_model  # Pass the preferred model
+        )
 
         if not answer:
             answer = "I'm sorry, I couldn't generate a response. Please try rephrasing your question."
-            llm_used = "fallback"
+            model_used = "fallback"
 
         # Generate follow-up questions
         followup_questions = followup_service.generate_followups(
@@ -211,7 +217,7 @@ def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
             conversation_history
         )
 
-        return response_service.build_ai_response(answer, start_time, llm_used, followup_questions)
+        return response_service.build_ai_response(answer, start_time, model_used, followup_questions, model_used)
 
     except Exception as llm_error:
         logger.error(f"LLM processing failed: {llm_error}")
@@ -227,7 +233,7 @@ def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
             "What technologies does he work with?"
         ]
 
-        return response_service.build_error_response(error_message, start_time, "fallback", followup_questions)
+        return response_service.build_error_response(error_message, start_time, "fallback", followup_questions, "error")
 
 
 # --- API Endpoints ---
@@ -319,6 +325,10 @@ async def query_endpoint(request: Request, query: Query) -> QueryResponse:
     try:
         question = query.question.lower().strip()
         logger.info(f"Processing query: {question[:50]}{'...' if len(question) > 50 else ''}")
+
+        # Log model preference
+        if query.preferred_model:
+            logger.info(f"User requested model: {query.preferred_model}")
 
         # Route the query to determine its type
         query_type, search_term = query_router.route_query(question)
