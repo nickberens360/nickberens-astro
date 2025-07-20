@@ -8,16 +8,10 @@
     :style="{ backgroundColor }"
     ref="sectionRef"
   >
-    <!-- Debug info -->
-    <div class="debug-info">
-      Parallax: {{ isScrolling ? 'ACTIVE' : 'INACTIVE' }} |
-      Offset: {{ currentOffset.toFixed(1) }}px |
-      In View: {{ inViewport ? 'YES' : 'NO' }}
-    </div>
-
     <!-- Background layer -->
     <div
       class="parallax-section__background"
+      :class="{ 'floating-reversed': floatingBackground }"
       ref="backgroundRef"
       :style="{ transform: `translateY(${currentOffset}px)` }"
     >
@@ -34,7 +28,7 @@
         :src="foregroundImage"
         :alt="foregroundAlt"
         class="parallax-section__fg-image"
-        :style="{ maxWidth: foregroundMaxWidth }"
+        :class="{ 'floating': floatingForeground }"
       />
     </div>
   </section>
@@ -51,15 +45,20 @@ export default {
     foregroundAlt: { type: String, default: 'Foreground image' },
     fullWidth: { type: Boolean, default: false },
     noPadding: { type: Boolean, default: false },
-    parallaxSpeed: { type: Number, default: 0.5 },
-    foregroundMaxWidth: { type: String, default: '300px' }
+    parallaxSpeed: { type: Number, default: 0.8 },
+    foregroundMaxWidth: { type: String, default: '300px' },
+    foregroundMaxWidthMobile: { type: String, default: '90%' },
+    floatingForeground: { type: Boolean, default: false },
+    floatingBackground: { type: Boolean, default: false }
   },
   data() {
     return {
       currentOffset: 0,
       inViewport: false,
-      isScrolling: false,
-      ticking: false
+      ticking: false,
+      // Damping factor to control the intensity of parallax effect
+      // Lower values create a more subtle effect
+      PARALLAX_DAMPING_FACTOR: -0.3
     };
   },
   mounted() {
@@ -78,14 +77,10 @@ export default {
   },
   methods: {
     onScroll() {
-      this.isScrolling = true;
       if (!this.ticking) {
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
           this.calculateParallax();
           this.ticking = false;
-          setTimeout(() => {
-            this.isScrolling = false;
-          }, 100);
         });
         this.ticking = true;
       }
@@ -94,20 +89,16 @@ export default {
       this.calculateParallax();
     },
     calculateParallax() {
-      if (!this.$refs.sectionRef) return;
+      const el = this.$refs.sectionRef;
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight;
 
-      const element = this.$refs.sectionRef;
-      const rect = element.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-
-      this.inViewport = rect.top < windowHeight && rect.bottom > 0;
-
+      this.inViewport = rect.top < vh && rect.bottom > 0;
       if (this.inViewport) {
         const elementCenter = rect.top + rect.height / 2;
-        const viewportCenter = windowHeight / 2;
+        const viewportCenter = vh / 2;
         const distance = elementCenter - viewportCenter;
-
-        this.currentOffset = distance * this.parallaxSpeed * -0.3;
+        this.currentOffset = distance * this.parallaxSpeed * this.PARALLAX_DAMPING_FACTOR;
       }
     }
   }
@@ -123,6 +114,7 @@ export default {
   padding: 4rem 1.5rem;
   overflow: hidden;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .parallax-section--full-width {
@@ -131,20 +123,6 @@ export default {
 
 .parallax-section--no-padding {
   padding: 0;
-}
-
-.debug-info {
-  display: none;
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 8px;
-  font-size: 12px;
-  z-index: 999;
-  border-radius: 4px;
-  font-family: monospace;
 }
 
 .parallax-section__background {
@@ -175,6 +153,7 @@ export default {
 }
 
 .parallax-section__fg-image {
+  max-width: v-bind(foregroundMaxWidth);
   width: 100%;
   margin: 0 auto;
   height: auto;
@@ -183,19 +162,53 @@ export default {
   z-index: 3;
 }
 
+/* Floating animation */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes floatReversed {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+
+.floating {
+  animation: float 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.floating-reversed {
+  animation: floatReversed 3s ease-in-out infinite;
+  will-change: transform;
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
-  .debug-info {
-    font-size: 10px;
-    padding: 4px;
+  .parallax-section__fg-image {
+    max-width: v-bind(foregroundMaxWidthMobile);
   }
-
-  /*.parallax-section__background {
-    position: absolute;
+  .parallax-section__background {
     top: 0;
     bottom: 0;
     height: 100%;
     transform: none !important;
-  }*/
+  }
 }
 </style>
