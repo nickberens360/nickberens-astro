@@ -35,7 +35,6 @@ import {
   createNewChat,
   updateChatTitle,
   isPendingNewChat,
-  allChats
 } from '../stores/ai.js';
 import { openImageOverlay, isChatProcessing } from '../stores/ui.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
