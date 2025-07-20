@@ -1,5 +1,10 @@
 import os
+import logging
 from typing import List
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class AppConfig:
     """Centralized configuration management."""
@@ -10,14 +15,28 @@ class AppConfig:
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
     # Search Configuration
-    SEARCH_THRESHOLD = int(os.getenv("SEARCH_THRESHOLD", "55"))
-    MAX_RESULTS = int(os.getenv("MAX_RESULTS", "15"))
+    try:
+        SEARCH_THRESHOLD = int(os.getenv("SEARCH_THRESHOLD", "55"))
+    except ValueError:
+        logger.error("Invalid SEARCH_THRESHOLD value. Using default value of 55.")
+        SEARCH_THRESHOLD = 55
+
+    try:
+        MAX_RESULTS = int(os.getenv("MAX_RESULTS", "15"))
+    except ValueError:
+        logger.error("Invalid MAX_RESULTS value. Using default value of 15.")
+        MAX_RESULTS = 15
+
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "public/illustrations.json")
 
     # Server Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     HOST = os.getenv("HOST", "0.0.0.0")
-    PORT = int(os.getenv("PORT", "8000"))
+    try:
+        PORT = int(os.getenv("PORT", "8000"))
+    except ValueError:
+        logger.error("Invalid PORT value. Using default value of 8000.")
+        PORT = 8000
 
     # CORS Configuration
     @staticmethod

@@ -304,40 +304,5 @@ export default {
 }
 
 /* Responsive styles */
-@media (max-width: 768px) {
-  .input-form {
-    padding: 0.5rem;
-  }
 
-  .message-input {
-    font-size: 0.875rem;
-  }
-
-  .d-flex {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .model-selector-container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .model-selector {
-    min-width: 100%;
-  }
-
-  .model-selector-bar {
-    padding: 0.5rem;
-  }
-
-  .send-button {
-    width: 36px;
-    height: 36px;
-    margin-left: 0.75rem;
-    margin-right: 0.25rem;
-  }
-}
 </style>
