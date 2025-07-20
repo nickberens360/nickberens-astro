@@ -84,7 +84,6 @@ const illustrations = [
         floating: true,
         floatingBackground: true,
         imgAlt: 'Snake Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
         noPadding: true,
         class: 'px-4',
     },
@@ -235,7 +234,7 @@ const illustrations = [
                 backgroundColor={item.backgroundColor}
                 backgroundImage={item.backgroundImage.src}
                 foregroundImage={item.foregroundImage.src}
-                backgroundAlt="Background"
+                backgroundAlt={item.imgAlt}
                 foregroundAlt={item.imgAlt}
                 fullWidth={item.fullWidth}
                 noPadding={item.noPadding}
