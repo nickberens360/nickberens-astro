@@ -9,6 +9,7 @@ import PageSection from '../components/PageSection.vue';
     title="Nick AI | A Chatbot for Nick's Portfolio"
     hideFooter={true}
     hideTerminal={true}
+    hideHeader={true}
 >
   <PageSection
       data-section-color="black"
@@ -30,9 +31,11 @@ import PageSection from '../components/PageSection.vue';
 <style>
     .chat-layout {
         display: flex;
-        height: calc(100vh - var(--site-header-height));
+        /*height: calc(100vh - var(--site-header-height));
         height: calc(100dvh - var(--site-header-height));
-        margin-top: var(--site-header-height);
+        margin-top: var(--site-header-height);*/
+        height: 100vh;
+        height: 100dvh;
         overflow: hidden;
     }
 </style>

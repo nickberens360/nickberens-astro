@@ -45,6 +45,8 @@
       <div
         v-for="chat in chatList"
         :key="chat.id"
+        class="history-item-mobile"
+        @click="toggleVisibility"
       >
         ...
       </div>
@@ -225,6 +227,10 @@ export default {
   background-color: #1c2539;
   font-weight: bold;
   color: #1f2937;
+}
+.history-item-mobile {
+  text-align: center;
+  color: #6c7889;
 }
 
 /* Dark theme styles */

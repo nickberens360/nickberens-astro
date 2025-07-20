@@ -1,5 +1,6 @@
 <template>
   <header
+    v-if="!hideHeader"
     class="site-header"
     :class="[
       `theme-${overlayTheme}`,
@@ -125,6 +126,10 @@ export default {
       default: 'main'
     },
     hasTerminalInput: {
+      type: Boolean,
+      default: false
+    },
+    hideHeader: {
       type: Boolean,
       default: false
     },
