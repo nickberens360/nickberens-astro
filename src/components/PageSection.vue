@@ -13,7 +13,7 @@
       :class="[themeClass, { 'page-section__inner--full-width': fullWidth }]"
       :style="fullWidth ? {} : { maxWidth: width + 'px' }"
     >
-      <slot></slot>
+      <slot name="default"></slot>
     </div>
   </section>
 </template>
