@@ -1,57 +1,85 @@
 <template>
-  <div :class="['message', message.sender]">
-    <div class="message-bubble">
-      <!-- User Message Content -->
-      <p v-if="message.sender === 'user'">{{ message.text }}</p>
+  <div
+    class="messages-window"
+    ref="messagesWindow"
+  >
+    <div class="messages-content">
+      <ChatBotWelcome
+        v-if="messages.length === 0"
+        :theme="theme"
+        @select-prompt="$emit('prompt-select', $event)"
+      />
+      <!-- Message Items -->
+      <div
+        v-for="(message, index) in messages"
+        :key="index"
+        :class="['message', message.sender]"
+      >
+        <div class="message-bubble">
+          <!-- User Message Content -->
+          <p v-if="message.sender === 'user'">{{ message.text }}</p>
 
-      <!-- Bot Message Content -->
-      <div v-else class="bot-message-wrapper">
-        <!-- Typing Text -->
-        <div>
-          <div v-if="message.text" class="markdown-content-wrapper">
-            <span v-html="renderMarkdown(message.text)" class="markdown-content"></span>
-            <span v-if="message.isTyping" class="typing-cursor">|</span>
-          </div>
+          <!-- Bot Message Content -->
+          <div v-else class="bot-message-wrapper">
+            <!-- Typing Text -->
+            <div>
+              <div v-if="message.text" class="markdown-content-wrapper">
+                <span v-html="renderMarkdown(message.text)" class="markdown-content"></span>
+                <span v-if="message.isTyping" class="typing-cursor">|</span>
+              </div>
 
-          <!-- Stopped message indicator -->
-          <div v-if="message.wasStopped && !message.isTyping" class="stopped-indicator">
-            <span class="stopped-icon">⏹</span>
-            You stopped this response
+              <!-- Stopped message indicator -->
+              <div v-if="message.wasStopped && !message.isTyping" class="stopped-indicator">
+                <span class="stopped-icon">⏹</span>
+                You stopped this response
+              </div>
+            </div>
+
+            <!-- Message Metadata -->
+            <div>
+              <!-- Images (only show after typing is complete) -->
+              <div v-if="message.images && message.images.length && !message.isTyping" class="image-gallery fade-in">
+                <img
+                  v-for="src in message.images"
+                  :key="src"
+                  :src="src"
+                  alt="Illustration"
+                  class="chat-image"
+                  @click="$emit('image-click', src)"
+                />
+              </div>
+
+              <!-- Model indicator for bot messages -->
+              <div v-if="message.model && !message.isTyping" class="model-indicator">
+                <span class="model-badge">{{ message.model }}</span>
+              </div>
+
+              <!-- Follow-up questions (only show after typing is complete) -->
+              <div v-if="shouldShowFollowups(message)" class="followup-container fade-in">
+                <p class="followup-label">💡 You might also want to ask:</p>
+                <div class="followup-buttons">
+                  <button
+                    v-for="(question, qIndex) in message.followup_questions"
+                    :key="qIndex"
+                    @click="$emit('followup-click', question)"
+                    class="followup-button"
+                  >
+                    {{ question }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Message Metadata -->
-        <div>
-          <!-- Images (only show after typing is complete) -->
-          <div v-if="message.images && message.images.length && !message.isTyping" class="image-gallery fade-in">
-            <img
-              v-for="src in message.images"
-              :key="src"
-              :src="src"
-              alt="Illustration"
-              class="chat-image"
-              @click="$emit('image-click', src)"
-            />
-          </div>
-
-          <!-- Model indicator for bot messages -->
-          <div v-if="message.model && !message.isTyping" class="model-indicator">
-            <span class="model-badge">{{ message.model }}</span>
-          </div>
-
-          <!-- Follow-up questions (only show after typing is complete) -->
-          <div v-if="shouldShowFollowups" class="followup-container fade-in">
-            <p class="followup-label">💡 You might also want to ask:</p>
-            <div class="followup-buttons">
-              <button
-                v-for="(question, qIndex) in message.followup_questions"
-                :key="qIndex"
-                @click="$emit('followup-click', question)"
-                class="followup-button"
-              >
-                {{ question }}
-              </button>
-            </div>
+      <!-- Loading Indicator -->
+      <div v-if="isLoading && !hasTypingMessage" class="message bot">
+        <div class="message-bubble">
+          <div class="typing-indicator">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
           </div>
         </div>
       </div>
@@ -60,35 +88,56 @@
 </template>
 
 <script>
-import { computed } from 'vue';
+import { ref, nextTick, watch } from 'vue';
+import { useScrollToBottom } from '../composables/useScrollToBottom.js';
+import ChatBotWelcome from './ChatBotWelcome.vue';
 import { marked } from 'marked';
 
 export default {
+  components: {
+    ChatBotWelcome
+  },
   props: {
-    message: {
-      type: Object,
+    messages: {
+      type: Array,
       required: true
     },
-    messageIndex: {
-      type: Number,
-      required: true
+    isLoading: {
+      type: Boolean,
+      default: false
+    },
+    hasTypingMessage: {
+      type: Boolean,
+      default: false
+    },
+    theme: {
+      type: String,
+      default: 'dark'
     }
   },
-  emits: ['image-click', 'followup-click'],
+  emits: ['prompt-select', 'image-click', 'followup-click'],
   setup(props) {
+    const messagesWindow = ref(null);
+    const { scrollToBottom } = useScrollToBottom(messagesWindow);
+
+    watch(() => props.messages, () => {
+      scrollToBottom();
+    }, { deep: true });
+
     const renderMarkdown = (text) => {
       return marked(text);
     };
 
-    const shouldShowFollowups = computed(() => {
-      return props.message.followup_questions &&
-        props.message.followup_questions.length &&
-        props.message.sender === 'bot' &&
-        !props.message.isTyping &&
+    const shouldShowFollowups = (message) => {
+      return message.followup_questions &&
+        message.followup_questions.length &&
+        message.sender === 'bot' &&
+        !message.isTyping &&
         false; // Currently disabled in original code
-    });
+    };
 
     return {
+      messagesWindow,
       renderMarkdown,
       shouldShowFollowups
     };
@@ -97,6 +146,25 @@ export default {
 </script>
 
 <style scoped>
+/* Messages Window Styles */
+.messages-window {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.messages-content {
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 /* Base message styles */
 .message {
   display: flex;
@@ -316,9 +384,37 @@ export default {
   letter-spacing: 0.025em;
 }
 
-@media (max-width: 768px) {
-  .model-badge {
-    font-size: 0.625rem;
+/* Typing Indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #666666;
+  animation: typing 1.2s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: translateY(-5px);
+    opacity: 1;
   }
 }
 
@@ -372,6 +468,14 @@ export default {
 }
 
 @media (max-width: 768px) {
+  .messages-window {
+    padding: 0.5rem;
+  }
+
+  .model-badge {
+    font-size: 0.625rem;
+  }
+
   .followup-buttons {
     gap: 0.375rem;
   }

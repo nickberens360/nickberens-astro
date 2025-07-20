@@ -3,7 +3,7 @@
     class="chatbot-container"
     :class="`theme-${theme}`"
   >
-    <ChatMessagesWindow
+    <ChatMessageList
       :messages="messages"
       :is-loading="isLoading"
       :has-typing-message="hasTypingMessage"
@@ -37,17 +37,17 @@ import {
   isPendingNewChat,
   allChats
 } from '../stores/ai.js';
-import { openImageOverlay } from '../stores/ui.js';
+import { openImageOverlay, isChatProcessing } from '../stores/ui.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
 import { useMessageState } from '../composables/useMessageState.js';
-import ChatMessagesWindow from './ChatMessagesWindow.vue';
+import ChatMessageList from './ChatMessageList.vue';
 import ChatInput from './ChatInput.vue';
 import ImageOverlay from './ImageOverlay.vue';
 
 export default {
   name: 'ChatBot',
   components: {
-    ChatMessagesWindow,
+    ChatMessageList,
     ChatInput,
     ImageOverlay
   },
@@ -155,6 +155,7 @@ export default {
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';
       isLoading.value = true;
+      isChatProcessing.set(true);
 
       try {
         const data = await sendChatMessage(question, chatHistoryForAPI, selectedModel.value);
@@ -192,6 +193,7 @@ export default {
         });
       } finally {
         isLoading.value = false;
+        isChatProcessing.set(false);
       }
     };
 
@@ -219,11 +221,13 @@ export default {
         // If we're in the loading phase, abort the API request
         stopLoading();
         isLoading.value = false;
+        isChatProcessing.set(false);
       } else if (hasTypingMessage.value) {
         // If we're in the typing phase, stop the typing for the specific chat
         const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
         if (typingMessageIndex !== -1) {
           stopTyping(typingMessageIndex, currentChatId);
+          isChatProcessing.set(false);
         }
       }
     };

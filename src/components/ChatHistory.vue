@@ -31,10 +31,11 @@
       <button
         @click="handleCreateNewChat"
         class="new-chat-button"
-        :disabled="hasTypingMessage || currentChatHasNoMessages"
-        :class="{ 'disabled': hasTypingMessage || currentChatHasNoMessages }"
+        :disabled="hasTypingMessage || currentChatHasNoMessages || isProcessing"
+        :class="{ 'disabled': hasTypingMessage || currentChatHasNoMessages || isProcessing }"
         :title="hasTypingMessage ? 'Cannot create new chat while message is typing' :
                 currentChatHasNoMessages ? 'Cannot create new chat when welcome screen is displayed' :
+                isProcessing ? 'Cannot create new chat while processing your prompt' :
                 'Create new chat'"
       >
         <font-awesome-icon
@@ -91,6 +92,7 @@ import {
   isChatHistoryVisible,
   isPendingNewChat
 } from '../stores/ai.js';
+import { isChatProcessing } from '../stores/ui.js';
 import { computed, onMounted, onUnmounted } from 'vue';
 
 export default {
@@ -107,6 +109,7 @@ export default {
     const chats = useStore(allChats);
     const currentChatId = useStore(activeChatId);
     const isVisible = useStore(isChatHistoryVisible);
+    const isProcessing = useStore(isChatProcessing);
 
     // Check if any message across ALL chats is currently typing
     const hasTypingMessage = computed(() => {
@@ -160,9 +163,9 @@ export default {
 
     // Modified createNewChat function that checks for empty messages and closes the drawer on mobile
     const handleCreateNewChat = () => {
-      // Don't allow new chat creation if there's a typing message
-      if (hasTypingMessage.value) {
-        console.log('Cannot create new chat while message is typing');
+      // Don't allow new chat creation if there's a typing message or if processing
+      if (hasTypingMessage.value || isProcessing.value) {
+        console.log('Cannot create new chat while message is typing or processing');
         return;
       }
 
@@ -216,6 +219,7 @@ export default {
       currentChatId,
       currentChatHasNoMessages,
       hasTypingMessage,
+      isProcessing,
       handleCreateNewChat,
       handleSelectChat,
       isVisible,

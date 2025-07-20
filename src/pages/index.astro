@@ -38,7 +38,7 @@ const initialCurseWord = terminalInputValue.get();
     <p class="text-xl">
       <span class="font-bold">Dummy</span>
       : I value a healthy team culture over all else. I love working with passionate people that love building cool
-      <span class="highlight"><span id="curse-word">bad&nbsp;word</span></span>!
+      <span class="highlight">bad&nbsp;word</span>!
     </p>
     <p class="text-md text-center font-bold">*oops</p>
   </PageSection>
@@ -81,10 +81,7 @@ const initialCurseWord = terminalInputValue.get();
       <h2 class="text-hero">But...</h2>
       <p class="text-fluid-lg text-wrap">If you're looking for a passionate Javascript, Vue, Nuxt, UI, UX, Astro,
         WordPress, Prismic, What-else-you-got frontend developer with 14 years of experience who says
-        <span
-            id="contact-curse-word"
-            class="highlight-yellow"
-        >{initialCurseWord}</span>
+        <span class="highlight-yellow">bad&nbsp;word</span>
         every now and then, hit me up!
       </p>
       <div class="text-center">
@@ -98,21 +95,4 @@ const initialCurseWord = terminalInputValue.get();
 
     </div>
   </PageSection>
-
-  <script>
-
-      import {terminalInputValue} from '../stores/ui';
-      document.addEventListener('DOMContentLoaded', () => {
-          terminalInputValue.subscribe(value => {
-              const idsToUpdate = ['curse-word', 'contact-curse-word'];
-              idsToUpdate.forEach(id => {
-                  const element = document.getElementById(id);
-                  if (element) {
-                      element.textContent = value;
-                  }
-              });
-          })
-      })
-  </script>
-
 </Layout>
