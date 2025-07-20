@@ -21,15 +21,32 @@
           <!-- User messages remain as plain text -->
           <p v-if="message.text && message.sender === 'user'">{{ message.text }}</p>
 
-          <!-- Bot messages are rendered as markdown -->
+          <!-- Bot messages with typing effect -->
+          <div v-if="message.sender === 'bot'" class="bot-message-wrapper">
+            <div
+              v-if="message.text"
+              class="markdown-content-wrapper"
+            >
+              <span
+                v-html="renderMarkdown(message.text)"
+                class="markdown-content"
+              ></span><span
+              v-if="message.isTyping"
+              class="typing-cursor"
+            >|</span>
+            </div>
+
+            <!-- Stopped message indicator -->
+            <div v-if="message.wasStopped && !message.isTyping" class="stopped-indicator">
+              <span class="stopped-icon">⏹</span>
+              You stopped this response
+            </div>
+          </div>
+
+          <!-- Images (only show after typing is complete) -->
           <div
-            v-if="message.text && message.sender === 'bot'"
-            v-html="renderMarkdown(message.text)"
-            class="markdown-content"
-          ></div>
-          <div
-            v-if="message.images && message.images.length"
-            class="image-gallery"
+            v-if="message.images && message.images.length && !message.isTyping"
+            class="image-gallery fade-in"
           >
             <img
               v-for="src in message.images"
@@ -40,10 +57,31 @@
               @click="handleImageClick(src)"
             />
           </div>
+
+          <!-- Follow-up questions (only show after typing is complete) -->
+          <div
+            v-if="message.followup_questions && message.followup_questions.length && message.sender === 'bot' && !message.isTyping && false"
+            class="followup-container fade-in"
+          >
+            <p class="followup-label">💡 You might also want to ask:</p>
+            <div class="followup-buttons">
+              <button
+                v-for="(question, qIndex) in message.followup_questions"
+                :key="qIndex"
+                @click="handleFollowupClick(question)"
+                class="followup-button"
+                :disabled="isLoading || hasTypingMessage"
+              >
+                {{ question }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Loading indicator (only show when no message is being typed) -->
       <div
-        v-if="isLoading"
+        v-if="isLoading && !hasTypingMessage"
         class="message bot"
       >
         <div class="message-bubble">
@@ -60,16 +98,24 @@
         <input
           v-model="userInput"
           @keyup.enter="sendMessage"
-          placeholder="Ask about Nick's skills, projects, etc..."
+          :placeholder="lastStoppedPrompt && !userInput.trim() ? 'Press Enter to retry stopped response...' : 'Ask about Nick\'s skills, projects, etc...'"
           class="message-input"
-          :disabled="isLoading"
+          :disabled="isLoading && !hasTypingMessage"
         />
         <button
-          @click="sendMessage"
+          @click="hasTypingMessage ? stopCurrentAction() : sendMessage()"
           class="send-button"
-          :disabled="isLoading"
+          :class="{ 'stop-mode': hasTypingMessage }"
+          :disabled="isLoading && !hasTypingMessage"
         >
-          Send
+          <span v-if="hasTypingMessage" class="stop-content">
+            <span class="stop-icon">⏹</span>
+            Stop
+          </span>
+          <span v-else-if="lastStoppedPrompt && !userInput.trim()">
+            Retry
+          </span>
+          <span v-else>Send</span>
         </button>
       </div>
     </div>
@@ -78,16 +124,17 @@
 </template>
 
 <script>
-import { ref, nextTick, watch, onMounted } from 'vue';
+import { ref, nextTick, watch, onMounted, computed } from 'vue';
 import { useStore } from '@nanostores/vue';
-import { marked } from 'marked'; // Import the marked library
+import { marked } from 'marked';
 import {
   activeChatId,
   activeChatMessages,
   addMessageToActiveChat,
   createNewChat,
   updateChatTitle,
-  isPendingNewChat
+  isPendingNewChat,
+  allChats
 } from '../stores/ai.js';
 import { openImageOverlay } from '../stores/ui.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
@@ -110,6 +157,15 @@ export default {
     const isLoading = ref(false);
     const messagesWindow = ref(null);
     const messages = useStore(activeChatMessages);
+    const typingMessages = ref(new Set());
+    const typingTimeouts = ref(new Map()); // Track typing timeouts for cancellation
+    const abortController = ref(null); // For cancelling API requests
+    const lastStoppedPrompt = ref(''); // Track the last stopped prompt for retry
+
+    // Check if any message is currently typing
+    const hasTypingMessage = computed(() => {
+      return messages.value.some(msg => msg.isTyping);
+    });
 
     const scrollToBottom = () => {
       nextTick(() => {
@@ -129,8 +185,182 @@ export default {
       scrollToBottom();
     }, { deep: true });
 
+    // Stop typing function
+    const stopTyping = (messageIndex) => {
+      // Clear the timeout for this message
+      if (typingTimeouts.value.has(messageIndex)) {
+        clearTimeout(typingTimeouts.value.get(messageIndex));
+        typingTimeouts.value.delete(messageIndex);
+      }
+
+      // Remove from typing messages set
+      typingMessages.value.delete(messageIndex);
+
+      // Update the message to show it's no longer typing and was stopped
+      const currentMessages = activeChatMessages.get();
+      const updatedMessages = [...currentMessages];
+      if (updatedMessages[messageIndex]) {
+        updatedMessages[messageIndex] = {
+          ...updatedMessages[messageIndex],
+          isTyping: false,
+          wasStopped: true
+        };
+
+        const currentChatId = activeChatId.get();
+        const currentChat = allChats.get()[currentChatId];
+        if (currentChat) {
+          allChats.setKey(currentChatId, {
+            ...currentChat,
+            messages: updatedMessages
+          });
+        }
+      }
+    };
+
+    // Stop loading function
+    const stopLoading = () => {
+      if (abortController.value) {
+        abortController.value.abort();
+        abortController.value = null;
+      }
+      isLoading.value = false;
+    };
+
+    // Combined stop function - only for typing messages
+    const stopCurrentAction = () => {
+      if (hasTypingMessage.value) {
+        // Store the prompt that's being stopped for potential retry
+        const currentMessages = activeChatMessages.get();
+        if (currentMessages.length >= 2) {
+          // Get the user message that prompted this response (should be second to last)
+          const userMessage = currentMessages[currentMessages.length - 2];
+          if (userMessage && userMessage.sender === 'user') {
+            lastStoppedPrompt.value = userMessage.text;
+          }
+        }
+
+        // Find the currently typing message and stop it
+        const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
+        if (typingMessageIndex !== -1) {
+          stopTyping(typingMessageIndex);
+        }
+      }
+    };
+
+    // Realistic typing effect composable with stop functionality
+    const useRealisticTyping = () => {
+      const getTypingSpeed = (char, prevChar) => {
+        const baseSpeed = 25; // Base typing speed in ms
+
+        // Slower for punctuation (thinking pauses)
+        if (['.', '!', '?', ':'].includes(char)) return baseSpeed + 400;
+        if ([',', ';'].includes(char)) return baseSpeed + 200;
+
+        // Slower after punctuation (pause after sentences)
+        if (prevChar && ['.', '!', '?'].includes(prevChar)) return baseSpeed + 300;
+        if (prevChar && [',', ';'].includes(prevChar)) return baseSpeed + 150;
+
+        // Faster for common letter combinations
+        const commonCombos = ['th', 'he', 'in', 'er', 'an', 're', 'ed', 'nd', 'ha', 'at'];
+        if (prevChar && commonCombos.includes(prevChar + char)) return baseSpeed - 15;
+
+        // Slower for uppercase letters (shift key)
+        if (char === char.toUpperCase() && char !== char.toLowerCase()) return baseSpeed + 20;
+
+        // Add some randomness for natural feel
+        const randomVariation = Math.random() * 25 - 12.5; // ±12.5ms
+
+        return Math.max(20, baseSpeed + randomVariation);
+      };
+
+      const typeMessageRealistic = (messageIndex, fullText) => {
+        return new Promise((resolve) => {
+          typingMessages.value.add(messageIndex);
+          let currentText = '';
+          let currentIndex = 0;
+
+          const typeChar = () => {
+            // Check if typing was stopped
+            if (!typingMessages.value.has(messageIndex)) {
+              resolve();
+              return;
+            }
+
+            if (currentIndex < fullText.length) {
+              const char = fullText[currentIndex];
+              const prevChar = currentIndex > 0 ? fullText[currentIndex - 1] : null;
+
+              currentText += char;
+
+              // Update the message in the store
+              const currentMessages = activeChatMessages.get();
+              const updatedMessages = [...currentMessages];
+              if (updatedMessages[messageIndex]) {
+                updatedMessages[messageIndex] = {
+                  ...updatedMessages[messageIndex],
+                  text: currentText,
+                  isTyping: true
+                };
+
+                const currentChatId = activeChatId.get();
+                const currentChat = allChats.get()[currentChatId];
+                if (currentChat) {
+                  allChats.setKey(currentChatId, {
+                    ...currentChat,
+                    messages: updatedMessages
+                  });
+                }
+              }
+
+              currentIndex++;
+              const nextSpeed = getTypingSpeed(char, prevChar);
+              const timeoutId = setTimeout(typeChar, nextSpeed);
+              typingTimeouts.value.set(messageIndex, timeoutId);
+            } else {
+              // Typing complete naturally (not stopped)
+              typingMessages.value.delete(messageIndex);
+              typingTimeouts.value.delete(messageIndex);
+              const currentMessages = activeChatMessages.get();
+              const updatedMessages = [...currentMessages];
+              if (updatedMessages[messageIndex]) {
+                updatedMessages[messageIndex] = {
+                  ...updatedMessages[messageIndex],
+                  isTyping: false,
+                  wasStopped: false // Mark as completed naturally
+                };
+
+                const currentChatId = activeChatId.get();
+                const currentChat = allChats.get()[currentChatId];
+                if (currentChat) {
+                  allChats.setKey(currentChatId, {
+                    ...currentChat,
+                    messages: updatedMessages
+                  });
+                }
+              }
+              resolve();
+            }
+          };
+
+          // Start typing after a brief pause (simulating thinking)
+          const initialTimeoutId = setTimeout(typeChar, 500);
+          typingTimeouts.value.set(messageIndex, initialTimeoutId);
+        });
+      };
+
+      return { typeMessageRealistic };
+    };
+
+    const { typeMessageRealistic } = useRealisticTyping();
+
     const sendMessage = async () => {
-      if (userInput.value.trim() === '' || isLoading.value) return;
+      // Check if input is empty and we have a stopped prompt to retry
+      if (userInput.value.trim() === '' && lastStoppedPrompt.value) {
+        userInput.value = lastStoppedPrompt.value;
+        lastStoppedPrompt.value = ''; // Clear after using
+      }
+
+      if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) return;
 
       const question = userInput.value;
 
@@ -155,6 +385,9 @@ export default {
       userInput.value = '';
       isLoading.value = true;
 
+      // Create abort controller for this request
+      abortController.value = new AbortController();
+
       try {
         const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
         const apiUrl = isDev
@@ -170,6 +403,7 @@ export default {
             question: question,
             chat_history: chatHistoryForAPI
           }),
+          signal: abortController.value.signal
         });
 
         if (!response.ok) {
@@ -192,13 +426,33 @@ export default {
         }
 
         const data = await response.json();
+
+        // Add empty bot message first
         addMessageToActiveChat({
-          text: data.answer,
+          text: '',
           sender: 'bot',
-          images: data.images || []
+          images: data.images || [],
+          followup_questions: data.followup_questions || [],
+          isTyping: true,
+          wasStopped: false
         });
 
+        // Get the index of the message we just added
+        const messagesAfterAdd = activeChatMessages.get();
+        const messageIndex = messagesAfterAdd.length - 1;
+
+        // Stop loading indicator since we're now typing
+        isLoading.value = false;
+
+        // Start realistic typing effect
+        await typeMessageRealistic(messageIndex, data.answer);
+
       } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Request was cancelled');
+          return;
+        }
+
         console.error('Error fetching response:', error);
         addMessageToActiveChat({
           text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`,
@@ -206,11 +460,19 @@ export default {
         });
       } finally {
         isLoading.value = false;
+        abortController.value = null;
       }
     };
 
     const handlePromptSelect = (prompt) => {
+      if (hasTypingMessage.value) return; // Prevent new messages while typing
       userInput.value = prompt;
+      sendMessage();
+    };
+
+    const handleFollowupClick = (question) => {
+      if (hasTypingMessage.value) return; // Prevent new messages while typing
+      userInput.value = question;
       sendMessage();
     };
 
@@ -228,10 +490,15 @@ export default {
       messages,
       isLoading,
       messagesWindow,
+      hasTypingMessage,
       sendMessage,
       handlePromptSelect,
+      handleFollowupClick,
       handleImageClick,
-      renderMarkdown
+      renderMarkdown,
+      stopTyping,
+      stopLoading,
+      stopCurrentAction
     };
   },
 };
@@ -299,6 +566,90 @@ export default {
   border-bottom-left-radius: 4px;
 }
 
+/* Bot message wrapper for inline cursor */
+.bot-message-wrapper {
+  width: 100%;
+}
+
+.markdown-content-wrapper {
+  display: inline;
+  line-height: 1.6;
+}
+
+.markdown-content-wrapper .markdown-content {
+  display: inline;
+  line-height: inherit;
+}
+
+.typing-cursor {
+  display: inline;
+  animation: blink 1s infinite;
+  font-weight: bold;
+  color: #457ef7;
+  font-size: 1em;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Stopped message indicator */
+.stopped-indicator {
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  opacity: 0.7;
+}
+
+.stopped-icon {
+  font-size: 0.6875em;
+  color: #9ca3af;
+}
+
+/* Override markdown content styling for inline display */
+.markdown-content-wrapper :deep(.markdown-content) {
+  display: inline;
+}
+
+.markdown-content-wrapper :deep(.markdown-content p) {
+  display: inline;
+  margin: 0;
+}
+
+.markdown-content-wrapper :deep(.markdown-content h1),
+.markdown-content-wrapper :deep(.markdown-content h2),
+.markdown-content-wrapper :deep(.markdown-content h3) {
+  display: inline;
+  font-size: inherit;
+  margin: 0;
+  font-weight: bold;
+}
+
+/* Fade in animation for images and follow-ups */
+.fade-in {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out 0.2s forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Image gallery */
 .image-gallery {
   display: grid;
@@ -318,6 +669,55 @@ export default {
 
 .chat-image:hover {
   transform: scale(1.05);
+}
+
+/* Follow-up questions styling */
+.followup-container {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #333333;
+}
+
+.followup-label {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.followup-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.followup-button {
+  background-color: #333333;
+  color: #f9fafb;
+  border: 1px solid #444444;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.followup-button:hover:not(:disabled) {
+  background-color: #404040;
+  border-color: #555555;
+  transform: translateY(-1px);
+}
+
+.followup-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.followup-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Typing indicator */
@@ -404,16 +804,36 @@ export default {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  min-width: 80px;
 }
 
-.send-button:hover {
+.send-button:hover:not(:disabled) {
   background-color: #3967ca;
+}
+
+.send-button.stop-mode {
+  background-color: #dc2626;
+}
+
+.send-button.stop-mode:hover {
+  background-color: #b91c1c;
 }
 
 .send-button:disabled {
   background-color: #5c709a;
   cursor: not-allowed;
+}
+
+.stop-content {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  justify-content: center;
+}
+
+.stop-icon {
+  font-size: 0.875em;
 }
 
 /* Markdown content styling */
@@ -489,6 +909,23 @@ export default {
   .send-button {
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
+  }
+
+  .followup-buttons {
+    gap: 0.375rem;
+  }
+
+  .followup-button {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .stop-content {
+    gap: 0.25rem;
+  }
+
+  .stop-icon {
+    font-size: 0.75em;
   }
 }
 </style>

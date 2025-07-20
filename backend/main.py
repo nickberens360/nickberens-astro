@@ -18,6 +18,7 @@ from .core.llm_chain import create_full_retrieval_chain, invoke_with_fallback
 from .core.illustration_service import IllustrationService
 from .core.query_router import QueryRouter, QueryType
 from .core.response_service import ResponseService, QueryResponse
+from .core.followup_service import FollowUpService
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Load environment variables
@@ -45,6 +46,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # --- Initialize Services ---
 query_router = QueryRouter()
 response_service = ResponseService()
+followup_service = FollowUpService()
 
 
 # Add request timing middleware
@@ -132,18 +134,40 @@ app.add_middleware(
 )
 
 
-def handle_image_query(query_type: QueryType, search_term: str, start_time: float) -> QueryResponse:
+def handle_image_query(query_type: QueryType, search_term: str, start_time: float, user_question: str, conversation_history: List = None) -> QueryResponse:
     """Handle image-related queries."""
     if not illustration_service:
         logger.warning("Illustration service not available")
-        return response_service.build_no_images_response(start_time)
+        followup_questions = followup_service.generate_followups(
+            user_question,
+            "No illustrations available",
+            conversation_history
+        )
+        return response_service.build_no_images_response(start_time, followup_questions)
 
     if query_type == QueryType.ALL_IMAGES:
         found_images = illustration_service.get_all()
-        return response_service.build_image_response("all", found_images, start_time)
+        ai_response = "Of course! Here are some of my illustrations:"
     else:
         found_images = illustration_service.search(search_term)
-        return response_service.build_image_response(search_term, found_images, start_time)
+        if found_images:
+            ai_response = f"Here are the illustrations I found for '{search_term}':"
+        else:
+            ai_response = f"Sorry, I couldn't find any illustrations matching '{search_term}'."
+
+    # Generate follow-up questions
+    followup_questions = followup_service.generate_followups(
+        user_question,
+        ai_response,
+        conversation_history
+    )
+
+    return response_service.build_image_response(
+        search_term,
+        found_images,
+        start_time,
+        followup_questions
+    )
 
 
 def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
@@ -154,13 +178,22 @@ def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
             detail="AI service temporarily unavailable - app not properly initialized"
         )
 
-    # Format chat history
+    # Format chat history for LLM
     formatted_chat_history = []
+    conversation_history = []  # For follow-up service
+
     for message in query.chat_history:
+        # For LLM
         if message.sender == 'user':
             formatted_chat_history.append(HumanMessage(content=message.text))
         elif message.sender in ['assistant', 'ai', 'bot']:
             formatted_chat_history.append(AIMessage(content=message.text))
+
+        # For follow-up service (simpler format)
+        conversation_history.append({
+            "sender": message.sender,
+            "text": message.text
+        })
 
     # Get AI response with enhanced error handling
     try:
@@ -171,7 +204,14 @@ def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
             answer = "I'm sorry, I couldn't generate a response. Please try rephrasing your question."
             llm_used = "fallback"
 
-        return response_service.build_ai_response(answer, start_time, llm_used)
+        # Generate follow-up questions
+        followup_questions = followup_service.generate_followups(
+            query.question,
+            answer,
+            conversation_history
+        )
+
+        return response_service.build_ai_response(answer, start_time, llm_used, followup_questions)
 
     except Exception as llm_error:
         logger.error(f"LLM processing failed: {llm_error}")
@@ -179,7 +219,15 @@ def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
             "I'm sorry, I'm currently experiencing technical difficulties with the AI service. "
             "This might be due to high demand or temporary service issues. Please try again in a few moments."
         )
-        return response_service.build_error_response(error_message, start_time, "fallback")
+
+        # Even for errors, provide helpful follow-ups
+        followup_questions = [
+            "Tell me about Nick's experience",
+            "Show me his illustrations",
+            "What technologies does he work with?"
+        ]
+
+        return response_service.build_error_response(error_message, start_time, "fallback", followup_questions)
 
 
 # --- API Endpoints ---
@@ -275,9 +323,15 @@ async def query_endpoint(request: Request, query: Query) -> QueryResponse:
         # Route the query to determine its type
         query_type, search_term = query_router.route_query(question)
 
+        # Convert chat history for follow-up service
+        conversation_history = [
+            {"sender": msg.sender, "text": msg.text}
+            for msg in query.chat_history
+        ]
+
         # Handle image queries
         if query_type != QueryType.AI_TEXT_RESPONSE:
-            return handle_image_query(query_type, search_term, start_time)
+            return handle_image_query(query_type, search_term, start_time, query.question, conversation_history)
 
         # Handle AI text queries
         return handle_ai_query(query, start_time)

@@ -15,15 +15,15 @@
       <ul class="example-prompts">
         <li @click="selectPrompt('Tell me about Nick')">
           <span class="prompt-icon">→</span>
-          Tell me about Nick
+          Tell me about yourself
         </li>
         <li @click="selectPrompt('Show me Nick\'s resume')">
           <span class="prompt-icon">→</span>
-          Show me Nick's resume
+          Show me your resume
         </li>
         <li @click="selectPrompt('Show all illustrations')">
           <span class="prompt-icon">→</span>
-          Show Nick's illustrations
+          Show me your illustrations
         </li>
       </ul>
     </div>

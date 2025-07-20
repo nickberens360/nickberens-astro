@@ -167,9 +167,6 @@ export default {
 }
 
 .drawer-header {
-  /*display: flex;
-  justify-content: space-between;
-  align-items: center;*/
   margin-bottom: 1rem;
 }
 
@@ -210,11 +207,13 @@ export default {
 
 .history-item {
   padding: 0.75rem;
-  border-radius: 6px;
+  border-radius: 100px;
+  font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #6c7889;
   transition: background-color 0.2s;
 }
 
@@ -223,7 +222,7 @@ export default {
 }
 
 .history-item.active {
-  /*background-color: #d1d5db;*/
+  background-color: #457ef7;
   font-weight: bold;
   color: #1f2937;
 }
