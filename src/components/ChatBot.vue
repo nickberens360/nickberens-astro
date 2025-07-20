@@ -596,7 +596,7 @@ export default {
 }
 
 .user .message-bubble {
-  background-color: #457ef7;
+  background-color: #1c2539;
   color: white;
   border-bottom-right-radius: 4px;
   font-size: 0.95rem;
@@ -633,7 +633,7 @@ export default {
   display: inline;
   animation: blink 1s infinite;
   font-weight: bold;
-  color: #457ef7;
+  color: #1c2539;
   font-size: 1em;
   line-height: inherit;
   vertical-align: baseline;
@@ -895,7 +895,7 @@ export default {
   margin-left: 1rem;
   padding: 0.65rem 1.5rem;
   border: none;
-  background-color: #457ef7;
+  background-color: #1c2539;
   color: white;
   border-radius: 8px;
   cursor: pointer;

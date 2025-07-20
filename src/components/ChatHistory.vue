@@ -222,7 +222,7 @@ export default {
 }
 
 .history-item.active {
-  background-color: #457ef7;
+  background-color: #1c2539;
   font-weight: bold;
   color: #1f2937;
 }
