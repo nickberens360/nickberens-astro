@@ -257,7 +257,7 @@ export default {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  background-color: #111111;
+  background-color: #1a1a1a;
   overflow: hidden;
 }
 </style>

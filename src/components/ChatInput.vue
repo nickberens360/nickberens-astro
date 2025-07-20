@@ -83,15 +83,13 @@ export default {
 .input-form {
   display: flex;
   padding: 0 1rem 1rem;
-  border-top: 1px solid #111111;
-  background-color: #111111;
 }
 
 .input-container {
-  box-shadow: 0 -8px 20px 10px rgba(17, 17, 17, .9);
+  box-shadow: 0 -8px 20px 10px rgba(26, 26, 26, .9);
   width: 100%;
   border: 1px solid #afafaf;
-  background-color: #111111;
+  /*background-color: rgba(17, 17, 17, 0.73);*/
   color: #f9fafb;
   border-radius: 8px;
   padding: 0.5rem;

@@ -43,13 +43,19 @@
     </div>
     <div v-else>
       <div
+        class="history-item-mobile mt-4"
+        @click="toggleVisibility"
+      >
+        {{chatList.length}}
+      </div>
+<!--      <div
         v-for="chat in chatList"
         :key="chat.id"
         class="history-item-mobile"
         @click="toggleVisibility"
       >
         ...
-      </div>
+      </div>-->
     </div>
   </div>
 </template>
@@ -229,8 +235,31 @@ export default {
   color: #1f2937;
 }
 .history-item-mobile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-align: center;
-  color: #6c7889;
+  color: #9ba6b6;
+  cursor: pointer;
+  height: 30px;
+  width: 30px;
+  border-radius: 50%;
+  background-color: #213e6b;
+  font-size: 14px;
+  position: relative;
+}
+
+.history-item-mobile::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 8px solid #213e6b;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  right: -3px;
+  top: 50%;
+  transform: translateY(0) rotate(30deg);
 }
 
 /* Dark theme styles */
