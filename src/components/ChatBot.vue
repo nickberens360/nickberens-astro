@@ -550,14 +550,10 @@ export default {
   background-color: #111111;
   overflow: hidden;
 }
-
-
-
 /* Messages window */
 .messages-window {
   padding: 1rem;
   overflow-y: auto;
-  background-color: #111111;
   flex: 1;
   display: flex;
   flex-direction: column;
