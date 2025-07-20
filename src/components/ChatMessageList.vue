@@ -24,8 +24,7 @@
             <!-- Typing Text -->
             <div>
               <div v-if="message.text" class="markdown-content-wrapper">
-                <span v-html="renderMarkdown(message.text)" class="markdown-content"></span>
-                <span v-if="message.isTyping" class="typing-cursor">|</span>
+                <span v-html="renderMarkdownWithCursor(message.text, message.isTyping)" class="markdown-content"></span>
               </div>
 
               <!-- Stopped message indicator -->
@@ -128,6 +127,14 @@ export default {
       return marked(text);
     };
 
+    const renderMarkdownWithCursor = (text, isTyping) => {
+      const renderedMarkdown = marked(text);
+      if (!isTyping) return renderedMarkdown;
+
+      // For typing messages, append the cursor to the content
+      return renderedMarkdown + '<span class="typing-cursor">|</span>';
+    };
+
     const shouldShowFollowups = (message) => {
       return message.followup_questions &&
         message.followup_questions.length &&
@@ -139,6 +146,7 @@ export default {
     return {
       messagesWindow,
       renderMarkdown,
+      renderMarkdownWithCursor,
       shouldShowFollowups
     };
   }
