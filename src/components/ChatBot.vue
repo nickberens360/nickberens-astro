@@ -93,18 +93,14 @@ export default {
 
     // Watch for new chat being created
     watch(pendingNewChat, (isPending) => {
-      console.log('isPendingNewChat changed to:', isPending);
       if (isPending && lastStoppedPrompt.value) {
-        console.log('Clearing lastStoppedPrompt due to pending new chat');
         lastStoppedPrompt.value = '';
       }
     });
 
     // Watch for chat changes and clear lastStoppedPrompt
     watch(chatId, (newChatId, oldChatId) => {
-      console.log('Chat ID changed from', oldChatId, 'to', newChatId);
       if (newChatId !== oldChatId && newChatId) {
-        console.log('Clearing lastStoppedPrompt due to chat change');
         lastStoppedPrompt.value = '';
       }
     });
@@ -112,7 +108,6 @@ export default {
     // Also watch the messages array - when it becomes empty (new chat), clear the retry state
     watch(messages, (newMessages) => {
       if (newMessages.length === 0 && lastStoppedPrompt.value) {
-        console.log('Clearing lastStoppedPrompt due to empty messages (new chat)');
         lastStoppedPrompt.value = '';
       }
     });
@@ -120,7 +115,6 @@ export default {
     // Clear lastStoppedPrompt when user starts typing manually
     watch(userInput, (newValue) => {
       if (newValue.trim() && lastStoppedPrompt.value) {
-        console.log('Clearing lastStoppedPrompt due to user typing');
         lastStoppedPrompt.value = '';
       }
     });
@@ -128,18 +122,15 @@ export default {
     const sendMessage = async () => {
       // Check if input is empty and we have a stopped prompt to retry
       if (userInput.value.trim() === '' && lastStoppedPrompt.value) {
-        console.log('Using lastStoppedPrompt for retry:', lastStoppedPrompt.value);
         userInput.value = lastStoppedPrompt.value;
         lastStoppedPrompt.value = ''; // Clear after using
       }
 
       if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) {
-        console.log('Cannot send message - invalid state');
         return;
       }
 
       const question = userInput.value;
-      console.log('Sending message:', question);
 
       // Check if we have a pending new chat or no active chat
       let currentChatId = activeChatId.get();
@@ -150,7 +141,6 @@ export default {
 
       // Store the chat ID for this specific message session
       const messageChatId = currentChatId;
-      console.log('Message will be associated with chat:', messageChatId);
 
       const currentMessages = activeChatMessages.get();
 
@@ -192,11 +182,9 @@ export default {
 
       } catch (error) {
         if (error.name === 'AbortError') {
-          console.log('Request was cancelled');
           return;
         }
 
-        console.error('Error fetching response:', error);
         addMessageToActiveChat({
           text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`,
           sender: 'bot',
@@ -208,7 +196,6 @@ export default {
     };
 
     const stopCurrentAction = () => {
-      console.log('Stopping current action');
 
       // Get the current chat ID for stopping
       const currentChatId = activeChatId.get();
@@ -219,25 +206,21 @@ export default {
         const userMessage = currentMessages[currentMessages.length - 1];
         if (userMessage && userMessage.sender === 'user') {
           lastStoppedPrompt.value = userMessage.text;
-          console.log('Stored stopped prompt:', lastStoppedPrompt.value);
         } else if (currentMessages.length >= 2) {
           // If the last message is a bot message, look for the user message before it
           const userMessage = currentMessages[currentMessages.length - 2];
           if (userMessage && userMessage.sender === 'user') {
             lastStoppedPrompt.value = userMessage.text;
-            console.log('Stored stopped prompt from previous user message:', lastStoppedPrompt.value);
           }
         }
       }
 
       if (isLoading.value) {
         // If we're in the loading phase, abort the API request
-        console.log('Stopping loading phase');
         stopLoading();
         isLoading.value = false;
       } else if (hasTypingMessage.value) {
         // If we're in the typing phase, stop the typing for the specific chat
-        console.log('Stopping typing phase');
         const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
         if (typingMessageIndex !== -1) {
           stopTyping(typingMessageIndex, currentChatId);
