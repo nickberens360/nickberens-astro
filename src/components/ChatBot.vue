@@ -10,7 +10,7 @@
     </div>
 
     <div v-else-if="backendStatus === 'offline'" class="status-notification offline">
-      <p>❌ Backend service is currently offline. Please try again later.</p>
+      <p>❌ Backend service is currently offline or rebuilding. Please try again later.</p>
     </div>
 
     <ChatMessageList
@@ -192,7 +192,7 @@ export default {
             statusMessage = "The backend service is starting up. This may take 1-2 minutes on the first visit.";
             break;
           case 'offline':
-            statusMessage = "The backend service is currently offline. Please try again later.";
+            statusMessage = "The backend service is currently offline or rebuilding. Please try again later.";
             break;
           default:
             statusMessage = "Cannot send message: Backend is not ready.";
