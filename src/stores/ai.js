@@ -12,7 +12,10 @@ const loadChats = () => {
         return JSON.parse(savedChats);
       }
     } catch (error) {
-      console.error('Error loading chat history:', error);
+      console.error('Error loading chat history, clearing corrupted data:', error);
+      // Clear corrupted data
+      localStorage.removeItem('allChats');
+      localStorage.removeItem('activeChatId');
     }
   }
   return {}; // Default empty chats object
@@ -24,10 +27,20 @@ const loadActiveChatId = () => {
     try {
       const savedId = localStorage.getItem('activeChatId');
       if (savedId) {
-        return savedId;
+        // Verify that the chat actually exists
+        const allChatsData = localStorage.getItem('allChats');
+        if (allChatsData) {
+          const chats = JSON.parse(allChatsData);
+          if (chats[savedId]) {
+            return savedId;
+          }
+        }
+        // If chat doesn't exist, clear the invalid activeChatId
+        localStorage.removeItem('activeChatId');
       }
     } catch (error) {
       console.error('Error loading active chat ID:', error);
+      localStorage.removeItem('activeChatId');
     }
   }
   return null; // Default to no active chat
@@ -112,17 +125,26 @@ export function selectChat(chatId) {
 }
 
 export function addMessageToActiveChat(message) {
-    const currentChat = activeChat.get();
-    if (currentChat) {
-        const updatedMessages = [...currentChat.messages, message];
-        allChats.setKey(currentChat.id, { ...currentChat, messages: updatedMessages });
+  const currentChat = activeChat.get();
+  if (currentChat) {
+    const updatedMessages = [...currentChat.messages, message];
+    allChats.setKey(currentChat.id, { ...currentChat, messages: updatedMessages });
+  } else {
+    console.error('No active chat found when trying to add message. Creating new chat.');
+    // Fallback: create a new chat if none exists
+    const newChatId = createNewChat();
+    const newChat = activeChat.get();
+    if (newChat) {
+      const updatedMessages = [...newChat.messages, message];
+      allChats.setKey(newChatId, { ...newChat, messages: updatedMessages });
     }
+  }
 }
 
-// --- NEW: A function to update a chat's title ---
+// --- Function to update a chat's title ---
 export function updateChatTitle(chatId, newTitle) {
-    const chat = allChats.get()[chatId];
-    if (chat) {
-        allChats.setKey(chatId, { ...chat, title: newTitle });
-    }
+  const chat = allChats.get()[chatId];
+  if (chat) {
+    allChats.setKey(chatId, { ...chat, title: newTitle });
+  }
 }

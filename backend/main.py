@@ -1,17 +1,14 @@
-import os
-import glob
-import json
-import re
+# backend/main.py
 import logging
 import time
-from typing import List, Dict, Any, Optional
+import re
+from typing import List, Optional
+from datetime import datetime, timedelta
+from collections import defaultdict
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-
-# Import the fuzzy matching library
-from thefuzz import process
 
 # Import rate limiting components
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -19,97 +16,242 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # Import your custom modules
+from .core.config import AppConfig
 from .core.data_loader import load_all_documents
 from .core.llm_chain import create_full_retrieval_chain, invoke_with_fallback
+from .core.illustration_service import IllustrationService
+from .core.query_router import QueryRouter, QueryType
+from .core.response_service import ResponseService, QueryResponse
+from .core.followup_service import FollowUpService
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Load environment variables
 load_dotenv()
 
 # Setup logging
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL),
+    level=getattr(logging, AppConfig.LOG_LEVEL),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# --- Configuration ---
-SEARCH_THRESHOLD = int(os.getenv("SEARCH_THRESHOLD", "55"))
-MAX_RESULTS = int(os.getenv("MAX_RESULTS", "15"))
-ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "public/illustrations.json")
-PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")
-
 # --- Setup Rate Limiter ---
 limiter = Limiter(key_func=get_remote_address)
 
+
+# --- Security Validator ---
+class SecurityValidator:
+    """Centralized input validation and security checks."""
+
+    # Configuration
+    MAX_QUERY_LENGTH = 2000
+    MAX_CHAT_HISTORY_LENGTH = 10  # Maximum number of messages
+    MAX_MESSAGE_LENGTH = 1000
+    MAX_PROCESSING_TIME = 30  # seconds
+
+    # Suspicious patterns (basic prompt injection detection)
+    SUSPICIOUS_PATTERNS = [
+        r'ignore\s+(previous|above|all)\s+instructions?',
+        r'system\s*:?\s*you\s+are\s+now',
+        r'forget\s+everything\s+(above|before)',
+        r'new\s+instructions?\s*:',
+        r'</?\s*(script|iframe|object|embed|form)',  # Basic HTML injection
+        r'javascript\s*:',
+        r'data\s*:\s*text/html',
+        r'(prompt|system)\s+(injection|hack|override)',
+        r'act\s+as\s+if\s+you\s+are',
+        r'pretend\s+(you\s+are|to\s+be)',
+    ]
+
+    ALLOWED_MODELS = ['claude', 'gemini', None]
+
+    # Simple rate limiting storage (in production, use Redis)
+    _user_requests = defaultdict(list)
+
+    @classmethod
+    def validate_query(cls, query, client_ip: str) -> tuple[bool, str]:
+        """
+        Comprehensive query validation.
+        Returns: (is_valid, error_message)
+        """
+        try:
+            # 1. Basic input validation
+            if not query.question or not isinstance(query.question, str):
+                return False, "Question is required and must be text"
+
+            # 2. Length limits
+            if len(query.question) > cls.MAX_QUERY_LENGTH:
+                return False, f"Question too long (max {cls.MAX_QUERY_LENGTH} characters)"
+
+            # 3. Chat history validation
+            if query.chat_history:
+                if len(query.chat_history) > cls.MAX_CHAT_HISTORY_LENGTH:
+                    return False, f"Chat history too long (max {cls.MAX_CHAT_HISTORY_LENGTH} messages)"
+
+                for i, msg in enumerate(query.chat_history):
+                    if not isinstance(msg.text, str):
+                        return False, f"Message {i+1} text must be string"
+
+                    if len(msg.text) > cls.MAX_MESSAGE_LENGTH:
+                        return False, f"Message {i+1} too long (max {cls.MAX_MESSAGE_LENGTH} characters)"
+
+                    if msg.sender not in ['user', 'assistant', 'ai', 'bot']:
+                        return False, f"Invalid sender in message {i+1}"
+
+            # 4. Model preference validation
+            if query.preferred_model and query.preferred_model not in cls.ALLOWED_MODELS:
+                return False, "Invalid model preference"
+
+            # 5. Content filtering (basic prompt injection detection)
+            combined_text = query.question.lower()
+            if query.chat_history:
+                combined_text += " " + " ".join([msg.text.lower() for msg in query.chat_history])
+
+            for pattern in cls.SUSPICIOUS_PATTERNS:
+                if re.search(pattern, combined_text, re.IGNORECASE):
+                    logger.warning(f"Suspicious pattern detected from {client_ip}: {pattern}")
+                    return False, "Content not allowed"
+
+            # 6. Rate limiting (per IP)
+            if not cls._check_rate_limit(client_ip):
+                return False, "Rate limit exceeded"
+
+            return True, ""
+
+        except Exception as e:
+            logger.error(f"Error validating query: {e}")
+            return False, "Validation error"
+
+    @classmethod
+    def _check_rate_limit(cls, client_ip: str) -> bool:
+        """
+        Simple rate limiting: 10 requests per minute per IP.
+        In production, use Redis with sliding window.
+        """
+        try:
+            now = datetime.now()
+            minute_ago = now - timedelta(minutes=1)
+
+            # Clean old requests
+            cls._user_requests[client_ip] = [
+                req_time for req_time in cls._user_requests[client_ip]
+                if req_time > minute_ago
+            ]
+
+            # Check limit
+            if len(cls._user_requests[client_ip]) >= 10:
+                return False
+
+            # Record this request
+            cls._user_requests[client_ip].append(now)
+            return True
+
+        except Exception as e:
+            logger.error(f"Rate limiting error: {e}")
+            return True  # Allow request if rate limiting fails
+
+    @classmethod
+    def sanitize_input(cls, text: str) -> str:
+        """Sanitize input text while preserving meaning."""
+        if not isinstance(text, str):
+            return ""
+
+        # Remove null bytes and control characters
+        sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+
+        # Normalize whitespace
+        sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+
+        # Limit length as final safety
+        return sanitized[:cls.MAX_QUERY_LENGTH]
+
+
+# --- Data Models ---
+class Message(BaseModel):
+    sender: str = Field(..., description="Either 'user' or 'assistant'")
+    text: str = Field(..., min_length=1, max_length=1000, description="The message content")
+
+
+class Query(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000, description="The user's question")
+    chat_history: List[Message] = Field(default=[], description="Previous conversation history")
+    preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
+
+
 # --- Setup Application ---
 app = FastAPI(
-    title="Nick Berens Portfolio API",
-    description="API for AI-powered responses and illustration search with Claude as primary LLM",
-    version="2.0.0"
+    title=AppConfig.APP_TITLE,
+    description=AppConfig.APP_DESCRIPTION,
+    version=AppConfig.APP_VERSION
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# --- Initialize Services ---
+query_router = QueryRouter()
+response_service = ResponseService()
+followup_service = FollowUpService()
 
-# Add request timing middleware
+
+# --- Security Middleware ---
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
+async def security_middleware(request: Request, call_next):
+    """Add security headers and basic protection."""
     start_time = time.time()
+
+    # Basic security checks
+    user_agent = request.headers.get("user-agent", "")
+    if len(user_agent) > 500:  # Unusually long user agent
+        logger.warning(f"Suspicious user agent from {request.client.host}")
+
+    # Content length check for non-GET requests
+    if request.method != "GET":
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > 100000:  # 100KB limit
+            logger.warning(f"Large request from {request.client.host}: {content_length} bytes")
+
     response = await call_next(request)
     process_time = time.time() - start_time
 
-    # Only log non-health check requests to reduce noise
+    # Add security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    # Only log non-health check requests
     if not request.url.path.startswith(("/health", "/status")):
         logger.info(
             f"Request: {request.method} {request.url.path} - "
             f"Status: {response.status_code} - "
-            f"Time: {process_time:.3f}s"
+            f"Time: {process_time:.3f}s - "
+            f"IP: {request.client.host}"
         )
+
     return response
 
 
-class Message(BaseModel):
-    sender: str = Field(..., description="Either 'user' or 'assistant'")
-    text: str = Field(..., description="The message content")
-
-
-class Query(BaseModel):
-    question: str = Field(..., min_length=1, description="The user's question")
-    chat_history: List[Message] = Field(default=[], description="Previous conversation history")
-
-
-class QueryResponse(BaseModel):
-    answer: str
-    images: Optional[List[str]] = None
-    processing_time: Optional[float] = None
-    llm_used: Optional[str] = None
-
-
-def load_illustrations() -> List[Dict[str, Any]]:
-    """Load illustrations data from JSON file with error handling."""
+# --- Helper Functions ---
+def initialize_illustration_service():
+    """Initialize the illustration service."""
     try:
-        with open(ILLUSTRATIONS_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            logger.info(f"Loaded {len(data)} illustrations")
-            return data
-    except FileNotFoundError:
-        logger.warning(f"Illustrations file not found at {ILLUSTRATIONS_PATH}")
-        return []
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in illustrations file: {e}")
-        return []
+        service = IllustrationService(
+            illustrations_path=AppConfig.ILLUSTRATIONS_PATH,
+            search_threshold=AppConfig.SEARCH_THRESHOLD,
+            max_results=AppConfig.MAX_RESULTS
+        )
+        is_valid, message = service.validate_data()
+        logger.info(message)
+        return service
     except Exception as e:
-        logger.error(f"Unexpected error loading illustrations: {e}")
-        return []
+        logger.error(f"Failed to initialize illustration service: {e}")
+        return None
 
 
 def initialize_app_state():
     """Initialize application state with error handling."""
     try:
         logger.info("Initializing application state...")
-        logger.info(f"Primary LLM configured: {PRIMARY_LLM}")
+        logger.info(f"Primary LLM configured: {AppConfig.PRIMARY_LLM}")
 
         logger.info("Loading documents...")
         all_docs = load_all_documents()
@@ -118,11 +260,11 @@ def initialize_app_state():
         logger.info("Creating retrieval chain...")
         retriever = create_full_retrieval_chain(all_docs)
 
-        logger.info("Loading illustrations...")
-        illustrations_data = load_illustrations()
+        logger.info("Initializing illustration service...")
+        illustration_service = initialize_illustration_service()
 
         logger.info("Application initialization complete")
-        return retriever, illustrations_data
+        return retriever, illustration_service
     except Exception as e:
         logger.error(f"Failed to initialize app state: {e}")
         raise
@@ -130,97 +272,122 @@ def initialize_app_state():
 
 # Initialize app state
 try:
-    retriever, illustrations_data = initialize_app_state()
+    retriever, illustration_service = initialize_app_state()
     app_initialized = True
 except Exception as e:
     logger.critical(f"Application startup failed: {e}")
-    retriever, illustrations_data = None, []
+    retriever, illustration_service = None, None
     app_initialized = False
 
-origins = [
-    "http://localhost:4321",                  # Local development
-    "http://localhost:3000",                  # Other local ports
-    "http://localhost:5173",                  # Vite dev server
-    "https://nickberens.me",                  # ← YOUR CUSTOM DOMAIN
-    "https://www.nickberens.me",              # ← WWW VERSION
-    "https://nickberens360.netlify.app",      # Netlify deployment
-    "https://deploy-preview-14--nickberens360.netlify.app",
-    "https://nickberens-astro.onrender.com",
-    "https://*.netlify.app",
-    "https://*.onrender.com",
-]
-
-
+# Setup CORS with security improvements
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=AppConfig.get_cors_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],  # Removed ["*"]
+    allow_headers=["Content-Type", "Authorization"],  # Removed ["*"]
 )
 
 
-def search_illustrations(search_term: str) -> List[Dict[str, str]]:
-    """
-    Search illustrations using fuzzy matching with improved error handling.
+# --- Query Handlers ---
+def handle_image_query(query_type: QueryType, search_term: str, start_time: float, user_question: str, conversation_history: List = None) -> QueryResponse:
+    """Handle image-related queries."""
+    if not illustration_service:
+        logger.warning("Illustration service not available")
+        followup_questions = followup_service.generate_followups(
+            user_question,
+            "No illustrations available",
+            conversation_history
+        )
+        return response_service.build_no_images_response(start_time, followup_questions)
 
-    Args:
-        search_term: The search term to match against illustrations
-
-    Returns:
-        List of dictionaries containing file paths of matching illustrations
-    """
-    try:
-        if not illustrations_data:
-            logger.warning("No illustrations data available")
-            return []
-
-        if not search_term or search_term.lower() == "all":
-            return [{"file": img["file"]} for img in illustrations_data]
-
-        search_term = search_term.strip()
-
-        # Handle multiple search terms joined by "and"
-        if " and " in search_term.lower():
-            terms = [term.strip() for term in search_term.lower().split(" and ") if term.strip()]
-            all_matches = []
-
-            for term in terms:
-                choices = {
-                    img["file"]: f"{img.get('title', '')} {' '.join(img.get('tags', []))}"
-                    for img in illustrations_data
-                    if isinstance(img, dict) and 'file' in img
-                }
-
-                if choices:
-                    found_matches = process.extract(term, choices, limit=10)
-                    term_matches = [key for match, score, key in found_matches if score >= SEARCH_THRESHOLD]
-                    all_matches.extend(term_matches)
-
-            # Deduplicate results while preserving order
-            unique_files = list(dict.fromkeys(all_matches))
-            return [{"file": file} for file in unique_files[:MAX_RESULTS]]
+    if query_type == QueryType.ALL_IMAGES:
+        found_images = illustration_service.get_all()
+        ai_response = "Of course! Here are some of my illustrations:"
+    else:
+        found_images = illustration_service.search(search_term)
+        if found_images:
+            ai_response = f"Here are the illustrations I found for '{search_term}':"
         else:
-            # Single-term search logic
-            choices = {
-                img["file"]: f"{img.get('title', '')} {' '.join(img.get('tags', []))}"
-                for img in illustrations_data
-                if isinstance(img, dict) and 'file' in img
-            }
+            ai_response = f"Sorry, I couldn't find any illustrations matching '{search_term}'."
 
-            if not choices:
-                return []
+    # Generate follow-up questions
+    followup_questions = followup_service.generate_followups(
+        user_question,
+        ai_response,
+        conversation_history
+    )
 
-            found_matches = process.extract(search_term, choices, limit=10)
-            high_quality_matches = [
-                {"file": key} for match, score, key in found_matches
-                if score >= SEARCH_THRESHOLD
-            ]
-            return high_quality_matches[:MAX_RESULTS]
+    return response_service.build_image_response(
+        search_term,
+        found_images,
+        start_time,
+        followup_questions
+    )
 
-    except Exception as e:
-        logger.error(f"Error searching illustrations: {e}")
-        return []
+
+def handle_ai_query(query: Query, start_time: float) -> QueryResponse:
+    """Handle AI text queries."""
+    if not retriever:
+        raise HTTPException(
+            status_code=503,
+            detail="AI service temporarily unavailable - app not properly initialized"
+        )
+
+    # Format chat history for LLM
+    formatted_chat_history = []
+    conversation_history = []  # For follow-up service
+
+    for message in query.chat_history:
+        # For LLM
+        if message.sender == 'user':
+            formatted_chat_history.append(HumanMessage(content=message.text))
+        elif message.sender in ['assistant', 'ai', 'bot']:
+            formatted_chat_history.append(AIMessage(content=message.text))
+
+        # For follow-up service (simpler format)
+        conversation_history.append({
+            "sender": message.sender,
+            "text": message.text
+        })
+
+    # Get AI response with enhanced error handling
+    try:
+        answer, model_used = invoke_with_fallback(
+            retriever,
+            formatted_chat_history,
+            query.question,
+            query.preferred_model  # Pass the preferred model
+        )
+
+        if not answer:
+            answer = "I'm sorry, I couldn't generate a response. Please try rephrasing your question."
+            model_used = "fallback"
+
+        # Generate follow-up questions
+        followup_questions = followup_service.generate_followups(
+            query.question,
+            answer,
+            conversation_history
+        )
+
+        return response_service.build_ai_response(answer, start_time, model_used, followup_questions, model_used)
+
+    except Exception as llm_error:
+        logger.error(f"LLM processing failed: {llm_error}")
+        error_message = (
+            "I'm sorry, I'm currently experiencing technical difficulties with the AI service. "
+            "This might be due to high demand or temporary service issues. Please try again in a few moments."
+        )
+
+        # Even for errors, provide helpful follow-ups
+        followup_questions = [
+            "Tell me about Nick's experience",
+            "Show me his illustrations",
+            "What technologies does he work with?"
+        ]
+
+        return response_service.build_error_response(error_message, start_time, "fallback", followup_questions, "error")
 
 
 # --- API Endpoints ---
@@ -230,27 +397,29 @@ async def root():
     """Health check endpoint."""
     return {
         "status": "healthy" if app_initialized else "degraded",
-        "message": "Nick Berens Portfolio API",
-        "primary_llm": PRIMARY_LLM,
-        "version": "2.0.0"
+        "message": AppConfig.APP_TITLE,
+        "primary_llm": AppConfig.PRIMARY_LLM,
+        "version": AppConfig.APP_VERSION
     }
 
 
 @app.get("/health")
 async def health_check():
     """Detailed health check."""
+    illustration_count = illustration_service.get_count() if illustration_service else 0
+
     return {
         "status": "healthy" if app_initialized else "degraded",
         "app_initialized": app_initialized,
         "components": {
             "retriever": retriever is not None,
-            "illustrations": len(illustrations_data) > 0,
-            "illustrations_count": len(illustrations_data)
+            "illustrations": illustration_count > 0,
+            "illustrations_count": illustration_count
         },
         "configuration": {
-            "primary_llm": PRIMARY_LLM,
-            "search_threshold": SEARCH_THRESHOLD,
-            "max_results": MAX_RESULTS
+            "primary_llm": AppConfig.PRIMARY_LLM,
+            "search_threshold": AppConfig.SEARCH_THRESHOLD,
+            "max_results": AppConfig.MAX_RESULTS
         }
     }
 
@@ -261,7 +430,7 @@ async def status():
     return {
         "status": "online",
         "timestamp": time.time(),
-        "primary_llm": PRIMARY_LLM,
+        "primary_llm": AppConfig.PRIMARY_LLM,
         "app_initialized": app_initialized
     }
 
@@ -286,12 +455,12 @@ async def llm_status():
         from .core.llm_chain import get_llm_instances
         llms = get_llm_instances()
         return {
-            "primary_llm": PRIMARY_LLM,
+            "primary_llm": AppConfig.PRIMARY_LLM,
             "claude_available": llms.get('claude') is not None,
             "gemini_available": llms.get('gemini') is not None,
             "models": {
-                "claude": os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022"),
-                "gemini": os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+                "claude": AppConfig.CLAUDE_MODEL,
+                "gemini": AppConfig.GEMINI_MODEL
             }
         }
     except Exception as e:
@@ -300,225 +469,80 @@ async def llm_status():
 
 
 @app.post("/query", response_model=QueryResponse)
-@limiter.limit("5/minute")
+@limiter.limit(AppConfig.RATE_LIMIT)
 async def query_endpoint(request: Request, query: Query) -> QueryResponse:
     """
-    Main query endpoint that handles both text queries and illustration searches.
-    Now with Claude as primary LLM and enhanced monitoring.
+    Main query endpoint with enhanced security validation.
     """
     start_time = time.time()
-    llm_used = None
+    client_ip = request.client.host
 
     try:
-        question = query.question.lower().strip()
+        # 1. Security validation
+        is_valid, error_msg = SecurityValidator.validate_query(query, client_ip)
+        if not is_valid:
+            logger.warning(f"Query validation failed from {client_ip}: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
 
-        # Log the query (truncated for privacy)
-        logger.info(f"Processing query: {question[:50]}{'...' if len(question) > 50 else ''}")
+        # 2. Input sanitization
+        sanitized_question = SecurityValidator.sanitize_input(query.question)
+        if not sanitized_question:
+            raise HTTPException(status_code=400, detail="Invalid question format")
 
-        # Define image-related keywords that indicate user wants illustrations
-        image_keywords = [
-            "image", "images", "illustration", "illustrations", "drawing", "drawings",
-            "art", "design", "designs", "pic", "pics", "picture", "pictures"
-        ]
+        # 3. Processing timeout protection
+        processing_timeout = time.time() + SecurityValidator.MAX_PROCESSING_TIME
 
-        # Define search patterns
-        specific_image_keywords = [
-            "images of", "image of", "drawings of", "drawing of",
-            "illustrations of", "illustration of", "art about", "art of"
-        ]
+        logger.info(f"Processing query from {client_ip}: {sanitized_question[:50]}{'...' if len(sanitized_question) > 50 else ''}")
 
-        # Enhanced image search patterns
-        show_me_patterns = [
-            "show me", "show", "find", "get", "display"
-        ]
+        # Log model preference securely
+        if query.preferred_model:
+            logger.info(f"User requested model: {query.preferred_model}")
 
-        image_indicators = [
-            "images", "image", "illustrations", "illustration", "drawings", "drawing", "art", "pics", "pictures"
-        ]
+        # 4. Route the query
+        query_type, search_term = query_router.route_query(sanitized_question.lower().strip())
 
-        # Words to ignore when building search terms
-        ignore_words = {
-            "show", "me", "get", "find", "display", "see", "view", "look", "at",
-            "the", "a", "an", "some", "any", "all", "your", "of", "for"
-        }
+        # Convert chat history for follow-up service (with validation)
+        conversation_history = []
+        for msg in query.chat_history:
+            sanitized_text = SecurityValidator.sanitize_input(msg.text)
+            if sanitized_text:  # Only include non-empty messages
+                conversation_history.append({
+                    "sender": msg.sender,
+                    "text": sanitized_text
+                })
 
-        # Special phrases for showing all images
-        all_image_phrases = [
-            "show me all illustrations", "show all illustrations", "show me your illustrations",
-            "show me all your art", "show me all images", "show me images", "show your art",
-            "all images", "all illustrations", "all art", "show me everything"
-        ]
+        # 5. Handle image queries
+        if query_type != QueryType.AI_TEXT_RESPONSE:
+            # Check timeout
+            if time.time() > processing_timeout:
+                raise HTTPException(status_code=408, detail="Request timeout")
 
-        # Route to specific image search
-        for trigger in specific_image_keywords:
-            if trigger in question:
-                search_term = question.split(trigger, 1)[1].strip()
-                if search_term:
-                    found_images = search_illustrations(search_term)
-                    if found_images:
-                        image_urls = [f"/illustrations/{img['file']}" for img in found_images]
-                        processing_time = time.time() - start_time
-                        logger.info(f"Image search completed in {processing_time:.3f}s")
-                        return QueryResponse(
-                            answer=f"Here are the illustrations I found for '{search_term}':",
-                            images=image_urls,
-                            processing_time=processing_time,
-                            llm_used="image_search"
-                        )
-                    else:
-                        processing_time = time.time() - start_time
-                        return QueryResponse(
-                            answer=f"Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to see all of my art.",
-                            processing_time=processing_time,
-                            llm_used="image_search"
-                        )
-
-        # Enhanced "show me X images/illustrations" pattern matching
-        for show_pattern in show_me_patterns:
-            if question.startswith(show_pattern):
-                remaining_text = question[len(show_pattern):].strip()
-
-                # Check if it contains image indicators
-                for img_indicator in image_indicators:
-                    if img_indicator in remaining_text:
-                        # Extract the search term (everything before the image indicator)
-                        parts = remaining_text.split(img_indicator)
-                        if len(parts) > 1:
-                            search_term = parts[0].strip()
-                        else:
-                            # Handle cases like "show me doug images" where the term comes before
-                            words = remaining_text.split()
-                            if img_indicator in words:
-                                idx = words.index(img_indicator)
-                                search_term = " ".join(words[:idx]).strip()
-                            else:
-                                search_term = remaining_text.replace(img_indicator, "").strip()
-
-                        if search_term:
-                            found_images = search_illustrations(search_term)
-                            if found_images:
-                                image_urls = [f"/illustrations/{img['file']}" for img in found_images]
-                                processing_time = time.time() - start_time
-                                logger.info(
-                                    f"Enhanced image search completed in {processing_time:.3f}s for '{search_term}'")
-                                return QueryResponse(
-                                    answer=f"Here are the {search_term} illustrations I found:",
-                                    images=image_urls,
-                                    processing_time=processing_time,
-                                    llm_used="image_search"
-                                )
-                            else:
-                                processing_time = time.time() - start_time
-                                return QueryResponse(
-                                    answer=f"Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to see all of my art.",
-                                    processing_time=processing_time,
-                                    llm_used="image_search"
-                                )
-                        break
-        # Route to show all images
-        if question in all_image_phrases:
-            all_images = search_illustrations("all")
-            if all_images:
-                image_urls = [f"/illustrations/{img['file']}" for img in all_images]
-                processing_time = time.time() - start_time
-                logger.info(f"All images search completed in {processing_time:.3f}s")
-                return QueryResponse(
-                    answer="Of course! Here are some of my illustrations:",
-                    images=image_urls,
-                    processing_time=processing_time,
-                    llm_used="image_search"
-                )
-            else:
-                processing_time = time.time() - start_time
-                return QueryResponse(
-                    answer="I couldn't find any illustrations at the moment.",
-                    processing_time=processing_time,
-                    llm_used="image_search"
-                )
-
-        # General pattern matching for "<subject> images" or similar patterns
-        words = question.split()
-        for img_indicator in image_indicators:
-            if img_indicator in words:
-                # Get the index of the image indicator
-                idx = words.index(img_indicator)
-
-                # Extract words before and after the image indicator
-                words_before = words[:idx]
-                words_after = words[idx+1:]
-
-                # Filter out ignore words
-                search_terms_before = [w for w in words_before if w not in ignore_words]
-                search_terms_after = [w for w in words_after if w not in ignore_words]
-
-                # Combine the search terms
-                search_term = " ".join(search_terms_before + search_terms_after).strip()
-
-                if search_term:
-                    found_images = search_illustrations(search_term)
-                    if found_images:
-                        image_urls = [f"/illustrations/{img['file']}" for img in found_images]
-                        processing_time = time.time() - start_time
-                        logger.info(f"General image search completed in {processing_time:.3f}s for '{search_term}'")
-                        return QueryResponse(
-                            answer=f"Here are the illustrations I found for '{search_term}':",
-                            images=image_urls,
-                            processing_time=processing_time,
-                            llm_used="image_search"
-                        )
-                    else:
-                        processing_time = time.time() - start_time
-                        return QueryResponse(
-                            answer=f"Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to see all of my art.",
-                            processing_time=processing_time,
-                            llm_used="image_search"
-                        )
-
-        # Default to AI-powered text response
-        if not retriever:
-            raise HTTPException(
-                status_code=503,
-                detail=f"AI service temporarily unavailable - app not properly initialized"
+            return handle_image_query(
+                query_type, search_term, start_time,
+                sanitized_question, conversation_history
             )
 
-        # Format chat history
-        formatted_chat_history = []
-        for message in query.chat_history:
-            if message.sender == 'user':
-                formatted_chat_history.append(HumanMessage(content=message.text))
-            elif message.sender in ['assistant', 'ai', 'bot']:
-                formatted_chat_history.append(AIMessage(content=message.text))
+        # 6. Handle AI text queries with timeout protection
+        if time.time() > processing_timeout:
+            raise HTTPException(status_code=408, detail="Request timeout")
 
-        # Get AI response with enhanced error handling
-        try:
-            answer = invoke_with_fallback(retriever, formatted_chat_history, query.question)
-            llm_used = PRIMARY_LLM  # Assume primary was used unless we add tracking to the chain
-        except Exception as llm_error:
-            logger.error(f"LLM processing failed: {llm_error}")
-            answer = (
-                "I'm sorry, I'm currently experiencing technical difficulties with the AI service. "
-                "This might be due to high demand or temporary service issues. Please try again in a few moments."
-            )
-            llm_used = "fallback"
-
-        if not answer:
-            answer = "I'm sorry, I couldn't generate a response. Please try rephrasing your question."
-            llm_used = "fallback"
-
-        processing_time = time.time() - start_time
-        logger.info(f"Query processed successfully in {processing_time:.3f}s using {llm_used}")
-
-        return QueryResponse(
-            answer=answer,
-            processing_time=processing_time,
-            llm_used=llm_used
+        # Create sanitized query object
+        sanitized_query = Query(
+            question=sanitized_question,
+            chat_history=[
+                Message(sender=msg["sender"], text=msg["text"])
+                for msg in conversation_history
+            ],
+            preferred_model=query.preferred_model
         )
+
+        return handle_ai_query(sanitized_query, start_time)
 
     except HTTPException:
         raise
     except Exception as e:
         processing_time = time.time() - start_time
-        logger.error(f"Error processing query after {processing_time:.3f}s: {e}")
+        logger.error(f"Error processing query from {client_ip} after {processing_time:.3f}s: {str(e)[:200]}")
         raise HTTPException(
             status_code=500,
             detail="Internal server error - please try again later"
@@ -528,7 +552,8 @@ async def query_endpoint(request: Request, query: Query) -> QueryResponse:
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Global exception handler with better logging."""
-    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    client_ip = getattr(request.client, 'host', 'unknown')
+    logger.error(f"Unhandled exception from {client_ip} on {request.method} {request.url.path}: {str(exc)[:200]}")
     return {
         "error": "An unexpected error occurred",
         "path": request.url.path,
@@ -541,9 +566,12 @@ async def general_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     """Log startup information."""
     logger.info("=== Nick Berens Portfolio API Starting ===")
-    logger.info(f"Primary LLM: {PRIMARY_LLM}")
+    logger.info(f"Primary LLM: {AppConfig.PRIMARY_LLM}")
     logger.info(f"App initialized: {app_initialized}")
-    logger.info(f"Illustrations loaded: {len(illustrations_data)}")
+
+    if illustration_service:
+        logger.info(f"Illustration service initialized with {illustration_service.get_count()} illustrations")
+
     logger.info("=== Startup Complete ===")
 
 
@@ -554,10 +582,10 @@ if __name__ == "__main__":
     logger.info("Starting development server...")
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=8000,
-        log_level=LOG_LEVEL.lower(),
+        host=AppConfig.HOST,
+        port=AppConfig.PORT,
+        log_level=AppConfig.LOG_LEVEL.lower(),
         reload=True
     )
 
-print("Backend setup complete. Ready for queries with Claude as primary LLM.")
+print("Backend setup complete with enhanced security. Ready for queries with Claude as primary LLM.")

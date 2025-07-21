@@ -13,17 +13,17 @@
       <h2>Welcome to nick.AI</h2>
       <p>Try asking me some questions like:</p>
       <ul class="example-prompts">
-        <li @click="selectPrompt('Tell me about Nick')">
+        <li @click="selectPrompt('Tell me about yourself')">
           <span class="prompt-icon">→</span>
-          Tell me about Nick
+          Tell me about yourself
         </li>
-        <li @click="selectPrompt('Show me Nick\'s resume')">
+        <li @click="selectPrompt('Show me your resume')">
           <span class="prompt-icon">→</span>
-          Show me Nick's resume
+          Show me your resume
         </li>
-        <li @click="selectPrompt('Show all illustrations')">
+        <li @click="selectPrompt('Show me your illustrations')">
           <span class="prompt-icon">→</span>
-          Show Nick's illustrations
+          Show me your illustrations
         </li>
       </ul>
     </div>
@@ -63,7 +63,6 @@ export default {
   height: 100%;
   padding: 2rem;
   text-align: center;
-  background-color: #111111;
   color: #f9fafb;
 }
 

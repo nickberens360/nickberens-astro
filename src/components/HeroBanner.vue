@@ -4,9 +4,9 @@
       <div class="hero-banner__heading">
         <slot name="heading">
           <h1>
-            One time I said the word
-            <span class="highlight">{{ inputValue}}</span>
-            during an interview&nbsp;😥.
+            One time I said a
+            <span class="highlight">bad&nbsp;word</span>
+            during an interview&nbsp;🤦‍♂️.
           </h1>
         </slot>
       </div>
