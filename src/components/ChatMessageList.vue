@@ -132,6 +132,7 @@ export default {
       if (!isTyping) return renderedMarkdown;
 
       // For typing messages, append the cursor to the content
+      // TODO: this is pretty broken, needs a better solution
       return renderedMarkdown + '<span class="typing-cursor">|</span>';
     };
 
@@ -229,7 +230,7 @@ export default {
 }
 
 .typing-cursor {
-  display: inline;
+  display: none;
   animation: blink 1s infinite;
   font-weight: bold;
   color: #1c2539;
