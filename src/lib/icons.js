@@ -10,6 +10,12 @@ import {
 import {
   faTerminal,
   faBars,
+  faArrowUp,
+  faStop,
+  faRotateRight,
+  faPenToSquare,
+  faHouseChimney,
+  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 
 
@@ -18,7 +24,13 @@ library.add(
   faTwitter,
   faLinkedin,
   faTerminal,
-  faBars
+  faBars,
+  faArrowUp,
+  faStop,
+  faRotateRight,
+  faPenToSquare,
+  faHouseChimney,
+  faTrash,
 );
 
 export { library };

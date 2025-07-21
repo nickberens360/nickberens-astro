@@ -5,7 +5,7 @@ import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
 import TerminalWindow from '../components/TerminalWindow.vue';
-import { getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl } from '../utils/gitInfo.js';
+import {getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl} from '../utils/gitInfo.js';
 
 export interface Props {
     title?: string;
@@ -14,9 +14,11 @@ export interface Props {
     headerVariant?: string;
     hideFooter?: boolean;
     hideTerminal?: boolean;
+    hideHeader?: boolean;
 }
 
-const {title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false} = Astro.props;
+const {
+    hideHeader = false,title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false} = Astro.props;
 const gitBranch = await getGitBranch();
 const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
@@ -31,9 +33,20 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<SiteHeader gitBranch={gitBranch} variant={headerVariant} client:only="vue" />
+<SiteHeader
+    gitBranch={gitBranch}
+    variant={headerVariant}
+    client:only="vue"
+    hideHeader={hideHeader}
+/>
 <slot/>
-<SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} hideFooter={hideFooter} client:load />
+<SiteFooter
+    commitHash={commitHash}
+    commitMessage={commitMessage}
+    repoUrl={repoUrl}
+    hideFooter={hideFooter}
+    client:load
+/>
 <TerminalWindow
     client:only="vue"
     title="Nick's Terminal"

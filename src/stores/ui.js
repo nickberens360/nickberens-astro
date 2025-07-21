@@ -62,7 +62,7 @@ terminalSizeStore.listen((value) => {
 });
 
 // Default value for the terminal input
-const DEFAULT_TERMINAL_INPUT_VALUE = '****';
+const DEFAULT_TERMINAL_INPUT_VALUE = 'bad word';
 
 // Store for the terminal input's value, initialized with a default.
 export const terminalInputValue = atom(DEFAULT_TERMINAL_INPUT_VALUE);
@@ -249,6 +249,9 @@ isTerminalMaximizedStore.listen((value) => {
     }
   }
 });
+
+// State to track when the chat is processing a prompt
+export const isChatProcessing = atom(false);
 
 // Image overlay state
 export const imageOverlayStore = atom({

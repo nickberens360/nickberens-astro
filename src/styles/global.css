@@ -1179,6 +1179,7 @@ p {
     padding: 0 1rem !important;
     background-color: var(--highlight-background) !important;
     color: var(--highlight-text) !important;
+    line-height: 1;
 }
 
 .highlight-light {

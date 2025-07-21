@@ -10,3 +10,4 @@ chromadb
 slowapi
 thefuzz[speed]
 langchain-anthropic
+markdown

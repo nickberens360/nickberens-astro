@@ -1,5 +1,6 @@
 <template>
   <header
+    v-if="!hideHeader"
     class="site-header"
     :class="[
       `theme-${overlayTheme}`,
@@ -128,6 +129,10 @@ export default {
       type: Boolean,
       default: false
     },
+    hideHeader: {
+      type: Boolean,
+      default: false
+    },
     variant: {
       type: String,
       default: 'default',
@@ -179,11 +184,19 @@ export default {
   },
   methods: {
     toggleTerminal() {
-      // If terminal is minimized, un-minimize it
-      if (this.isTerminalMinimized) {
+      // Simplified terminal toggle logic using centralized state
+      if (this.isTerminalHidden) {
+        // Show terminal and restore if minimized
+        isTerminalHiddenStore.set(false);
+        if (this.isTerminalMinimized) {
+          isTerminalMinimizedStore.set(false);
+        }
+      } else if (this.isTerminalMinimized) {
+        // Terminal is visible but minimized, so restore it
         isTerminalMinimizedStore.set(false);
       } else {
-        isTerminalHiddenStore.set(!isTerminalHiddenStore.value);
+        // Terminal is visible and restored, so hide it
+        isTerminalHiddenStore.set(true);
       }
     },
     toggleMobileMenu() {

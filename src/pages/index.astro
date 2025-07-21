@@ -33,12 +33,12 @@ const initialCurseWord = terminalInputValue.get();
     <h2 class="text-hero">It's true.</h2>
     <p class="text-xl">
       <span class="font-bold">Interviewer</span>
-      : What do you value in your teammates?
+      : What do you value most in your teammates?
     </p>
     <p class="text-xl">
       <span class="font-bold">Dummy</span>
-      : I value a healthy team culture over all else. I love working with passionate people that love building cool
-      <span class="highlight"><span id="curse-word">{initialCurseWord}</span></span>!
+      : I value a healthy team culture and working with passionate people that love building cool
+      <span class="highlight">bad&nbsp;word</span>!
     </p>
     <p class="text-md text-center font-bold">*oops</p>
   </PageSection>
@@ -52,7 +52,7 @@ const initialCurseWord = terminalInputValue.get();
       full-height
   >
     <h2 class="text-hero">Note from my recruiter.</h2>
-    <p class="text-xl">"They thought you had a great skill set for the position, but because of the curse word you
+    <p class="text-xl">"They thought you had a great skill set for the position, but because of the <span class="highlight">bad&nbsp;word</span> you
       wouldn't be a good fit culturally."</p>
     <p class="font-bold">Love, Jacob the Recruiter</p>
   </PageSection>
@@ -64,9 +64,9 @@ const initialCurseWord = terminalInputValue.get();
       full-height
   >
     <h2 class="text-hero">NOW LET ME BE CLEAR.</h2>
-    <p class="text-fluid-lg">I totally get that this was on me, and I understand where they’re coming from. I have no hard feelings toward the company or its values.</p>
+    <p class="text-fluid-lg">I totally get that this was on me, and I understand where they’re coming from. I have no hard feelings towards the company nor their values.</p>
     <p class="text-lg ">I was definitely bummed I didn’t get the position. It really felt like a good fit, and the person who interviewed me was super cool.</p>
-    <p class="text-lg">Honestly, I’m just disappointed in myself. I tend to drop a curse word when I get really excited about something.</p>
+    <p class="text-lg">Honestly, I’m just disappointed in myself. I tend to drop a <span class="highlight">bad word</span> when I get really excited about something.</p>
   </PageSection>
 
   <PageSection
@@ -80,11 +80,8 @@ const initialCurseWord = terminalInputValue.get();
     <div>
       <h2 class="text-hero">But...</h2>
       <p class="text-fluid-lg text-wrap">If you're looking for a passionate Javascript, Vue, Nuxt, UI, UX, Astro,
-        WordPress, Prismic, What-else-you-got frontend developer with 14 years of experience who says
-        <span
-            id="contact-curse-word"
-            class="highlight-yellow"
-        >{initialCurseWord}</span>
+        WordPress, Prismic, What-else-you-got frontend developer with 14 years of experience who says a
+        <span class="highlight-yellow">bad&nbsp;word</span>
         every now and then, hit me up!
       </p>
       <div class="text-center">
@@ -98,21 +95,4 @@ const initialCurseWord = terminalInputValue.get();
 
     </div>
   </PageSection>
-
-  <script>
-
-      import {terminalInputValue} from '../stores/ui';
-      document.addEventListener('DOMContentLoaded', () => {
-          terminalInputValue.subscribe(value => {
-              const idsToUpdate = ['curse-word', 'contact-curse-word'];
-              idsToUpdate.forEach(id => {
-                  const element = document.getElementById(id);
-                  if (element) {
-                      element.textContent = value;
-                  }
-              });
-          })
-      })
-  </script>
-
 </Layout>
