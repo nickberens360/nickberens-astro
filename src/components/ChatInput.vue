@@ -9,6 +9,8 @@
         :placeholder="inputPlaceholder"
         class="message-input"
         :disabled="hasTypingMessage"
+        aria-label="Chat message input"
+        :aria-describedby="hasTypingMessage ? 'typing-status' : null"
       />
 
       <div class="d-flex justify-between items-center w-full pt-2">
