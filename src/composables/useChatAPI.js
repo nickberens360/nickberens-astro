@@ -99,7 +99,7 @@ export function useChatAPI() {
           errorMessage = 'The backend service is starting up. Please try again in a few minutes.';
           break;
         case 'offline':
-          errorMessage = 'The backend service is currently offline. Please try again later.';
+          errorMessage = 'The backend service is currently offline or being rebuilt. Please try again later.';
           break;
         default:
           errorMessage = 'Cannot send message: Backend is not ready.';
