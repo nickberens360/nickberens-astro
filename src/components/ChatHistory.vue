@@ -50,6 +50,9 @@
     </div>
     <p v-if="isVisible">Recent</p>
     <div
+      :class="{ 'disabled-history-items': hasTypingMessage || isProcessing }"
+    >
+    <div
       v-if="isVisible"
       class="history-list"
     >
@@ -70,7 +73,7 @@
         {{ chatList.length }}
       </div>
     </div>
-
+    </div>
     <!-- Add the clear localStorage button at the bottom -->
     <button
       @click="clearLocalStorage"
@@ -379,7 +382,11 @@ export default {
   top: 50%;
   transform: translateY(0) rotate(30deg);
 }
-
+.disabled-history-items .history-item {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 /* Add style for the clear localStorage button */
 .clear-storage-button {
   margin-top: auto;

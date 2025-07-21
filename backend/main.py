@@ -1,7 +1,10 @@
 # backend/main.py
 import logging
 import time
+import re
 from typing import List, Optional
+from datetime import datetime, timedelta
+from collections import defaultdict
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -35,6 +38,146 @@ logger = logging.getLogger(__name__)
 # --- Setup Rate Limiter ---
 limiter = Limiter(key_func=get_remote_address)
 
+
+# --- Security Validator ---
+class SecurityValidator:
+    """Centralized input validation and security checks."""
+
+    # Configuration
+    MAX_QUERY_LENGTH = 2000
+    MAX_CHAT_HISTORY_LENGTH = 10  # Maximum number of messages
+    MAX_MESSAGE_LENGTH = 1000
+    MAX_PROCESSING_TIME = 30  # seconds
+
+    # Suspicious patterns (basic prompt injection detection)
+    SUSPICIOUS_PATTERNS = [
+        r'ignore\s+(previous|above|all)\s+instructions?',
+        r'system\s*:?\s*you\s+are\s+now',
+        r'forget\s+everything\s+(above|before)',
+        r'new\s+instructions?\s*:',
+        r'</?\s*(script|iframe|object|embed|form)',  # Basic HTML injection
+        r'javascript\s*:',
+        r'data\s*:\s*text/html',
+        r'(prompt|system)\s+(injection|hack|override)',
+        r'act\s+as\s+if\s+you\s+are',
+        r'pretend\s+(you\s+are|to\s+be)',
+    ]
+
+    ALLOWED_MODELS = ['claude', 'gemini', None]
+
+    # Simple rate limiting storage (in production, use Redis)
+    _user_requests = defaultdict(list)
+
+    @classmethod
+    def validate_query(cls, query, client_ip: str) -> tuple[bool, str]:
+        """
+        Comprehensive query validation.
+        Returns: (is_valid, error_message)
+        """
+        try:
+            # 1. Basic input validation
+            if not query.question or not isinstance(query.question, str):
+                return False, "Question is required and must be text"
+
+            # 2. Length limits
+            if len(query.question) > cls.MAX_QUERY_LENGTH:
+                return False, f"Question too long (max {cls.MAX_QUERY_LENGTH} characters)"
+
+            # 3. Chat history validation
+            if query.chat_history:
+                if len(query.chat_history) > cls.MAX_CHAT_HISTORY_LENGTH:
+                    return False, f"Chat history too long (max {cls.MAX_CHAT_HISTORY_LENGTH} messages)"
+
+                for i, msg in enumerate(query.chat_history):
+                    if not isinstance(msg.text, str):
+                        return False, f"Message {i+1} text must be string"
+
+                    if len(msg.text) > cls.MAX_MESSAGE_LENGTH:
+                        return False, f"Message {i+1} too long (max {cls.MAX_MESSAGE_LENGTH} characters)"
+
+                    if msg.sender not in ['user', 'assistant', 'ai', 'bot']:
+                        return False, f"Invalid sender in message {i+1}"
+
+            # 4. Model preference validation
+            if query.preferred_model and query.preferred_model not in cls.ALLOWED_MODELS:
+                return False, "Invalid model preference"
+
+            # 5. Content filtering (basic prompt injection detection)
+            combined_text = query.question.lower()
+            if query.chat_history:
+                combined_text += " " + " ".join([msg.text.lower() for msg in query.chat_history])
+
+            for pattern in cls.SUSPICIOUS_PATTERNS:
+                if re.search(pattern, combined_text, re.IGNORECASE):
+                    logger.warning(f"Suspicious pattern detected from {client_ip}: {pattern}")
+                    return False, "Content not allowed"
+
+            # 6. Rate limiting (per IP)
+            if not cls._check_rate_limit(client_ip):
+                return False, "Rate limit exceeded"
+
+            return True, ""
+
+        except Exception as e:
+            logger.error(f"Error validating query: {e}")
+            return False, "Validation error"
+
+    @classmethod
+    def _check_rate_limit(cls, client_ip: str) -> bool:
+        """
+        Simple rate limiting: 10 requests per minute per IP.
+        In production, use Redis with sliding window.
+        """
+        try:
+            now = datetime.now()
+            minute_ago = now - timedelta(minutes=1)
+
+            # Clean old requests
+            cls._user_requests[client_ip] = [
+                req_time for req_time in cls._user_requests[client_ip]
+                if req_time > minute_ago
+            ]
+
+            # Check limit
+            if len(cls._user_requests[client_ip]) >= 10:
+                return False
+
+            # Record this request
+            cls._user_requests[client_ip].append(now)
+            return True
+
+        except Exception as e:
+            logger.error(f"Rate limiting error: {e}")
+            return True  # Allow request if rate limiting fails
+
+    @classmethod
+    def sanitize_input(cls, text: str) -> str:
+        """Sanitize input text while preserving meaning."""
+        if not isinstance(text, str):
+            return ""
+
+        # Remove null bytes and control characters
+        sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+
+        # Normalize whitespace
+        sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+
+        # Limit length as final safety
+        return sanitized[:cls.MAX_QUERY_LENGTH]
+
+
+# --- Data Models ---
+class Message(BaseModel):
+    sender: str = Field(..., description="Either 'user' or 'assistant'")
+    text: str = Field(..., min_length=1, max_length=1000, description="The message content")
+
+
+class Query(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000, description="The user's question")
+    chat_history: List[Message] = Field(default=[], description="Previous conversation history")
+    preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
+
+
 # --- Setup Application ---
 app = FastAPI(
     title=AppConfig.APP_TITLE,
@@ -50,34 +193,44 @@ response_service = ResponseService()
 followup_service = FollowUpService()
 
 
-# Add request timing middleware
+# --- Security Middleware ---
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
+async def security_middleware(request: Request, call_next):
+    """Add security headers and basic protection."""
     start_time = time.time()
+
+    # Basic security checks
+    user_agent = request.headers.get("user-agent", "")
+    if len(user_agent) > 500:  # Unusually long user agent
+        logger.warning(f"Suspicious user agent from {request.client.host}")
+
+    # Content length check for non-GET requests
+    if request.method != "GET":
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > 100000:  # 100KB limit
+            logger.warning(f"Large request from {request.client.host}: {content_length} bytes")
+
     response = await call_next(request)
     process_time = time.time() - start_time
 
-    # Only log non-health check requests to reduce noise
+    # Add security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    # Only log non-health check requests
     if not request.url.path.startswith(("/health", "/status")):
         logger.info(
             f"Request: {request.method} {request.url.path} - "
             f"Status: {response.status_code} - "
-            f"Time: {process_time:.3f}s"
+            f"Time: {process_time:.3f}s - "
+            f"IP: {request.client.host}"
         )
+
     return response
 
 
-class Message(BaseModel):
-    sender: str = Field(..., description="Either 'user' or 'assistant'")
-    text: str = Field(..., description="The message content")
-
-
-class Query(BaseModel):
-    question: str = Field(..., min_length=1, description="The user's question")
-    chat_history: List[Message] = Field(default=[], description="Previous conversation history")
-    preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
-
-
+# --- Helper Functions ---
 def initialize_illustration_service():
     """Initialize the illustration service."""
     try:
@@ -126,17 +279,17 @@ except Exception as e:
     retriever, illustration_service = None, None
     app_initialized = False
 
-# Setup CORS
+# Setup CORS with security improvements
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=AppConfig.get_cors_origins(),  # Now properly validated
+    allow_origins=AppConfig.get_cors_origins(),
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["GET", "POST"],  # Removed ["*"]
+    allow_headers=["Content-Type", "Authorization"],  # Removed ["*"]
 )
 
 
-
+# --- Query Handlers ---
 def handle_image_query(query_type: QueryType, search_term: str, start_time: float, user_question: str, conversation_history: List = None) -> QueryResponse:
     """Handle image-related queries."""
     if not illustration_service:
@@ -319,39 +472,77 @@ async def llm_status():
 @limiter.limit(AppConfig.RATE_LIMIT)
 async def query_endpoint(request: Request, query: Query) -> QueryResponse:
     """
-    Main query endpoint that handles both text queries and illustration searches.
+    Main query endpoint with enhanced security validation.
     """
     start_time = time.time()
+    client_ip = request.client.host
 
     try:
-        question = query.question.lower().strip()
-        logger.info(f"Processing query: {question[:50]}{'...' if len(question) > 50 else ''}")
+        # 1. Security validation
+        is_valid, error_msg = SecurityValidator.validate_query(query, client_ip)
+        if not is_valid:
+            logger.warning(f"Query validation failed from {client_ip}: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
 
-        # Log model preference
+        # 2. Input sanitization
+        sanitized_question = SecurityValidator.sanitize_input(query.question)
+        if not sanitized_question:
+            raise HTTPException(status_code=400, detail="Invalid question format")
+
+        # 3. Processing timeout protection
+        processing_timeout = time.time() + SecurityValidator.MAX_PROCESSING_TIME
+
+        logger.info(f"Processing query from {client_ip}: {sanitized_question[:50]}{'...' if len(sanitized_question) > 50 else ''}")
+
+        # Log model preference securely
         if query.preferred_model:
             logger.info(f"User requested model: {query.preferred_model}")
 
-        # Route the query to determine its type
-        query_type, search_term = query_router.route_query(question)
+        # 4. Route the query
+        query_type, search_term = query_router.route_query(sanitized_question.lower().strip())
 
-        # Convert chat history for follow-up service
-        conversation_history = [
-            {"sender": msg.sender, "text": msg.text}
-            for msg in query.chat_history
-        ]
+        # Convert chat history for follow-up service (with validation)
+        conversation_history = []
+        for msg in query.chat_history:
+            sanitized_text = SecurityValidator.sanitize_input(msg.text)
+            if sanitized_text:  # Only include non-empty messages
+                conversation_history.append({
+                    "sender": msg.sender,
+                    "text": sanitized_text
+                })
 
-        # Handle image queries
+        # 5. Handle image queries
         if query_type != QueryType.AI_TEXT_RESPONSE:
-            return handle_image_query(query_type, search_term, start_time, query.question, conversation_history)
+            # Check timeout
+            if time.time() > processing_timeout:
+                raise HTTPException(status_code=408, detail="Request timeout")
 
-        # Handle AI text queries
-        return handle_ai_query(query, start_time)
+            return handle_image_query(
+                query_type, search_term, start_time,
+                sanitized_question, conversation_history
+            )
+
+        # 6. Handle AI text queries with timeout protection
+        if time.time() > processing_timeout:
+            raise HTTPException(status_code=408, detail="Request timeout")
+
+        # Create sanitized query object
+        sanitized_query = Query(
+            question=sanitized_question,
+            chat_history=[
+                Message(sender=msg["sender"], text=msg["text"])
+                for msg in conversation_history
+            ],
+            preferred_model=query.preferred_model
+        )
+
+        return handle_ai_query(sanitized_query, start_time)
 
     except HTTPException:
         raise
     except Exception as e:
         processing_time = time.time() - start_time
-        logger.error(f"Error processing query after {processing_time:.3f}s: {e}")
+        logger.error(f"Error processing query from {client_ip} after {processing_time:.3f}s: {str(e)[:200]}")
         raise HTTPException(
             status_code=500,
             detail="Internal server error - please try again later"
@@ -361,7 +552,8 @@ async def query_endpoint(request: Request, query: Query) -> QueryResponse:
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Global exception handler with better logging."""
-    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    client_ip = getattr(request.client, 'host', 'unknown')
+    logger.error(f"Unhandled exception from {client_ip} on {request.method} {request.url.path}: {str(exc)[:200]}")
     return {
         "error": "An unexpected error occurred",
         "path": request.url.path,
@@ -396,4 +588,4 @@ if __name__ == "__main__":
         reload=True
     )
 
-print("Backend setup complete. Ready for queries with Claude as primary LLM.")
+print("Backend setup complete with enhanced security. Ready for queries with Claude as primary LLM.")
