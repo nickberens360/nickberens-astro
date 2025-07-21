@@ -7,32 +7,68 @@ export function useMessageState() {
   const typingTimeouts = ref(new Map());
   const typingMessageChats = ref(new Map()); // Track which chat each typing message belongs to
 
+  // Speed multiplier - adjust this single value to change all typing speeds
+  // Values > 1 will slow down typing (longer delays)
+  // Values < 1 will speed up typing (shorter delays)
+  // Value of 1 maintains the original speed
+  const SPEED_MULTIPLIER = 1.0;
+
+  // Base values for typing speeds (original values)
+  const BASE_TYPING_VALUES = {
+    BASE_SPEED: 10,                // Base typing speed in ms
+    MAJOR_PUNCTUATION_DELAY: 133,  // Extra delay for period, exclamation, question mark, colon
+    MINOR_PUNCTUATION_DELAY: 67,   // Extra delay for comma, semicolon
+    AFTER_MAJOR_PUNCT_DELAY: 100,  // Extra delay after period, exclamation, question mark
+    AFTER_MINOR_PUNCT_DELAY: 50,   // Extra delay after comma, semicolon
+    COMMON_COMBO_BOOST: 10,        // Speed boost for common letter combinations
+    UPPERCASE_DELAY: 13,           // Extra delay for uppercase letters (shift key)
+    RANDOM_VARIATION_RANGE: 10,    // Range for random variation (±5)
+    RANDOM_VARIATION_OFFSET: 5,    // Offset for random variation
+    MIN_TYPING_SPEED: 13,          // Minimum typing speed
+    INITIAL_TYPING_DELAY: 333      // Initial delay before typing starts
+  };
+
+  // Typing speed constants - calculated based on base values and the speed multiplier
+  const TYPING_CONSTANTS = {
+    BASE_SPEED: Math.round(BASE_TYPING_VALUES.BASE_SPEED * SPEED_MULTIPLIER),
+    MAJOR_PUNCTUATION_DELAY: Math.round(BASE_TYPING_VALUES.MAJOR_PUNCTUATION_DELAY * SPEED_MULTIPLIER),
+    MINOR_PUNCTUATION_DELAY: Math.round(BASE_TYPING_VALUES.MINOR_PUNCTUATION_DELAY * SPEED_MULTIPLIER),
+    AFTER_MAJOR_PUNCT_DELAY: Math.round(BASE_TYPING_VALUES.AFTER_MAJOR_PUNCT_DELAY * SPEED_MULTIPLIER),
+    AFTER_MINOR_PUNCT_DELAY: Math.round(BASE_TYPING_VALUES.AFTER_MINOR_PUNCT_DELAY * SPEED_MULTIPLIER),
+    COMMON_COMBO_BOOST: Math.round(BASE_TYPING_VALUES.COMMON_COMBO_BOOST * SPEED_MULTIPLIER),
+    UPPERCASE_DELAY: Math.round(BASE_TYPING_VALUES.UPPERCASE_DELAY * SPEED_MULTIPLIER),
+    RANDOM_VARIATION_RANGE: Math.round(BASE_TYPING_VALUES.RANDOM_VARIATION_RANGE * SPEED_MULTIPLIER),
+    RANDOM_VARIATION_OFFSET: Math.round(BASE_TYPING_VALUES.RANDOM_VARIATION_OFFSET * SPEED_MULTIPLIER),
+    MIN_TYPING_SPEED: Math.round(BASE_TYPING_VALUES.MIN_TYPING_SPEED * SPEED_MULTIPLIER),
+    INITIAL_TYPING_DELAY: Math.round(BASE_TYPING_VALUES.INITIAL_TYPING_DELAY * SPEED_MULTIPLIER)
+  };
+
   const hasTypingMessage = computed(() => {
     return activeChatMessages.get().some(msg => msg.isTyping);
   });
 
   const getTypingSpeed = (char, prevChar) => {
-    const baseSpeed = 10; // Base typing speed in ms
+    const baseSpeed = TYPING_CONSTANTS.BASE_SPEED;
 
     // Slower for punctuation (thinking pauses)
-    if (['.', '!', '?', ':'].includes(char)) return baseSpeed + 133;
-    if ([',', ';'].includes(char)) return baseSpeed + 67;
+    if (['.', '!', '?', ':'].includes(char)) return baseSpeed + TYPING_CONSTANTS.MAJOR_PUNCTUATION_DELAY;
+    if ([',', ';'].includes(char)) return baseSpeed + TYPING_CONSTANTS.MINOR_PUNCTUATION_DELAY;
 
     // Slower after punctuation (pause after sentences)
-    if (prevChar && ['.', '!', '?'].includes(prevChar)) return baseSpeed + 100;
-    if (prevChar && [',', ';'].includes(prevChar)) return baseSpeed + 50;
+    if (prevChar && ['.', '!', '?'].includes(prevChar)) return baseSpeed + TYPING_CONSTANTS.AFTER_MAJOR_PUNCT_DELAY;
+    if (prevChar && [',', ';'].includes(prevChar)) return baseSpeed + TYPING_CONSTANTS.AFTER_MINOR_PUNCT_DELAY;
 
     // Faster for common letter combinations
     const commonCombos = ['th', 'he', 'in', 'er', 'an', 're', 'ed', 'nd', 'ha', 'at'];
-    if (prevChar && commonCombos.includes(prevChar + char)) return baseSpeed - 10;
+    if (prevChar && commonCombos.includes(prevChar + char)) return baseSpeed - TYPING_CONSTANTS.COMMON_COMBO_BOOST;
 
     // Slower for uppercase letters (shift key)
-    if (char === char.toUpperCase() && char !== char.toLowerCase()) return baseSpeed + 13;
+    if (char === char.toUpperCase() && char !== char.toLowerCase()) return baseSpeed + TYPING_CONSTANTS.UPPERCASE_DELAY;
 
     // Add some randomness for natural feel
-    const randomVariation = Math.random() * 10 - 5;
+    const randomVariation = Math.random() * TYPING_CONSTANTS.RANDOM_VARIATION_RANGE - TYPING_CONSTANTS.RANDOM_VARIATION_OFFSET;
 
-    return Math.max(13, baseSpeed + randomVariation);
+    return Math.max(TYPING_CONSTANTS.MIN_TYPING_SPEED, baseSpeed + randomVariation);
   };
 
   const updateMessageTyping = (messageIndex, fullText, targetChatId) => {
@@ -101,7 +137,7 @@ export function useMessageState() {
       };
 
       // Start typing after a brief pause (simulating thinking)
-      const initialTimeoutId = setTimeout(typeChar, 333);
+      const initialTimeoutId = setTimeout(typeChar, TYPING_CONSTANTS.INITIAL_TYPING_DELAY);
       typingTimeouts.value.set(messageIndex, initialTimeoutId);
     });
   };
