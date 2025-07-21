@@ -126,13 +126,13 @@ export function useTerminalController(props) {
     },
 
     toggleMaximize() {
-      this.maximize();
+      actions.maximize();
     },
 
     // Unified unmaximize method for all use cases
     unmaximize() {
       if (isMaximized.value) {
-        this.maximize(); // This will unmaximize since it's already maximized
+        actions.maximize(); // This will unmaximize since it's already maximized
       }
     }
   };
