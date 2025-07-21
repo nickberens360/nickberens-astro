@@ -9,7 +9,7 @@ export function useChatAPI() {
     abortController.value = new AbortController();
 
     // Add timeout handling
-    const timeoutDuration = 12000; // 12 seconds
+    const timeoutDuration = 20000; // 20 seconds
     let timeoutId = setTimeout(() => abortController.value.abort(), timeoutDuration);
 
     const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
