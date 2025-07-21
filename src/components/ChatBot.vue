@@ -26,7 +26,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useStore } from '@nanostores/vue';
 import {
   activeChatId,
@@ -70,7 +70,8 @@ export default {
       typingMessages,
       typingTimeouts,
       stopTyping,
-      updateMessageTyping
+      updateMessageTyping,
+      cleanupTypingTimeouts
     } = useMessageState();
 
     // hasTypingMessage should be computed from the actual messages
@@ -88,6 +89,10 @@ export default {
       if (!activeChatId.get() && !isPendingNewChat.get()) {
         createNewChat();
       }
+    });
+
+    onUnmounted(() => {
+      cleanupTypingTimeouts();
     });
 
     // Watch for new chat being created

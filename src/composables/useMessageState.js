@@ -45,6 +45,7 @@ export function useMessageState() {
       const typeChar = () => {
         // Check if typing was stopped
         if (!typingMessages.value.has(messageIndex)) {
+          cleanupTypingTimeouts();
           resolve();
           return;
         }
@@ -105,6 +106,18 @@ export function useMessageState() {
     });
   };
 
+  const cleanupTypingTimeouts = () => {
+    // Clear all active timeouts
+    for (const [messageIndex, timeoutId] of typingTimeouts.value.entries()) {
+      clearTimeout(timeoutId);
+      typingTimeouts.value.delete(messageIndex);
+    }
+
+    // Clear typing messages tracking
+    typingMessages.value.clear();
+    typingMessageChats.value.clear();
+  };
+
   const stopTyping = (messageIndex, targetChatId) => {
     // Clear the timeout for this message
     if (typingTimeouts.value.has(messageIndex)) {
@@ -139,6 +152,7 @@ export function useMessageState() {
     typingMessageChats,
     hasTypingMessage,
     updateMessageTyping,
-    stopTyping
+    stopTyping,
+    cleanupTypingTimeouts
   };
 }
