@@ -1,5 +1,7 @@
 import os
 import time
+import hashlib
+import json
 import logging
 from typing import List, Optional, Dict, Any, Tuple
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
@@ -69,8 +71,6 @@ def create_full_retrieval_chain(docs):
         raise
 
 
-# In your llm_chain.py file, find the get_llm_instances() function and update the Gemini initialization:
-
 def get_llm_instances():
     """Initialize LLM instances with proper error handling, Claude first."""
     llms = {}
@@ -87,12 +87,12 @@ def get_llm_instances():
         logger.warning(f"Failed to initialize Claude (primary): {e}")
         llms['claude'] = None
 
-    # Initialize Gemini as fallback - FIX: Use 'timeout' instead of 'request_timeout'
+    # Initialize Gemini as fallback
     try:
         llms['gemini'] = ChatGoogleGenerativeAI(
             model=GEMINI_MODEL,
             temperature=0.7,
-            timeout=REQUEST_TIMEOUT  # Changed from request_timeout to timeout
+            timeout=REQUEST_TIMEOUT
         )
         logger.info(f"Gemini model {GEMINI_MODEL} initialized successfully (FALLBACK)")
     except Exception as e:
@@ -141,52 +141,162 @@ def create_prompts():
 
 
 def get_cache_key(user_input: str, chat_history: List[BaseMessage]) -> str:
-    """Generate a cache key for the request."""
+    """Generate a secure, deterministic cache key."""
     if not ENABLE_CACHING:
         return None
 
-    # Simple cache key based on input and recent history
-    history_str = ""
-    if chat_history and len(chat_history) > 0:
-        # Use only the last 2 messages for cache key to balance performance and relevance
-        recent_history = chat_history[-2:] if len(chat_history) >= 2 else chat_history
-        history_str = str([msg.content for msg in recent_history])
+    try:
+        # Sanitize and limit user input
+        if not isinstance(user_input, str):
+            return None
 
-    return f"{user_input}:{hash(history_str)}"
+        # Limit input length to prevent memory issues
+        sanitized_input = user_input.strip()[:1000]  # Max 1000 chars
+
+        # Process chat history safely
+        history_data = []
+        if chat_history:
+            # Limit to last 3 messages for performance and security
+            recent_history = chat_history[-3:] if len(chat_history) >= 3 else chat_history
+
+            for msg in recent_history:
+                if hasattr(msg, 'content') and msg.content:
+                    # Limit each message length and sanitize
+                    content = str(msg.content).strip()[:500]
+                    msg_type = msg.__class__.__name__
+                    history_data.append({"type": msg_type, "content": content})
+
+        # Create deterministic data structure
+        cache_data = {
+            "input": sanitized_input,
+            "history": history_data,
+            "version": "v1"  # For cache versioning
+        }
+
+        # Convert to JSON for consistent serialization
+        cache_json = json.dumps(cache_data, sort_keys=True, separators=(',', ':'))
+
+        # Use SHA-256 for secure, deterministic hashing
+        cache_hash = hashlib.sha256(cache_json.encode('utf-8')).hexdigest()
+
+        # Return shorter hash for efficiency (first 16 chars is plenty for collision avoidance)
+        return cache_hash[:16]
+
+    except Exception as e:
+        logger.error(f"Error generating cache key: {e}")
+        return None
 
 
 def get_cached_response(cache_key: str) -> Optional[str]:
-    """Get cached response if available and not expired."""
+    """Get cached response with additional security checks."""
     if not cache_key or not ENABLE_CACHING:
         return None
 
-    if cache_key in _response_cache:
-        cached_data = _response_cache[cache_key]
-        if time.time() - cached_data['timestamp'] < CACHE_TTL:
-            logger.info("Returning cached response")
-            return cached_data['response']
-        else:
-            # Remove expired cache entry
+    try:
+        if cache_key in _response_cache:
+            cached_data = _response_cache[cache_key]
+
+            # Check expiration
+            if time.time() - cached_data['timestamp'] < CACHE_TTL:
+                # Additional integrity check
+                if 'response' in cached_data and isinstance(cached_data['response'], str):
+                    logger.info("Returning valid cached response")
+                    return cached_data['response']
+                else:
+                    logger.warning(f"Invalid cached data structure for key: {cache_key}")
+                    del _response_cache[cache_key]
+            else:
+                # Remove expired entry
+                del _response_cache[cache_key]
+                logger.debug("Removed expired cache entry")
+
+    except Exception as e:
+        logger.error(f"Error retrieving cached response: {e}")
+        # Remove potentially corrupted cache entry
+        if cache_key in _response_cache:
             del _response_cache[cache_key]
 
     return None
 
 
 def cache_response(cache_key: str, response: str):
-    """Cache the response."""
+    """Cache response with security validation."""
     if not cache_key or not ENABLE_CACHING:
         return
 
-    _response_cache[cache_key] = {
-        'response': response,
-        'timestamp': time.time()
-    }
+    try:
+        # Validate inputs
+        if not isinstance(cache_key, str) or not isinstance(response, str):
+            logger.warning("Invalid cache data types")
+            return
 
-    # Simple cache cleanup: remove oldest entries if cache gets too large
-    if len(_response_cache) > 100:
-        oldest_key = min(_response_cache.keys(),
-                         key=lambda k: _response_cache[k]['timestamp'])
-        del _response_cache[oldest_key]
+        # Limit response size to prevent memory exhaustion
+        if len(response) > 50000:  # 50KB limit per cached response
+            logger.warning("Response too large to cache")
+            return
+
+        # Limit cache key length
+        if len(cache_key) > 32:
+            logger.warning("Cache key too long")
+            return
+
+        _response_cache[cache_key] = {
+            'response': response,
+            'timestamp': time.time(),
+            'size': len(response)
+        }
+
+        # Enhanced cache cleanup with size limits
+        cleanup_cache()
+
+    except Exception as e:
+        logger.error(f"Error caching response: {e}")
+
+
+def cleanup_cache():
+    """Clean up cache with size and count limits."""
+    try:
+        max_entries = 100
+        max_total_size = 5 * 1024 * 1024  # 5MB total cache size
+
+        # Remove expired entries first
+        now = time.time()
+        expired_keys = []
+        total_size = 0
+
+        for key, data in _response_cache.items():
+            if now - data['timestamp'] >= CACHE_TTL:
+                expired_keys.append(key)
+            else:
+                total_size += data.get('size', 0)
+
+        for key in expired_keys:
+            del _response_cache[key]
+
+        # If still too many entries or too large, remove oldest
+        if len(_response_cache) > max_entries or total_size > max_total_size:
+            # Sort by timestamp (oldest first)
+            sorted_entries = sorted(
+                _response_cache.items(),
+                key=lambda x: x[1]['timestamp']
+            )
+
+            # Remove oldest entries until under limits
+            entries_to_remove = max(0, len(_response_cache) - max_entries)
+            current_size = sum(data.get('size', 0) for data in _response_cache.values())
+
+            for key, data in sorted_entries:
+                if entries_to_remove > 0 or current_size > max_total_size:
+                    del _response_cache[key]
+                    entries_to_remove -= 1
+                    current_size -= data.get('size', 0)
+                else:
+                    break
+
+        logger.debug(f"Cache cleanup: {len(_response_cache)} entries, ~{total_size} bytes")
+
+    except Exception as e:
+        logger.error(f"Error during cache cleanup: {e}")
 
 
 def invoke_chain_with_llm(llm, retriever, contextualize_q_prompt, qa_prompt, user_input, chat_history):
@@ -325,21 +435,35 @@ def invoke_with_fallback(retriever, chat_history: List[BaseMessage], user_input:
 
 
 def get_cache_stats() -> Dict[str, Any]:
-    """Get cache statistics for monitoring."""
+    """Get comprehensive cache statistics."""
     if not ENABLE_CACHING:
         return {"caching": "disabled"}
 
-    now = time.time()
-    valid_entries = sum(1 for data in _response_cache.values()
-                        if now - data['timestamp'] < CACHE_TTL)
+    try:
+        now = time.time()
+        valid_entries = 0
+        total_size = 0
+        oldest_timestamp = now
 
-    return {
-        "caching": "enabled",
-        "total_entries": len(_response_cache),
-        "valid_entries": valid_entries,
-        "cache_ttl": CACHE_TTL,
-        "primary_llm": PRIMARY_LLM
-    }
+        for data in _response_cache.values():
+            if now - data['timestamp'] < CACHE_TTL:
+                valid_entries += 1
+                total_size += data.get('size', 0)
+                oldest_timestamp = min(oldest_timestamp, data['timestamp'])
+
+        return {
+            "caching": "enabled",
+            "total_entries": len(_response_cache),
+            "valid_entries": valid_entries,
+            "total_size_bytes": total_size,
+            "cache_ttl_seconds": CACHE_TTL,
+            "oldest_entry_age_seconds": int(now - oldest_timestamp) if oldest_timestamp < now else 0,
+            "primary_llm": PRIMARY_LLM
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting cache stats: {e}")
+        return {"error": "Cache stats unavailable"}
 
 
 # Alternative simple fallback function for emergencies

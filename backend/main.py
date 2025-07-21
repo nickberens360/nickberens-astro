@@ -129,11 +129,12 @@ except Exception as e:
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=AppConfig.get_cors_origins(),
+    allow_origins=AppConfig.get_cors_origins(),  # Now properly validated
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
 
 
 def handle_image_query(query_type: QueryType, search_term: str, start_time: float, user_question: str, conversation_history: List = None) -> QueryResponse:
