@@ -130,10 +130,7 @@ export default {
     const renderMarkdownWithCursor = (text, isTyping) => {
       const renderedMarkdown = marked(text);
       if (!isTyping) return renderedMarkdown;
-
-      // For typing messages, append the cursor to the content
-      // TODO: this is pretty broken, needs a better solution
-      return renderedMarkdown + '<span class="typing-cursor">|</span>';
+      return renderedMarkdown
     };
 
     const shouldShowFollowups = (message) => {

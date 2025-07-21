@@ -151,7 +151,7 @@ export function useTerminalResize(terminalWindow, position, size, isMaximized, p
   };
 
   // --- MAXIMIZE FUNCTIONS ---
-  const toggleMaximize = () => {
+  const maximizeTerminal = () => {
     if (!isMaximized.value) {
       // Save current position and size before maximizing
       previousTerminalStateStore.set({
@@ -160,7 +160,11 @@ export function useTerminalResize(terminalWindow, position, size, isMaximized, p
       });
       isTerminalMaximizedStore.set(true);
       document.body.style.overflow = 'hidden';
-    } else {
+    }
+  };
+
+  const unmaximizeTerminal = () => {
+    if (isMaximized.value) {
       // Restore previous position and size
       if (previousTerminalState.value.position && previousTerminalState.value.size) {
         terminalPositionStore.set(previousTerminalState.value.position);
@@ -168,6 +172,15 @@ export function useTerminalResize(terminalWindow, position, size, isMaximized, p
       }
       isTerminalMaximizedStore.set(false);
       document.body.style.overflow = '';
+    }
+  };
+
+  // For backward compatibility
+  const toggleMaximize = () => {
+    if (isMaximized.value) {
+      unmaximizeTerminal();
+    } else {
+      maximizeTerminal();
     }
   };
 
@@ -195,6 +208,8 @@ export function useTerminalResize(terminalWindow, position, size, isMaximized, p
     stopResize,
 
     // Maximize functions
+    maximizeTerminal,
+    unmaximizeTerminal,
     toggleMaximize
   };
 }

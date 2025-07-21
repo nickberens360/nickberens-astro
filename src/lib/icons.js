@@ -15,6 +15,7 @@ import {
   faRotateRight,
   faPenToSquare,
   faHouseChimney,
+  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 
 
@@ -29,6 +30,7 @@ library.add(
   faRotateRight,
   faPenToSquare,
   faHouseChimney,
+  faTrash,
 );
 
 export { library };

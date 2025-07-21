@@ -184,11 +184,21 @@ export default {
   },
   methods: {
     toggleTerminal() {
-      // If terminal is minimized, un-minimize it
-      if (this.isTerminalMinimized) {
+      // If terminal is hidden, show it
+      if (this.isTerminalHidden) {
+        isTerminalHiddenStore.set(false);
+        // If it was minimized, un-minimize it too
+        if (this.isTerminalMinimized) {
+          isTerminalMinimizedStore.set(false);
+        }
+      }
+      // If terminal is visible but minimized, un-minimize it
+      else if (this.isTerminalMinimized) {
         isTerminalMinimizedStore.set(false);
-      } else {
-        isTerminalHiddenStore.set(!isTerminalHiddenStore.value);
+      }
+      // If terminal is visible and not minimized, hide it
+      else {
+        isTerminalHiddenStore.set(true);
       }
     },
     toggleMobileMenu() {

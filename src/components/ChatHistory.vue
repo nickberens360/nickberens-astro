@@ -17,8 +17,8 @@
             icon="bars"
           />
         </button>
-        <a href="/"
-          @click="toggleVisibility"
+        <a
+          href="/"
           class="toggle-button"
         >
           <font-awesome-icon
@@ -70,6 +70,25 @@
         {{ chatList.length }}
       </div>
     </div>
+
+    <!-- Add the clear localStorage button at the bottom -->
+    <button
+      @click="clearLocalStorage"
+      class="clear-storage-button"
+    >
+      <font-awesome-icon
+        icon="trash"
+        class="base-icon"
+      />
+      <span
+        v-if="isVisible"
+        class="ml-2"
+      >Clear localStorage</span>
+    </button>
+    <p
+      v-if="isVisible"
+      class="text-center text-italic text-sm text-hint"
+    >Having issues? Try clearing localStorage.</p>
   </div>
 </template>
 
@@ -205,6 +224,14 @@ export default {
       window.removeEventListener('resize', updateVisibilityForScreenSize);
     });
 
+    // Add the clearLocalStorage function
+    const clearLocalStorage = () => {
+      if (confirm('Are you sure you want to clear all chat history? This action cannot be undone.')) {
+        localStorage.clear();
+        window.location.reload(); // Reload the page to reflect changes
+      }
+    };
+
     return {
       chatList,
       currentChatId,
@@ -214,7 +241,8 @@ export default {
       handleCreateNewChat,
       handleSelectChat,
       isVisible,
-      toggleVisibility
+      toggleVisibility,
+      clearLocalStorage
     };
   },
 };
@@ -350,5 +378,35 @@ export default {
   right: -3px;
   top: 50%;
   transform: translateY(0) rotate(30deg);
+}
+
+/* Add style for the clear localStorage button */
+.clear-storage-button {
+  margin-top: auto;
+  padding: 0.75rem;
+  border: none;
+  color: #d1d5db;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  background-color: #333333;
+}
+
+.clear-storage-button:hover {
+  background-color: #222222;
+  color: #f9fafb;
+}
+
+.clear-storage-button .base-icon {
+  color: #ff6b6b;
+}
+
+.text-hint {
+  color: #9ca3af;
+  margin-top: 0.5rem;
 }
 </style>

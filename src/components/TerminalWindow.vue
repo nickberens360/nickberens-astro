@@ -22,7 +22,7 @@
         :isMaximized="isMaximized"
         @close="isTerminalHiddenStore.set(true);"
         @minimize="isTerminalMinimizedStore.set(true)"
-        @maximize="toggleMaximize"
+        @maximize="isMaximized ? unmaximizeTerminalResize : maximizeTerminal"
         @startDrag="startDrag"
         @stopDrag="stopDrag"
       />
@@ -97,6 +97,8 @@ export default {
       startResize,
       stopResize,
       toggleMaximize,
+      maximizeTerminal,
+      unmaximizeTerminal: unmaximizeTerminalResize,
     } = useTerminalResize(
       terminalWindow,
       terminalState.position,
@@ -119,13 +121,15 @@ export default {
 
     // --- BODY SCROLL CONTROL ---
     const blockBodyScroll = () => {
-      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) { // Only apply if not already maximized
+      // Only block scrolling when hovering over a non-maximized terminal
+      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) {
         document.body.style.overflow = 'hidden';
       }
     };
 
     const restoreBodyScroll = () => {
-      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) { // Only restore if not maximized
+      // Always restore scrolling when mouse leaves the terminal
+      if (!isMaximized.value) {
         document.body.style.overflow = '';
       }
     };
@@ -212,6 +216,8 @@ export default {
       startResize,
       stopResize,
       toggleMaximize,
+      maximizeTerminal,
+      unmaximizeTerminalResize,
 
       // Methods
       submitCommand,
