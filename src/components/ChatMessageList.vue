@@ -112,6 +112,10 @@ export default {
     theme: {
       type: String,
       default: 'dark'
+    },
+    backendStatus: {
+      type: String,
+      default: 'checking'
     }
   },
   emits: ['prompt-select', 'image-click', 'followup-click'],

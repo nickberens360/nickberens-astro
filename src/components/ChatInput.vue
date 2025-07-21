@@ -8,7 +8,7 @@
         @keyup.enter="$emit('send-message')"
         :placeholder="inputPlaceholder"
         class="message-input"
-        :disabled="hasTypingMessage"
+        :disabled="hasTypingMessage || backendStatus !== 'online'"
         aria-label="Chat message input"
         :aria-describedby="hasTypingMessage ? 'typing-status' : null"
       />
@@ -21,7 +21,7 @@
               :value="selectedModel"
               @change="$emit('update:selectedModel', $event.target.value)"
               class="model-selector"
-              :disabled="hasTypingMessage"
+              :disabled="hasTypingMessage || backendStatus !== 'online'"
             >
               <option value="claude">Claude (Recommended)</option>
               <option value="gemini">Gemini (Fast)</option>
@@ -83,6 +83,10 @@ export default {
     lastStoppedPrompt: {
       type: String,
       default: ''
+    },
+    backendStatus: {
+      type: String,
+      default: 'checking'
     }
   },
   emits: [
@@ -94,6 +98,21 @@ export default {
   setup(props, { emit }) {
     // Input placeholder logic
     const inputPlaceholder = computed(() => {
+      // First check backend status
+      if (props.backendStatus !== 'online') {
+        switch (props.backendStatus) {
+          case 'checking':
+            return '🔄 Checking backend status...';
+          case 'building':
+            return '⚠️ Backend starting up, please wait...';
+          case 'offline':
+            return '❌ Backend offline, please try again later';
+          default:
+            return 'Backend not ready...';
+        }
+      }
+
+      // If backend is online, show normal placeholders
       return props.lastStoppedPrompt && !props.userInput.trim()
         ? 'Press Enter to retry stopped response...'
         : 'Ask about Nick\'s skills, projects, etc...';
