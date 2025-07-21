@@ -184,20 +184,18 @@ export default {
   },
   methods: {
     toggleTerminal() {
-      // If terminal is hidden, show it
+      // Simplified terminal toggle logic using centralized state
       if (this.isTerminalHidden) {
+        // Show terminal and restore if minimized
         isTerminalHiddenStore.set(false);
-        // If it was minimized, un-minimize it too
         if (this.isTerminalMinimized) {
           isTerminalMinimizedStore.set(false);
         }
-      }
-      // If terminal is visible but minimized, un-minimize it
-      else if (this.isTerminalMinimized) {
+      } else if (this.isTerminalMinimized) {
+        // Terminal is visible but minimized, so restore it
         isTerminalMinimizedStore.set(false);
-      }
-      // If terminal is visible and not minimized, hide it
-      else {
+      } else {
+        // Terminal is visible and restored, so hide it
         isTerminalHiddenStore.set(true);
       }
     },

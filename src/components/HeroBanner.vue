@@ -6,7 +6,7 @@
           <h1>
             One time I said a
             <span class="highlight">bad&nbsp;word</span>
-            during an interview&nbsp;🤦.
+            during an interview&nbsp;🤦‍♂️.
           </h1>
         </slot>
       </div>

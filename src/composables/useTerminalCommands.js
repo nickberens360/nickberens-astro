@@ -3,16 +3,12 @@ import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../u
 import {
   navItems,
   commandHistoryStore,
-  nextCommandIdStore,
-  isTerminalMaximizedStore,
-  previousTerminalStateStore,
-  terminalPositionStore,
-  terminalSizeStore
+  nextCommandIdStore
 } from '../stores/ui.js';
 import { DEFAULT_TERMINAL } from '../config/terminalConfig.js';
 import { processCodeFrequencyData, processCommitHistory } from '../utils/dataProcessing.js';
 
-export function useTerminalCommands(terminalOutput, isMounted) {
+export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallback) {
   // Helper function to update a specific history item
   const updateHistoryItem = (commandId, updates) => {
     const history = commandHistoryStore.get();
@@ -91,20 +87,6 @@ export function useTerminalCommands(terminalOutput, isMounted) {
       });
   };
 
-  // Helper to unmaximize terminal
-  const unmaximizeTerminal = () => {
-    if (isTerminalMaximizedStore.get()) {
-      isTerminalMaximizedStore.set(false);
-      document.body.style.overflow = '';
-
-      const previousState = previousTerminalStateStore.get();
-      if (previousState.position && previousState.size) {
-        terminalPositionStore.set(previousState.position);
-        terminalSizeStore.set(previousState.size);
-      }
-    }
-  };
-
   // Command definitions
   const commands = {
     clear: () => {
@@ -169,8 +151,10 @@ export function useTerminalCommands(terminalOutput, isMounted) {
         return;
       }
 
-      // Unmaximize terminal before navigation
-      unmaximizeTerminal();
+      // Use the callback to unmaximize instead of direct import
+      if (unmaximizeCallback) {
+        unmaximizeCallback();
+      }
 
       const targetName = args.join(' ').toLowerCase();
 
@@ -289,7 +273,6 @@ export function useTerminalCommands(terminalOutput, isMounted) {
 
   return {
     handleCommand,
-    updateHistoryItem,
-    unmaximizeTerminal
+    updateHistoryItem
   };
 }

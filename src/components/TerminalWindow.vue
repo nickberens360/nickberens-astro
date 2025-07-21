@@ -1,10 +1,10 @@
 <template>
-  <div v-if="!isHidden">
+  <div v-if="isVisible">
     <TerminalControlBar
       v-if="isMinimized"
       :title="title"
       class="terminal-minimized"
-      @click="isTerminalMinimizedStore.set(false)"
+      @click="actions.restore()"
     />
 
     <div
@@ -14,17 +14,17 @@
       :style="terminalStyle"
       ref="terminalWindow"
       @click="focusInput"
-      @mouseenter="blockBodyScroll"
-      @mouseleave="restoreBodyScroll"
+      @mouseenter="mouseHandlers.enter"
+      @mouseleave="mouseHandlers.leave"
     >
       <TerminalControlBar
         :title="title"
         :isMaximized="isMaximized"
-        @close="isTerminalHiddenStore.set(true);"
-        @minimize="isTerminalMinimizedStore.set(true)"
-        @maximize="isMaximized ? unmaximizeTerminalResize : maximizeTerminal"
-        @startDrag="startDrag"
-        @stopDrag="stopDrag"
+        @close="actions.hide"
+        @minimize="actions.minimize"
+        @maximize="actions.maximize"
+        @startDrag="dragHandlers.start"
+        @stopDrag="dragHandlers.stop"
       />
 
       <TerminalContent
@@ -32,7 +32,6 @@
         :command-history="commandHistory"
         :input-value="inputValue"
         @focus-input="focusInput"
-        @unmaximize="unmaximizeTerminal"
         @update:input-value="inputValue = $event"
         @submit-command="submitCommand"
         ref="terminalContent"
@@ -41,20 +40,19 @@
       <TerminalResizeHandles
         :is-maximized="isMaximized"
         :theme="theme"
-        @start-resize="startResize"
+        @start-resize="resizeHandlers.start"
       />
     </div>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, watch, onUnmounted } from 'vue';
+import { computed } from 'vue';
 import TerminalControlBar from './TerminalControlBar.vue';
 import TerminalContent from './TerminalContent.vue';
 import TerminalResizeHandles from './TerminalResizeHandles.vue';
+import { useTerminalController } from '../composables/useTerminalController.js';
 import { useTerminalCommands } from '../composables/useTerminalCommands.js';
-import { useTerminalResize } from '../composables/useTerminalResize.js';
-import { useTerminalState } from '../composables/useTerminalState.js';
 
 export default {
   name: 'TerminalWindow',
@@ -78,153 +76,38 @@ export default {
     }
   },
   setup(props) {
-    // --- REFS ---
-    const terminalWindow = ref(null);
-    const terminalContent = ref(null);
+    const controller = useTerminalController(props);
 
-    // Create direct refs that will be properly connected
-    const terminalInput = ref(null);
-    const terminalOutput = ref(null);
+    // Create terminal output ref for commands
+    const terminalOutput = computed(() => ({
+      get scrollTop() {
+        return controller.terminalContent.value?.$refs.terminalOutput?.scrollTop || 0;
+      },
+      set scrollTop(value) {
+        if (controller.terminalContent.value?.$refs.terminalOutput) {
+          controller.terminalContent.value.$refs.terminalOutput.scrollTop = value;
+        }
+      },
+      get scrollHeight() {
+        return controller.terminalContent.value?.$refs.terminalOutput?.scrollHeight || 0;
+      }
+    }));
 
-    // --- COMPOSABLES ---
-    const terminalState = useTerminalState(props, terminalInput, terminalOutput);
-    const { handleCommand, unmaximizeTerminal } = useTerminalCommands(terminalOutput, terminalState.isMounted);
-
-    const {
-      terminalStyle,
-      startDrag,
-      stopDrag,
-      startResize,
-      stopResize,
-      toggleMaximize,
-      maximizeTerminal,
-      unmaximizeTerminal: unmaximizeTerminalResize,
-    } = useTerminalResize(
-      terminalWindow,
-      terminalState.position,
-      terminalState.size,
-      terminalState.isMaximized,
-      terminalState.previousTerminalState
+    // Initialize commands with unmaximize callback
+    const { handleCommand } = useTerminalCommands(
+      terminalOutput,
+      controller.isMounted,
+      controller.actions.unmaximize // Pass unmaximize callback
     );
 
-    // --- COMMAND SUBMISSION ---
     const submitCommand = () => {
-      terminalState.submitCommand(handleCommand);
+      controller.submitCommand(handleCommand);
     };
-
-    // --- FOCUS INPUT ---
-    const focusInput = (event) => {
-      if (!event || event.target.tagName !== 'A') {
-        terminalContent.value?.focusInput();
-      }
-    };
-
-    // --- BODY SCROLL CONTROL ---
-    const blockBodyScroll = () => {
-      // Only block scrolling when hovering over a non-maximized terminal
-      if (terminalState && terminalState.isMaximized && !terminalState.isMaximized.value) {
-        document.body.style.overflow = 'hidden';
-      }
-    };
-
-    const restoreBodyScroll = () => {
-      // Always restore scrolling when mouse leaves the terminal
-      if (!isMaximized.value) {
-        document.body.style.overflow = '';
-      }
-    };
-
-    // --- LIFECYCLE ---
-    onMounted(() => {
-      // Set up refs for the composables that need them
-      terminalInput.value = {
-        focus: () => terminalContent.value?.focusInput()
-      };
-      terminalOutput.value = {
-        get scrollTop() {
-          return terminalContent.value?.$refs.terminalOutput?.scrollTop || 0;
-        },
-        set scrollTop(value) {
-          if (terminalContent.value?.$refs.terminalOutput) {
-            terminalContent.value.$refs.terminalOutput.scrollTop = value;
-          }
-        },
-        get scrollHeight() {
-          return terminalContent.value?.$refs.terminalOutput?.scrollHeight || 0;
-        }
-      };
-
-      terminalState.cleanup.value = terminalState.initialize(
-        terminalWindow,
-        toggleMaximize,
-        stopDrag,
-        stopResize
-      );
-
-      // Apply body scroll blocking if terminal is already maximized on page load
-      if (terminalState.isMaximized.value) {
-        document.body.style.overflow = 'hidden';
-      }
-    });
-
-    // Watch for changes in terminal visibility
-    watch(terminalState.isHidden, (isHidden) => {
-      if (isHidden) {
-        // If terminal is hidden, reset body overflow
-        document.body.style.overflow = '';
-      }
-    });
-
-    // Watch for changes in terminal minimized state
-    watch(terminalState.isMinimized, (isMinimized) => {
-      if (isMinimized) {
-        // If terminal is minimized, restore body scrolling
-        document.body.style.overflow = '';
-      } else if (terminalState.isMaximized.value) {
-        // If terminal is un-minimized and is maximized, block scrolling again
-        document.body.style.overflow = 'hidden';
-      }
-    });
-
-    // Ensure body overflow is reset when component is unmounted
-    onUnmounted(() => {
-      if (terminalState.isMaximized.value) {
-        document.body.style.overflow = '';
-      }
-    });
 
     return {
-      // Refs
-      terminalWindow,
-      terminalContent,
-
-      // From terminalState composable
-      theme: terminalState.theme,
-      inputValue: terminalState.inputValue,
-      isMounted: terminalState.isMounted,
-      isMinimized: terminalState.isMinimized,
-      isHidden: terminalState.isHidden,
-      isMaximized: terminalState.isMaximized,
-      commandHistory: terminalState.commandHistory,
-      isTerminalMinimizedStore: terminalState.isTerminalMinimizedStore,
-      isTerminalHiddenStore: terminalState.isTerminalHiddenStore,
-
-      // From useTerminalResize composable
-      terminalStyle,
-      startDrag,
-      stopDrag,
-      startResize,
-      stopResize,
-      toggleMaximize,
-      maximizeTerminal,
-      unmaximizeTerminalResize,
-
-      // Methods
-      submitCommand,
-      focusInput,
-      unmaximizeTerminal,
-      blockBodyScroll,
-      restoreBodyScroll,
+      // All controller properties and methods
+      ...controller,
+      submitCommand
     };
   }
 };
@@ -248,20 +131,16 @@ export default {
 }
 
 .terminal-window {
-  position: fixed;
   background-color: #1e1e1e;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  z-index: 1000;
 }
 
 .terminal-maximized {
-  position: fixed !important;
   border-radius: 0 !important;
-  z-index: 1001 !important;
 }
 
 .terminal-window.theme-light {
