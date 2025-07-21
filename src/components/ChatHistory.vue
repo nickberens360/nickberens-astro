@@ -400,11 +400,11 @@ export default {
   width: 100%;
   border-radius: 4px;
   transition: background-color 0.2s;
-  background-color: #333333;
+  background-color: #222222;
 }
 
 .clear-storage-button:hover {
-  background-color: #222222;
+  background-color: #1c1c1c;
   color: #f9fafb;
 }
 

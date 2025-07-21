@@ -129,7 +129,10 @@ export function useChatAPI() {
         },
         body: JSON.stringify({
           question: question,
-          chat_history: chatHistory,
+          chat_history: chatHistory.map(msg => ({
+            ...msg,
+            sender: msg.sender === 'bot' ? 'assistant' : msg.sender
+          })),
           preferred_model: selectedModel
         }),
         signal: abortController.value.signal
