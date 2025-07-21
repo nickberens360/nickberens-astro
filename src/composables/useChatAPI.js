@@ -12,7 +12,7 @@ export function useChatAPI() {
     const apiUrl = isDev
       ? 'http://localhost:8000'
       : 'https://nickberens-astro-api.onrender.com';
-
+      console.log('API URL:', apiUrl);
     const response = await fetch(`${apiUrl}/query`, {
       method: 'POST',
       headers: {
