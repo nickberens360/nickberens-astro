@@ -69,14 +69,6 @@
       >
         {{ chatList.length }}
       </div>
-      <!--      <div
-              v-for="chat in chatList"
-              :key="chat.id"
-              class="history-item-mobile"
-              @click="toggleVisibility"
-            >
-              ...
-            </div>-->
     </div>
   </div>
 </template>
