@@ -184,7 +184,6 @@ export default {
 
       // Check current status before proceeding
       const currentStatus = backendStatus.get();
-      console.log('Current backend status before sending:', currentStatus);
 
       if (currentStatus !== 'online') {
         let statusMessage;
