@@ -96,7 +96,6 @@
 </template>
 
 <script>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { useStore } from '@nanostores/vue';
 import {
   allChats,
@@ -111,7 +110,6 @@ import { computed, onMounted, onUnmounted } from 'vue';
 
 export default {
   name: 'ChatHistory',
-  components: { FontAwesomeIcon },
   props: {
     theme: {
       type: String,
