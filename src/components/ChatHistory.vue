@@ -369,6 +369,7 @@ export default {
   text-overflow: ellipsis;
   color: #6c7889;
   transition: background-color 0.2s;
+  margin-bottom: 0.5rem;
 }
 
 .history-item:hover {
