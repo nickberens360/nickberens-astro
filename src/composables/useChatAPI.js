@@ -47,7 +47,6 @@ export function useChatAPI() {
       if (!response.ok) {
         const status = { online: false, initialized: false, building: false };
         updateBackendStatus(status);
-        console.log('Status check result:', status);
         return status;
       }
 
@@ -59,7 +58,6 @@ export function useChatAPI() {
       };
 
       updateBackendStatus(status);
-      console.log('Status check result:', status);
       return status;
     } catch (error) {
       // Different error handling based on error type
@@ -80,7 +78,6 @@ export function useChatAPI() {
 
       updateBackendStatus(status);
       console.log('Status check error:', error.message);
-      console.log('Status check result:', status);
       return status;
     }
   };
