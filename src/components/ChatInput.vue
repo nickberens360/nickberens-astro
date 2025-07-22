@@ -308,8 +308,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  width: 40px;
+  height: 40px;
 }
 
 /* Add a subtle animation for the stop state */
@@ -327,5 +327,14 @@ export default {
 }
 
 /* Responsive styles */
+
+@media (max-width: 767px) {
+  .input-form {
+    padding: 0 0.5rem 0.5rem;
+  }
+  .model-selector {
+    padding: 0.375rem 0.5rem;
+  }
+}
 
 </style>
