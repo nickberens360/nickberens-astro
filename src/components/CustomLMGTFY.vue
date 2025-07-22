@@ -15,7 +15,7 @@
         <span class="letter l">l</span>
         <span class="letter e">e</span>
       </div>
-      <p class="mt-0">Let me Google that for you</p>
+      <p class="mt-0" style="color: red;">Let me Google that for you 🙄</p>
       <div class="search-container">
         <input
           ref="searchInput"
@@ -84,7 +84,7 @@
           :class="{ 'loading': isIframeLoading }"
           frameborder="0"
           allowfullscreen
-          sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           title="Research Results"
           @load="handleIframeLoad"
         ></iframe>
@@ -192,7 +192,7 @@ export default {
         await animateSearchButton();
 
         // Mark animation as complete in store
-        if (props.chatId != null && props.messageIndex != null) {
+        if (props.chatId !== null && props.messageIndex != null) {
           updateMessageProperty(props.chatId, props.messageIndex, 'isNewResearch', false);
         }
 

@@ -92,7 +92,7 @@ isChatHistoryVisible.listen((value) => {
   if (isBrowser()) {
     try {
       localStorage.setItem('isChatHistoryVisible', JSON.stringify(value));
-    } catch (error) { // <-- This block was missing its opening brace
+    } catch (error) {
       console.error('Error saving chat history visibility:', error);
     }
   }
