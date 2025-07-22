@@ -52,7 +52,9 @@
               <div v-if="message.model && !message.isTyping" class="model-indicator">
                 <span
                   class="model-badge"
-                  :class="{'error': message.model === 'error'} || backendStatus === 'offline'"
+                  :class="{
+                   'error': message.model === 'error' || backendStatus === 'offline'
+                  }"
                 >
                   {{ message.model }}
                 </span>
