@@ -116,9 +116,7 @@ export function useChatAPI() {
     const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
     const apiUrl = isDev
       ? 'http://localhost:8000'
-      : 'https://nickberens-astro-api.onrender.com';
-    console.log('API URL:', apiUrl);
-    console.log('Current backend status before sending:', currentStatus);
+      : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-api.onrender.com';
 
     try {
       const response = await fetch(`${apiUrl}/query`, {
