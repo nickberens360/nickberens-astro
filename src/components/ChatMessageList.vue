@@ -50,7 +50,12 @@
 
               <!-- Model indicator for bot messages -->
               <div v-if="message.model && !message.isTyping" class="model-indicator">
-                <span class="model-badge">{{ message.model }}</span>
+                <span
+                  class="model-badge"
+                  :class="{'error': message.model === 'error'} || backendStatus === 'offline'"
+                >
+                  {{ message.model }}
+                </span>
               </div>
 
               <!-- Follow-up questions (only show after typing is complete) -->
@@ -108,6 +113,10 @@ export default {
     hasTypingMessage: {
       type: Boolean,
       default: false
+    },
+    backendStatus: {
+      type: String,
+      default: null
     },
     theme: {
       type: String,
@@ -388,6 +397,11 @@ export default {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.025em;
+}
+.model-badge.error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
 
 /* Typing Indicator */

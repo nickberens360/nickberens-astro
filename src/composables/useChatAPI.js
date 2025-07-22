@@ -125,10 +125,31 @@ export function useChatAPI() {
         },
         body: JSON.stringify({
           question: question,
-          chat_history: chatHistory.map(msg => ({
-            ...msg,
-            sender: msg.sender === 'bot' ? 'assistant' : msg.sender
-          })),
+          chat_history: chatHistory
+            .filter(msg => {
+              // Only include messages with valid structure
+              return msg &&
+                     msg.sender &&
+                     (
+                       // Include messages with text content
+                       (typeof msg.text === 'string' && msg.text.trim().length > 0) ||
+                       // Include bot messages that might have images or other content even with empty text
+                       (msg.sender === 'bot' && (msg.images?.length > 0 || msg.followup_questions?.length > 0))
+                     );
+            })
+            .map(msg => {
+              let text = msg.text?.trim() || '';
+
+              // Truncate text if it exceeds 1000 characters
+              if (text.length > 1000) {
+                text = text.substring(0, 997) + '...'; // 997 + 3 = 1000 characters
+              }
+
+              return {
+                sender: msg.sender === 'bot' ? 'assistant' : msg.sender,
+                text: text
+              };
+            }),
           preferred_model: selectedModel
         }),
         signal: abortController.value.signal
