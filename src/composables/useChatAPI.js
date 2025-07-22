@@ -23,7 +23,9 @@ export function useChatAPI() {
       : 'https://nickberens-astro-api.onrender.com';
 
     // Set status to checking before making the request
-    if (isBackendOnline.get() === null) {
+    if (isBackendOnline.get() === null &&
+        isBackendInitialized.get() === null &&
+        isBackendBuilding.get() === null) {
       updateBackendStatus({ online: null, initialized: null, building: null });
     }
 
