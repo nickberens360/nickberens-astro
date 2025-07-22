@@ -10,7 +10,7 @@
       >
         <button
           @click="toggleVisibility"
-          class="toggle-button"
+          class="base-icon-button collapse-icon-button"
         >
           <font-awesome-icon
             class="base-icon"
@@ -19,7 +19,7 @@
         </button>
         <a
           href="/"
-          class="toggle-button"
+          class="base-icon-button"
         >
           <font-awesome-icon
             icon="house-chimney"
@@ -48,7 +48,7 @@
         >New Chat</span>
       </button>
     </div>
-    <p v-if="isVisible">Recent</p>
+    <p v-if="isVisible" class="history-heading">Recent</p>
     <div
       :class="{ 'disabled-history-items': hasTypingMessage || isProcessing }"
     >
@@ -67,7 +67,7 @@
     </div>
     <div v-else>
       <div
-        class="history-item-mobile mt-4"
+        class="history-item-collapsed"
         @click="toggleVisibility"
       >
         {{ chatList.length }}
@@ -106,7 +106,7 @@ import {
   isPendingNewChat
 } from '../stores/ai.js';
 import { isChatProcessing } from '../stores/ui.js';
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 export default {
   name: 'ChatHistory',
@@ -164,11 +164,25 @@ export default {
       return window.innerWidth < 768; // Using md breakpoint (768px)
     };
 
+    // Track the drawer state before it was collapsed due to screen size
+    const wasVisibleBeforeCollapse = ref(null);
+
     // Function to update visibility based on screen size
     const updateVisibilityForScreenSize = () => {
-      // If mobile size, collapse the chat history
       if (isMobileSize()) {
+        // If we're going to mobile and drawer is currently visible,
+        // remember this state before collapsing
+        if (isVisible.value && wasVisibleBeforeCollapse.value === null) {
+          wasVisibleBeforeCollapse.value = true;
+        }
         isChatHistoryVisible.set(false);
+      } else {
+        // If we're going back to desktop and we had stored a previous state,
+        // restore it
+        if (wasVisibleBeforeCollapse.value !== null) {
+          isChatHistoryVisible.set(wasVisibleBeforeCollapse.value);
+          wasVisibleBeforeCollapse.value = null; // Reset the stored state
+        }
       }
     };
 
@@ -262,21 +276,11 @@ export default {
   transition: width 0.3s ease;
 }
 
-.drawer-header {
-  margin-bottom: 1rem;
-}
-
-.button-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .button-group--stacked {
   flex-direction: column;
 }
 
-.toggle-button {
+.base-icon-button {
   background: none;
   color: #d1d5db;
   border: none;
@@ -305,12 +309,38 @@ export default {
   left: 4px;
   border: none;
   background: none !important; /* Keeping !important from original rule */
-  margin-top: 34px;
+  margin-bottom: 1rem;
   outline: none;
   color: white;
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.drawer-header {
+  margin-bottom: 1rem;
+}
+
+.history-heading {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: .75rem;
+}
+
+.collapsed .collapse-icon-button {
+  margin-bottom: 1rem;
+}
+.collapsed .history-item-collapsed {
+  margin-top: 0 !important;
+}
+
+
+
 
 .new-chat-button:disabled,
 .new-chat-button.disabled {
@@ -352,7 +382,7 @@ export default {
   padding-left: 1rem;
 }
 
-.history-item-mobile {
+.history-item-collapsed {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -368,7 +398,7 @@ export default {
   position: relative;
 }
 
-.history-item-mobile::after {
+.history-item-collapsed::after {
   content: '';
   position: absolute;
   width: 0;
