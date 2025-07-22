@@ -26,6 +26,16 @@
               <option value="claude">Claude (Recommended)</option>
               <option value="gemini">Gemini (Fast)</option>
             </select>
+
+            <!-- Add Research Button -->
+            <button
+              @click="handleResearchClick"
+              class="research-button"
+              :disabled="!userInput.trim() || hasTypingMessage || backendStatus !== 'online'"
+              title="Research this topic"
+            >
+              Research
+            </button>
           </div>
         </div>
 
@@ -93,7 +103,8 @@ export default {
     'update:userInput',
     'update:selectedModel',
     'send-message',
-    'stop-action'
+    'stop-action',
+    'research-message'
   ],
   setup(props, { emit }) {
     // Input placeholder logic
@@ -155,12 +166,17 @@ export default {
       }
     };
 
+    const handleResearchClick = () => {
+      emit('research-message');
+    };
+
     return {
       inputPlaceholder,
       isInStopMode,
       isInRetryMode,
       buttonTitle,
-      handleSendButtonClick
+      handleSendButtonClick,
+      handleResearchClick
     };
   }
 };
@@ -254,6 +270,28 @@ export default {
 }
 
 .model-selector:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.research-button {
+  background-color: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #e2e8f0;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.research-button:hover:not(:disabled) {
+  background-color: #4a5568;
+  border-color: #718096;
+}
+
+.research-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

@@ -37,6 +37,7 @@
       :backend-status="backendStatus"
       @send-message="sendMessage"
       @stop-action="stopCurrentAction"
+      @research-message="handleResearchMessage"
     />
 
     <ImageOverlay />
@@ -328,6 +329,45 @@ export default {
       openImageOverlay(src);
     };
 
+    const handleResearchMessage = () => {
+      if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) {
+        return;
+      }
+
+      const question = userInput.value;
+
+      // Check if we have a pending new chat or no active chat
+      let currentChatId = activeChatId.get();
+      if (isPendingNewChat.get() || !currentChatId) {
+        currentChatId = createNewChat();
+        isPendingNewChat.set(false);
+      }
+
+      const currentMessages = activeChatMessages.get();
+
+      // If this is the very first message in the chat, update the title
+      if (currentMessages.length === 0) {
+        updateChatTitle(currentChatId, `Research: ${question}`);
+      }
+
+      // Add user message
+      addMessageToActiveChat({ text: question, sender: 'user' });
+
+      // Create the Let Me Google That For You URL
+      const encodedQuery = encodeURIComponent(question);
+      const lmgtfyUrl = `https://letmegooglethat.com/?q=${encodedQuery}`;
+
+      // Add bot message with iframe
+      addMessageToActiveChat({
+        text: `Here's a research link for "${question}":`,
+        sender: 'bot',
+        model: 'research',
+        iframe: lmgtfyUrl
+      });
+
+      userInput.value = '';
+    };
+
     return {
       userInput,
       messages,
@@ -340,6 +380,7 @@ export default {
       handlePromptSelect,
       handleFollowupClick,
       handleImageClick,
+      handleResearchMessage,
       stopCurrentAction
     };
   },

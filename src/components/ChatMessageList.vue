@@ -32,6 +32,17 @@
                 <span class="stopped-icon">⏹</span>
                 You stopped this response
               </div>
+
+              <!-- Iframe Content for Research -->
+              <div v-if="message.iframe && !message.isTyping" class="iframe-container fade-in">
+                <iframe
+                  :src="message.iframe"
+                  class="research-iframe"
+                  frameborder="0"
+                  allowfullscreen
+                  title="Research Results"
+                ></iframe>
+              </div>
             </div>
 
             <!-- Message Metadata -->
@@ -492,6 +503,21 @@ export default {
   transform: none;
 }
 
+/* Iframe Styles */
+.iframe-container {
+  margin-top: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.research-iframe {
+  width: 100%;
+  height: 500px;
+  border: none;
+  border-radius: 8px;
+}
+
 @media (max-width: 768px) {
   .messages-window {
     padding: 0.5rem;
@@ -508,6 +534,10 @@ export default {
   .followup-button {
     padding: 0.375rem 0.625rem;
     font-size: 0.8125rem;
+  }
+
+  .research-iframe {
+    height: 400px;
   }
 }
 </style>
