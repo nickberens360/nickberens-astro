@@ -3,6 +3,10 @@ import { ref } from 'vue';
 import { isBackendOnline, isBackendInitialized, isBackendBuilding, lastStatusCheck, backendStatus, updateBackendStatus } from '../stores/backendStatus.js';
 
 export function useChatAPI() {
+  // Constants for text truncation
+  const MAX_TEXT_LENGTH = 1000;
+  const TRUNCATION_SUFFIX = '...';
+
   const abortController = ref(null);
 
   const checkBackendStatus = async () => {
@@ -140,9 +144,9 @@ export function useChatAPI() {
             .map(msg => {
               let text = msg.text?.trim() || '';
 
-              // Truncate text if it exceeds 1000 characters
-              if (text.length > 1000) {
-                text = text.substring(0, 997) + '...'; // 997 + 3 = 1000 characters
+              // Truncate text if it exceeds maximum length
+              if (text.length > MAX_TEXT_LENGTH) {
+                text = text.substring(0, MAX_TEXT_LENGTH - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
               }
 
               return {
