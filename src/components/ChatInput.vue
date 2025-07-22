@@ -34,7 +34,7 @@
               :disabled="!userInput.trim() || hasTypingMessage || backendStatus !== 'online'"
               title="Research this topic"
             >
-              Research
+              Deep Research
             </button>
           </div>
         </div>

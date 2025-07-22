@@ -33,15 +33,12 @@
                 You stopped this response
               </div>
 
-              <!-- Iframe Content for Research -->
-              <div v-if="message.iframe && !message.isTyping" class="iframe-container fade-in">
-                <iframe
-                  :src="message.iframe"
-                  class="research-iframe"
-                  frameborder="0"
-                  allowfullscreen
-                  title="Research Results"
-                ></iframe>
+              <!-- Custom LMGTFY Component for Research -->
+              <div v-if="message.lmgtfyQuery && !message.isTyping" class="lmgtfy-wrapper fade-in">
+                <CustomLMGTFY
+                  :search-query="message.lmgtfyQuery"
+                  :is-from-history="message.isNewResearch === false"
+                />
               </div>
             </div>
 
@@ -108,11 +105,13 @@
 import { ref, nextTick, watch } from 'vue';
 import { useScrollToBottom } from '../composables/useScrollToBottom.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
+import CustomLMGTFY from './CustomLMGTFY.vue';
 import { marked } from 'marked';
 
 export default {
   components: {
-    ChatBotWelcome
+    ChatBotWelcome,
+    CustomLMGTFY
   },
   props: {
     messages: {
@@ -165,6 +164,8 @@ export default {
         !message.isTyping &&
         false; // Currently disabled in original code
     };
+
+
 
     return {
       messagesWindow,
@@ -233,6 +234,7 @@ export default {
   background-color: transparent;
   color: #f9fafb;
   border-bottom-left-radius: 4px;
+  width: 100%;
 }
 
 /* Bot message wrapper */
@@ -503,20 +505,14 @@ export default {
   transform: none;
 }
 
-/* Iframe Styles */
-.iframe-container {
-  margin-top: 1rem;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* LMGTFY Wrapper */
+.lmgtfy-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
 }
 
-.research-iframe {
-  width: 100%;
-  height: 500px;
-  border: none;
-  border-radius: 8px;
-}
 
 @media (max-width: 768px) {
   .messages-window {
@@ -536,8 +532,5 @@ export default {
     font-size: 0.8125rem;
   }
 
-  .research-iframe {
-    height: 400px;
-  }
 }
 </style>

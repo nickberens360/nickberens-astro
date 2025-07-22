@@ -353,16 +353,13 @@ export default {
       // Add user message
       addMessageToActiveChat({ text: question, sender: 'user' });
 
-      // Create the Let Me Google That For You URL
-      const encodedQuery = encodeURIComponent(question);
-      const lmgtfyUrl = `https://letmegooglethat.com/?q=${encodedQuery}`;
-
-      // Add bot message with iframe
+      // Add bot message with custom LMGTFY component
       addMessageToActiveChat({
-        text: `Here's a research link for "${question}":`,
+        text: `Let me Google "${question}" for you...`,
         sender: 'bot',
         model: 'research',
-        iframe: lmgtfyUrl
+        lmgtfyQuery: question,
+        isNewResearch: true  // Explicitly mark as new research to trigger animation
       });
 
       userInput.value = '';
