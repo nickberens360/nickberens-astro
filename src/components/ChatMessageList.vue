@@ -390,9 +390,9 @@ export default {
 }
 
 .model-badge {
-  background-color: rgba(69, 126, 247, 0.1);
-  border: 1px solid rgba(69, 126, 247, 0.3);
-  color: #60a5fa;
+  background-color: rgba(132, 250, 96, 0.1);
+  border: 1px solid rgba(132, 250, 96, 0.3);
+  color: #84fa60;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-size: 0.6875rem;
