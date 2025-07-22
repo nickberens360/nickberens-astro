@@ -77,7 +77,6 @@ export function useChatAPI() {
       }
 
       updateBackendStatus(status);
-      console.log('Status check error:', error.message);
       return status;
     }
   };
