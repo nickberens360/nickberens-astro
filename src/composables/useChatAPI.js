@@ -131,15 +131,13 @@ export function useChatAPI() {
           question: question,
           chat_history: chatHistory
             .filter(msg => {
-              // Only include messages with valid structure
-              return msg &&
-                     msg.sender &&
-                     (
-                       // Include messages with text content
-                       (typeof msg.text === 'string' && msg.text.trim().length > 0) ||
-                       // Include bot messages that might have images or other content even with empty text
-                       (msg.sender === 'bot' && (msg.images?.length > 0 || msg.followup_questions?.length > 0))
-                     );
+              if (!msg?.sender) return false;
+
+              const hasValidText = msg.text?.trim()?.length > 0;
+              const hasBotContent = msg.sender === 'bot' &&
+                (msg.images?.length > 0 || msg.followup_questions?.length > 0);
+
+              return hasValidText || hasBotContent;
             })
             .map(msg => {
               let text = msg.text?.trim() || '';
