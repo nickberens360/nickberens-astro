@@ -131,7 +131,10 @@ export default {
     const { scrollToBottom } = useScrollToBottom(messagesWindow);
 
     watch(() => props.messages, () => {
-      scrollToBottom();
+      nextTick(() => {
+        // Add a small delay to ensure images and other dynamic content have rendered
+        setTimeout(() => scrollToBottom(), 50);
+      });
     }, { deep: true });
 
     const renderMarkdown = (text) => {
