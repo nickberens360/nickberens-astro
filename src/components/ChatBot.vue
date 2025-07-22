@@ -1,6 +1,5 @@
 <template>
   <div class="chatbot-container" :class="`theme-${theme}`">
-    <!-- Better status notifications -->
     <div v-if="backendStatus === 'checking'" class="status-notification checking">
       <p>🔄 Checking backend status...</p>
     </div>
@@ -23,6 +22,7 @@
       :has-typing-message="hasTypingMessage"
       :theme="theme"
       :backend-status="backendStatus"
+      :chat-id="chatId"
       @image-click="handleImageClick"
       @followup-click="handleFollowupClick"
       @prompt-select="handlePromptSelect"
@@ -373,6 +373,7 @@ export default {
       selectedModel,
       lastStoppedPrompt,
       backendStatus: backendStatusValue,
+      chatId,
       sendMessage,
       handlePromptSelect,
       handleFollowupClick,

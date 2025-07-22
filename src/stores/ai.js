@@ -92,7 +92,7 @@ isChatHistoryVisible.listen((value) => {
   if (isBrowser()) {
     try {
       localStorage.setItem('isChatHistoryVisible', JSON.stringify(value));
-    } catch (error) {
+    } catch (error) { // <-- This block was missing its opening brace
       console.error('Error saving chat history visibility:', error);
     }
   }
@@ -146,5 +146,29 @@ export function updateChatTitle(chatId, newTitle) {
   const chat = allChats.get()[chatId];
   if (chat) {
     allChats.setKey(chatId, { ...chat, title: newTitle });
+  }
+}
+
+/**
+ * Updates a specific property of a message within a chat.
+ * This is used to mark a research message as "no longer new" after its animation has played.
+ * @param {string} chatId - The ID of the chat containing the message.
+ * @param {number} messageIndex - The index of the message to update.
+ * @param {string} property - The name of the property to update on the message object.
+ * @param {*} value - The new value for the property.
+ */
+export function updateMessageProperty(chatId, messageIndex, property, value) {
+  const chat = allChats.get()[chatId];
+  if (chat && chat.messages && chat.messages[messageIndex]) {
+    const updatedMessages = [...chat.messages];
+    // Create a new message object with the updated property
+    updatedMessages[messageIndex] = {
+      ...updatedMessages[messageIndex],
+      [property]: value
+    };
+    // Update the chat in the store
+    allChats.setKey(chatId, { ...chat, messages: updatedMessages });
+  } else {
+    console.warn(`Could not update message property. Chat or message not found. ChatID: ${chatId}, Index: ${messageIndex}`);
   }
 }

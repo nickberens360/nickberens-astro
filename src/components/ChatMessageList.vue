@@ -9,42 +9,36 @@
         :theme="theme"
         @select-prompt="$emit('prompt-select', $event)"
       />
-      <!-- Message Items -->
       <div
         v-for="(message, index) in messages"
         :key="index"
         :class="['message', message.sender]"
       >
         <div class="message-bubble">
-          <!-- User Message Content -->
           <p v-if="message.sender === 'user'">{{ message.text }}</p>
 
-          <!-- Bot Message Content -->
           <div v-else class="bot-message-wrapper">
-            <!-- Typing Text -->
             <div>
               <div v-if="message.text" class="markdown-content-wrapper">
                 <span v-html="renderMarkdownWithCursor(message.text, message.isTyping)" class="markdown-content"></span>
               </div>
 
-              <!-- Stopped message indicator -->
               <div v-if="message.wasStopped && !message.isTyping" class="stopped-indicator">
                 <span class="stopped-icon">⏹</span>
                 You stopped this response
               </div>
 
-              <!-- Custom LMGTFY Component for Research -->
               <div v-if="message.lmgtfyQuery && !message.isTyping" class="lmgtfy-wrapper fade-in">
                 <CustomLMGTFY
                   :search-query="message.lmgtfyQuery"
-                  :is-from-history="message.isNewResearch === false"
+                  :play-animation="message.isNewResearch === true"
+                  :chat-id="chatId"
+                  :message-index="index"
                 />
               </div>
             </div>
 
-            <!-- Message Metadata -->
             <div>
-              <!-- Images (only show after typing is complete) -->
               <div v-if="message.images && message.images.length && !message.isTyping" class="image-gallery fade-in">
                 <img
                   v-for="src in message.images"
@@ -56,7 +50,6 @@
                 />
               </div>
 
-              <!-- Model indicator for bot messages -->
               <div v-if="message.model && !message.isTyping" class="model-indicator">
                 <span
                   class="model-badge"
@@ -68,7 +61,6 @@
                 </span>
               </div>
 
-              <!-- Follow-up questions (only show after typing is complete) -->
               <div v-if="shouldShowFollowups(message)" class="followup-container fade-in">
                 <p class="followup-label">💡 You might also want to ask:</p>
                 <div class="followup-buttons">
@@ -87,7 +79,6 @@
         </div>
       </div>
 
-      <!-- Loading Indicator -->
       <div v-if="isLoading && !hasTypingMessage" class="message bot">
         <div class="message-bubble">
           <div class="typing-indicator">
@@ -134,6 +125,10 @@ export default {
       type: String,
       default: 'dark'
     },
+    chatId: {
+      type: String,
+      default: null
+    }
   },
   emits: ['prompt-select', 'image-click', 'followup-click'],
   setup(props) {
@@ -164,8 +159,6 @@ export default {
         !message.isTyping &&
         false; // Currently disabled in original code
     };
-
-
 
     return {
       messagesWindow,
