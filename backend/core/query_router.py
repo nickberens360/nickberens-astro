@@ -43,7 +43,8 @@ class QueryRouter:
         self.all_image_phrases = [
             "show me all illustrations", "show all illustrations", "show me your illustrations",
             "show me all your art", "show me all images", "show me images", "show your art",
-            "all images", "all illustrations", "all art", "show me everything"
+            "all images", "all illustrations", "all art", "show me everything",
+            "show me illustrations", "show me art", "show me pictures", "show me drawings"
         ]
 
     def route_query(self, question: str) -> Tuple[QueryType, Optional[str]]:
@@ -61,14 +62,15 @@ class QueryRouter:
         if search_term:
             return QueryType.SPECIFIC_IMAGE_SEARCH, search_term
 
+        # Route to show all images BEFORE checking show me patterns
+        # This prevents "show me images" from being incorrectly parsed as "show me 's'"
+        if self._check_all_images_pattern(question):
+            return QueryType.ALL_IMAGES, "all"
+
         # Route to "show me X" patterns
         search_term = self._check_show_me_pattern(question)
         if search_term:
             return QueryType.SHOW_ME_PATTERN, search_term
-
-        # Route to show all images
-        if self._check_all_images_pattern(question):
-            return QueryType.ALL_IMAGES, "all"
 
         # Route to general image patterns
         search_term = self._check_general_image_pattern(question)
@@ -107,6 +109,11 @@ class QueryRouter:
 
     def _extract_search_term_from_show_pattern(self, remaining_text: str, img_indicator: str) -> Optional[str]:
         """Extract search term from 'show me X images' pattern."""
+        # Check if the remaining text is exactly just the image indicator
+        # This handles cases like "show me images" where we want to show all images
+        if remaining_text.strip() == img_indicator:
+            return None
+
         # This logic handles terms appearing before or after the image indicator.
         search_term = ' '.join(remaining_text.split(img_indicator)).strip()
 
