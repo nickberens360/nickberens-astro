@@ -117,6 +117,9 @@ export default {
       }
     };
 
+    // Store interval ID for proper cleanup
+    let statusInterval = null;
+
     onMounted(async () => {
       if (!activeChatId.get() && !isPendingNewChat.get()) {
         createNewChat();
@@ -126,20 +129,18 @@ export default {
       await checkStatus();
 
       // More frequent checks when status is unknown/building
-      const statusInterval = setInterval(async () => {
+      statusInterval = setInterval(async () => {
         const currentStatus = backendStatus.get();
         if (currentStatus === 'checking' || currentStatus === 'building') {
           await checkStatus();
         }
       }, 15000); // Check every 15 seconds when building
-
-      // Store the interval ID for cleanup
-      return () => {
-        clearInterval(statusInterval);
-      };
     });
 
     onUnmounted(() => {
+      if (statusInterval) {
+        clearInterval(statusInterval);
+      }
       cleanupTypingTimeouts();
     });
 
