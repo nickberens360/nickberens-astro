@@ -50,7 +50,14 @@
 
               <!-- Model indicator for bot messages -->
               <div v-if="message.model && !message.isTyping" class="model-indicator">
-                <span class="model-badge">{{ message.model }}</span>
+                <span
+                  class="model-badge"
+                  :class="{
+                   'error': message.model === 'error' || backendStatus === 'offline'
+                  }"
+                >
+                  {{ message.model }}
+                </span>
               </div>
 
               <!-- Follow-up questions (only show after typing is complete) -->
@@ -109,6 +116,10 @@ export default {
       type: Boolean,
       default: false
     },
+    backendStatus: {
+      type: String,
+      default: null
+    },
     theme: {
       type: String,
       default: 'dark'
@@ -120,7 +131,10 @@ export default {
     const { scrollToBottom } = useScrollToBottom(messagesWindow);
 
     watch(() => props.messages, () => {
-      scrollToBottom();
+      nextTick(() => {
+        // Add a small delay to ensure images and other dynamic content have rendered
+        setTimeout(() => scrollToBottom(), 50);
+      });
     }, { deep: true });
 
     const renderMarkdown = (text) => {
@@ -379,15 +393,20 @@ export default {
 }
 
 .model-badge {
-  background-color: rgba(69, 126, 247, 0.1);
-  border: 1px solid rgba(69, 126, 247, 0.3);
-  color: #60a5fa;
+  background-color: rgba(132, 250, 96, 0.1);
+  border: 1px solid rgba(132, 250, 96, 0.3);
+  color: #84fa60;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-size: 0.6875rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.025em;
+}
+.model-badge.error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
 
 /* Typing Indicator */

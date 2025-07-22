@@ -3,6 +3,10 @@ import { ref } from 'vue';
 import { isBackendOnline, isBackendInitialized, isBackendBuilding, lastStatusCheck, backendStatus, updateBackendStatus } from '../stores/backendStatus.js';
 
 export function useChatAPI() {
+  // Constants for text truncation
+  const MAX_TEXT_LENGTH = 1000;
+  const TRUNCATION_SUFFIX = '...';
+
   const abortController = ref(null);
 
   const checkBackendStatus = async () => {
@@ -125,10 +129,29 @@ export function useChatAPI() {
         },
         body: JSON.stringify({
           question: question,
-          chat_history: chatHistory.map(msg => ({
-            ...msg,
-            sender: msg.sender === 'bot' ? 'assistant' : msg.sender
-          })),
+          chat_history: chatHistory
+            .filter(msg => {
+              if (!msg?.sender) return false;
+
+              const hasValidText = msg.text?.trim()?.length > 0;
+              const hasBotContent = msg.sender === 'bot' &&
+                (msg.images?.length > 0 || msg.followup_questions?.length > 0);
+
+              return hasValidText || hasBotContent;
+            })
+            .map(msg => {
+              let text = msg.text?.trim() || '';
+
+              // Truncate text if it exceeds maximum length
+              if (text.length > MAX_TEXT_LENGTH) {
+                text = text.substring(0, MAX_TEXT_LENGTH - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
+              }
+
+              return {
+                sender: msg.sender === 'bot' ? 'assistant' : msg.sender,
+                text: text
+              };
+            }),
           preferred_model: selectedModel
         }),
         signal: abortController.value.signal
