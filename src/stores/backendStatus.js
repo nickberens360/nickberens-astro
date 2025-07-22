@@ -23,5 +23,4 @@ export function updateBackendStatus(status) {
   isBackendInitialized.set(status.initialized);
   isBackendBuilding.set(status.building);
   lastStatusCheck.set(Date.now());
-  console.log('Backend status updated to:', backendStatus.get());
 }
