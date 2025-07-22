@@ -16,13 +16,15 @@ pnpm-debug.log*
 
 # Python cache files
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 *.py[cod]
 *$py.class
 *.so
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
