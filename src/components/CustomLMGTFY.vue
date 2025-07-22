@@ -30,14 +30,26 @@
         <button
           @click="handleSearch"
           class="search-button"
-          :class="{ 'fade-in': showButton }"
+          :class="{
+            'fade-in': showButton,
+            'animate-down': animatePointer
+          }"
           :disabled="!canSearch"
         >
-          <font-awesome-icon
-            icon="arrow-pointer"
-            class="pointer-icon"
+          <span
+            class="pointer-icon-container"
             :class="{ 'animate-down': animatePointer }"
-          />
+          >
+            <font-awesome-icon
+              icon="arrow-pointer"
+              class="pointer-icon"
+
+            />
+            <font-awesome-icon
+              icon="arrow-pointer"
+              class="pointer-icon pointer-icon-shadow"
+            />
+          </span>
           Google Search
         </button>
       </div>
@@ -109,12 +121,12 @@ export default {
     let typingTimeout = null;
     let animationTimeouts = [];
 
-    const TYPING_SPEED = 50;
+    const TYPING_SPEED = 200;
     const TYPING_START_DELAY = 500;
     const BUTTON_SHOW_DELAY = 300;
     const POINTER_ANIMATION_DELAY = 100;
     const POINTER_ANIMATION_DURATION = 1200;
-    const IFRAME_SHOW_DELAY = 300;
+    const IFRAME_SHOW_DELAY = 200;
 
     // Clear all timeouts
     const clearAllTimeouts = () => {
@@ -303,6 +315,7 @@ export default {
 }
 
 .search-input {
+  position: relative;
   width: 100%;
   height: 44px;
   border: 1px solid #dfe1e5;
@@ -328,10 +341,11 @@ export default {
 }
 
 .search-button {
-  background-color: #f8f9fa;
-  border: 1px solid #f8f9fa;
+  position: relative;
+  background-color: #4285f4;
   border-radius: 4px;
-  color: #3c4043;
+  border: none;
+  color: white;
   font-family: arial, sans-serif;
   font-size: 14px;
   margin: 11px 4px;
@@ -341,9 +355,7 @@ export default {
   min-width: 120px;
   cursor: pointer;
   transition: all 0.1s ease;
-  opacity: 0;
   transform: translateY(10px);
-  position: relative;
 }
 
 .search-button.fade-in {
@@ -353,22 +365,44 @@ export default {
 }
 
 .search-button:hover:not(:disabled) {
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
-  background-color: #f8f9fa;
-  border: 1px solid #dadce0;
+  background-color: #4285f4;
   color: #202124;
 }
 
 .search-button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 1;
+}
+
+.pointer-icon-container {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  transition: transform 1.2s ease;
+  transform: translate(-90px, -80px);
+}
+
+.pointer-icon-container.animate-down {
+  transform: translateY(0);
 }
 
 .pointer-icon {
-  margin-right: 8px;
-  transition: transform 1.2s ease;
-  transform: translateY(-60px) scale(1.5);
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  color: black;
   display: inline-block;
+  font-size: 24px;
+}
+
+.pointer-icon.pointer-icon-shadow {
+  z-index: 5;
+  color: white;
+  transform: scale(1.3);
 }
 
 .pointer-icon.animate-down {
@@ -517,57 +551,7 @@ export default {
   }
 }
 
-/* Dark theme skeleton */
-.theme-dark .skeleton-loader {
-  background: white;
-}
 
-.theme-dark .skeleton-header {
-  border-bottom-color: #ececec;
-}
-
-.theme-dark .skeleton-logo,
-.theme-dark .skeleton-search-bar,
-.theme-dark .skeleton-result-title,
-.theme-dark .skeleton-result-url,
-.theme-dark .skeleton-line {
-  background: linear-gradient(90deg, #d0d0d0 25%, #c6c6c6 50%, #d0d0d0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-/* Dark theme styles */
-.theme-dark .lmgtfy-container {
-  background: #ffffff;
-  color: #e8eaed;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.theme-dark .search-input {
-  background: #303134;
-  border: 1px solid #5f6368;
-  color: #e8eaed;
-}
-
-.theme-dark .search-input:focus {
-  border-color: #8ab4f8;
-}
-
-.theme-dark .search-button {
-  background-color: #303134;
-  border: 1px solid #303134;
-  color: #e8eaed;
-}
-
-.theme-dark .search-button:hover:not(:disabled) {
-  background-color: #3c4043;
-  border: 1px solid #5f6368;
-}
-
-.theme-dark .iframe-container {
-  background: #2d2d2d;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
 
 /* Responsive styles */
 @media (max-width: 768px) {

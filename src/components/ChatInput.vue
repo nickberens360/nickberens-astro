@@ -26,18 +26,18 @@
               <option value="claude">Claude (Recommended)</option>
               <option value="gemini">Gemini (Fast)</option>
             </select>
-
-            <!-- Add Research Button -->
-            <button
-              @click="handleResearchClick"
-              class="research-button"
-              :disabled="!userInput.trim() || hasTypingMessage || backendStatus !== 'online'"
-              title="Research this topic"
-            >
-              Deep Research
-            </button>
           </div>
         </div>
+
+        <button
+          @click="handleResearchClick"
+          class="research-button ml-auto"
+          :disabled="!userInput.trim() || hasTypingMessage || backendStatus !== 'online'"
+          title="Research this topic"
+        >
+          <font-awesome-icon icon="globe" class="mr-2" />
+          <span>Super Deep Research</span>
+        </button>
 
         <!-- ChatSendButton functionality -->
         <button
@@ -275,10 +275,11 @@ export default {
 }
 
 .research-button {
-  background-color: #2d3748;
-  border: 1px solid #4a5568;
+  background-color: rgba(87, 115, 174, 0.41);
+  outline: none;
+  border: 1px solid #718096;
+  color: #bfd4ff;
   border-radius: 6px;
-  color: #e2e8f0;
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   cursor: pointer;
