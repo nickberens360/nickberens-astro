@@ -3,6 +3,10 @@ import { ref } from 'vue';
 import { isBackendOnline, isBackendInitialized, isBackendBuilding, lastStatusCheck, backendStatus, updateBackendStatus } from '../stores/backendStatus.js';
 
 export function useChatAPI() {
+  // Constants for text truncation
+  const MAX_TEXT_LENGTH = 1000;
+  const TRUNCATION_SUFFIX = '...';
+
   const abortController = ref(null);
 
   const checkBackendStatus = async () => {
@@ -127,22 +131,20 @@ export function useChatAPI() {
           question: question,
           chat_history: chatHistory
             .filter(msg => {
-              // Only include messages with valid structure
-              return msg &&
-                     msg.sender &&
-                     (
-                       // Include messages with text content
-                       (typeof msg.text === 'string' && msg.text.trim().length > 0) ||
-                       // Include bot messages that might have images or other content even with empty text
-                       (msg.sender === 'bot' && (msg.images?.length > 0 || msg.followup_questions?.length > 0))
-                     );
+              if (!msg?.sender) return false;
+
+              const hasValidText = msg.text?.trim()?.length > 0;
+              const hasBotContent = msg.sender === 'bot' &&
+                (msg.images?.length > 0 || msg.followup_questions?.length > 0);
+
+              return hasValidText || hasBotContent;
             })
             .map(msg => {
               let text = msg.text?.trim() || '';
 
-              // Truncate text if it exceeds 1000 characters
-              if (text.length > 1000) {
-                text = text.substring(0, 997) + '...'; // 997 + 3 = 1000 characters
+              // Truncate text if it exceeds maximum length
+              if (text.length > MAX_TEXT_LENGTH) {
+                text = text.substring(0, MAX_TEXT_LENGTH - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
               }
 
               return {

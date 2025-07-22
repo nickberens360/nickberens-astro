@@ -52,7 +52,9 @@
               <div v-if="message.model && !message.isTyping" class="model-indicator">
                 <span
                   class="model-badge"
-                  :class="{'error': message.model === 'error'} || backendStatus === 'offline'"
+                  :class="{
+                   'error': message.model === 'error' || backendStatus === 'offline'
+                  }"
                 >
                   {{ message.model }}
                 </span>
@@ -129,7 +131,10 @@ export default {
     const { scrollToBottom } = useScrollToBottom(messagesWindow);
 
     watch(() => props.messages, () => {
-      scrollToBottom();
+      nextTick(() => {
+        // Add a small delay to ensure images and other dynamic content have rendered
+        setTimeout(() => scrollToBottom(), 50);
+      });
     }, { deep: true });
 
     const renderMarkdown = (text) => {
@@ -388,9 +393,9 @@ export default {
 }
 
 .model-badge {
-  background-color: rgba(69, 126, 247, 0.1);
-  border: 1px solid rgba(69, 126, 247, 0.3);
-  color: #60a5fa;
+  background-color: rgba(132, 250, 96, 0.1);
+  border: 1px solid rgba(132, 250, 96, 0.3);
+  color: #84fa60;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-size: 0.6875rem;
