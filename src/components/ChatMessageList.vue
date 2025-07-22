@@ -112,7 +112,7 @@ export default {
     theme: {
       type: String,
       default: 'dark'
-    }
+    },
   },
   emits: ['prompt-select', 'image-click', 'followup-click'],
   setup(props) {

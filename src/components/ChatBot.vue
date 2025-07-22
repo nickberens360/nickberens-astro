@@ -1,26 +1,44 @@
 <template>
-  <div
-    class="chatbot-container"
-    :class="`theme-${theme}`"
-  >
+  <div class="chatbot-container" :class="`theme-${theme}`">
+    <!-- Better status notifications -->
+    <div v-if="backendStatus === 'checking'" class="status-notification checking">
+      <p>🔄 Checking backend status...</p>
+    </div>
+
+    <div v-else-if="backendStatus === 'building'" class="status-notification building">
+      <p>⚠️ Backend service is building. This may take 1-2 minutes on the first visit.</p>
+    </div>
+
+    <div v-else-if="backendStatus === 'initializing'" class="status-notification initializing">
+      <p>🔄 Backend service is initializing. Please wait a moment...</p>
+    </div>
+
+    <div v-else-if="backendStatus === 'offline'" class="status-notification offline">
+      <p>❌ Backend service is currently offline or rebuilding. Please try again later.</p>
+    </div>
+
     <ChatMessageList
       :messages="messages"
       :is-loading="isLoading"
       :has-typing-message="hasTypingMessage"
       :theme="theme"
+      :backend-status="backendStatus"
       @image-click="handleImageClick"
       @followup-click="handleFollowupClick"
       @prompt-select="handlePromptSelect"
     />
+
     <ChatInput
       v-model:userInput="userInput"
       v-model:selectedModel="selectedModel"
       :is-loading="isLoading"
       :has-typing-message="hasTypingMessage"
       :last-stopped-prompt="lastStoppedPrompt"
+      :backend-status="backendStatus"
       @send-message="sendMessage"
       @stop-action="stopCurrentAction"
     />
+
     <ImageOverlay />
   </div>
 </template>
@@ -37,6 +55,7 @@ import {
   isPendingNewChat,
 } from '../stores/ai.js';
 import { openImageOverlay, isChatProcessing } from '../stores/ui.js';
+import { backendStatus } from '../stores/backendStatus.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
 import { useMessageState } from '../composables/useMessageState.js';
 import ChatMessageList from './ChatMessageList.vue';
@@ -66,6 +85,9 @@ export default {
     const lastStoppedPrompt = ref('');
     const selectedModel = ref('claude');
 
+    // Backend status store
+    const backendStatusValue = useStore(backendStatus);
+
     const {
       typingMessages,
       typingTimeouts,
@@ -82,16 +104,43 @@ export default {
     const {
       sendChatMessage,
       abortController,
-      stopLoading
+      stopLoading,
+      checkBackendStatus
     } = useChatAPI();
 
-    onMounted(() => {
+    // Function to check backend status
+    const checkStatus = async () => {
+      try {
+        await checkBackendStatus();
+      } catch (error) {
+        console.error('Error checking backend status:', error);
+      }
+    };
+
+    // Store interval ID for proper cleanup
+    let statusInterval = null;
+
+    onMounted(async () => {
       if (!activeChatId.get() && !isPendingNewChat.get()) {
         createNewChat();
       }
+
+      // Initial status check
+      await checkStatus();
+
+      // More frequent checks when status is unknown/building
+      statusInterval = setInterval(async () => {
+        const currentStatus = backendStatus.get();
+        if (currentStatus === 'checking' || currentStatus === 'building') {
+          await checkStatus();
+        }
+      }, 15000); // Check every 15 seconds when building
     });
 
     onUnmounted(() => {
+      if (statusInterval) {
+        clearInterval(statusInterval);
+      }
       cleanupTypingTimeouts();
     });
 
@@ -131,6 +180,33 @@ export default {
       }
 
       if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) {
+        return;
+      }
+
+      // Check current status before proceeding
+      const currentStatus = backendStatus.get();
+
+      if (currentStatus !== 'online') {
+        let statusMessage;
+        switch (currentStatus) {
+          case 'checking':
+            statusMessage = "Still checking backend status. Please try again in a moment.";
+            break;
+          case 'building':
+            statusMessage = "The backend service is starting up. This may take 1-2 minutes on the first visit.";
+            break;
+          case 'offline':
+            statusMessage = "The backend service is currently offline or rebuilding. Please try again later.";
+            break;
+          default:
+            statusMessage = "Cannot send message: Backend is not ready.";
+        }
+
+        addMessageToActiveChat({
+          text: statusMessage,
+          sender: 'bot',
+          model: 'system'
+        });
         return;
       }
 
@@ -259,6 +335,7 @@ export default {
       hasTypingMessage,
       selectedModel,
       lastStoppedPrompt,
+      backendStatus: backendStatusValue,
       sendMessage,
       handlePromptSelect,
       handleFollowupClick,
@@ -280,5 +357,50 @@ export default {
   flex-grow: 1;
   background-color: #1a1a1a;
   overflow: hidden;
+}
+
+.status-notification {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+  border: 1px solid;
+}
+
+.status-notification.checking {
+  background-color: rgba(209, 236, 241, 0.8);
+  color: #0c5460;
+  border-color: #0c5460;
+}
+
+.status-notification.building {
+  background-color: rgba(248, 215, 218, 0.8);
+  color: #721c24;
+  border-color: #721c24;
+}
+
+.status-notification.offline {
+  background-color: rgba(248, 215, 218, 0.8);
+  color: #721c24;
+  border-color: #721c24;
+}
+
+.theme-dark .status-notification.checking {
+  background-color: rgba(12, 52, 64, 0.8);
+  color: #d1ecf1;
+  border-color: #0c5460;
+}
+
+.theme-dark .status-notification.building {
+  background-color: rgba(44, 18, 21, 0.8);
+  color: #f8d7da;
+  border-color: #721c24;
+}
+
+.theme-dark .status-notification.offline {
+  background-color: rgba(44, 18, 21, 0.8);
+  color: #f8d7da;
+  border-color: #721c24;
 }
 </style>

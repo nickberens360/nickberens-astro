@@ -7,8 +7,9 @@ export function useMessageState() {
   const typingTimeouts = ref(new Map());
   const typingMessageChats = ref(new Map()); // Track which chat each typing message belongs to
 
-  // Single constant for typing speed (in milliseconds)
+  // Constants for typing animation
   const TYPING_SPEED = 10;
+  const BATCH_SIZE = 5; // Number of characters to type at once
 
   const hasTypingMessage = computed(() => {
     return activeChatMessages.get().some(msg => msg.isTyping);
@@ -30,8 +31,9 @@ export function useMessageState() {
         }
 
         if (currentIndex < fullText.length) {
-          const char = fullText[currentIndex];
-          currentText += char;
+          // Determine how many characters to add (up to BATCH_SIZE)
+          const charsToAdd = Math.min(BATCH_SIZE, fullText.length - currentIndex);
+          currentText += fullText.substring(currentIndex, currentIndex + charsToAdd);
 
           // Update the message in the SPECIFIC chat (not necessarily the active one)
           const targetChat = allChats.get()[targetChatId];
@@ -49,7 +51,7 @@ export function useMessageState() {
             });
           }
 
-          currentIndex++;
+          currentIndex += charsToAdd;
           const timeoutId = setTimeout(typeChar, TYPING_SPEED);
           typingTimeouts.value.set(messageIndex, timeoutId);
         } else {
