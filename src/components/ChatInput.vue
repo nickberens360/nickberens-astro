@@ -23,8 +23,8 @@
               class="model-selector"
               :disabled="hasTypingMessage || backendStatus !== 'online'"
             >
-              <option value="claude">Claude (Recommended)</option>
-              <option value="gemini">Gemini (Fast)</option>
+              <option value="claude">Claude</option>
+              <option value="gemini">Gemini</option>
             </select>
           </div>
         </div>
