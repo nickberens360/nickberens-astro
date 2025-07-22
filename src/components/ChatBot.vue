@@ -6,7 +6,11 @@
     </div>
 
     <div v-else-if="backendStatus === 'building'" class="status-notification building">
-      <p>⚠️ Backend service is starting up. This may take 1-2 minutes on the first visit.</p>
+      <p>⚠️ Backend service is building. This may take 1-2 minutes on the first visit.</p>
+    </div>
+
+    <div v-else-if="backendStatus === 'initializing'" class="status-notification initializing">
+      <p>🔄 Backend service is initializing. Please wait a moment...</p>
     </div>
 
     <div v-else-if="backendStatus === 'offline'" class="status-notification offline">

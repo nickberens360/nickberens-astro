@@ -104,7 +104,9 @@ export default {
           case 'checking':
             return '🔄 Checking backend status...';
           case 'building':
-            return '⚠️ Backend starting up, please wait...';
+            return '⚠️ Backend building, please wait...';
+          case 'initializing':
+            return '🔄 Backend initializing, please wait...';
           case 'offline':
             return '❌ Backend offline, please try again later';
           default:

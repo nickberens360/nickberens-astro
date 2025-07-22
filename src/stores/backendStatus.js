@@ -13,7 +13,7 @@ export const backendStatus = computed([isBackendOnline, isBackendInitialized, is
     if (!online) return 'offline';
     if (building) return 'building';
     if (initialized) return 'online';
-    return 'building';
+    return 'initializing';
   }
 );
 
