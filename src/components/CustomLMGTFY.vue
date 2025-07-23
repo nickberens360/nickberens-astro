@@ -9,13 +9,13 @@
     <template v-if="!showIframe">
       <div class="google-heading">
         <span class="letter g1">G</span>
-        <span class="letter o1">o</span>
-        <span class="letter o2">o</span>
+        <span class="letter o1">🙄</span>
+        <span class="letter o2">🙄</span>
         <span class="letter g2">g</span>
         <span class="letter l">l</span>
         <span class="letter e">e</span>
       </div>
-      <p class="mt-0" style="color: red;">Let me Google that for you 🙄</p>
+      <p class="mt-0" style="color: red;">Let me Google that for you, I guess.</p>
       <div class="search-container">
         <input
           ref="searchInput"
@@ -125,7 +125,7 @@ export default {
     const TYPING_START_DELAY = 500;
     const BUTTON_SHOW_DELAY = 300;
     const POINTER_ANIMATION_DELAY = 100;
-    const POINTER_ANIMATION_DURATION = 1200;
+    const POINTER_ANIMATION_DURATION = 1750;
     const IFRAME_SHOW_DELAY = 200;
 
     // Clear all timeouts
@@ -355,12 +355,10 @@ export default {
   min-width: 120px;
   cursor: pointer;
   transition: all 0.1s ease;
-  transform: translateY(10px);
 }
 
 .search-button.fade-in {
   opacity: 1;
-  transform: translateY(0);
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
@@ -381,7 +379,7 @@ export default {
   justify-content: center;
   width: 24px;
   height: 24px;
-  transition: transform 1.2s ease;
+  transition: transform 2s ease;
   transform: translate(-90px, -80px);
 }
 
