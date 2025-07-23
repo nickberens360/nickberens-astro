@@ -138,7 +138,7 @@ export default {
     // Character counting and warning states
     const characterCount = computed(() => props.userInput.length);
     const isNearLimit = computed(() => characterCount.value >= warningThreshold && characterCount.value < maxLength);
-    const isOverLimit = computed(() => characterCount.value > maxLength);
+    const isOverLimit = computed(() => characterCount.value >= maxLength);
 
     // Auto-resize textarea
     const autoResize = () => {
