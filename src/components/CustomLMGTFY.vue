@@ -95,7 +95,7 @@
           :class="{ 'loading': isIframeLoading }"
           frameborder="0"
           allowfullscreen
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          sandbox="allow-scripts allow-forms allow-popups"
           title="Research Results"
           @load="handleIframeLoad"
           @error="handleIframeError"
