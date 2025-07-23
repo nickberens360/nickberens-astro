@@ -140,9 +140,6 @@ export default {
     const POINTER_ANIMATION_DURATION = 3500;
     const IFRAME_SHOW_DELAY = 200;
 
-    // Truncation for typing animation - shorter than bot message display
-    const MAX_TYPING_LENGTH = 30;
-
     // Clear all timeouts
     const clearAllTimeouts = () => {
       if (typingTimeout) {
@@ -153,14 +150,11 @@ export default {
       animationTimeouts = [];
     };
 
-    // Type the search query (truncated for better UX)
+    // Type the search query
     const typeQuery = async () => {
       return new Promise((resolve) => {
         let currentIndex = 0;
-        // Truncate the text for typing animation
-        const fullText = props.searchQuery.length > MAX_TYPING_LENGTH
-          ? props.searchQuery.substring(0, MAX_TYPING_LENGTH) + '...'
-          : props.searchQuery;
+        const fullText = props.searchQuery;
 
         const typeChar = () => {
           if (currentIndex < fullText.length) {
@@ -274,15 +268,12 @@ export default {
     // Initialize
     onMounted(() => {
       if (props.playAnimation) {
-        // If animation is requested, start with empty displayText for typing animation
-        displayText.value = '';
+        // If animation is requested, start with an empty displayText for typing animation
+        displayText.value = props.searchQuery;
         runAnimationSequence();
       } else {
-        // No animation - show truncated text immediately
-        const truncatedText = props.searchQuery.length > MAX_TYPING_LENGTH
-          ? props.searchQuery.substring(0, MAX_TYPING_LENGTH) + '...'
-          : props.searchQuery;
-        displayText.value = truncatedText;
+        // No animation - show everything immediately
+        displayText.value = props.searchQuery;
         typingComplete.value = true;
         canSearch.value = true;
 

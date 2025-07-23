@@ -359,12 +359,18 @@ export default {
       updateChatTitleIfNeeded(currentChatId, () => `Research: ${userInput.value}`);
       const question = processUserInput();
 
+      // Truncate question for display while keeping full query for search
+      const MAX_DISPLAY_LENGTH = 50;
+      const displayQuestion = question.length > MAX_DISPLAY_LENGTH
+        ? question.substring(0, MAX_DISPLAY_LENGTH) + '...'
+        : question;
+
       // Add bot message with custom LMGTFY component
       addMessageToActiveChat({
-        text: `Let me Google "${question}" for you...`,
+        text: `Let me Google "${displayQuestion}" for you...`,
         sender: 'bot',
         model: 'research',
-        lmgtfyQuery: question,
+        lmgtfyQuery: question, // Keep full query for actual search
         isNewResearch: true  // Explicitly mark as new research to trigger animation
       });
     };
