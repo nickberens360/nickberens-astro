@@ -50,8 +50,8 @@ class SecurityValidator:
     MAX_PROCESSING_TIME = 30  # seconds
 
     # Progressive length thresholds
-    QUERY_WARNING_THRESHOLD = int(0.9 * MAX_QUERY_LENGTH)  # 90% of max query length
-    MESSAGE_WARNING_THRESHOLD = 900  # 90% of max message length
+    QUERY_WARNING_THRESHOLD = int(0.9 * MAX_QUERY_LENGTH)
+    MESSAGE_WARNING_THRESHOLD = int(0.9 * MAX_MESSAGE_LENGTH)
     CHUNK_SIZE = 1500  # For text chunking when needed
 
     # Suspicious patterns (basic prompt injection detection)
