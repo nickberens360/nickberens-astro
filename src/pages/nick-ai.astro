@@ -32,7 +32,11 @@ import PageSection from '../components/PageSection.vue';
     .chat-layout {
         display: flex;
         height: 100vh;
-        height: 100dvh;
         overflow: hidden;
+    }
+    @supports (height: 100dvh) {
+      .chat-layout {
+        height: 100dvh;
+      }
     }
 </style>

@@ -6,7 +6,6 @@
       'results-displayed': showIframe,
     }"
   >
-    <!--    v-if="!showIframe"-->
     <div class="google-container">
       <div class="google-heading">
         <span class="letter g1">G</span>
@@ -99,6 +98,7 @@
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           title="Research Results"
           @load="handleIframeLoad"
+          @error="handleIframeError"
         ></iframe>
       </div>
     </transition>
@@ -257,11 +257,18 @@ export default {
       }, 300);
     };
 
+    const handleIframeError = () => {
+      isIframeLoading.value = false;
+      // Emit an error event or show an error message to the user
+      console.error('Failed to load search results');
+      // Consider showing a fallback UI or retry option
+    };
+
 
     // Initialize
     onMounted(() => {
       if (props.playAnimation) {
-        // If animation is requested, display the query immediately for instant visual feedback
+        // If animation is requested, start with an empty displayText for typing animation
         displayText.value = props.searchQuery;
         runAnimationSequence();
       } else {
@@ -294,6 +301,7 @@ export default {
       isIframeLoading,
       handleSearch,
       handleIframeLoad,
+      handleIframeError,
     };
   }
 };

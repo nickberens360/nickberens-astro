@@ -56,15 +56,21 @@ const repoUrl = getGitHubRepoUrl();
     ]}
     hideTerminal={hideTerminal}
 ></TerminalWindow>
-</body>
+
 <script>
-    console.log(
-`███╗   ██╗██╗ ██████╗██╗  ██╗    █████╗ ██╗
+    console.log(`
+%c███╗   ██╗██╗ ██████╗██╗  ██╗    █████╗ ██╗
 ████╗  ██║██║██╔════╝██║ ██╔╝   ██╔══██╗██║
 ██╔██╗ ██║██║██║     █████╔╝    ███████║██║
 ██║╚██╗██║██║██║     ██╔═██╗    ██╔══██║██║
 ██║ ╚████║██║╚██████╗██║  ██╗██╗██║  ██║██║
-╚═╝  ╚═══╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝`
+╚═╝  ╚═══╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝`,
+        "background: linear-gradient(to right, #ff0000, #00ff00, #5959ff);; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; font-size: 24px;"
     )
+    console.log(
+        `%cWelcome to my website!`,
+        "color: #00ff00; font-weight: bold; font-size: 20px;"
+    );
 </script>
+</body>
 </html>

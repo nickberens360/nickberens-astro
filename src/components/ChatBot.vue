@@ -173,6 +173,35 @@ export default {
       }
     });
 
+    // Helper methods for shared logic
+    const validateInput = () => {
+      return !(userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value);
+    };
+
+    const ensureChatExists = () => {
+      let currentChatId = activeChatId.get();
+      if (isPendingNewChat.get() || !currentChatId) {
+        currentChatId = createNewChat();
+        isPendingNewChat.set(false);
+      }
+      return currentChatId;
+    };
+
+    const updateChatTitleIfNeeded = (chatId, titleGenerator) => {
+      const currentMessages = activeChatMessages.get();
+      if (currentMessages.length === 0) {
+        const title = typeof titleGenerator === 'function' ? titleGenerator() : titleGenerator;
+        updateChatTitle(chatId, title);
+      }
+    };
+
+    const processUserInput = () => {
+      const question = userInput.value;
+      addMessageToActiveChat({ text: question, sender: 'user' });
+      userInput.value = '';
+      return question;
+    };
+
     const sendMessage = async () => {
       // Check if input is empty and we have a stopped prompt to retry
       if (userInput.value.trim() === '' && lastStoppedPrompt.value) {
@@ -180,7 +209,7 @@ export default {
         lastStoppedPrompt.value = ''; // Clear after using
       }
 
-      if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) {
+      if (!validateInput()) {
         return;
       }
 
@@ -211,30 +240,19 @@ export default {
         return;
       }
 
-      const question = userInput.value;
-
-      // Check if we have a pending new chat or no active chat
-      let currentChatId = activeChatId.get();
-      if (isPendingNewChat.get() || !currentChatId) {
-        currentChatId = createNewChat();
-        isPendingNewChat.set(false);
-      }
+      // Ensure chat exists and get current chat ID
+      const currentChatId = ensureChatExists();
 
       // Store the chat ID for this specific message session
       const messageChatId = currentChatId;
 
-      const currentMessages = activeChatMessages.get();
-
-      // If this is the very first message in the chat, update the title
-      if (currentMessages.length === 0) {
-        updateChatTitle(currentChatId, question);
-      }
-
       // Get chat history BEFORE adding the new user message
-      const chatHistoryForAPI = currentMessages.slice();
+      const chatHistoryForAPI = activeChatMessages.get().slice();
 
-      addMessageToActiveChat({ text: question, sender: 'user' });
-      userInput.value = '';
+      // Update chat title if needed and process user input
+      updateChatTitleIfNeeded(currentChatId, userInput.value);
+      const question = processUserInput();
+
       isLoading.value = true;
       isChatProcessing.set(true);
 
@@ -330,28 +348,16 @@ export default {
     };
 
     const handleResearchMessage = () => {
-      if (userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value) {
+      if (!validateInput()) {
         return;
       }
 
-      const question = userInput.value;
+      // Ensure chat exists and get current chat ID
+      const currentChatId = ensureChatExists();
 
-      // Check if we have a pending new chat or no active chat
-      let currentChatId = activeChatId.get();
-      if (isPendingNewChat.get() || !currentChatId) {
-        currentChatId = createNewChat();
-        isPendingNewChat.set(false);
-      }
-
-      const currentMessages = activeChatMessages.get();
-
-      // If this is the very first message in the chat, update the title
-      if (currentMessages.length === 0) {
-        updateChatTitle(currentChatId, `Research: ${question}`);
-      }
-
-      // Add user message
-      addMessageToActiveChat({ text: question, sender: 'user' });
+      // Update chat title if needed with research prefix and process user input
+      updateChatTitleIfNeeded(currentChatId, () => `Research: ${userInput.value}`);
+      const question = processUserInput();
 
       // Add bot message with custom LMGTFY component
       addMessageToActiveChat({
@@ -361,8 +367,6 @@ export default {
         lmgtfyQuery: question,
         isNewResearch: true  // Explicitly mark as new research to trigger animation
       });
-
-      userInput.value = '';
     };
 
     return {

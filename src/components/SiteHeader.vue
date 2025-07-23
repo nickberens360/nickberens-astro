@@ -380,12 +380,17 @@ export default {
   left: 0;
   width: 100%;
   height: 100vh;
-  height: 100dvh;
   background-color: #fff;
   padding-top: 80px;
   transform: translateY(-100%);
   transition: transform 0.3s ease;
   z-index: 1000;
+}
+
+@supports (height: 100dvh) {
+  .site-header__mobile-nav {
+    height: 100dvh;
+  }
 }
 
 .site-header__mobile-nav.is-active {
