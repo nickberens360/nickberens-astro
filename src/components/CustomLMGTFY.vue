@@ -322,7 +322,7 @@ export default {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 40px 20px;
+  /*padding: 40px 20px;*/
   background: #fff;
   border-radius: 8px;
   margin: 20px 0;
@@ -334,8 +334,9 @@ export default {
 
 .google-container {
   position: relative;
-  z-index: 10;
-  margin-bottom: -85px;
+  padding: 20px 10px;
+  z-index: 20;
+  margin-bottom: -115px;
   background: #fff;
   width: 100%;
 }
@@ -379,6 +380,7 @@ export default {
 
 
 .iframe-container {
+  position: relative;
   width: 100%;
   border-radius: 8px;
   overflow: hidden;
@@ -391,6 +393,19 @@ export default {
   min-height: 500px;
   border: none;
   transition: opacity 0.3s ease;
+}
+
+.iframe-container::before {
+  content: '';
+  display: block;
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 82px;
+  background: white;
+  margin-bottom: -100px;
 }
 
 .research-iframe.loading {
