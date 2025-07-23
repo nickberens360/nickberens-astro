@@ -44,7 +44,7 @@ class SecurityValidator:
     """Centralized input validation and security checks."""
 
     # Configuration
-    MAX_QUERY_LENGTH = 2000
+    MAX_QUERY_LENGTH = 1000
     MAX_CHAT_HISTORY_LENGTH = 10  # Maximum number of messages
     MAX_MESSAGE_LENGTH = 1000
     MAX_PROCESSING_TIME = 30  # seconds
@@ -279,11 +279,11 @@ class SecurityValidator:
 # --- Data Models ---
 class Message(BaseModel):
     sender: str = Field(..., description="Either 'user' or 'assistant'")
-    text: str = Field(..., min_length=1, max_length=1000, description="The message content")
+    text: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_MESSAGE_LENGTH, description="The message content")
 
 
 class Query(BaseModel):
-    question: str = Field(..., min_length=1, max_length=2000, description="The user's question")
+    question: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_QUERY_LENGTH, description="The user's question")
     chat_history: List[Message] = Field(default=[], description="Previous conversation history")
     preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
 

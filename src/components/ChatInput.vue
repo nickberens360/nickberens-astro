@@ -132,7 +132,7 @@ export default {
   ],
   setup(props, { emit }) {
     const textareaRef = ref(null);
-    const maxLength = 2000; // Match backend Query model limit
+    const maxLength = 1000; // Match backend Query model limit
     const warningThreshold = 1800; // 90% of max length
 
     // Character counting and warning states
