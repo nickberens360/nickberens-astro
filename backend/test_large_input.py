@@ -5,7 +5,8 @@ Test script to verify large text input handling improvements.
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
+# Add parent directory to path to access backend as a module
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from backend.main import SecurityValidator
 
