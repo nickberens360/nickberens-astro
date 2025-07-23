@@ -28,7 +28,7 @@
       <p
         class="mt-0 font-bold text-center"
         style="color: red;"
-      >Let me Google that for you, I guess.</p>
+      >Let me Google that for you.</p>
       <div class="button-container">
         <button
           @click="handleSearch"
@@ -255,7 +255,7 @@ export default {
       // Add a small delay for smoother transition
       setTimeout(() => {
         isIframeLoading.value = false;
-        console.error('The iframe error is expected 🙄');
+        console.info('The iframe error is expected 🙄');
         // Emit height change when iframe finishes loading
         nextTick(() => {
           emit('height-changed');
@@ -585,9 +585,11 @@ export default {
 }
 
 .pointer-icon.pointer-icon-shadow {
+  left: -1px;
+  top: 1px;
   z-index: 5;
+  transform: scale(1.1);
   color: white;
-  transform: scale(1.3);
 }
 
 .pointer-icon.animate-down {
