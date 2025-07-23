@@ -16,6 +16,8 @@ import {
   faPenToSquare,
   faHouseChimney,
   faTrash,
+  faArrowPointer,
+  faGlobe,
 } from '@fortawesome/free-solid-svg-icons';
 
 
@@ -31,6 +33,8 @@ library.add(
   faPenToSquare,
   faHouseChimney,
   faTrash,
+  faArrowPointer,
+  faGlobe,
 );
 
 export { library };

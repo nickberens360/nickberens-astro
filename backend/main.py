@@ -44,10 +44,15 @@ class SecurityValidator:
     """Centralized input validation and security checks."""
 
     # Configuration
-    MAX_QUERY_LENGTH = 2000
+    MAX_QUERY_LENGTH = 1000
     MAX_CHAT_HISTORY_LENGTH = 10  # Maximum number of messages
     MAX_MESSAGE_LENGTH = 1000
     MAX_PROCESSING_TIME = 30  # seconds
+
+    # Progressive length thresholds
+    QUERY_WARNING_THRESHOLD = int(0.9 * MAX_QUERY_LENGTH)
+    MESSAGE_WARNING_THRESHOLD = int(0.9 * MAX_MESSAGE_LENGTH)
+    CHUNK_SIZE = 1500  # For text chunking when needed
 
     # Suspicious patterns (basic prompt injection detection)
     SUSPICIOUS_PATTERNS = [
@@ -151,6 +156,94 @@ class SecurityValidator:
             return True  # Allow request if rate limiting fails
 
     @classmethod
+    def check_length_status(cls, text: str, text_type: str = "query") -> dict:
+        """
+        Check text length and return status information.
+        Returns: {
+            'length': int,
+            'max_length': int,
+            'status': 'ok'|'warning'|'error',
+            'message': str,
+            'needs_chunking': bool
+        }
+        """
+        length = len(text)
+
+        if text_type == "query":
+            max_length = cls.MAX_QUERY_LENGTH
+            warning_threshold = cls.QUERY_WARNING_THRESHOLD
+        else:  # message
+            max_length = cls.MAX_MESSAGE_LENGTH
+            warning_threshold = cls.MESSAGE_WARNING_THRESHOLD
+
+        if length <= warning_threshold:
+            status = "ok"
+            message = f"Text length is within normal limits ({length}/{max_length})"
+        elif length <= max_length:
+            status = "warning"
+            message = f"Text is approaching length limit ({length}/{max_length})"
+        else:
+            status = "error"
+            message = f"Text exceeds maximum length ({length}/{max_length})"
+
+        needs_chunking = length > cls.CHUNK_SIZE
+
+        return {
+            'length': length,
+            'max_length': max_length,
+            'status': status,
+            'message': message,
+            'needs_chunking': needs_chunking
+        }
+
+    @classmethod
+    def chunk_text(cls, text: str, chunk_size: int = None) -> list[str]:
+        """
+        Split large text into smaller chunks while preserving sentence boundaries.
+        """
+        if chunk_size is None:
+            chunk_size = cls.CHUNK_SIZE
+
+        if len(text) <= chunk_size:
+            return [text]
+
+        chunks = []
+        current_chunk = ""
+
+        # Split by sentences first
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+
+        for sentence in sentences:
+            # If adding this sentence would exceed chunk size
+            if len(current_chunk) + len(sentence) > chunk_size:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                    current_chunk = sentence
+                else:
+                    # Single sentence is too long, split by words
+                    words = sentence.split()
+                    temp_chunk = ""
+                    for word in words:
+                        if len(temp_chunk) + len(word) + 1 > chunk_size:
+                            if temp_chunk:
+                                chunks.append(temp_chunk.strip())
+                                temp_chunk = word
+                            else:
+                                # Single word is too long, force split
+                                chunks.append(word[:chunk_size])
+                                temp_chunk = word[chunk_size:]
+                        else:
+                            temp_chunk += (" " + word) if temp_chunk else word
+                    current_chunk = temp_chunk
+            else:
+                current_chunk += (" " + sentence) if current_chunk else sentence
+
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+
+        return chunks
+
+    @classmethod
     def sanitize_input(cls, text: str) -> str:
         """Sanitize input text while preserving meaning."""
         if not isinstance(text, str):
@@ -165,15 +258,32 @@ class SecurityValidator:
         # Limit length as final safety
         return sanitized[:cls.MAX_QUERY_LENGTH]
 
+    @classmethod
+    def log_request_metrics(cls, client_ip: str, text_length: int, processing_time: float = None):
+        """Enhanced request monitoring and logging."""
+        try:
+            # Log basic metrics
+            logger.info(f"Request metrics - IP: {client_ip}, Text length: {text_length}")
+
+            # Log warnings for large requests
+            if text_length > cls.QUERY_WARNING_THRESHOLD:
+                logger.warning(f"Large text input from {client_ip}: {text_length} characters")
+
+            if processing_time and processing_time > 10:  # Log slow requests
+                logger.warning(f"Slow request from {client_ip}: {processing_time:.2f}s")
+
+        except Exception as e:
+            logger.error(f"Error logging request metrics: {e}")
+
 
 # --- Data Models ---
 class Message(BaseModel):
     sender: str = Field(..., description="Either 'user' or 'assistant'")
-    text: str = Field(..., min_length=1, max_length=1000, description="The message content")
+    text: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_MESSAGE_LENGTH, description="The message content")
 
 
 class Query(BaseModel):
-    question: str = Field(..., min_length=1, max_length=2000, description="The user's question")
+    question: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_QUERY_LENGTH, description="The user's question")
     chat_history: List[Message] = Field(default=[], description="Previous conversation history")
     preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
 

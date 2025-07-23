@@ -9,34 +9,37 @@
         :theme="theme"
         @select-prompt="$emit('prompt-select', $event)"
       />
-      <!-- Message Items -->
       <div
         v-for="(message, index) in messages"
         :key="index"
         :class="['message', message.sender]"
       >
         <div class="message-bubble">
-          <!-- User Message Content -->
           <p v-if="message.sender === 'user'">{{ message.text }}</p>
 
-          <!-- Bot Message Content -->
           <div v-else class="bot-message-wrapper">
-            <!-- Typing Text -->
             <div>
               <div v-if="message.text" class="markdown-content-wrapper">
                 <span v-html="renderMarkdownWithCursor(message.text, message.isTyping)" class="markdown-content"></span>
               </div>
 
-              <!-- Stopped message indicator -->
               <div v-if="message.wasStopped && !message.isTyping" class="stopped-indicator">
                 <span class="stopped-icon">⏹</span>
                 You stopped this response
               </div>
+
+              <div v-if="message.lmgtfyQuery && !message.isTyping" class="lmgtfy-wrapper fade-in">
+                <CustomLMGTFY
+                  :search-query="message.lmgtfyQuery"
+                  :play-animation="message.isNewResearch === true"
+                  :chat-id="chatId"
+                  :message-index="index"
+                  @height-changed="handleHeightChanged"
+                />
+              </div>
             </div>
 
-            <!-- Message Metadata -->
             <div>
-              <!-- Images (only show after typing is complete) -->
               <div v-if="message.images && message.images.length && !message.isTyping" class="image-gallery fade-in">
                 <img
                   v-for="src in message.images"
@@ -48,7 +51,6 @@
                 />
               </div>
 
-              <!-- Model indicator for bot messages -->
               <div v-if="message.model && !message.isTyping" class="model-indicator">
                 <span
                   class="model-badge"
@@ -60,7 +62,6 @@
                 </span>
               </div>
 
-              <!-- Follow-up questions (only show after typing is complete) -->
               <div v-if="shouldShowFollowups(message)" class="followup-container fade-in">
                 <p class="followup-label">💡 You might also want to ask:</p>
                 <div class="followup-buttons">
@@ -79,7 +80,6 @@
         </div>
       </div>
 
-      <!-- Loading Indicator -->
       <div v-if="isLoading && !hasTypingMessage" class="message bot">
         <div class="message-bubble">
           <div class="typing-indicator">
@@ -94,14 +94,16 @@
 </template>
 
 <script>
-import { ref, nextTick, watch } from 'vue';
+import { ref, nextTick, watch, onMounted } from 'vue';
 import { useScrollToBottom } from '../composables/useScrollToBottom.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
+import CustomLMGTFY from './CustomLMGTFY.vue';
 import { marked } from 'marked';
 
 export default {
   components: {
-    ChatBotWelcome
+    ChatBotWelcome,
+    CustomLMGTFY
   },
   props: {
     messages: {
@@ -124,6 +126,10 @@ export default {
       type: String,
       default: 'dark'
     },
+    chatId: {
+      type: String,
+      default: null
+    }
   },
   emits: ['prompt-select', 'image-click', 'followup-click'],
   setup(props) {
@@ -136,6 +142,14 @@ export default {
         setTimeout(() => scrollToBottom(), 50);
       });
     }, { deep: true });
+
+    onMounted(() => {
+      if (props.messages.length > 0) {
+        nextTick(() => {
+          setTimeout(() => scrollToBottom(), 100);
+        });
+      }
+    });
 
     const renderMarkdown = (text) => {
       return marked(text);
@@ -155,11 +169,19 @@ export default {
         false; // Currently disabled in original code
     };
 
+    const handleHeightChanged = () => {
+      // Add a small delay to ensure DOM has updated after height change
+      nextTick(() => {
+        setTimeout(() => scrollToBottom(), 100);
+      });
+    };
+
     return {
       messagesWindow,
       renderMarkdown,
       renderMarkdownWithCursor,
-      shouldShowFollowups
+      shouldShowFollowups,
+      handleHeightChanged
     };
   }
 };
@@ -222,6 +244,7 @@ export default {
   background-color: transparent;
   color: #f9fafb;
   border-bottom-left-radius: 4px;
+  width: 100%;
 }
 
 /* Bot message wrapper */
@@ -492,6 +515,15 @@ export default {
   transform: none;
 }
 
+/* LMGTFY Wrapper */
+.lmgtfy-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+
 @media (max-width: 768px) {
   .messages-window {
     padding: 0.5rem;
@@ -509,5 +541,6 @@ export default {
     padding: 0.375rem 0.625rem;
     font-size: 0.8125rem;
   }
+
 }
 </style>
