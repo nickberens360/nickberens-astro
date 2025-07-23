@@ -622,4 +622,9 @@ export default {
     min-height: 400px;
   }
 }
+@media (max-width: 450px) {
+  .google-heading {
+    font-size: 40px;
+  }
+}
 </style>
