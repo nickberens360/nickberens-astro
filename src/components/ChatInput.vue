@@ -2,16 +2,40 @@
   <div class="input-form">
     <div class="input-container">
       <!-- ChatMessageInput functionality -->
-      <input
-        :value="userInput"
-        @input="$emit('update:userInput', $event.target.value)"
-        @keyup.enter="$emit('send-message')"
-        :placeholder="inputPlaceholder"
-        class="message-input"
-        :disabled="hasTypingMessage || backendStatus !== 'online'"
-        aria-label="Chat message input"
-        :aria-describedby="hasTypingMessage ? 'typing-status' : null"
-      />
+      <div class="input-wrapper">
+        <textarea
+          :value="userInput"
+          @input="handleInput"
+          @keydown="handleKeydown"
+          :placeholder="inputPlaceholder"
+          class="message-input"
+          :class="{
+            'warning': isNearLimit,
+            'error': isOverLimit
+          }"
+          :disabled="hasTypingMessage || backendStatus !== 'online'"
+          aria-label="Chat message input"
+          :aria-describedby="hasTypingMessage ? 'typing-status' : null"
+          rows="1"
+          ref="textareaRef"
+        ></textarea>
+
+        <!-- Character count and warnings -->
+        <div class="input-info">
+          <div class="character-count" :class="{
+            'warning': isNearLimit,
+            'error': isOverLimit
+          }">
+            {{ characterCount }}/{{ maxLength }}
+            <span v-if="isNearLimit && !isOverLimit" class="warning-text">
+              (approaching limit)
+            </span>
+            <span v-if="isOverLimit" class="error-text">
+              (over limit - will be truncated)
+            </span>
+          </div>
+        </div>
+      </div>
 
       <div class="d-flex justify-between items-center w-full pt-2">
         <!-- ChatModelSelector functionality -->
@@ -69,7 +93,7 @@
 </template>
 
 <script>
-import { computed } from 'vue';
+import { computed, ref, nextTick, watch } from 'vue';
 
 export default {
   name: 'ChatInput',
@@ -107,6 +131,55 @@ export default {
     'research-message'
   ],
   setup(props, { emit }) {
+    const textareaRef = ref(null);
+    const maxLength = 2000; // Match backend Query model limit
+    const warningThreshold = 1800; // 90% of max length
+
+    // Character counting and warning states
+    const characterCount = computed(() => props.userInput.length);
+    const isNearLimit = computed(() => characterCount.value >= warningThreshold && characterCount.value < maxLength);
+    const isOverLimit = computed(() => characterCount.value > maxLength);
+
+    // Auto-resize textarea
+    const autoResize = () => {
+      if (textareaRef.value) {
+        textareaRef.value.style.height = 'auto';
+        textareaRef.value.style.height = Math.min(textareaRef.value.scrollHeight, 120) + 'px';
+      }
+    };
+
+    // Handle input with truncation
+    const handleInput = (event) => {
+      let value = event.target.value;
+
+      // If over limit, truncate and show warning
+      if (value.length > maxLength) {
+        value = value.substring(0, maxLength);
+        // Optional: Show a brief notification about truncation
+        console.warn(`Input truncated to ${maxLength} characters`);
+      }
+
+      emit('update:userInput', value);
+      nextTick(() => autoResize());
+    };
+
+    // Handle keyboard events
+    const handleKeydown = (event) => {
+      // Enter without Shift sends message
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        if (props.userInput.trim() && !props.hasTypingMessage && props.backendStatus === 'online') {
+          emit('send-message');
+        }
+      }
+      // Shift+Enter adds new line (default behavior)
+    };
+
+    // Watch for external changes to userInput to trigger resize
+    watch(() => props.userInput, () => {
+      nextTick(() => autoResize());
+    });
+
     // Input placeholder logic
     const inputPlaceholder = computed(() => {
       // First check backend status
@@ -171,6 +244,13 @@ export default {
     };
 
     return {
+      textareaRef,
+      maxLength,
+      characterCount,
+      isNearLimit,
+      isOverLimit,
+      handleInput,
+      handleKeydown,
       inputPlaceholder,
       isInStopMode,
       isInRetryMode,
@@ -200,6 +280,11 @@ export default {
   margin: 0 auto;
 }
 
+/* Input wrapper styles */
+.input-wrapper {
+  width: 100%;
+}
+
 /* Message input styles */
 .message-input {
   flex-grow: 0;
@@ -209,6 +294,20 @@ export default {
   background: none !important;
   color: #f9fafb;
   width: 100%;
+  resize: none;
+  min-height: 24px;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.5;
+  transition: border-color 0.2s ease;
+}
+
+.message-input.warning {
+  border-left: 3px solid #f59e0b !important;
+}
+
+.message-input.error {
+  border-left: 3px solid #ef4444 !important;
 }
 
 .message-input::placeholder {
@@ -367,12 +466,51 @@ export default {
 
 /* Responsive styles */
 
+/* Input info and character count styles */
+.input-info {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.25rem 0.75rem 0;
+}
+
+.character-count {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.character-count.warning {
+  color: #f59e0b;
+}
+
+.character-count.error {
+  color: #ef4444;
+}
+
+.warning-text,
+.error-text {
+  font-weight: 500;
+  margin-left: 0.25rem;
+}
+
+.warning-text {
+  color: #f59e0b;
+}
+
+.error-text {
+  color: #ef4444;
+}
+
 @media (max-width: 767px) {
   .input-form {
     padding: 0 0.5rem 0.5rem;
   }
   .model-selector {
     padding: 0.375rem 0.5rem;
+  }
+
+  .character-count {
+    font-size: 0.7rem;
   }
 }
 
