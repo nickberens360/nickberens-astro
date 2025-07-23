@@ -59,8 +59,8 @@
           :disabled="!userInput.trim() || hasTypingMessage || backendStatus !== 'online'"
           title="Research this topic"
         >
-          <font-awesome-icon icon="globe" class="mr-2" />
-          <span>Super Deep Research</span>
+          <font-awesome-icon icon="globe" />
+          <span class="research-button-label ml-2">Super Deep Research</span>
         </button>
 
         <!-- ChatSendButton functionality -->
@@ -201,7 +201,7 @@ export default {
       // If backend is online, show normal placeholders
       return props.lastStoppedPrompt && !props.userInput.trim()
         ? 'Press Enter to retry stopped response...'
-        : 'Ask about Nick\'s skills, projects, etc...';
+        : 'Ask about Nick...';
     });
 
     // Send button state logic
@@ -508,9 +508,11 @@ export default {
   .model-selector {
     padding: 0.375rem 0.5rem;
   }
-
   .character-count {
     font-size: 0.7rem;
+  }
+  .research-button-label {
+    display: none;
   }
 }
 
