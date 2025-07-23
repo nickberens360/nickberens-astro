@@ -15,7 +15,6 @@
         <span class="letter l">l</span>
         <span class="letter e">e</span>
       </div>
-      <p class="mt-0" style="color: red;">Let me Google that for you, I guess.</p>
       <div class="search-container">
         <input
           ref="searchInput"
@@ -26,6 +25,7 @@
           placeholder="Search"
         />
       </div>
+      <p class="mt-0 font-bold" style="color: red;">Let me Google that for you, I guess.</p>
       <div class="button-container">
         <button
           @click="handleSearch"
@@ -121,11 +121,10 @@ export default {
     let typingTimeout = null;
     let animationTimeouts = [];
 
-    const TYPING_SPEED = 200;
+    const TYPING_SPEED = 150;
     const TYPING_START_DELAY = 500;
-    const BUTTON_SHOW_DELAY = 300;
     const POINTER_ANIMATION_DELAY = 100;
-    const POINTER_ANIMATION_DURATION = 1750;
+    const POINTER_ANIMATION_DURATION = 3500;
     const IFRAME_SHOW_DELAY = 200;
 
     // Clear all timeouts
@@ -318,7 +317,7 @@ export default {
   position: relative;
   width: 100%;
   height: 44px;
-  border: 1px solid #dfe1e5;
+  border: 1px solid #676767;
   border-radius: 24px;
   padding: 0 16px;
   font-size: 16px;
@@ -379,8 +378,8 @@ export default {
   justify-content: center;
   width: 24px;
   height: 24px;
-  transition: transform 2s ease;
-  transform: translate(-90px, -80px);
+  transition: transform 3s ease;
+  transform: translate(-90px, -120px);
 }
 
 .pointer-icon-container.animate-down {
