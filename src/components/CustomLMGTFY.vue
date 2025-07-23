@@ -6,7 +6,8 @@
       'results-displayed': showIframe,
     }"
   >
-    <template v-if="!showIframe">
+    <!--    v-if="!showIframe"-->
+    <div class="google-container">
       <div class="google-heading">
         <span class="letter g1">G</span>
         <span class="letter o1">🙄</span>
@@ -25,7 +26,10 @@
           placeholder="Search"
         />
       </div>
-      <p class="mt-0 font-bold" style="color: red;">Let me Google that for you, I guess.</p>
+      <p
+        class="mt-0 font-bold text-center"
+        style="color: red;"
+      >Let me Google that for you, I guess.</p>
       <div class="button-container">
         <button
           @click="handleSearch"
@@ -53,7 +57,7 @@
           Google Search
         </button>
       </div>
-    </template>
+    </div>
 
     <transition name="fade-in-iframe">
       <div
@@ -61,13 +65,20 @@
         class="iframe-container"
       >
         <!-- Skeleton loader -->
-        <div v-if="isIframeLoading" class="skeleton-loader">
+        <div
+          v-if="isIframeLoading"
+          class="skeleton-loader"
+        >
           <div class="skeleton-header">
             <div class="skeleton-logo"></div>
             <div class="skeleton-search-bar"></div>
           </div>
           <div class="skeleton-content">
-            <div v-for="i in 3" :key="i" class="skeleton-result">
+            <div
+              v-for="i in 3"
+              :key="i"
+              class="skeleton-result"
+            >
               <div class="skeleton-result-title"></div>
               <div class="skeleton-result-url"></div>
               <div class="skeleton-result-desc">
@@ -79,6 +90,7 @@
         </div>
 
         <iframe
+          v-if="showIframe"
           :src="iframeUrl"
           class="research-iframe"
           :class="{ 'loading': isIframeLoading }"
@@ -105,7 +117,8 @@ export default {
     chatId: { type: String, required: true },
     messageIndex: { type: Number, required: true }
   },
-  setup(props) {
+  emits: ['height-changed'],
+  setup(props, { emit }) {
     // Refs
     const searchInput = ref(null);
     const displayText = ref('');
@@ -197,6 +210,11 @@ export default {
 
         // Auto-search after animation
         await performSearch();
+
+        // Emit height change after animation sequence completes
+        nextTick(() => {
+          emit('height-changed');
+        });
       } catch (error) {
         console.error('Animation sequence error:', error);
       }
@@ -212,6 +230,10 @@ export default {
       const iframeTimeout = setTimeout(() => {
         showIframe.value = true;
         isIframeLoading.value = true;
+        // Emit height change when iframe becomes visible
+        nextTick(() => {
+          emit('height-changed');
+        });
       }, IFRAME_SHOW_DELAY);
 
       animationTimeouts.push(iframeTimeout);
@@ -227,8 +249,14 @@ export default {
       // Add a small delay for smoother transition
       setTimeout(() => {
         isIframeLoading.value = false;
+        console.error('The iframe error is expected 🙄');
+        // Emit height change when iframe finishes loading
+        nextTick(() => {
+          emit('height-changed');
+        });
       }, 300);
     };
+
 
     // Initialize
     onMounted(() => {
@@ -265,7 +293,7 @@ export default {
       canSearch,
       isIframeLoading,
       handleSearch,
-      handleIframeLoad
+      handleIframeLoad,
     };
   }
 };
@@ -287,154 +315,57 @@ export default {
   transition: min-height 0.3s ease;
 }
 
+.google-container {
+  position: relative;
+  z-index: 10;
+  margin-bottom: -85px;
+  background: #fff;
+  width: 100%;
+}
+
 .google-heading {
   font-size: 90px;
   font-family: 'Product Sans', Arial, sans-serif;
   font-weight: 400;
   letter-spacing: -2px;
   margin-bottom: 20px;
+  text-align: center;
 }
 
 .letter {
   display: inline-block;
 }
 
-.g1 { color: #4285f4; }
-.o1 { color: #ea4335; }
-.o2 { color: #fbbc05; }
-.g2 { color: #4285f4; }
-.l  { color: #34a853; }
-.e  { color: #ea4335; }
-
-.search-container {
-  width: 100%;
-  max-width: 584px;
-  margin-bottom: 30px;
-  position: relative;
+.g1 {
+  color: #4285f4;
 }
 
-.search-input {
-  position: relative;
-  width: 100%;
-  height: 44px;
-  border: 1px solid #676767;
-  border-radius: 24px;
-  padding: 0 16px;
-  font-size: 16px;
-  background: #fff;
-  color: #202124;
-  transition: box-shadow 0.2s;
+.o1 {
+  color: #ea4335;
 }
 
-.search-input:focus {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-color: transparent;
+.o2 {
+  color: #fbbc05;
 }
 
-.button-container {
-  position: relative;
-  min-height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.g2 {
+  color: #4285f4;
 }
 
-.search-button {
-  position: relative;
-  background-color: #4285f4;
-  border-radius: 4px;
-  border: none;
-  color: white;
-  font-family: arial, sans-serif;
-  font-size: 14px;
-  margin: 11px 4px;
-  padding: 0 16px;
-  line-height: 27px;
-  height: 36px;
-  min-width: 120px;
-  cursor: pointer;
-  transition: all 0.1s ease;
+.l {
+  color: #34a853;
 }
 
-.search-button.fade-in {
-  opacity: 1;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+.e {
+  color: #ea4335;
 }
 
-.search-button:hover:not(:disabled) {
-  background-color: #4285f4;
-  color: #202124;
-}
-
-.search-button:disabled {
-  cursor: not-allowed;
-  opacity: 1;
-}
-
-.pointer-icon-container {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  transition: transform 3s ease;
-  transform: translate(-90px, -120px);
-}
-
-.pointer-icon-container.animate-down {
-  transform: translateY(0);
-}
-
-.pointer-icon {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 10;
-  color: black;
-  display: inline-block;
-  font-size: 24px;
-}
-
-.pointer-icon.pointer-icon-shadow {
-  z-index: 5;
-  color: white;
-  transform: scale(1.3);
-}
-
-.pointer-icon.animate-down {
-  transform: translateY(0) scale(1);
-}
-
-/* Iframe transition */
-.fade-in-iframe-enter-active,
-.fade-in-iframe-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.fade-in-iframe-enter-from {
-  opacity: 0;
-  transform: scale(0.98);
-}
-
-.fade-in-iframe-enter-to {
-  opacity: 1;
-  transform: scale(1);
-}
 
 .iframe-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   background: #fff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .research-iframe {
@@ -447,19 +378,23 @@ export default {
 
 .research-iframe.loading {
   opacity: 0;
-  position: absolute;
+  position: relative;
 }
 
 /* Skeleton Loader Styles */
 .skeleton-loader {
   position: absolute;
-  top: 0;
+  width: 100%;
   left: 0;
   right: 0;
   bottom: 0;
   padding: 20px;
   background: #fff;
   overflow: hidden;
+}
+
+.skeleton-loader * {
+  width: 100%;
 }
 
 .skeleton-header {
@@ -469,6 +404,7 @@ export default {
   padding: 20px;
   border-bottom: 1px solid #e0e0e0;
   margin-bottom: 20px;
+  width: 100%;
 }
 
 .skeleton-logo {
@@ -539,6 +475,109 @@ export default {
   width: 80%;
 }
 
+
+.search-container {
+  width: 100%;
+  max-width: 584px;
+  margin-bottom: 30px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+}
+
+.search-input {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  border: 1px solid #676767;
+  border-radius: 24px;
+  padding: 0 16px;
+  font-size: 16px;
+  background: #fff;
+  color: #202124;
+  transition: box-shadow 0.2s;
+}
+
+.search-input:focus {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: transparent;
+}
+
+.button-container {
+  position: relative;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-button {
+  position: relative;
+  background-color: #4285f4;
+  border-radius: 4px;
+  border: none;
+  color: white;
+  font-family: arial, sans-serif;
+  font-size: 14px;
+  margin: 11px 4px;
+  padding: 0 16px;
+  line-height: 27px;
+  height: 36px;
+  min-width: 120px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.search-button.fade-in {
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.search-button:hover:not(:disabled) {
+  background-color: #4285f4;
+}
+
+.search-button:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.pointer-icon-container {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  transition: transform 3s ease;
+  transform: translate(-90px, -120px);
+}
+
+.pointer-icon-container.animate-down {
+  transform: translateY(0);
+}
+
+.pointer-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  color: black;
+  display: inline-block;
+  font-size: 24px;
+}
+
+.pointer-icon.pointer-icon-shadow {
+  z-index: 5;
+  color: white;
+  transform: scale(1.3);
+}
+
+.pointer-icon.animate-down {
+  transform: translateY(0) scale(1);
+}
+
+
 @keyframes loading {
   0% {
     background-position: 200% 0;
@@ -547,7 +586,6 @@ export default {
     background-position: -200% 0;
   }
 }
-
 
 
 /* Responsive styles */

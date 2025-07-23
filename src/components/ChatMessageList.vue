@@ -34,6 +34,7 @@
                   :play-animation="message.isNewResearch === true"
                   :chat-id="chatId"
                   :message-index="index"
+                  @height-changed="handleHeightChanged"
                 />
               </div>
             </div>
@@ -93,7 +94,7 @@
 </template>
 
 <script>
-import { ref, nextTick, watch } from 'vue';
+import { ref, nextTick, watch, onMounted } from 'vue';
 import { useScrollToBottom } from '../composables/useScrollToBottom.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
 import CustomLMGTFY from './CustomLMGTFY.vue';
@@ -142,6 +143,14 @@ export default {
       });
     }, { deep: true });
 
+    onMounted(() => {
+      if (props.messages.length > 0) {
+        nextTick(() => {
+          setTimeout(() => scrollToBottom(), 100);
+        });
+      }
+    });
+
     const renderMarkdown = (text) => {
       return marked(text);
     };
@@ -160,11 +169,19 @@ export default {
         false; // Currently disabled in original code
     };
 
+    const handleHeightChanged = () => {
+      // Add a small delay to ensure DOM has updated after height change
+      nextTick(() => {
+        setTimeout(() => scrollToBottom(), 100);
+      });
+    };
+
     return {
       messagesWindow,
       renderMarkdown,
       renderMarkdownWithCursor,
-      shouldShowFollowups
+      shouldShowFollowups,
+      handleHeightChanged
     };
   }
 };
