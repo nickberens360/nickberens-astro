@@ -221,12 +221,12 @@ export default {
 }
 
 .bot {
-  width: 100%;
+  justify-content: flex-start;
 }
 
 .bot .message-bubble {
   width: 100%;
-  background-color: #2c2c2c;
+  background: none;
   color: #f9fafb;
   border-bottom-left-radius: 4px;
 }
