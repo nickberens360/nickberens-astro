@@ -45,7 +45,8 @@ def create_multi_vector_retriever(docs, embeddings):
         "illustration": [doc for doc in docs if doc.metadata["source"] == "illustration"],
     }
     for source, source_docs in docs_by_source.items():
-        if not source_docs: continue
+        if not source_docs:
+            continue
         try:
             client = chromadb.EphemeralClient()
             vectorstore = Chroma.from_documents(documents=source_docs, embedding=embeddings, client=client, collection_name=f"nickberens_{source}")
