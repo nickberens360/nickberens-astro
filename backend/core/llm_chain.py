@@ -64,16 +64,21 @@ def create_multi_vector_retriever(docs, embeddings):
     return {info["name"]: info["retriever"] for info in retriever_infos}
 
 def get_llm_instances():
-    # This function is unchanged
     llms = {}
     try:
         llms['claude'] = ChatAnthropic(model=CLAUDE_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-    except Exception: llms['claude'] = None
+        logger.info(f"Claude model {CLAUDE_MODEL} initialized successfully (PRIMARY)")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Claude (primary): {e}")
+        llms['claude'] = None
     try:
         llms['gemini'] = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-    except Exception: llms['gemini'] = None
+        logger.info(f"Gemini model {GEMINI_MODEL} initialized successfully (FALLBACK)")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Gemini (fallback): {e}")
+        llms['gemini'] = None
     if not any(llms.values()):
-        raise RuntimeError("No LLM models could be initialized.")
+        raise RuntimeError("No LLM models could be initialized. Check your API keys and model names.")
     return llms
 
 def create_qa_chain(llm):
