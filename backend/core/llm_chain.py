@@ -28,6 +28,7 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
 ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
+MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
 
 # --- Caching Layers ---
 # Layer 1: Caches the final generated string response
@@ -103,7 +104,8 @@ def create_qa_chain(llm):
 
 # New code
 def get_cache_key(user_input: str) -> str:
-    if not ENABLE_CACHING or not isinstance(user_input, str): return None
+    if not ENABLE_CACHING or not isinstance(user_input, str):
+        return None
     # Normalize by lowercasing, removing punctuation, and stripping whitespace
     normalized_input = re.sub(r'[^\w\s]', '', user_input.lower()).strip()
     return hashlib.sha256(normalized_input.encode('utf-8')).hexdigest()[:16]
@@ -120,8 +122,17 @@ def get_cached_response(cache_key: str) -> Optional[str]:
     return None
 
 def cache_response(cache_key: str, response_chunks: List[str]):
-    # This function is unchanged
-    if not cache_key or not ENABLE_CACHING: return
+    if not cache_key or not ENABLE_CACHING:
+        return
+
+    # Check if cache exceeds size limit and evict oldest entry if needed
+    if len(_response_cache) >= MAX_CACHE_SIZE:
+        # Find the oldest cache entry by timestamp
+        oldest_key = min(_response_cache.keys(),
+                        key=lambda k: _response_cache[k]['timestamp'])
+        del _response_cache[oldest_key]
+        logger.info(f"Evicted oldest response cache entry: {oldest_key}")
+
     full_response = "".join(response_chunks)
     _response_cache[cache_key] = {'response': full_response, 'timestamp': time.time()}
 
@@ -155,7 +166,17 @@ def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
 
 def cache_retrieval(cache_key: str, documents: List[Document]):
     """Stores a list of documents in the retrieval cache."""
-    if not cache_key or not ENABLE_CACHING: return
+    if not cache_key or not ENABLE_CACHING:
+        return
+
+    # Check if cache exceeds size limit and evict oldest entry if needed
+    if len(_retrieval_cache) >= MAX_CACHE_SIZE:
+        # Find the oldest cache entry by timestamp
+        oldest_key = min(_retrieval_cache.keys(),
+                        key=lambda k: _retrieval_cache[k]['timestamp'])
+        del _retrieval_cache[oldest_key]
+        logger.info(f"Evicted oldest retrieval cache entry: {oldest_key}")
+
     _retrieval_cache[cache_key] = {'documents': documents, 'timestamp': time.time()}
     logger.info(f"Stored {len(documents)} documents in retrieval cache.")
 # --- END OF NEW CACHING LOGIC ---

@@ -217,6 +217,7 @@ export default {
 .user .message-bubble {
   background-color: #1c2539;
   color: white;
+  padding: 0.25rem 1.25rem;
   border-bottom-right-radius: 4px;
 }
 
