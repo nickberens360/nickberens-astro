@@ -9,11 +9,11 @@ export function useChatAPI() {
 
   const abortController = ref(null);
 
+  // This function does not need changes.
   const checkBackendStatus = async () => {
-    // Don't check too frequently
     const now = Date.now();
     const lastCheck = lastStatusCheck.get();
-    if (lastCheck && (now - lastCheck) < 5000) { // 5 second minimum between checks
+    if (lastCheck && (now - lastCheck) < 5000) {
       return {
         online: isBackendOnline.get(),
         initialized: isBackendInitialized.get(),
@@ -26,23 +26,17 @@ export function useChatAPI() {
       ? 'http://localhost:8000'
       : 'https://nickberens-astro-api.onrender.com';
 
-    // Set status to checking before making the request
-    if (isBackendOnline.get() === null &&
-        isBackendInitialized.get() === null &&
-        isBackendBuilding.get() === null) {
+    if (isBackendOnline.get() === null && isBackendInitialized.get() === null && isBackendBuilding.get() === null) {
       updateBackendStatus({ online: null, initialized: null, building: null });
     }
 
     try {
-      // Add timeout for the status check
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(`${apiUrl}/status`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         signal: controller.signal
       });
 
@@ -64,56 +58,39 @@ export function useChatAPI() {
       updateBackendStatus(status);
       return status;
     } catch (error) {
-      // Different error handling based on error type
       let status;
-
       if (error.name === 'AbortError') {
-        // Timeout occurred
         status = { online: false, initialized: false, building: false };
-      } else if (error.message.includes('CORS') ||
-                error.message.includes('NetworkError') ||
-                error.message.includes('Failed to fetch')) {
-        // Network error or CORS error indicates backend is likely building
+      } else if (error.message.includes('CORS') || error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
         status = { online: false, initialized: false, building: true };
       } else {
-        // Other errors
         status = { online: false, initialized: false, building: false };
       }
-
       updateBackendStatus(status);
       return status;
     }
   };
 
-  const sendChatMessage = async (question, chatHistory, selectedModel) => {
-    // Pre-flight status check
+  // --- MODIFIED FUNCTION ---
+  const sendChatMessage = async (question, chatHistory, selectedModel, onChunk, onComplete, onError) => {
     await checkBackendStatus();
 
-    // Check current status before proceeding
     const currentStatus = backendStatus.get();
     if (currentStatus !== 'online') {
       let errorMessage;
       switch (currentStatus) {
-        case 'checking':
-          errorMessage = 'Still checking backend status. Please try again in a moment.';
-          break;
-        case 'building':
-          errorMessage = 'The backend service is starting up. Please try again in a few minutes.';
-          break;
-        case 'offline':
-          errorMessage = 'The backend service is currently offline or being rebuilt. Please try again later.';
-          break;
-        default:
-          errorMessage = 'Cannot send message: Backend is not ready.';
+        case 'checking': errorMessage = 'Still checking backend status. Please try again in a moment.'; break;
+        case 'building': errorMessage = 'The backend service is starting up. Please try again in a few minutes.'; break;
+        case 'offline': errorMessage = 'The backend service is currently offline. Please try again later.'; break;
+        default: errorMessage = 'Cannot send message: Backend is not ready.';
       }
-      throw new Error(errorMessage);
+      // Use the onError callback instead of throwing
+      onError(errorMessage);
+      return;
     }
 
-    // Create abort controller for this request
     abortController.value = new AbortController();
-
-    // Add timeout handling
-    const timeoutDuration = 60000; // 60 seconds
+    const timeoutDuration = 60000;
     let timeoutId = setTimeout(() => abortController.value.abort(), timeoutDuration);
 
     const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
@@ -122,97 +99,103 @@ export function useChatAPI() {
       : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-api.onrender.com';
 
     try {
+      // Your robust history processing logic is preserved
+      const processedHistory = chatHistory
+        .filter(msg => {
+          if (!msg?.sender) return false;
+          const hasValidText = msg.text?.trim()?.length > 0;
+          const hasBotContent = msg.sender === 'bot' && (msg.images?.length > 0 || msg.followup_questions?.length > 0);
+          return hasValidText || hasBotContent;
+        })
+        .map(msg => {
+          let text = msg.text?.trim() || '';
+          if (text.length > MAX_TEXT_LENGTH) {
+            text = text.substring(0, MAX_TEXT_LENGTH - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
+          }
+          return {
+            sender: msg.sender === 'bot' ? 'assistant' : msg.sender,
+            text: text
+          };
+        });
+
       const response = await fetch(`${apiUrl}/query`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: question,
-          chat_history: chatHistory
-            .filter(msg => {
-              if (!msg?.sender) return false;
-
-              const hasValidText = msg.text?.trim()?.length > 0;
-              const hasBotContent = msg.sender === 'bot' &&
-                (msg.images?.length > 0 || msg.followup_questions?.length > 0);
-
-              return hasValidText || hasBotContent;
-            })
-            .map(msg => {
-              let text = msg.text?.trim() || '';
-
-              // Truncate text if it exceeds maximum length
-              if (text.length > MAX_TEXT_LENGTH) {
-                text = text.substring(0, MAX_TEXT_LENGTH - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
-              }
-
-              return {
-                sender: msg.sender === 'bot' ? 'assistant' : msg.sender,
-                text: text
-              };
-            }),
+          chat_history: processedHistory,
           preferred_model: selectedModel
         }),
         signal: abortController.value.signal
       });
 
-      // Clear the timeout since the request completed
       clearTimeout(timeoutId);
+
+      // --- START of streaming changes ---
 
       if (!response.ok) {
         let errorMessage = `Error: ${response.status} ${response.statusText}`;
-
         try {
           const errorData = await response.json();
-          if (errorData.detail) {
-            errorMessage = errorData.detail;
-          }
-        } catch (parseError) {
-          // If we can't parse the JSON, just use the status message
-        }
+          if (errorData.detail) errorMessage = errorData.detail;
+        } catch (parseError) {}
 
-        if (response.status === 429) {
-          errorMessage = 'Rate limit exceeded. Please wait a moment before sending more messages.';
-        } else if (response.status === 503) {
-          // Service unavailable - likely building or restarting
+        if (response.status === 429) errorMessage = 'Rate limit exceeded. Please wait a moment.';
+        else if (response.status === 503) {
           updateBackendStatus({ online: false, initialized: false, building: true });
-          errorMessage = 'The backend service is currently starting up. Please try again in a few minutes.';
+          errorMessage = 'The backend service is currently starting up. Please try again.';
         } else if (response.status >= 500) {
-          // Server error - mark as offline
           updateBackendStatus({ online: false, initialized: false, building: false });
           errorMessage = 'The backend service encountered an error. Please try again later.';
         }
-
-        throw new Error(errorMessage);
+        // Use onError callback
+        onError(errorMessage);
+        return;
       }
 
-      const responseData = await response.json();
+      // Handle metadata from headers first
+      const modelUsed = response.headers.get('X-Model-Used');
+      const followupHeader = response.headers.get('X-Followup-Questions');
+      const followupQuestions = followupHeader ? JSON.parse(followupHeader) : [];
+
+      // Signal that metadata has been received
+      onComplete({ model: modelUsed, followups: followupQuestions, isInitial: true });
+
+      // Process the text stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        onChunk(chunk);
+      }
+
+      // Signal that the stream has finished
+      onComplete({ isFinal: true });
       updateBackendStatus({ online: true, initialized: true, building: false });
-      return responseData;
+
+      // --- END of streaming changes ---
+
     } catch (error) {
-      // Clear the timeout in case of error
       clearTimeout(timeoutId);
 
-      // Check if it's a CORS error (which often happens during backend builds)
-      const isCorsError = error.message.includes('CORS') ||
-                          error.message.includes('NetworkError') ||
-                          error.message.includes('Failed to fetch');
+      const isCorsError = error.message.includes('CORS') || error.message.includes('NetworkError') || error.message.includes('Failed to fetch');
+      let errorMessage = error.message;
 
       if (isCorsError) {
-        // Update the backend status store with the new function
         updateBackendStatus({ online: false, initialized: false, building: true });
-        throw new Error('The backend service appears to be building or restarting. Please try again in a few minutes.');
+        errorMessage = 'The backend service seems to be restarting. Please try again in a moment.';
+      } else if (error.name === 'AbortError') {
+        errorMessage = 'Request timed out or was stopped.';
       }
 
-      // Re-throw other errors to be handled by the caller
-      if (error.name === 'AbortError') {
-        throw new Error('Request timed out. Please try again.');
-      }
-      throw error;
+      // Use onError callback for all errors
+      onError(errorMessage);
     }
   };
 
+  // This function does not need changes.
   const stopLoading = () => {
     if (abortController.value) {
       abortController.value.abort();

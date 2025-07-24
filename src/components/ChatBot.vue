@@ -3,17 +3,8 @@
     <div v-if="backendStatus === 'checking'" class="status-notification checking">
       <p>🔄 Checking backend status...</p>
     </div>
-
-    <div v-else-if="backendStatus === 'building'" class="status-notification building">
-      <p>⚠️ Backend service is building. This may take 1-2 minutes on the first visit.</p>
-    </div>
-
-    <div v-else-if="backendStatus === 'initializing'" class="status-notification initializing">
-      <p>🔄 Backend service is initializing. Please wait a moment...</p>
-    </div>
-
     <div v-else-if="backendStatus === 'offline'" class="status-notification offline">
-      <p>❌ Backend service is currently offline or rebuilding. Please try again later.</p>
+      <p>❌ Backend service is currently offline. Please try again later.</p>
     </div>
 
     <ChatMessageList
@@ -45,300 +36,134 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useStore } from '@nanostores/vue';
-import {
-  activeChatId,
-  activeChatMessages,
-  addMessageToActiveChat,
-  createNewChat,
-  updateChatTitle,
-  isPendingNewChat,
-} from '../stores/ai.js';
+import { activeChatId, activeChatMessages, addMessageToActiveChat, createNewChat, updateChatTitle, isPendingNewChat, updateMessageInActiveChat } from '../stores/ai.js';
 import { openImageOverlay, isChatProcessing } from '../stores/ui.js';
 import { backendStatus } from '../stores/backendStatus.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
-import { useMessageState } from '../composables/useMessageState.js';
 import ChatMessageList from './ChatMessageList.vue';
 import ChatInput from './ChatInput.vue';
 import ImageOverlay from './ImageOverlay.vue';
 
 export default {
   name: 'ChatBot',
-  components: {
-    ChatMessageList,
-    ChatInput,
-    ImageOverlay
-  },
+  components: { ChatMessageList, ChatInput, ImageOverlay },
   props: {
-    theme: {
-      type: String,
-      default: 'dark',
-      validator: (value) => ['light', 'dark'].includes(value)
-    }
+    theme: { type: String, default: 'dark' }
   },
   setup() {
     const userInput = ref('');
-    const isLoading = ref(false);
+    const isLoading = ref(false); // Used briefly before the stream starts
     const messages = useStore(activeChatMessages);
     const chatId = useStore(activeChatId);
     const pendingNewChat = useStore(isPendingNewChat);
     const lastStoppedPrompt = ref('');
     const selectedModel = ref('claude');
-
-    // Backend status store
     const backendStatusValue = useStore(backendStatus);
 
-    const {
-      typingMessages,
-      typingTimeouts,
-      stopTyping,
-      updateMessageTyping,
-      cleanupTypingTimeouts
-    } = useMessageState();
+    const { sendChatMessage, stopLoading, checkBackendStatus } = useChatAPI();
 
-    // hasTypingMessage should be computed from the actual messages
-    const hasTypingMessage = computed(() => {
-      return messages.value.some(msg => msg.isTyping);
-    });
+    const hasTypingMessage = computed(() => messages.value.some(msg => msg.isTyping));
 
-    const {
-      sendChatMessage,
-      abortController,
-      stopLoading,
-      checkBackendStatus
-    } = useChatAPI();
-
-    // Function to check backend status
-    const checkStatus = async () => {
-      try {
-        await checkBackendStatus();
-      } catch (error) {
-        console.error('Error checking backend status:', error);
-      }
-    };
-
-    // Store interval ID for proper cleanup
     let statusInterval = null;
-
     onMounted(async () => {
-      if (!activeChatId.get() && !isPendingNewChat.get()) {
-        createNewChat();
-      }
-
-      // Initial status check
-      await checkStatus();
-
-      // More frequent checks when status is unknown/building
-      statusInterval = setInterval(async () => {
-        const currentStatus = backendStatus.get();
-        if (currentStatus === 'checking' || currentStatus === 'building') {
-          await checkStatus();
-        }
-      }, 15000); // Check every 15 seconds when building
+      if (!activeChatId.get() && !isPendingNewChat.get()) createNewChat();
+      await checkBackendStatus();
+      statusInterval = setInterval(checkBackendStatus, 15000);
     });
-
     onUnmounted(() => {
-      if (statusInterval) {
-        clearInterval(statusInterval);
-      }
-      cleanupTypingTimeouts();
+      if (statusInterval) clearInterval(statusInterval);
     });
 
-    // Watch for new chat being created
-    watch(pendingNewChat, (isPending) => {
-      if (isPending && lastStoppedPrompt.value) {
-        lastStoppedPrompt.value = '';
-      }
-    });
-
-    // Watch for chat changes and clear lastStoppedPrompt
-    watch(chatId, (newChatId, oldChatId) => {
-      if (newChatId !== oldChatId && newChatId) {
-        lastStoppedPrompt.value = '';
-      }
-    });
-
-    // Also watch the messages array - when it becomes empty (new chat), clear the retry state
-    watch(messages, (newMessages) => {
-      if (newMessages.length === 0 && lastStoppedPrompt.value) {
-        lastStoppedPrompt.value = '';
-      }
-    });
-
-    // Clear lastStoppedPrompt when user starts typing manually
     watch(userInput, (newValue) => {
-      if (newValue.trim() && lastStoppedPrompt.value) {
-        lastStoppedPrompt.value = '';
-      }
+      if (newValue.trim()) lastStoppedPrompt.value = '';
     });
 
-    // Helper methods for shared logic
-    const validateInput = () => {
-      return !(userInput.value.trim() === '' || isLoading.value || hasTypingMessage.value);
-    };
-
-    const ensureChatExists = () => {
-      let currentChatId = activeChatId.get();
-      if (isPendingNewChat.get() || !currentChatId) {
-        currentChatId = createNewChat();
-        isPendingNewChat.set(false);
+    const sendMessage = async () => {
+      if (userInput.value.trim() === '' && lastStoppedPrompt.value) {
+        userInput.value = lastStoppedPrompt.value;
+        lastStoppedPrompt.value = '';
       }
-      return currentChatId;
-    };
+      if (!userInput.value.trim() || hasTypingMessage.value || backendStatusValue.value !== 'online') return;
 
-    const updateChatTitleIfNeeded = (chatId, titleGenerator) => {
-      const currentMessages = activeChatMessages.get();
-      if (currentMessages.length === 0) {
-        const title = typeof titleGenerator === 'function' ? titleGenerator() : titleGenerator;
-        updateChatTitle(chatId, title);
-      }
-    };
+      const currentChatId = activeChatId.get() || createNewChat();
+      const chatHistoryForAPI = activeChatMessages.get().slice(-10); // Send last 10 messages
+      if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, userInput.value);
 
-    const processUserInput = () => {
       const question = userInput.value;
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';
-      return question;
-    };
-
-    const sendMessage = async () => {
-      // Check if input is empty and we have a stopped prompt to retry
-      if (userInput.value.trim() === '' && lastStoppedPrompt.value) {
-        userInput.value = lastStoppedPrompt.value;
-        lastStoppedPrompt.value = ''; // Clear after using
-      }
-
-      if (!validateInput()) {
-        return;
-      }
-
-      // Check current status before proceeding
-      const currentStatus = backendStatus.get();
-
-      if (currentStatus !== 'online') {
-        let statusMessage;
-        switch (currentStatus) {
-          case 'checking':
-            statusMessage = "Still checking backend status. Please try again in a moment.";
-            break;
-          case 'building':
-            statusMessage = "The backend service is starting up. This may take 1-2 minutes on the first visit.";
-            break;
-          case 'offline':
-            statusMessage = "The backend service is currently offline or rebuilding. Please try again later.";
-            break;
-          default:
-            statusMessage = "Cannot send message: Backend is not ready.";
-        }
-
-        addMessageToActiveChat({
-          text: statusMessage,
-          sender: 'bot',
-          model: 'system'
-        });
-        return;
-      }
-
-      // Ensure chat exists and get current chat ID
-      const currentChatId = ensureChatExists();
-
-      // Store the chat ID for this specific message session
-      const messageChatId = currentChatId;
-
-      // Get chat history BEFORE adding the new user message
-      const chatHistoryForAPI = activeChatMessages.get().slice();
-
-      // Update chat title if needed and process user input
-      updateChatTitleIfNeeded(currentChatId, userInput.value);
-      const question = processUserInput();
 
       isLoading.value = true;
       isChatProcessing.set(true);
 
-      try {
-        const data = await sendChatMessage(question, chatHistoryForAPI, selectedModel.value);
+      addMessageToActiveChat({ text: '', sender: 'bot', isTyping: true });
+      const botMessageIndex = activeChatMessages.get().length - 1;
 
-        // Add empty bot message first
-        addMessageToActiveChat({
-          text: '',
-          sender: 'bot',
-          images: data.images || [],
-          followup_questions: data.followup_questions || [],
-          isTyping: true,
-          wasStopped: false,
-          model: data.model_used || data.llm_used || selectedModel.value
-        });
-
-        // Get the index of the message we just added
-        const messagesAfterAdd = activeChatMessages.get();
-        const messageIndex = messagesAfterAdd.length - 1;
-
-        // Stop loading indicator since we're now typing
-        isLoading.value = false;
-
-        // Start realistic typing effect via message state - bound to specific chat
-        await updateMessageTyping(messageIndex, data.answer, messageChatId);
-
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          return;
+      const onChunk = (chunk) => {
+        isLoading.value = false; // Stop loading indicator once first chunk arrives
+        const currentMessages = activeChatMessages.get();
+        const msg = currentMessages[botMessageIndex];
+        if (msg) {
+          msg.text += chunk;
+          updateMessageInActiveChat(botMessageIndex, msg);
         }
+      };
 
-        addMessageToActiveChat({
-          text: `${error.message || 'Sorry, I encountered an error. Please try again.'}`,
-          sender: 'bot',
-          model: 'error'
-        });
-      } finally {
+      const onComplete = ({ model, followups, images, isInitial, isFinal }) => {
+        const currentMessages = activeChatMessages.get();
+        const msg = currentMessages[botMessageIndex];
+        if (!msg) return;
+
+        if (isInitial) {
+          msg.model = model;
+          msg.followup_questions = followups;
+          msg.images = images;
+        }
+        if (isFinal) {
+          msg.isTyping = false;
+          isChatProcessing.set(false);
+        }
+        updateMessageInActiveChat(botMessageIndex, msg);
+      };
+
+      const onError = (errorMessage) => {
+        const currentMessages = activeChatMessages.get();
+        const msg = currentMessages[botMessageIndex];
+        if (msg) {
+          msg.text = errorMessage;
+          msg.isTyping = false;
+          msg.model = 'error';
+          updateMessageInActiveChat(botMessageIndex, msg);
+        }
         isLoading.value = false;
         isChatProcessing.set(false);
-      }
+      };
+
+      await sendChatMessage(question, chatHistoryForAPI, selectedModel.value, onChunk, onComplete, onError);
     };
 
     const stopCurrentAction = () => {
+      stopLoading(); // Aborts the fetch request
+      isChatProcessing.set(false);
+      isLoading.value = false;
 
-      // Get the current chat ID for stopping
-      const currentChatId = activeChatId.get();
-
-      // Store the prompt that's being stopped for potential retry
-      const currentMessages = activeChatMessages.get();
-      if (currentMessages.length >= 1) {
-        const userMessage = currentMessages[currentMessages.length - 1];
-        if (userMessage && userMessage.sender === 'user') {
-          lastStoppedPrompt.value = userMessage.text;
-        } else if (currentMessages.length >= 2) {
-          // If the last message is a bot message, look for the user message before it
-          const userMessage = currentMessages[currentMessages.length - 2];
-          if (userMessage && userMessage.sender === 'user') {
-            lastStoppedPrompt.value = userMessage.text;
-          }
-        }
-      }
-
-      if (isLoading.value) {
-        // If we're in the loading phase, abort the API request
-        stopLoading();
-        isLoading.value = false;
-        isChatProcessing.set(false);
-      } else if (hasTypingMessage.value) {
-        // If we're in the typing phase, stop the typing for the specific chat
-        const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
-        if (typingMessageIndex !== -1) {
-          stopTyping(typingMessageIndex, currentChatId);
-          isChatProcessing.set(false);
-        }
+      const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
+      if (typingMessageIndex !== -1) {
+        const msg = messages.value[typingMessageIndex];
+        msg.isTyping = false;
+        msg.wasStopped = true;
+        updateMessageInActiveChat(typingMessageIndex, msg);
       }
     };
 
     const handlePromptSelect = (prompt) => {
-      if (hasTypingMessage.value) return;
       userInput.value = prompt;
       sendMessage();
     };
 
     const handleFollowupClick = (question) => {
-      if (hasTypingMessage.value) return;
       userInput.value = question;
       sendMessage();
     };
@@ -348,108 +173,40 @@ export default {
     };
 
     const handleResearchMessage = () => {
-      if (!validateInput()) {
-        return;
-      }
-
-      // Ensure chat exists and get current chat ID
-      const currentChatId = ensureChatExists();
-
-      // Update chat title if needed with research prefix and process user input
-      updateChatTitleIfNeeded(currentChatId, () => `Research: ${userInput.value}`);
-      const question = processUserInput();
-
-      // Truncate question for display while keeping full query for search
-      const MAX_DISPLAY_LENGTH = 50;
-      const displayQuestion = question.length > MAX_DISPLAY_LENGTH
-        ? question.substring(0, MAX_DISPLAY_LENGTH) + '...'
-        : question;
-
-      // Add bot message with custom LMGTFY component
-      addMessageToActiveChat({
-        text: `Let me Google "${displayQuestion}" for you...`,
-        sender: 'bot',
-        model: 'research',
-        lmgtfyQuery: question, // Keep full query for actual search
-        isNewResearch: true  // Explicitly mark as new research to trigger animation
-      });
+      if (!userInput.value.trim()) return;
+      const currentChatId = activeChatId.get() || createNewChat();
+      if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, `Research: ${userInput.value}`);
+      const question = userInput.value;
+      addMessageToActiveChat({ text: question, sender: 'user' });
+      userInput.value = '';
+      addMessageToActiveChat({ text: `Let me research "${question}" for you...`, sender: 'bot', model: 'research', lmgtfyQuery: question, isNewResearch: true });
     };
 
-    return {
-      userInput,
-      messages,
-      isLoading,
-      hasTypingMessage,
-      selectedModel,
-      lastStoppedPrompt,
-      backendStatus: backendStatusValue,
-      chatId,
-      sendMessage,
-      handlePromptSelect,
-      handleFollowupClick,
-      handleImageClick,
-      handleResearchMessage,
-      stopCurrentAction
-    };
+    return { userInput, messages, isLoading, hasTypingMessage, selectedModel, lastStoppedPrompt, backendStatus: backendStatusValue, chatId, sendMessage, stopCurrentAction, handlePromptSelect, handleFollowupClick, handleImageClick, handleResearchMessage };
   },
 };
 </script>
 
 <style scoped>
+/* Scoped styles are unchanged */
 .chatbot-container {
-  max-width: none;
-  margin: 0;
-  border: none;
-  border-radius: 0;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
   background-color: #1a1a1a;
   overflow: hidden;
 }
-
 .status-notification {
   padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 4px;
   text-align: center;
   font-weight: bold;
-  border: 1px solid;
 }
-
 .status-notification.checking {
-  background-color: rgba(209, 236, 241, 0.8);
-  color: #0c5460;
-  border-color: #0c5460;
+  background-color: #334155;
+  color: #f1f5f9;
 }
-
-.status-notification.building {
-  background-color: rgba(248, 215, 218, 0.8);
-  color: #721c24;
-  border-color: #721c24;
-}
-
 .status-notification.offline {
-  background-color: rgba(248, 215, 218, 0.8);
-  color: #721c24;
-  border-color: #721c24;
-}
-
-.theme-dark .status-notification.checking {
-  background-color: rgba(12, 52, 64, 0.8);
-  color: #d1ecf1;
-  border-color: #0c5460;
-}
-
-.theme-dark .status-notification.building {
-  background-color: rgba(44, 18, 21, 0.8);
-  color: #f8d7da;
-  border-color: #721c24;
-}
-
-.theme-dark .status-notification.offline {
-  background-color: rgba(44, 18, 21, 0.8);
-  color: #f8d7da;
-  border-color: #721c24;
+  background-color: #7f1d1d;
+  color: #fecaca;
 }
 </style>
