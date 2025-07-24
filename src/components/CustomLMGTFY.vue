@@ -4,17 +4,26 @@
     :class="{
       'typing-complete': typingComplete,
       'results-displayed': showIframe,
+      'button-visible': showButtonVisible,
+      'pointer-animating': pointerAnimating,
+      'letters-bouncing': lettersBouncing,
+      'search-loading': isIframeLoading,
+      'animate-button-click': buttonClickAnimating,
     }"
   >
     <div class="google-container">
       <div class="google-heading">
-        <span class="letter g1">G</span>
-        <span class="letter o1">🙄</span>
-        <span class="letter o2">🙄</span>
-        <span class="letter g2">g</span>
-        <span class="letter l">l</span>
-        <span class="letter e">e</span>
+        <span
+          v-for="letter in letters"
+          :key="letter.class"
+          class="letter"
+          :class="letter.class"
+          :style="{ animationDelay: letter.animationDelay }"
+        >
+          {{ letter.char }}
+        </span>
       </div>
+
       <div class="search-container">
         <input
           ref="searchInput"
@@ -25,28 +34,24 @@
           placeholder="Search"
         />
       </div>
+
       <p
         class="mt-0 font-bold text-center"
         style="color: red;"
-      >Let me Google that for you.</p>
+      >
+        Let me Google that for you.
+      </p>
+
       <div class="button-container">
         <button
           @click="handleSearch"
           class="search-button"
-          :class="{
-            'fade-in': showButton,
-            'animate-down': animatePointer
-          }"
           :disabled="!canSearch"
         >
-          <span
-            class="pointer-icon-container"
-            :class="{ 'animate-down': animatePointer }"
-          >
+          <span class="pointer-icon-container">
             <font-awesome-icon
               icon="arrow-pointer"
               class="pointer-icon"
-
             />
             <font-awesome-icon
               icon="arrow-pointer"
@@ -92,21 +97,20 @@
           v-if="showIframe"
           :src="iframeUrl"
           class="research-iframe"
-          :class="{ 'loading': isIframeLoading }"
           frameborder="0"
           allowfullscreen
           sandbox="allow-scripts allow-forms allow-popups"
           title="Research Results"
           @load="handleIframeLoad"
           @error="handleIframeError"
-        ></iframe>
+        />
       </div>
     </transition>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, nextTick, onUnmounted } from 'vue';
+import { ref, reactive, onMounted, nextTick, computed, onUnmounted } from 'vue';
 import { updateMessageProperty } from '../stores/ai.js';
 
 export default {
@@ -118,225 +122,273 @@ export default {
     messageIndex: { type: Number, required: true }
   },
   emits: ['height-changed'],
+
   setup(props, { emit }) {
-    // Refs
-    const searchInput = ref(null);
+    const sleep = (ms) => new Promise(resolve => {
+      const timeoutId = setTimeout(() => {
+        resolve();
+        // Remove from tracking array when executed
+        activeTimeouts.value = activeTimeouts.value.filter(id => id !== timeoutId);
+      }, ms);
+
+      activeTimeouts.value.push(timeoutId);
+    });
+
+    // Track active timeouts for cleanup
+    const activeTimeouts = ref([]);
+
+    // Helper function to create tracked timeouts
+    const createTimeout = (callback, delay) => {
+      const timeoutId = setTimeout(() => {
+        callback();
+        // Remove from tracking array when executed
+        activeTimeouts.value = activeTimeouts.value.filter(id => id !== timeoutId);
+      }, delay);
+
+      activeTimeouts.value.push(timeoutId);
+      return timeoutId;
+    };
+
+    // === Centralized Animation Configuration ===
+    const animationConfig = {
+      typingSpeedMs: ref(150),
+      logoBounceBaseMs: ref(300),
+      logoBounceStaggerMs: ref(150),
+      showButtonDelayMs: ref(300),
+      buttonClickDurationMs: ref(300),
+      pointerSpeedMs: ref(1000),
+      buttonFadeMs: ref(300),
+      bounceAnimationMs: ref(600),
+      skeletonLoopMs: ref(1500),
+      iframeFadeMs: ref(300),
+      buttonScaleMs: ref(300),
+      iframeLoadDelayMs: ref(600)
+    };
+
+    // CSS bindings - computed properties for dynamic CSS
+    const pointerSpeedCss = computed(() => `${animationConfig.pointerSpeedMs.value}ms`);
+    const buttonFadeCss = computed(() => `${animationConfig.buttonFadeMs.value}ms`);
+    const bounceAnimationCss = computed(() => `${animationConfig.bounceAnimationMs.value}ms`);
+    const skeletonLoopCss = computed(() => `${animationConfig.skeletonLoopMs.value}ms`);
+    const iframeFadeCss = computed(() => `${animationConfig.iframeFadeMs.value}ms`);
+    const buttonScaleCss = computed(() => `${animationConfig.buttonScaleMs.value}ms`);
+
+    const letters = reactive([
+      { char: 'G', class: 'g1' },
+      { char: '🙄', class: 'o1' },
+      { char: '🙄', class: 'o2' },
+      { char: 'g', class: 'g2' },
+      { char: 'l', class: 'l' },
+      { char: 'e', class: 'e' }
+    ].map((letter, index) => ({
+      ...letter,
+      animationDelay: `${index * animationConfig.logoBounceStaggerMs.value}ms`
+    })));
+
     const displayText = ref('');
     const typingComplete = ref(false);
     const showIframe = ref(false);
     const iframeUrl = ref('');
-    const showButton = ref(!props.playAnimation);
-    const animatePointer = ref(false);
+    const showButtonVisible = ref(!props.playAnimation);
+    const pointerAnimating = ref(false);
+    const buttonClickAnimating = ref(false);
+    const lettersBouncing = ref(false);
     const canSearch = ref(!props.playAnimation);
     const isIframeLoading = ref(false);
 
-    // Animation state
-    let typingTimeout = null;
-    let animationTimeouts = [];
+    const logoBounceTotalMs = computed(() =>
+      animationConfig.logoBounceBaseMs.value + animationConfig.logoBounceStaggerMs.value * letters.length
+    );
 
-    const TYPING_SPEED = 150;
-    const TYPING_START_DELAY = 500;
-    const POINTER_ANIMATION_DELAY = 100;
-    const POINTER_ANIMATION_DURATION = 3500;
-    const IFRAME_SHOW_DELAY = 200;
+    const truncatedQuery = computed(() => {
+      const maxLength = 30;
+      return props.searchQuery.length > maxLength
+        ? props.searchQuery.substring(0, maxLength) + '...'
+        : props.searchQuery;
+    });
 
-    // Truncation for typing animation - shorter than bot message display
-    const MAX_TYPING_LENGTH = 30;
+    // === Animation functions ===
+    const typeQuery = async (speed = animationConfig.typingSpeedMs.value) => {
+      const text = truncatedQuery.value;
 
-    // Clear all timeouts
-    const clearAllTimeouts = () => {
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-        typingTimeout = null;
+      displayText.value = '';
+      for (const char of text) {
+        displayText.value += char;
+        await sleep(speed);
       }
-      animationTimeouts.forEach(timeout => clearTimeout(timeout));
-      animationTimeouts = [];
+      typingComplete.value = true;
     };
 
-    // Type the search query (truncated for better UX)
-    const typeQuery = async () => {
-      return new Promise((resolve) => {
-        let currentIndex = 0;
-        // Truncate the text for typing animation
-        const fullText = props.searchQuery.length > MAX_TYPING_LENGTH
-          ? props.searchQuery.substring(0, MAX_TYPING_LENGTH) + '...'
-          : props.searchQuery;
-
-        const typeChar = () => {
-          if (currentIndex < fullText.length) {
-            displayText.value = fullText.substring(0, currentIndex + 1);
-            currentIndex++;
-            typingTimeout = setTimeout(typeChar, TYPING_SPEED);
-          } else {
-            typingComplete.value = true;
-            resolve();
-          }
-        };
-
-        typingTimeout = setTimeout(typeChar, TYPING_START_DELAY);
-      });
+    const animateGoogleLogo = () => {
+      lettersBouncing.value = true;
     };
-
-    // Animate the pointer and button
-    const animateSearchButton = async () => {
-      return new Promise((resolve) => {
-        // Show button
-        showButton.value = true;
-
-        // Start pointer animation after button appears
-        const pointerTimeout = setTimeout(() => {
-          animatePointer.value = true;
-
-          // Enable search after animation completes
-          const enableTimeout = setTimeout(() => {
-            canSearch.value = true;
-            resolve();
-          }, POINTER_ANIMATION_DURATION);
-
-          animationTimeouts.push(enableTimeout);
-        }, POINTER_ANIMATION_DELAY);
-
-        animationTimeouts.push(pointerTimeout);
-      });
+    const showButton = () => {
+      showButtonVisible.value = true;
     };
-
-    // Run the full animation sequence
-    const runAnimationSequence = async () => {
-      try {
-        // Type the query
-        await typeQuery();
-
-        // Show and animate the button
-        await animateSearchButton();
-
-        // Mark animation as complete in store
-        if (props.chatId !== null && props.messageIndex != null) {
-          updateMessageProperty(props.chatId, props.messageIndex, 'isNewResearch', false);
-        }
-
-        // Auto-search after animation
-        await performSearch();
-
-        // Emit height change after animation sequence completes
-        nextTick(() => {
-          emit('height-changed');
-        });
-      } catch (error) {
-        console.error('Animation sequence error:', error);
-      }
+    const animatePointer = () => {
+      pointerAnimating.value = true;
+      canSearch.value = true;
     };
-
-    // Perform the actual search
+    const animateButtonClick = async () => {
+      buttonClickAnimating.value = true;
+      // Reset the animation state after the duration to return to normal scale
+      createTimeout(() => {
+        buttonClickAnimating.value = false;
+      }, animationConfig.buttonClickDurationMs.value);
+    };
     const performSearch = async () => {
       const encodedQuery = encodeURIComponent(props.searchQuery);
       iframeUrl.value = `https://google.gprivate.com/search.php?search?q=${encodedQuery}`;
-
-      // Show iframe container and start loading
       await nextTick();
-      const iframeTimeout = setTimeout(() => {
+      createTimeout(() => {
         showIframe.value = true;
         isIframeLoading.value = true;
-        // Emit height change when iframe becomes visible
-        nextTick(() => {
-          emit('height-changed');
-        });
-      }, IFRAME_SHOW_DELAY);
-
-      animationTimeouts.push(iframeTimeout);
+      }, animationConfig.buttonClickDurationMs.value + 300);
+      await nextTick();
+      emit('height-changed');
     };
 
-    // Handle manual search button click
+    const showTextInstantly = () => {
+      displayText.value = truncatedQuery.value;
+      typingComplete.value = true;
+    };
+    const enableSearchInstantly = () => {
+      showButtonVisible.value = true;
+      canSearch.value = true;
+    };
+
+    // === Timeline with dynamic speed refs ===
+    const createNormalTimeline = () => [
+      { step: () => typeQuery(animationConfig.typingSpeedMs.value), delay: 0 },
+      { step: () => animateGoogleLogo(), delay: logoBounceTotalMs.value },
+      { step: () => showButton(), delay: animationConfig.showButtonDelayMs.value },
+      { step: () => animatePointer(), delay: animationConfig.pointerSpeedMs.value + 500 },
+      { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
+      { step: () => performSearch(), delay: 0 }
+    ];
+
+    const createFastTimeline = () => [
+      { step: () => showTextInstantly(), delay: 0 },
+      { step: () => enableSearchInstantly(), delay: 0 },
+      { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
+      { step: () => performSearch(), delay: 0 }
+    ];
+
+    const runTimeline = async (timeline) => {
+      for (const { step, delay } of timeline) {
+        await step();
+        if (delay) await sleep(delay);
+      }
+      if (props.chatId && props.messageIndex != null) {
+        updateMessageProperty(props.chatId, props.messageIndex, 'isNewResearch', false);
+      }
+      await nextTick();
+      emit('height-changed');
+    };
+
     const handleSearch = () => {
       if (!canSearch.value || showIframe.value) return;
-      performSearch();
+      runTimeline([{ step: () => performSearch(), delay: 0 }]);
     };
 
     const handleIframeLoad = () => {
-      // Add a small delay for smoother transition
-      setTimeout(() => {
-        isIframeLoading.value = false;
-        console.info('The iframe error is expected 🙄');
-        // Emit height change when iframe finishes loading
-        nextTick(() => {
-          emit('height-changed');
-        });
-      }, 300);
+      // Give extra time for stylesheets to load and render
+      const checkStylesLoaded = () => {
+        createTimeout(() => {
+          isIframeLoading.value = false;
+          nextTick(() => emit('height-changed'));
+        }, animationConfig.iframeLoadDelayMs.value);
+      };
+
+      // Double-check after a longer delay to ensure styles are rendered
+      createTimeout(checkStylesLoaded, 100);
     };
 
     const handleIframeError = () => {
       isIframeLoading.value = false;
-      // Emit an error event or show an error message to the user
       console.error('Failed to load search results');
-      // Consider showing a fallback UI or retry option
     };
 
-
-    // Initialize
     onMounted(() => {
-      if (props.playAnimation) {
-        // If animation is requested, start with empty displayText for typing animation
-        displayText.value = '';
-        runAnimationSequence();
-      } else {
-        // No animation - show truncated text immediately
-        const truncatedText = props.searchQuery.length > MAX_TYPING_LENGTH
-          ? props.searchQuery.substring(0, MAX_TYPING_LENGTH) + '...'
-          : props.searchQuery;
-        displayText.value = truncatedText;
-        typingComplete.value = true;
-        canSearch.value = true;
-
-        // Immediately perform search
-        nextTick(() => {
-          performSearch();
-        });
-      }
+      displayText.value = '';
+      const timeline = props.playAnimation ? createNormalTimeline() : createFastTimeline();
+      runTimeline(timeline);
     });
 
-    // Cleanup
+    // Cleanup function
     onUnmounted(() => {
-      clearAllTimeouts();
+      activeTimeouts.value.forEach(timeoutId => clearTimeout(timeoutId));
+      activeTimeouts.value = [];
     });
 
     return {
-      searchInput,
+      letters,
       displayText,
       typingComplete,
       showIframe,
       iframeUrl,
-      showButton,
-      animatePointer,
+      showButtonVisible,
+      pointerAnimating,
+      buttonClickAnimating,
+      lettersBouncing,
       canSearch,
       isIframeLoading,
+      // CSS binding computed properties
+      pointerSpeedCss,
+      buttonFadeCss,
+      bounceAnimationCss,
+      skeletonLoopCss,
+      iframeFadeCss,
+      buttonScaleCss,
       handleSearch,
       handleIframeLoad,
-      handleIframeError,
+      handleIframeError
     };
   }
 };
 </script>
 
 <style scoped>
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .lmgtfy-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  /*padding: 40px 20px;*/
   background: #fff;
   border-radius: 8px;
+  overflow: hidden;
   margin: 20px 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: relative;
-  min-height: 500px;
-  transition: min-height 0.3s ease;
+  min-height: 400px;
 }
 
 .google-container {
   position: relative;
   padding: 20px 10px;
   z-index: 20;
-  margin-bottom: -115px;
+  margin-bottom: -122px;
   background: #fff;
   width: 100%;
 }
@@ -378,6 +430,93 @@ export default {
   color: #ea4335;
 }
 
+.search-container {
+  width: 100%;
+  max-width: 584px;
+  margin-bottom: 30px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #676767;
+  border-radius: 24px;
+  padding: 0 16px;
+  font-size: 16px;
+  background: #fff;
+  color: #202124;
+}
+
+.search-input:focus {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: transparent;
+}
+
+.button-container {
+  position: relative;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform v-bind(buttonScaleCss) ease;
+}
+
+.search-button {
+  background-color: #4285f4;
+  border-radius: 4px;
+  border: none;
+  color: white;
+  font-family: arial, sans-serif;
+  font-size: 14px;
+  margin: 11px 4px;
+  padding: 0 16px;
+  line-height: 27px;
+  height: 36px;
+  min-width: 120px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity v-bind(buttonFadeCss) ease;
+}
+
+.search-button:hover:not(:disabled) {
+  background-color: #3367d6;
+}
+
+.search-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pointer-icon-container {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  transform: translate(-60px, -120px);
+  transition: transform v-bind(pointerSpeedCss) ease;
+}
+
+.pointer-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  color: black;
+  font-size: 24px;
+}
+
+.pointer-icon-shadow {
+  left: -1px;
+  top: 1px;
+  z-index: 5;
+  transform: scale(1.1);
+  color: white;
+}
 
 .iframe-container {
   position: relative;
@@ -392,12 +531,10 @@ export default {
   height: 100%;
   min-height: 500px;
   border: none;
-  transition: opacity 0.3s ease;
 }
 
 .iframe-container::before {
   content: '';
-  display: block;
   position: absolute;
   z-index: 10;
   top: 0;
@@ -408,25 +545,12 @@ export default {
   margin-bottom: -100px;
 }
 
-.research-iframe.loading {
-  opacity: 0;
-  position: relative;
-}
-
-/* Skeleton Loader Styles */
 .skeleton-loader {
   position: absolute;
   width: 100%;
-  left: 0;
-  right: 0;
-  bottom: 0;
   padding: 20px;
   background: #fff;
   overflow: hidden;
-}
-
-.skeleton-loader * {
-  width: 100%;
 }
 
 .skeleton-header {
@@ -442,9 +566,6 @@ export default {
 .skeleton-logo {
   width: 120px;
   height: 40px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
   border-radius: 4px;
 }
 
@@ -452,9 +573,6 @@ export default {
   flex: 1;
   max-width: 600px;
   height: 44px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
   border-radius: 22px;
 }
 
@@ -469,9 +587,6 @@ export default {
 .skeleton-result-title {
   width: 60%;
   height: 20px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
   border-radius: 4px;
   margin-bottom: 8px;
 }
@@ -479,9 +594,6 @@ export default {
 .skeleton-result-url {
   width: 40%;
   height: 14px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
   border-radius: 4px;
   margin-bottom: 8px;
 }
@@ -492,9 +604,6 @@ export default {
 
 .skeleton-line {
   height: 14px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
   border-radius: 4px;
   margin-bottom: 6px;
 }
@@ -507,122 +616,6 @@ export default {
   width: 80%;
 }
 
-
-.search-container {
-  width: 100%;
-  max-width: 584px;
-  margin-bottom: 30px;
-  margin-left: auto;
-  margin-right: auto;
-  position: relative;
-}
-
-.search-input {
-  position: relative;
-  width: 100%;
-  height: 44px;
-  border: 1px solid #676767;
-  border-radius: 24px;
-  padding: 0 16px;
-  font-size: 16px;
-  background: #fff;
-  color: #202124;
-  transition: box-shadow 0.2s;
-}
-
-.search-input:focus {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-color: transparent;
-}
-
-.button-container {
-  position: relative;
-  min-height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.search-button {
-  position: relative;
-  background-color: #4285f4;
-  border-radius: 4px;
-  border: none;
-  color: white;
-  font-family: arial, sans-serif;
-  font-size: 14px;
-  margin: 11px 4px;
-  padding: 0 16px;
-  line-height: 27px;
-  height: 36px;
-  min-width: 120px;
-  cursor: pointer;
-  transition: all 0.1s ease;
-}
-
-.search-button.fade-in {
-  opacity: 1;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.search-button:hover:not(:disabled) {
-  background-color: #4285f4;
-}
-
-.search-button:disabled {
-  cursor: not-allowed;
-  opacity: 1;
-}
-
-.pointer-icon-container {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  transition: transform 3s ease;
-  transform: translate(-90px, -120px);
-}
-
-.pointer-icon-container.animate-down {
-  transform: translateY(0);
-}
-
-.pointer-icon {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 10;
-  color: black;
-  display: inline-block;
-  font-size: 24px;
-}
-
-.pointer-icon.pointer-icon-shadow {
-  left: -1px;
-  top: 1px;
-  z-index: 5;
-  transform: scale(1.1);
-  color: white;
-}
-
-.pointer-icon.animate-down {
-  transform: translateY(0) scale(1);
-}
-
-
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-
-/* Responsive styles */
 @media (max-width: 768px) {
   .lmgtfy-container {
     min-height: 400px;
@@ -637,9 +630,44 @@ export default {
     min-height: 400px;
   }
 }
+
 @media (max-width: 450px) {
   .google-heading {
     font-size: 40px;
   }
+}
+
+.lmgtfy-container.button-visible .search-button {
+  opacity: 1;
+}
+
+.lmgtfy-container.pointer-animating .pointer-icon-container {
+  transform: translate(0, 0);
+}
+
+.lmgtfy-container.letters-bouncing .letter {
+  animation: bounce v-bind(bounceAnimationCss) ease-in-out;
+}
+
+.lmgtfy-container.animate-button-click .button-container {
+  transform: scale(0.95);
+}
+
+.lmgtfy-container.search-loading .skeleton-logo,
+.lmgtfy-container.search-loading .skeleton-search-bar,
+.lmgtfy-container.search-loading .skeleton-result-title,
+.lmgtfy-container.search-loading .skeleton-result-url,
+.lmgtfy-container.search-loading .skeleton-line {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0f0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading v-bind(skeletonLoopCss) infinite;
+}
+
+.fade-in-iframe-enter-active, .fade-in-iframe-leave-active {
+  transition: opacity v-bind(iframeFadeCss) ease;
+}
+
+.fade-in-iframe-enter-from, .fade-in-iframe-leave-to {
+  opacity: 0;
 }
 </style>

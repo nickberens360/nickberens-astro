@@ -541,6 +541,9 @@ export default {
     padding: 0.375rem 0.625rem;
     font-size: 0.8125rem;
   }
+  .message-bubble {
+    padding: 0.75rem 0.25rem;
+  }
 
 }
 </style>
