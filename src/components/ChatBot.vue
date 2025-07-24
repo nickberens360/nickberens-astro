@@ -1,9 +1,18 @@
 <template>
-  <div class="chatbot-container" :class="`theme-${theme}`">
-    <div v-if="backendStatus === 'checking'" class="status-notification checking">
+  <div
+    class="chatbot-container"
+    :class="`theme-${theme}`"
+  >
+    <div
+      v-if="backendStatus === 'checking'"
+      class="status-notification checking"
+    >
       <p>🔄 Checking backend status...</p>
     </div>
-    <div v-else-if="backendStatus === 'offline'" class="status-notification offline">
+    <div
+      v-else-if="backendStatus === 'offline'"
+      class="status-notification offline"
+    >
       <p>❌ Backend service is currently offline. Please try again later.</p>
     </div>
 
@@ -31,14 +40,22 @@
       @research-message="handleResearchMessage"
     />
 
-    <ImageOverlay />
+    <ImageOverlay/>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useStore } from '@nanostores/vue';
-import { activeChatId, activeChatMessages, addMessageToActiveChat, createNewChat, updateChatTitle, isPendingNewChat, updateMessageInActiveChat } from '../stores/ai.js';
+import {
+  activeChatId,
+  activeChatMessages,
+  addMessageToActiveChat,
+  createNewChat,
+  updateChatTitle,
+  isPendingNewChat,
+  updateMessageInActiveChat
+} from '../stores/ai.js';
 import { openImageOverlay, isChatProcessing } from '../stores/ui.js';
 import { backendStatus } from '../stores/backendStatus.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
@@ -179,10 +196,31 @@ export default {
       const question = userInput.value;
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';
-      addMessageToActiveChat({ text: `Let me research "${question}" for you...`, sender: 'bot', model: 'research', lmgtfyQuery: question, isNewResearch: true });
+      addMessageToActiveChat({
+        text: `Let me research "${question}" for you...`,
+        sender: 'bot',
+        model: 'research',
+        lmgtfyQuery: question,
+        isNewResearch: true
+      });
     };
 
-    return { userInput, messages, isLoading, hasTypingMessage, selectedModel, lastStoppedPrompt, backendStatus: backendStatusValue, chatId, sendMessage, stopCurrentAction, handlePromptSelect, handleFollowupClick, handleImageClick, handleResearchMessage };
+    return {
+      userInput,
+      messages,
+      isLoading,
+      hasTypingMessage,
+      selectedModel,
+      lastStoppedPrompt,
+      backendStatus: backendStatusValue,
+      chatId,
+      sendMessage,
+      stopCurrentAction,
+      handlePromptSelect,
+      handleFollowupClick,
+      handleImageClick,
+      handleResearchMessage
+    };
   },
 };
 </script>
@@ -196,15 +234,18 @@ export default {
   background-color: #1a1a1a;
   overflow: hidden;
 }
+
 .status-notification {
   padding: 10px;
   text-align: center;
   font-weight: bold;
 }
+
 .status-notification.checking {
   background-color: #334155;
   color: #f1f5f9;
 }
+
 .status-notification.offline {
   background-color: #7f1d1d;
   color: #fecaca;
