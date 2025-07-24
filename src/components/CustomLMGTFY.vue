@@ -136,7 +136,7 @@ export default {
       logoBounceStaggerMs: ref(150),
       showButtonDelayMs: ref(300),
       buttonClickDurationMs: ref(300),
-      pointerSpeedMs: ref(3000),
+      pointerSpeedMs: ref(1000),
       buttonFadeMs: ref(300),
       bounceAnimationMs: ref(600),
       skeletonLoopMs: ref(1500),
@@ -146,7 +146,6 @@ export default {
     }
 
     // CSS bindings - computed properties for dynamic CSS
-    const typingSpeedCss = computed(() => `${animationConfig.typingSpeedMs.value}ms`)
     const pointerSpeedCss = computed(() => `${animationConfig.pointerSpeedMs.value}ms`)
     const buttonFadeCss = computed(() => `${animationConfig.buttonFadeMs.value}ms`)
     const bounceAnimationCss = computed(() => `${animationConfig.bounceAnimationMs.value}ms`)
@@ -425,7 +424,7 @@ export default {
   justify-content: center;
   width: 24px;
   height: 24px;
-  transform: translate(-90px, -120px);
+  transform: translate(-60px, -120px);
   transition: transform v-bind(pointerSpeedCss) ease;
 }
 .pointer-icon {
