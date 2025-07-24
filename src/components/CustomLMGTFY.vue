@@ -4,19 +4,21 @@
     :class="{
       'typing-complete': typingComplete,
       'results-displayed': showIframe,
-      'button-visible': showButton,
-      'pointer-animating': animatePointer,
+      'button-visible': showButtonVisible,
+      'pointer-animating': pointerAnimating,
       'letters-bouncing': lettersBouncing,
-      'search-loading': isIframeLoading
+      'search-loading': isIframeLoading,
+      'animate-button-click': buttonClickAnimating,
     }"
   >
     <div class="google-container">
       <div class="google-heading">
         <span
-          v-for="(letter, index) in letters"
-          :key="index"
+          v-for="letter in letters"
+          :key="letter.class"
           class="letter"
           :class="letter.class"
+          :style="{ animationDelay: letter.animationDelay }"
         >
           {{ letter.char }}
         </span>
@@ -33,7 +35,10 @@
         />
       </div>
 
-      <p class="mt-0 font-bold text-center" style="color: red;">
+      <p
+        class="mt-0 font-bold text-center"
+        style="color: red;"
+      >
         Let me Google that for you.
       </p>
 
@@ -44,8 +49,14 @@
           :disabled="!canSearch"
         >
           <span class="pointer-icon-container">
-            <font-awesome-icon icon="arrow-pointer" class="pointer-icon" />
-            <font-awesome-icon icon="arrow-pointer" class="pointer-icon pointer-icon-shadow" />
+            <font-awesome-icon
+              icon="arrow-pointer"
+              class="pointer-icon"
+            />
+            <font-awesome-icon
+              icon="arrow-pointer"
+              class="pointer-icon pointer-icon-shadow"
+            />
           </span>
           Google Search
         </button>
@@ -53,9 +64,15 @@
     </div>
 
     <transition name="fade-in-iframe">
-      <div v-if="showIframe" class="iframe-container">
+      <div
+        v-if="showIframe"
+        class="iframe-container"
+      >
         <!-- Skeleton loader -->
-        <div v-if="isIframeLoading" class="skeleton-loader">
+        <div
+          v-if="isIframeLoading"
+          class="skeleton-loader"
+        >
           <div class="skeleton-header">
             <div class="skeleton-logo"></div>
             <div class="skeleton-search-bar"></div>
@@ -93,8 +110,8 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, nextTick, onUnmounted } from 'vue'
-import { updateMessageProperty } from '../stores/ai.js'
+import { ref, reactive, onMounted, nextTick, computed, onUnmounted } from 'vue';
+import { updateMessageProperty } from '../stores/ai.js';
 
 export default {
   name: 'CustomLMGTFY',
@@ -107,10 +124,55 @@ export default {
   emits: ['height-changed'],
 
   setup(props, { emit }) {
-    // Simple helper
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+    const sleep = (ms) => new Promise(resolve => {
+      const timeoutId = setTimeout(() => {
+        resolve();
+        // Remove from tracking array when executed
+        activeTimeouts.value = activeTimeouts.value.filter(id => id !== timeoutId);
+      }, ms);
 
-    // Reactive state (instead of DOM queries)
+      activeTimeouts.value.push(timeoutId);
+    });
+
+    // Track active timeouts for cleanup
+    const activeTimeouts = ref([]);
+
+    // Helper function to create tracked timeouts
+    const createTimeout = (callback, delay) => {
+      const timeoutId = setTimeout(() => {
+        callback();
+        // Remove from tracking array when executed
+        activeTimeouts.value = activeTimeouts.value.filter(id => id !== timeoutId);
+      }, delay);
+
+      activeTimeouts.value.push(timeoutId);
+      return timeoutId;
+    };
+
+    // === Centralized Animation Configuration ===
+    const animationConfig = {
+      typingSpeedMs: ref(150),
+      logoBounceBaseMs: ref(300),
+      logoBounceStaggerMs: ref(150),
+      showButtonDelayMs: ref(300),
+      buttonClickDurationMs: ref(300),
+      pointerSpeedMs: ref(1000),
+      buttonFadeMs: ref(300),
+      bounceAnimationMs: ref(600),
+      skeletonLoopMs: ref(1500),
+      iframeFadeMs: ref(300),
+      buttonScaleMs: ref(300),
+      iframeLoadDelayMs: ref(600)
+    };
+
+    // CSS bindings - computed properties for dynamic CSS
+    const pointerSpeedCss = computed(() => `${animationConfig.pointerSpeedMs.value}ms`);
+    const buttonFadeCss = computed(() => `${animationConfig.buttonFadeMs.value}ms`);
+    const bounceAnimationCss = computed(() => `${animationConfig.bounceAnimationMs.value}ms`);
+    const skeletonLoopCss = computed(() => `${animationConfig.skeletonLoopMs.value}ms`);
+    const iframeFadeCss = computed(() => `${animationConfig.iframeFadeMs.value}ms`);
+    const buttonScaleCss = computed(() => `${animationConfig.buttonScaleMs.value}ms`);
+
     const letters = reactive([
       { char: 'G', class: 'g1' },
       { char: '🙄', class: 'o1' },
@@ -118,214 +180,146 @@ export default {
       { char: 'g', class: 'g2' },
       { char: 'l', class: 'l' },
       { char: 'e', class: 'e' }
-    ])
+    ].map((letter, index) => ({
+      ...letter,
+      animationDelay: `${index * animationConfig.logoBounceStaggerMs.value}ms`
+    })));
 
-    // Animation state - centralized on root element
-    const displayText = ref('')
-    const typingComplete = ref(false)
-    const showIframe = ref(false)
-    const iframeUrl = ref('')
-    const showButton = ref(!props.playAnimation)
-    const animatePointer = ref(false)
-    const lettersBouncing = ref(false)
-    const canSearch = ref(!props.playAnimation)
-    const isIframeLoading = ref(false)
+    const displayText = ref('');
+    const typingComplete = ref(false);
+    const showIframe = ref(false);
+    const iframeUrl = ref('');
+    const showButtonVisible = ref(!props.playAnimation);
+    const pointerAnimating = ref(false);
+    const buttonClickAnimating = ref(false);
+    const lettersBouncing = ref(false);
+    const canSearch = ref(!props.playAnimation);
+    const isIframeLoading = ref(false);
 
-    // Animation methods (separate from config)
-    const animationMethods = {
-      animateGoogleLogo: async (config) => {
-        lettersBouncing.value = true
+    const logoBounceTotalMs = computed(() =>
+      animationConfig.logoBounceBaseMs.value + animationConfig.logoBounceStaggerMs.value * letters.length
+    );
 
-        // Let CSS handle the visual animation, we just control timing
-        await sleep(config.duration + (config.staggerDelay * letters.length))
+    const truncatedQuery = computed(() => {
+      const maxLength = 30;
+      return props.searchQuery.length > maxLength
+        ? props.searchQuery.substring(0, maxLength) + '...'
+        : props.searchQuery;
+    });
 
-        lettersBouncing.value = false
-      },
+    // === Animation functions ===
+    const typeQuery = async (speed = animationConfig.typingSpeedMs.value) => {
+      const text = truncatedQuery.value;
 
-      typeQuery: async (config) => {
-        const maxLength = 30
-        const text = props.searchQuery.length > maxLength
-          ? props.searchQuery.substring(0, maxLength) + '...'
-          : props.searchQuery
-
-        let currentText = ''
-        for (const char of text) {
-          currentText += char
-          displayText.value = currentText
-          await sleep(config.speed)
-        }
-        typingComplete.value = true
-      },
-
-      showButton: async (config) => {
-        showButton.value = true
-        await sleep(config.duration)
-      },
-
-      animatePointer: async (config) => {
-        animatePointer.value = true
-        await sleep(config.duration)
-        canSearch.value = true
-      },
-
-      performSearch: async (config) => {
-        const encodedQuery = encodeURIComponent(props.searchQuery)
-        iframeUrl.value = `https://google.gprivate.com/search.php?search?q=${encodedQuery}`
-
-        await sleep(config.delay)
-        showIframe.value = true
-        isIframeLoading.value = true
-
-        await nextTick()
-        emit('height-changed')
-      },
-
-      showTextInstantly: async () => {
-        const maxLength = 30
-        displayText.value = props.searchQuery.length > maxLength
-          ? props.searchQuery.substring(0, maxLength) + '...'
-          : props.searchQuery
-        typingComplete.value = true
-      },
-
-      enableSearch: async (config) => {
-        showButton.value = true
-        canSearch.value = true
-        await sleep(config.delay)
-      },
-
-      runLogoAndTypingParallel: async () => {
-        await Promise.all([
-          animationMethods.animateGoogleLogo({ duration: 600, staggerDelay: 150 }),
-          animationMethods.typeQuery({ speed: 150 })
-        ])
+      displayText.value = '';
+      for (const char of text) {
+        displayText.value += char;
+        await sleep(speed);
       }
-    }
+      typingComplete.value = true;
+    };
 
-    // Animation config - clean and focused on timing/sequencing
-    const animationSequence = [
-      {
-        name: 'typing',
-        delay: 300,
-        speed: 150,
-        action: 'typeQuery'
-      },
-      {
-        name: 'logo-bounce',
-        delay: 200,
-        duration: 600,
-        staggerDelay: 150,
-        action: 'animateGoogleLogo'
-      },
-      {
-        name: 'show-button',
-        delay: 100,
-        duration: 300,
-        action: 'showButton'
-      },
-      {
-        name: 'animate-pointer',
-        delay: 100,
-        duration: 3500,
-        action: 'animatePointer'
-      },
-      {
-        name: 'perform-search',
-        delay: 200,
-        action: 'performSearch'
+    const animateGoogleLogo = () => {
+      lettersBouncing.value = true;
+    };
+    const showButton = () => {
+      showButtonVisible.value = true;
+    };
+    const animatePointer = () => {
+      pointerAnimating.value = true;
+      canSearch.value = true;
+    };
+    const animateButtonClick = async () => {
+      buttonClickAnimating.value = true;
+      // Reset the animation state after the duration to return to normal scale
+      createTimeout(() => {
+        buttonClickAnimating.value = false;
+      }, animationConfig.buttonClickDurationMs.value);
+    };
+    const performSearch = async () => {
+      const encodedQuery = encodeURIComponent(props.searchQuery);
+      iframeUrl.value = `https://google.gprivate.com/search.php?search?q=${encodedQuery}`;
+      await nextTick();
+      createTimeout(() => {
+        showIframe.value = true;
+        isIframeLoading.value = true;
+      }, animationConfig.buttonClickDurationMs.value + 300);
+      await nextTick();
+      emit('height-changed');
+    };
+
+    const showTextInstantly = () => {
+      displayText.value = truncatedQuery.value;
+      typingComplete.value = true;
+    };
+    const enableSearchInstantly = () => {
+      showButtonVisible.value = true;
+      canSearch.value = true;
+    };
+
+    // === Timeline with dynamic speed refs ===
+    const createNormalTimeline = () => [
+      { step: () => typeQuery(animationConfig.typingSpeedMs.value), delay: 0 },
+      { step: () => animateGoogleLogo(), delay: logoBounceTotalMs.value },
+      { step: () => showButton(), delay: animationConfig.showButtonDelayMs.value },
+      { step: () => animatePointer(), delay: animationConfig.pointerSpeedMs.value + 500 },
+      { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
+      { step: () => performSearch(), delay: 0 }
+    ];
+
+    const createFastTimeline = () => [
+      { step: () => showTextInstantly(), delay: 0 },
+      { step: () => enableSearchInstantly(), delay: 0 },
+      { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
+      { step: () => performSearch(), delay: 0 }
+    ];
+
+    const runTimeline = async (timeline) => {
+      for (const { step, delay } of timeline) {
+        await step();
+        if (delay) await sleep(delay);
       }
-    ]
-
-    // Fast sequence (no animations)
-    const fastSequence = [
-      {
-        name: 'show-text',
-        action: 'showTextInstantly'
-      },
-      {
-        name: 'enable-search',
-        delay: 100,
-        action: 'enableSearch'
-      },
-      {
-        name: 'perform-search',
-        delay: 200,
-        action: 'performSearch'
+      if (props.chatId && props.messageIndex != null) {
+        updateMessageProperty(props.chatId, props.messageIndex, 'isNewResearch', false);
       }
-    ]
+      await nextTick();
+      emit('height-changed');
+    };
 
-    // Simple animation runner
-    const runAnimations = async (sequence) => {
-      for (const animation of sequence) {
-        await sleep(animation.delay || 0)
-        await animationMethods[animation.action](animation)
-      }
-
-      // Update store when complete
-      if (props.chatId !== null && props.messageIndex != null) {
-        updateMessageProperty(props.chatId, props.messageIndex, 'isNewResearch', false)
-      }
-
-      await nextTick()
-      emit('height-changed')
-    }
-
-    // Easy sequence variations
-    const createSlowSequence = () => {
-      return animationSequence.map(anim => {
-        if (anim.name === 'typing') return { ...anim, speed: 300 }
-        if (anim.name === 'logo-bounce') return { ...anim, staggerDelay: 300 }
-        return anim
-      })
-    }
-
-    const createParallelSequence = () => {
-      // Run logo and typing at the same time
-      return [
-        {
-          name: 'logo-and-typing',
-          delay: 200,
-          action: 'runLogoAndTypingParallel'
-        },
-        ...animationSequence.slice(2) // rest of the animations
-      ]
-    }
-
-    // Event handlers
     const handleSearch = () => {
-      if (!canSearch.value || showIframe.value) return
-
-      const searchOnly = [{
-        name: 'perform-search',
-        delay: 0,
-        action: 'performSearch'
-      }]
-
-      runAnimations(searchOnly)
-    }
+      if (!canSearch.value || showIframe.value) return;
+      runTimeline([{ step: () => performSearch(), delay: 0 }]);
+    };
 
     const handleIframeLoad = () => {
-      setTimeout(() => {
-        isIframeLoading.value = false
-        console.info('The iframe error is expected 🙄')
-        nextTick(() => emit('height-changed'))
-      }, 300)
-    }
+      // Give extra time for stylesheets to load and render
+      const checkStylesLoaded = () => {
+        createTimeout(() => {
+          isIframeLoading.value = false;
+          nextTick(() => emit('height-changed'));
+        }, animationConfig.iframeLoadDelayMs.value);
+      };
+
+      // Double-check after a longer delay to ensure styles are rendered
+      createTimeout(checkStylesLoaded, 100);
+    };
 
     const handleIframeError = () => {
-      isIframeLoading.value = false
-      console.error('Failed to load search results')
-    }
+      isIframeLoading.value = false;
+      console.error('Failed to load search results');
+    };
 
-    // Initialize
     onMounted(() => {
-      if (props.playAnimation) {
-        displayText.value = ''
-        runAnimations(animationSequence)
-      } else {
-        runAnimations(fastSequence)
-      }
-    })
+      displayText.value = '';
+      const timeline = props.playAnimation ? createNormalTimeline() : createFastTimeline();
+      runTimeline(timeline);
+    });
+
+    // Cleanup function
+    onUnmounted(() => {
+      activeTimeouts.value.forEach(timeoutId => clearTimeout(timeoutId));
+      activeTimeouts.value = [];
+    });
 
     return {
       letters,
@@ -333,42 +327,48 @@ export default {
       typingComplete,
       showIframe,
       iframeUrl,
-      showButton,
-      animatePointer,
+      showButtonVisible,
+      pointerAnimating,
+      buttonClickAnimating,
       lettersBouncing,
       canSearch,
       isIframeLoading,
+      // CSS binding computed properties
+      pointerSpeedCss,
+      buttonFadeCss,
+      bounceAnimationCss,
+      skeletonLoopCss,
+      iframeFadeCss,
+      buttonScaleCss,
       handleSearch,
       handleIframeLoad,
-      handleIframeError,
-
-      // For debugging/testing
-      runSlowAnimations: () => runAnimations(createSlowSequence()),
-      runParallelAnimations: () => runAnimations(createParallelSequence())
-    }
+      handleIframeError
+    };
   }
-}
+};
 </script>
 
 <style scoped>
-/* =============================================================================
-   ANIMATION KEYFRAMES
-   ============================================================================= */
-
 @keyframes bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-20px); }
-  60% { transform: translateY(-10px); }
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
 }
 
 @keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
-
-/* =============================================================================
-   BASE COMPONENT STYLES
-   ============================================================================= */
 
 .lmgtfy-container {
   display: flex;
@@ -388,7 +388,7 @@ export default {
   position: relative;
   padding: 20px 10px;
   z-index: 20;
-  margin-bottom: -120px;
+  margin-bottom: -122px;
   background: #fff;
   width: 100%;
 }
@@ -406,13 +406,29 @@ export default {
   display: inline-block;
 }
 
-/* Letter Colors (Base Styles Only) */
-.g1 { color: #4285f4; }
-.o1 { color: #ea4335; }
-.o2 { color: #fbbc05; }
-.g2 { color: #4285f4; }
-.l { color: #34a853; }
-.e { color: #ea4335; }
+.g1 {
+  color: #4285f4;
+}
+
+.o1 {
+  color: #ea4335;
+}
+
+.o2 {
+  color: #fbbc05;
+}
+
+.g2 {
+  color: #4285f4;
+}
+
+.l {
+  color: #34a853;
+}
+
+.e {
+  color: #ea4335;
+}
 
 .search-container {
   width: 100%;
@@ -424,7 +440,6 @@ export default {
 }
 
 .search-input {
-  position: relative;
   width: 100%;
   height: 44px;
   border: 1px solid #676767;
@@ -446,10 +461,10 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform v-bind(buttonScaleCss) ease;
 }
 
 .search-button {
-  position: relative;
   background-color: #4285f4;
   border-radius: 4px;
   border: none;
@@ -462,7 +477,8 @@ export default {
   height: 36px;
   min-width: 120px;
   cursor: pointer;
-  opacity: 0; /* Default hidden state */
+  opacity: 0;
+  transition: opacity v-bind(buttonFadeCss) ease;
 }
 
 .search-button:hover:not(:disabled) {
@@ -481,7 +497,8 @@ export default {
   justify-content: center;
   width: 24px;
   height: 24px;
-  transform: translate(-90px, -120px); /* Default hidden position */
+  transform: translate(-60px, -120px);
+  transition: transform v-bind(pointerSpeedCss) ease;
 }
 
 .pointer-icon {
@@ -490,7 +507,6 @@ export default {
   top: 0;
   z-index: 10;
   color: black;
-  display: inline-block;
   font-size: 24px;
 }
 
@@ -519,7 +535,6 @@ export default {
 
 .iframe-container::before {
   content: '';
-  display: block;
   position: absolute;
   z-index: 10;
   top: 0;
@@ -530,20 +545,12 @@ export default {
   margin-bottom: -100px;
 }
 
-/* Skeleton Loader Styles */
 .skeleton-loader {
   position: absolute;
   width: 100%;
-  left: 0;
-  right: 0;
-  bottom: 0;
   padding: 20px;
   background: #fff;
   overflow: hidden;
-}
-
-.skeleton-loader * {
-  width: 100%;
 }
 
 .skeleton-header {
@@ -609,7 +616,6 @@ export default {
   width: 80%;
 }
 
-/* Responsive styles */
 @media (max-width: 768px) {
   .lmgtfy-container {
     min-height: 400px;
@@ -631,72 +637,37 @@ export default {
   }
 }
 
-/* =============================================================================
-   ANIMATION STATES (Modifications to Base Styles)
-   ============================================================================= */
-
-/* Button Visibility */
 .lmgtfy-container.button-visible .search-button {
   opacity: 1;
-  transition: opacity 0.3s ease;
 }
 
-/* Pointer Animation */
 .lmgtfy-container.pointer-animating .pointer-icon-container {
-  transform: translateY(0);
-  transition: transform 3s ease;
+  transform: translate(0, 0);
 }
 
-/* Letter Bouncing */
-.lmgtfy-container.letters-bouncing .letter:nth-child(1) {
-  animation: bounce 0.6s ease-in-out;
-  animation-delay: 0ms;
+.lmgtfy-container.letters-bouncing .letter {
+  animation: bounce v-bind(bounceAnimationCss) ease-in-out;
 }
 
-.lmgtfy-container.letters-bouncing .letter:nth-child(2) {
-  animation: bounce 0.6s ease-in-out;
-  animation-delay: 150ms;
+.lmgtfy-container.animate-button-click .button-container {
+  transform: scale(0.95);
 }
 
-.lmgtfy-container.letters-bouncing .letter:nth-child(3) {
-  animation: bounce 0.6s ease-in-out;
-  animation-delay: 300ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(4) {
-  animation: bounce 0.6s ease-in-out;
-  animation-delay: 450ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(5) {
-  animation: bounce 0.6s ease-in-out;
-  animation-delay: 600ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(6) {
-  animation: bounce 0.6s ease-in-out;
-  animation-delay: 750ms;
-}
-
-/* Loading Animation */
 .lmgtfy-container.search-loading .skeleton-logo,
 .lmgtfy-container.search-loading .skeleton-search-bar,
 .lmgtfy-container.search-loading .skeleton-result-title,
 .lmgtfy-container.search-loading .skeleton-result-url,
 .lmgtfy-container.search-loading .skeleton-line {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0f0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
-  animation: loading 1.5s infinite;
+  animation: loading v-bind(skeletonLoopCss) infinite;
 }
 
-/* Vue Transition Classes */
-.fade-in-iframe-enter-active,
-.fade-in-iframe-leave-active {
-  transition: opacity 0.3s ease;
+.fade-in-iframe-enter-active, .fade-in-iframe-leave-active {
+  transition: opacity v-bind(iframeFadeCss) ease;
 }
 
-.fade-in-iframe-enter-from,
-.fade-in-iframe-leave-to {
+.fade-in-iframe-enter-from, .fade-in-iframe-leave-to {
   opacity: 0;
 }
 </style>
