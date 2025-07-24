@@ -90,7 +90,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, nextTick, computed } from 'vue'
+import { ref, reactive, onMounted, nextTick, computed, onUnmounted } from 'vue'
 import { updateMessageProperty } from '../stores/ai.js'
 
 export default {
@@ -104,12 +104,35 @@ export default {
   emits: ['height-changed'],
 
   setup(props, { emit }) {
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+    const sleep = (ms) => new Promise(resolve => {
+      const timeoutId = setTimeout(() => {
+        resolve()
+        // Remove from tracking array when executed
+        activeTimeouts.value = activeTimeouts.value.filter(id => id !== timeoutId)
+      }, ms)
+
+      activeTimeouts.value.push(timeoutId)
+    })
+
+    // Track active timeouts for cleanup
+    const activeTimeouts = ref([])
+
+    // Helper function to create tracked timeouts
+    const createTimeout = (callback, delay) => {
+      const timeoutId = setTimeout(() => {
+        callback()
+        // Remove from tracking array when executed
+        activeTimeouts.value = activeTimeouts.value.filter(id => id !== timeoutId)
+      }, delay)
+
+      activeTimeouts.value.push(timeoutId)
+      return timeoutId
+    }
 
     // === Centralized Animation Configuration ===
     const animationConfig = {
       typingSpeedMs: ref(150),
-      logoBounceBaseMs: ref(600),
+      logoBounceBaseMs: ref(300),
       logoBounceStaggerMs: ref(150),
       showButtonDelayMs: ref(300),
       buttonClickDurationMs: ref(300),
@@ -177,7 +200,7 @@ export default {
     const animateButtonClick = async () => {
       buttonClickAnimating.value = true
       // Reset the animation state after the duration to return to normal scale
-      setTimeout(() => {
+      createTimeout(() => {
         buttonClickAnimating.value = false
       }, animationConfig.buttonClickDurationMs.value)
     }
@@ -185,7 +208,7 @@ export default {
       const encodedQuery = encodeURIComponent(props.searchQuery)
       iframeUrl.value = `https://google.gprivate.com/search.php?search?q=${encodedQuery}`
       await nextTick()
-      setTimeout(() => {
+      createTimeout(() => {
         showIframe.value = true
         isIframeLoading.value = true
       }, animationConfig.buttonClickDurationMs.value + 300)
@@ -243,14 +266,14 @@ export default {
     const handleIframeLoad = () => {
       // Give extra time for stylesheets to load and render
       const checkStylesLoaded = () => {
-        setTimeout(() => {
+        createTimeout(() => {
           isIframeLoading.value = false
           nextTick(() => emit('height-changed'))
         }, animationConfig.iframeLoadDelayMs.value)
       }
 
       // Double-check after a longer delay to ensure styles are rendered
-      setTimeout(checkStylesLoaded, 100)
+      createTimeout(checkStylesLoaded, 100)
     }
 
     const handleIframeError = () => {
@@ -262,6 +285,12 @@ export default {
       displayText.value = ''
       const timeline = props.playAnimation ? createNormalTimeline() : createFastTimeline()
       runTimeline(timeline)
+    })
+
+    // Cleanup function
+    onUnmounted(() => {
+      activeTimeouts.value.forEach(timeoutId => clearTimeout(timeoutId))
+      activeTimeouts.value = []
     })
 
     return {
