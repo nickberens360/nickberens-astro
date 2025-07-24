@@ -115,7 +115,7 @@ def create_history_aware_prompt():
         ("human", "{input}"),
     ])
 
-def get_cache_key(user_input: str) -> str:
+def get_cache_key(user_input: str) -> Optional[str]:
     if not ENABLE_CACHING or not isinstance(user_input, str):
         return None
     # Normalize by lowercasing, removing punctuation, and stripping whitespace

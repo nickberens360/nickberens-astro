@@ -76,6 +76,7 @@ export default {
     const chatId = useStore(activeChatId);
     const pendingNewChat = useStore(isPendingNewChat);
     const lastStoppedPrompt = ref('');
+    const currentPrompt = ref(''); // Track the current prompt being processed
     const selectedModel = ref('claude');
     const backendStatusValue = useStore(backendStatus);
 
@@ -109,6 +110,7 @@ export default {
       if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, userInput.value);
 
       const question = userInput.value;
+      currentPrompt.value = question; // Store the current prompt
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';
 
@@ -141,6 +143,7 @@ export default {
         if (isFinal) {
           msg.isTyping = false;
           isChatProcessing.set(false);
+          currentPrompt.value = ''; // Clear tracked prompt on successful completion
         }
         updateMessageInActiveChat(botMessageIndex, msg);
       };
@@ -156,15 +159,38 @@ export default {
         }
         isLoading.value = false;
         isChatProcessing.set(false);
+        currentPrompt.value = ''; // Clear tracked prompt on error
       };
 
-      await sendChatMessage(question, chatHistoryForAPI, selectedModel.value, onChunk, onComplete, onError);
+      const onStop = (stopMessage) => {
+        const currentMessages = activeChatMessages.get();
+        const msg = currentMessages[botMessageIndex];
+        if (msg) {
+          msg.text = stopMessage;
+          msg.isTyping = false;
+          msg.wasStopped = true;
+          // Don't set model to 'error' for stopped messages
+          updateMessageInActiveChat(botMessageIndex, msg);
+        }
+        isLoading.value = false;
+        isChatProcessing.set(false);
+        currentPrompt.value = ''; // Clear tracked prompt on stop
+      };
+
+      await sendChatMessage(question, chatHistoryForAPI, selectedModel.value, onChunk, onComplete, onError, onStop);
     };
 
     const stopCurrentAction = () => {
       stopLoading(); // Aborts the fetch request
       isChatProcessing.set(false);
       isLoading.value = false;
+
+      // Save the current prompt and put it back in the input
+      if (currentPrompt.value) {
+        lastStoppedPrompt.value = currentPrompt.value;
+        userInput.value = currentPrompt.value;
+        currentPrompt.value = ''; // Clear the tracked prompt
+      }
 
       const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
       if (typingMessageIndex !== -1) {

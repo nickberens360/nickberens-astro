@@ -148,9 +148,12 @@ app.add_middleware(CORSMiddleware, allow_origins=AppConfig.get_cors_origins(), a
 async def root(): return {"status": "healthy" if app_initialized else "degraded"}
 
 @app.get("/status")
-async def status_check():
+async def status():
+    """Simple status check."""
     return {
-        "status": "online" if app_initialized else "offline",
+        "status": "online",
+        "timestamp": time.time(),
+        "primary_llm": AppConfig.PRIMARY_LLM,
         "app_initialized": app_initialized
     }
 

@@ -14,6 +14,7 @@ export function useChatAPI() {
   const MAX_TEXT_LENGTH = 1000;
   const TRUNCATION_SUFFIX = '...';
   const abortController = ref(null);
+  const isUserStopped = ref(false);
 
   const checkBackendStatus = async () => {
     // This function is correct and does not need changes
@@ -66,7 +67,10 @@ export function useChatAPI() {
     }
   };
 
-  const sendChatMessage = async (question, chatHistory, selectedModel, onChunk, onComplete, onError) => {
+  const sendChatMessage = async (question, chatHistory, selectedModel, onChunk, onComplete, onError, onStop) => {
+    // Reset the user stopped flag for new requests
+    isUserStopped.value = false;
+
     // Pre-flight checks and history processing are unchanged
     await checkBackendStatus();
     const currentStatus = backendStatus.get();
@@ -88,9 +92,10 @@ export function useChatAPI() {
 
     try {
       const processedHistory = chatHistory
+        .filter(msg => typeof msg.text === 'string' && msg.text.trim().length > 0) // Filter out invalid or empty text
         .map(msg => ({
           sender: msg.sender === 'bot' ? 'assistant' : msg.sender,
-          text: (msg.text || '').substring(0, MAX_TEXT_LENGTH)
+          text: msg.text.substring(0, MAX_TEXT_LENGTH)
         }));
 
       const response = await fetch(`${apiUrl}/query`, {
@@ -153,14 +158,23 @@ export function useChatAPI() {
 
     } catch (error) {
       clearTimeout(timeoutId);
-      let errorMessage = error.message;
-      if (error.name === 'AbortError') errorMessage = 'Request timed out or was stopped.';
-      onError(errorMessage);
+      if (error.name === 'AbortError' && isUserStopped.value) {
+        // User manually stopped the request
+        if (onStop) {
+          onStop('Message paused');
+        }
+      } else {
+        // Actual error or timeout
+        let errorMessage = error.message;
+        if (error.name === 'AbortError') errorMessage = 'Request timed out.';
+        onError(errorMessage);
+      }
     }
   };
 
   const stopLoading = () => {
     if (abortController.value) {
+      isUserStopped.value = true;
       abortController.value.abort();
       abortController.value = null;
     }
