@@ -119,7 +119,7 @@ export default {
       skeletonLoopMs: ref(1500),
       iframeFadeMs: ref(300),
       buttonScaleMs: ref(300),
-      iframeLoadDelayMs: ref(600) // Increased from 300ms to 600ms
+      iframeLoadDelayMs: ref(600)
     }
 
     // CSS bindings - computed properties for dynamic CSS
@@ -319,7 +319,7 @@ export default {
   position: relative;
   padding: 20px 10px;
   z-index: 20;
-  margin-bottom: -120px;
+  margin-bottom: -122px;
   background: #fff;
   width: 100%;
 }
