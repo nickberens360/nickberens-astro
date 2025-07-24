@@ -28,7 +28,7 @@ def build_unified_data():
             {"name": "Vue.js", "category": "Frontend Frameworks"},
             {"name": "Nuxt.js", "category": "Frontend Frameworks"},
             {"name": "Vuetify.js", "category": "UI Libraries"},
-            {"name": "Vuex/Pina", "category": "State Management"},
+            {"name": "Vuex/Pinia", "category": "State Management"},
             {"name": "Vue Router", "category": "Routing"},
             {"name": "JavaScript", "category": "Languages"},
             {"name": "CSS/Scss", "category": "Styling"},
