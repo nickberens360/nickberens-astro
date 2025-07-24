@@ -169,9 +169,13 @@ export default {
       const typingMessageIndex = messages.value.findIndex(msg => msg.isTyping);
       if (typingMessageIndex !== -1) {
         const msg = messages.value[typingMessageIndex];
-        msg.isTyping = false;
-        msg.wasStopped = true;
-        updateMessageInActiveChat(typingMessageIndex, msg);
+        // ✅ Create a new object instead of mutating the existing one
+        const updatedMsg = {
+          ...msg,
+          isTyping: false,
+          wasStopped: true
+        };
+        updateMessageInActiveChat(typingMessageIndex, updatedMsg);
       }
     };
 
