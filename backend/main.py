@@ -106,12 +106,13 @@ class SecurityValidator:
 # --- END OF RESTORED SECURITY LOGIC ---
 
 class Message(BaseModel):
-    sender: str
-    text: str
+    sender: str = Field(..., min_length=1, max_length=50, description="The sender of the message (user or assistant)")
+    text: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_MESSAGE_LENGTH, description="The message content")
+
 class Query(BaseModel):
-    question: str
-    chat_history: List[Message] = Field(default=[])
-    preferred_model: Optional[str] = None
+    question: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_QUERY_LENGTH, description="The user's question")
+    chat_history: List[Message] = Field(default=[], max_items=SecurityValidator.MAX_CHAT_HISTORY_LENGTH, description="Previous conversation history")
+    preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
 
 app = FastAPI(title=AppConfig.APP_TITLE, description=AppConfig.APP_DESCRIPTION, version=AppConfig.APP_VERSION)
 app.state.limiter = limiter
