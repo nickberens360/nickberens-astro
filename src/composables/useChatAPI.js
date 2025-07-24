@@ -2,6 +2,14 @@
 import { ref } from 'vue';
 import { isBackendOnline, isBackendInitialized, isBackendBuilding, lastStatusCheck, backendStatus, updateBackendStatus } from '../stores/backendStatus.js';
 
+// Helper function to get API URL consistently
+const getApiUrl = () => {
+  const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+  return isDev
+    ? 'http://localhost:8000'
+    : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-api.onrender.com';
+};
+
 export function useChatAPI() {
   const MAX_TEXT_LENGTH = 1000;
   const TRUNCATION_SUFFIX = '...';
@@ -18,8 +26,7 @@ export function useChatAPI() {
         building: isBackendBuilding.get()
       };
     }
-    const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
-    const apiUrl = isDev ? 'http://localhost:8000' : 'https://nickberens-astro-api.onrender.com';
+    const apiUrl = getApiUrl();
     if (isBackendOnline.get() === null && isBackendInitialized.get() === null && isBackendBuilding.get() === null) {
       updateBackendStatus({ online: null, initialized: null, building: null });
     }
@@ -77,8 +84,7 @@ export function useChatAPI() {
     const timeoutDuration = 60000;
     let timeoutId = setTimeout(() => abortController.value.abort(), timeoutDuration);
 
-    const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
-    const apiUrl = isDev ? 'http://localhost:8000' : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-api.onrender.com';
+    const apiUrl = getApiUrl();
 
     try {
       const processedHistory = chatHistory

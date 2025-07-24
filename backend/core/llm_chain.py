@@ -3,7 +3,8 @@ import time
 import hashlib
 import json
 import logging
-from typing import List, Optional, Dict, Any, Tuple, Iterator
+import asyncio
+from typing import List, Optional, Dict, Any, Tuple, AsyncIterator
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_anthropic import ChatAnthropic
@@ -18,7 +19,7 @@ import chromadb
 
 logger = logging.getLogger(__name__)
 
-# Configuration
+# Configuration and other functions remain the same
 PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20240620")
@@ -35,7 +36,6 @@ def create_multi_vector_retriever(docs, embeddings):
         "about": [doc for doc in docs if doc.metadata["source"] == "about"],
         "illustration": [doc for doc in docs if doc.metadata["source"] == "illustration"],
     }
-
     for source, source_docs in docs_by_source.items():
         if not source_docs: continue
         try:
@@ -48,9 +48,9 @@ def create_multi_vector_retriever(docs, embeddings):
             raise
 
     retriever_infos = [
-        {"name": "resume", "description": "Good for answering questions about Nick's professional work experience, job history, roles, responsibilities, and technical skills.", "retriever": vectorstores["resume"].as_retriever(search_kwargs={"k": 8})},
-        {"name": "about", "description": "Good for answering questions about Nick's background, personal story, design philosophy, and general professional approach.", "retriever": vectorstores["about"].as_retriever(search_kwargs={"k": 5})},
-        {"name": "illustration", "description": "Good for answering questions about Nick's art, illustrations, characters, and creative work.", "retriever": vectorstores["illustration"].as_retriever(search_kwargs={"k": 5})}
+        {"name": "resume", "description": "Good for answering questions about Nick's professional work experience...", "retriever": vectorstores["resume"].as_retriever(search_kwargs={"k": 8})},
+        {"name": "about", "description": "Good for answering questions about Nick's background...", "retriever": vectorstores["about"].as_retriever(search_kwargs={"k": 5})},
+        {"name": "illustration", "description": "Good for answering questions about Nick's art...", "retriever": vectorstores["illustration"].as_retriever(search_kwargs={"k": 5})}
     ]
     return {info["name"]: info["retriever"] for info in retriever_infos}
 
@@ -58,32 +58,35 @@ def get_llm_instances():
     llms = {}
     try:
         llms['claude'] = ChatAnthropic(model=CLAUDE_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-        logger.info(f"Claude model {CLAUDE_MODEL} initialized successfully (PRIMARY)")
-    except Exception as e:
-        logger.warning(f"Failed to initialize Claude (primary): {e}")
-        llms['claude'] = None
+    except Exception: llms['claude'] = None
     try:
         llms['gemini'] = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-        logger.info(f"Gemini model {GEMINI_MODEL} initialized successfully (FALLBACK)")
-    except Exception as e:
-        logger.warning(f"Failed to initialize Gemini (fallback): {e}")
-        llms['gemini'] = None
+    except Exception: llms['gemini'] = None
     if not any(llms.values()):
         raise RuntimeError("No LLM models could be initialized.")
     return llms
 
+# --- START OF FIX ---
+# Restoring the robust system prompt
 def create_qa_chain(llm):
     system_prompt = (
         "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
-        "\n\n**CRITICAL INSTRUCTIONS:**\n"
-        "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience is...').\n"
-        "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the provided resume context into a clear, professional summary. **NEVER** state that you are an AI or do not have a resume. The user is asking for Nick's resume, and the context provided is the source for it.\n"
-        "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers.\n"
+        "\n\n"
+        "**CRITICAL INSTRUCTIONS:**"
+        "\n"
+        "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience is...')."
+        "\n"
+        "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the provided resume context into a clear, professional summary. **NEVER** state that you are an AI or do not have a resume. The user is asking for Nick's resume, and the context provided is the source for it."
+        "\n"
+        "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers."
+        "\n"
         "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work experience or skills for readability."
-        "\n\n**Provided Context:**\n{context}"
+        "\n\n"
+        "**Provided Context:**\n{context}"
     )
     prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
     return create_stuff_documents_chain(llm, prompt)
+# --- END OF FIX ---
 
 def get_cache_key(user_input: str) -> str:
     if not ENABLE_CACHING or not isinstance(user_input, str): return None
@@ -95,7 +98,6 @@ def get_cached_response(cache_key: str) -> Optional[str]:
     if cache_key in _response_cache:
         cached_data = _response_cache[cache_key]
         if time.time() - cached_data['timestamp'] < CACHE_TTL:
-            logger.info("Returning valid cached response")
             return cached_data['response']
         else: del _response_cache[cache_key]
     return None
@@ -115,16 +117,10 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
     if any(keyword in query_lower for keyword in about_keywords): selected_names.add("about")
     if any(keyword in query_lower for keyword in illustration_keywords): selected_names.add("illustration")
     if not selected_names:
-        logger.info("No specific keywords found, routing to 'resume' and 'about' retrievers.")
         selected_names.update(["resume", "about"])
     return [retrievers[name] for name in selected_names if name in retrievers]
 
-def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_history: List[BaseMessage], user_input: str, preferred_model: Optional[str] = None) -> Iterator[str]:
-    if not retrievers:
-        logger.error("No retrievers provided.")
-        yield "I'm sorry, the AI service is temporarily unavailable."
-        return
-
+async def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_history: List[BaseMessage], user_input: str, preferred_model: Optional[str] = None) -> AsyncIterator[str]:
     cache_key = get_cache_key(user_input)
     cached_response = get_cached_response(cache_key)
     if cached_response:
@@ -138,16 +134,18 @@ def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_history: Lis
         yield "I'm sorry, the AI service is temporarily unavailable."
         return
 
+    selected_retrievers = route_query_to_retrievers(user_input, retrievers)
+    # New code
+    tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
+    logger.info(f"Running {len(tasks)} retrieval tasks concurrently...")
+    retrieval_results = await asyncio.gather(*tasks)
+    all_docs = [doc for sublist in retrieval_results for doc in sublist]
+    unique_docs = list({doc.page_content: doc for doc in all_docs}.values())
+
     if preferred_model == "gemini" and llms.get('gemini'):
         llm_order = [('gemini', llms['gemini']), ('claude', llms.get('claude'))]
     else:
         llm_order = [('claude', llms.get('claude')), ('gemini', llms.get('gemini'))]
-
-    selected_retrievers = route_query_to_retrievers(user_input, retrievers)
-    all_docs = []
-    for retriever in selected_retrievers:
-        all_docs.extend(retriever.get_relevant_documents(user_input))
-    unique_docs = list({doc.page_content: doc for doc in all_docs}.values())
 
     full_response_chunks = []
     stream_successful = False
@@ -156,12 +154,9 @@ def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_history: Lis
         try:
             logger.info(f"Attempting to stream using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
-            stream = qa_chain.stream({"input": user_input, "context": unique_docs})
-
-            for chunk in stream:
+            async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
                 yield chunk
                 full_response_chunks.append(chunk)
-
             stream_successful = True
             break
         except Exception as e:
@@ -171,4 +166,4 @@ def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_history: Lis
         cache_response(cache_key, full_response_chunks)
     else:
         logger.error("All LLM streaming attempts failed.")
-        yield "I'm sorry, I'm currently experiencing technical difficulties. Please try again in a few minutes."
+        yield "I'm sorry, I'm currently experiencing technical difficulties."
