@@ -5,19 +5,17 @@ import json
 import logging
 import asyncio
 import re
-from typing import List, Optional, Dict, Any, Tuple, AsyncIterator
+from typing import List, Optional, Dict, Any, AsyncIterator
 
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
 from langchain_community.vectorstores import Chroma
-from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 # New code
-from langchain_core.messages import HumanMessage, BaseMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from google.api_core import exceptions
 import chromadb
 
 logger = logging.getLogger(__name__)
