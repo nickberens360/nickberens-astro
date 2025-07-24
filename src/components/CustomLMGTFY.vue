@@ -14,10 +14,11 @@
     <div class="google-container">
       <div class="google-heading">
         <span
-          v-for="(letter, index) in letters"
-          :key="index"
+          v-for="letter in letters"
+          :key="letter.class"
           class="letter"
           :class="letter.class"
+          :style="{ animationDelay: letter.animationDelay }"
         >
           {{ letter.char }}
         </span>
@@ -98,7 +99,7 @@
           class="research-iframe"
           frameborder="0"
           allowfullscreen
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          sandbox="allow-scripts allow-forms allow-popups"
           title="Research Results"
           @load="handleIframeLoad"
           @error="handleIframeError"
@@ -179,7 +180,10 @@ export default {
       { char: 'g', class: 'g2' },
       { char: 'l', class: 'l' },
       { char: 'e', class: 'e' }
-    ]);
+    ].map((letter, index) => ({
+      ...letter,
+      animationDelay: `${index * animationConfig.logoBounceStaggerMs.value}ms`
+    })));
 
     const displayText = ref('');
     const typingComplete = ref(false);
@@ -641,34 +645,8 @@ export default {
   transform: translate(0, 0);
 }
 
-.lmgtfy-container.letters-bouncing .letter:nth-child(1) {
+.lmgtfy-container.letters-bouncing .letter {
   animation: bounce v-bind(bounceAnimationCss) ease-in-out;
-  animation-delay: 0ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(2) {
-  animation: bounce v-bind(bounceAnimationCss) ease-in-out;
-  animation-delay: 150ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(3) {
-  animation: bounce v-bind(bounceAnimationCss) ease-in-out;
-  animation-delay: 300ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(4) {
-  animation: bounce v-bind(bounceAnimationCss) ease-in-out;
-  animation-delay: 450ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(5) {
-  animation: bounce v-bind(bounceAnimationCss) ease-in-out;
-  animation-delay: 600ms;
-}
-
-.lmgtfy-container.letters-bouncing .letter:nth-child(6) {
-  animation: bounce v-bind(bounceAnimationCss) ease-in-out;
-  animation-delay: 750ms;
 }
 
 .lmgtfy-container.animate-button-click .button-container {
