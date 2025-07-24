@@ -1,22 +1,38 @@
 import json
+import logging
 from langchain.docstore.document import Document
 from typing import List, Tuple, Dict, Any
+
+# Get the logger instance
+logger = logging.getLogger(__name__)
 
 def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
     """
     Load structured JSON data and convert it into a list of LangChain Documents,
     chunked by logical units and enriched with metadata.
     """
-    print("Loading structured unified data...")
-    with open("public/unified_data.json", "r", encoding="utf-8") as f:
-        unified_data = json.load(f)
+    logger.info("Loading structured unified data from public/unified_data.json...")
+
+    # --- START OF UPDATE ---
+    # Wrap file loading in a try-except block for resilience
+    try:
+        with open("public/unified_data.json", "r", encoding="utf-8") as f:
+            unified_data = json.load(f)
+    except FileNotFoundError:
+        logger.critical("CRITICAL: The unified_data.json file was not found. The application cannot load its knowledge base. Please run the build script.")
+        # Return empty data to allow the app to start in a degraded state
+        return [], []
+    except json.JSONDecodeError:
+        logger.critical("CRITICAL: The unified_data.json file is corrupted or not valid JSON. The application cannot load its knowledge base.")
+        return [], []
+    # --- END OF UPDATE ---
 
     docs = []
     resume = unified_data.get("resume", {})
     about = unified_data.get("about", {})
     illustrations = unified_data.get("illustrations", [])
 
-    # --- Process Resume: Chunk by logical section ---
+    # Process Resume: Chunk by logical section
     if resume.get("summary"):
         docs.append(Document(
             page_content=f"Summary: {resume['summary']}",
@@ -62,7 +78,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
                 metadata={"source": "resume", "section": "accomplishments"}
             ))
 
-    # --- Process About: Chunk by section heading ---
+    # Process About: Chunk by section heading
     if about.get("introduction"):
         docs.append(Document(
             page_content=about["introduction"],
@@ -75,7 +91,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
                 metadata={"source": "about", "section": section['heading']}
             ))
 
-    # --- Process Illustrations: One document per illustration ---
+    # Process Illustrations: One document per illustration
     for img in illustrations:
         tags = ", ".join(img.get("tags", []))
         content = f"Title: {img.get('title', '')}\nTags: {tags}"
@@ -88,6 +104,5 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
             }
         ))
 
-    print(f"Loaded {len(docs)} logical documents from structured data.")
-    # The second return value (raw illustrations data) is kept for the IllustrationService
+    logger.info(f"Loaded {len(docs)} logical documents from structured data.")
     return docs, illustrations
