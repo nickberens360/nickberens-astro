@@ -11,8 +11,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
 from langchain_community.vectorstores import Chroma
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.history_aware_retriever import create_history_aware_retriever
 from langchain_core.prompts import ChatPromptTemplate
-# New code
 from langchain_core.messages import BaseMessage
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
@@ -102,7 +102,19 @@ def create_qa_chain(llm):
     prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
     return create_stuff_documents_chain(llm, prompt)
 
-# New code
+def create_history_aware_prompt():
+    """Create a prompt template for reformulating questions based on chat history."""
+    contextualize_q_system_prompt = (
+        "Given a chat history and the latest user question which might reference the chat history, "
+        "formulate a standalone question which can be understood without the chat history. "
+        "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
+    )
+    return ChatPromptTemplate.from_messages([
+        ("system", contextualize_q_system_prompt),
+        ("placeholder", "{chat_history}"),
+        ("human", "{input}"),
+    ])
+
 def get_cache_key(user_input: str) -> str:
     if not ENABLE_CACHING or not isinstance(user_input, str):
         return None
@@ -150,7 +162,7 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
         selected_names.update(["resume", "about"])
     return [retrievers[name] for name in selected_names if name in retrievers]
 
-# --- START OF NEW CACHING LOGIC ---
+# --- CACHING LOGIC ---
 def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
     """Checks the retrieval cache for a list of documents."""
     if not cache_key or not ENABLE_CACHING: return None
@@ -204,7 +216,35 @@ async def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_histor
     if unique_docs is None:
         logger.info("Retrieval cache miss. Performing vector search...")
         selected_retrievers = route_query_to_retrievers(user_input, retrievers)
-        tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
+
+        # If we have chat history, create history-aware retrievers
+        if chat_history:
+            try:
+                # Get the first available LLM for query reformulation
+                llms = get_llm_instances()
+                reformulation_llm = llms.get('claude') or llms.get('gemini')
+
+                if reformulation_llm:
+                    history_prompt = create_history_aware_prompt()
+                    history_aware_retrievers = [
+                        create_history_aware_retriever(reformulation_llm, retriever, history_prompt)
+                        for retriever in selected_retrievers
+                    ]
+
+                    # Use history-aware retrievers with both input and chat_history
+                    tasks = [
+                        retriever.ainvoke({"input": user_input, "chat_history": chat_history})
+                        for retriever in history_aware_retrievers
+                    ]
+                else:
+                    # Fallback to regular retrievers if no LLM available
+                    tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
+            except Exception as e:
+                logger.warning(f"Failed to create history-aware retrievers: {e}. Using regular retrievers.")
+                tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
+        else:
+            # No chat history, use regular retrievers
+            tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
 
         if tasks:
             retrieval_results = await asyncio.gather(*tasks)

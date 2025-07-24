@@ -13,7 +13,6 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
     """
     logger.info("Loading structured unified data from public/unified_data.json...")
 
-    # --- START OF UPDATE ---
     # Wrap file loading in a try-except block for resilience
     try:
         with open("public/unified_data.json", "r", encoding="utf-8") as f:

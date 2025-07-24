@@ -115,7 +115,6 @@ export function useChatAPI() {
         return;
       }
 
-      // --- START OF FIX ---
       // Check the content type to decide how to process the response
       const contentType = response.headers.get('content-type');
 
@@ -149,7 +148,6 @@ export function useChatAPI() {
         }
         onComplete({ isFinal: true });
       }
-      // --- END OF FIX ---
 
       updateBackendStatus({ online: true, initialized: true, building: false });
 

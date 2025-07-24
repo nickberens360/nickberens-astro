@@ -31,8 +31,6 @@ logging.basicConfig(level=getattr(logging, AppConfig.LOG_LEVEL), format="%(ascti
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
-# --- START OF RESTORED SECURITY LOGIC ---
-
 class SecurityValidator:
     MAX_QUERY_LENGTH = 1000
     MAX_CHAT_HISTORY_LENGTH = 10
