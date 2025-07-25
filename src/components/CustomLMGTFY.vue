@@ -63,29 +63,27 @@
           Google Search
         </button>
       </div>
-
-      <!-- Show link for history items -->
-      <div
-        v-else
-        class="result-container text-on-light"
-      >
-        <p class="font-bold">Super Deep Research Results: </p>
-        <div class="result">
-          <a
-            :href="googleSearchUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="result-link"
-          >
-            <div class="result-link-top">
-              <font-awesome-icon class="result-icon" icon="globe" />
-              <span class="result-preview-url">www.google.com > {{displayText}}</span>
-            </div>
-            <div class="result-text">
-              {{ displayText }}
-            </div>
-          </a>
-          <p class="mt-2 mb-0">This is just meant to be a joke but the link works if you really want to learn more about <span class="font-bold">{{displayText}}</span>.</p>
+      <div class="result-container text-on-light">
+        <SkeletonLoader v-if="showSkeletonLoader" />
+        <div v-if="!playAnimation">
+          <p class="font-bold">Super Deep Research Results: </p>
+          <div class="result">
+            <a
+              :href="googleSearchUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="result-link"
+            >
+              <div class="result-link-top">
+                <font-awesome-icon class="result-icon" icon="globe" />
+                <span class="result-preview-url">www.google.com > {{displayText}}</span>
+              </div>
+              <div class="result-text">
+                {{ displayText }}
+              </div>
+            </a>
+            <p class="mt-2 mb-0">This is just meant to be a joke but the link works if you really want to learn more about <span class="font-bold">{{displayText}}</span>.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -95,9 +93,11 @@
 <script>
 import { ref, reactive, onMounted, nextTick, computed, onUnmounted } from 'vue';
 import { updateMessageProperty } from '../stores/ai.js';
+import SkeletonLoader from './SkeletonLoader.vue';
 
 export default {
   name: 'CustomLMGTFY',
+  components: { SkeletonLoader },
   props: {
     searchQuery: { type: String, required: true },
     playAnimation: { type: Boolean, default: false },
@@ -143,6 +143,11 @@ export default {
       buttonFadeMs: ref(300),
       bounceAnimationMs: ref(600),
       buttonScaleMs: ref(300),
+      // Add skeleton loader timing
+      skeletonLoaderDurationMs: ref(2000),
+      // Add other timing constants
+      pointerInitialDelayMs: ref(500),
+      finalSearchDelayMs: ref(500),
     };
 
     // CSS bindings - computed properties for dynamic CSS
@@ -168,6 +173,7 @@ export default {
     const showButtonVisible = ref(!props.playAnimation);
     const pointerAnimating = ref(false);
     const buttonClickAnimating = ref(false);
+    const showSkeletonLoader = ref(false)
     const lettersBouncing = ref(false);
     const canSearch = ref(!props.playAnimation);
 
@@ -203,29 +209,36 @@ export default {
     const animateGoogleLogo = () => {
       lettersBouncing.value = true;
     };
+
     const showButton = () => {
       showButtonVisible.value = true;
     };
+
     const animatePointer = () => {
       pointerAnimating.value = true;
       canSearch.value = true;
     };
+
     const animateButtonClick = async () => {
       buttonClickAnimating.value = true;
+      showSkeletonLoader.value = true;
+
       // Reset the animation state after the duration to return to normal scale
       createTimeout(() => {
         buttonClickAnimating.value = false;
       }, animationConfig.buttonClickDurationMs.value);
     };
-    const performSearch = async () => {
-      await sleep(500);
-    };
 
+    const performSearch = async () => {
+      await sleep(animationConfig.skeletonLoaderDurationMs.value);
+      showSkeletonLoader.value = false;
+    };
 
     const showTextInstantly = () => {
       displayText.value = truncatedQuery.value;
       typingComplete.value = true;
     };
+
     const enableSearchInstantly = () => {
       showButtonVisible.value = true;
       canSearch.value = true;
@@ -236,12 +249,13 @@ export default {
       { step: () => typeQuery(animationConfig.typingSpeedMs.value), delay: 0 },
       { step: () => animateGoogleLogo(), delay: logoBounceTotalMs.value },
       { step: () => showButton(), delay: animationConfig.showButtonDelayMs.value },
-      { step: () => animatePointer(), delay: animationConfig.pointerSpeedMs.value + 500 },
+      { step: () => animatePointer(), delay: animationConfig.pointerSpeedMs.value + animationConfig.pointerInitialDelayMs.value },
       { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
-      { step: () => performSearch(), delay: animationConfig.buttonClickDurationMs.value + 500 }
+      { step: () => performSearch(), delay: animationConfig.finalSearchDelayMs.value }
     ];
 
     const createFastTimeline = () => [
+      { step: () => showTextInstantly(), delay: 0 },
       { step: () => enableSearchInstantly(), delay: 0 }
     ];
 
@@ -260,7 +274,7 @@ export default {
     const handleSearch = () => {
       if (!canSearch.value) return;
       runTimeline([
-        { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
+        { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value + animationConfig.finalSearchDelayMs.value },
         { step: () => performSearch(), delay: 0 }
       ]);
     };
@@ -292,7 +306,8 @@ export default {
       buttonFadeCss,
       bounceAnimationCss,
       buttonScaleCss,
-      handleSearch
+      handleSearch,
+      showSkeletonLoader
     };
   }
 };
