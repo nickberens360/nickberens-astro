@@ -7,7 +7,7 @@ import asyncio
 import re
 from typing import List, Optional, Dict, Any, AsyncIterator
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_anthropic import ChatAnthropic
 from langchain_community.vectorstores import Chroma
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -20,7 +20,7 @@ import chromadb
 
 logger = logging.getLogger(__name__)
 
-# Configuration
+# --- Configuration ---
 PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20240620")
@@ -31,59 +31,89 @@ CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
 MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
 
 # --- Caching Layers ---
-# Layer 1: Caches the final generated string response
 _response_cache: Dict[str, Dict[str, Any]] = {}
-# Layer 2: Caches the list of documents retrieved from the vector store
 _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 
-
-def create_multi_vector_retriever(docs, embeddings):
-    # This function is unchanged
+# ---
+# NOTE: The 'embeddings' object should be created outside this script and passed in.
+# Example:
+# embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
+# retrievers = create_multi_vector_retriever(docs, embeddings)
+# ---
+def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
+    """
+    Creates and returns a dictionary of Chroma vector store retrievers,
+    one for each document source.
+    """
     vectorstores = {}
     docs_by_source = {
-        "resume": [doc for doc in docs if doc.metadata["source"] == "resume"],
-        "about": [doc for doc in docs if doc.metadata["source"] == "about"],
-        "illustration": [doc for doc in docs if doc.metadata["source"] == "illustration"],
+        "resume": [doc for doc in docs if doc.metadata.get("source") == "resume"],
+        "about": [doc for doc in docs if doc.metadata.get("source") == "about"],
+        "illustration": [doc for doc in docs if doc.metadata.get("source") == "illustration"],
     }
+
     for source, source_docs in docs_by_source.items():
         if not source_docs:
+            logger.warning(f"No documents found for source '{source}'. Skipping vector store creation.")
             continue
         try:
+            # Using EphemeralClient for in-memory storage
             client = chromadb.EphemeralClient()
-            vectorstore = Chroma.from_documents(documents=source_docs, embedding=embeddings, client=client, collection_name=f"nickberens_{source}")
+            vectorstore = Chroma.from_documents(
+                documents=source_docs,
+                embedding=embeddings,
+                client=client,
+                collection_name=f"nickberens_{source}"
+            )
             vectorstores[source] = vectorstore
             logger.info(f"Created Chroma vector store for '{source}' with {len(source_docs)} documents.")
         except Exception as e:
             logger.error(f"Failed to create vector store for source '{source}': {e}")
             raise
 
-    retriever_infos = [
-        {"name": "resume", "description": "Good for answering questions about Nick's professional work experience...", "retriever": vectorstores["resume"].as_retriever(search_kwargs={"k": 8})},
-        {"name": "about", "description": "Good for answering questions about Nick's background...", "retriever": vectorstores["about"].as_retriever(search_kwargs={"k": 5})},
-        {"name": "illustration", "description": "Good for answering questions about Nick's art...", "retriever": vectorstores["illustration"].as_retriever(search_kwargs={"k": 5})}
-    ]
-    return {info["name"]: info["retriever"] for info in retriever_infos}
+    # **FIXED**: Safely create retrievers only for successfully created vector stores
+    retriever_definitions = {
+        "resume": {"description": "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills.", "search_kwargs": {"k": 8}},
+        "about": {"description": "Good for answering questions about Nick's background, personal interests, and general professional philosophy.", "search_kwargs": {"k": 5}},
+        "illustration": {"description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.", "search_kwargs": {"k": 5}},
+    }
 
-def get_llm_instances():
+    final_retrievers = {}
+    for name, store in vectorstores.items():
+        if name in retriever_definitions:
+            final_retrievers[name] = store.as_retriever(
+                search_kwargs=retriever_definitions[name]["search_kwargs"]
+            )
+
+    if not final_retrievers:
+        logger.warning("No retrievers were created. The application may not be able to answer questions.")
+
+    return final_retrievers
+
+
+def get_llm_instances() -> Dict[str, Optional[ChatGoogleGenerativeAI | ChatAnthropic]]:
+    """Initializes and returns a dictionary of available LLM instances."""
     llms = {}
     try:
         llms['claude'] = ChatAnthropic(model=CLAUDE_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-        logger.info(f"Claude model {CLAUDE_MODEL} initialized successfully (PRIMARY)")
+        logger.info(f"Claude model '{CLAUDE_MODEL}' initialized successfully (PRIMARY)")
     except Exception as e:
         logger.warning(f"Failed to initialize Claude (primary): {e}")
         llms['claude'] = None
     try:
         llms['gemini'] = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-        logger.info(f"Gemini model {GEMINI_MODEL} initialized successfully (FALLBACK)")
+        logger.info(f"Gemini model '{GEMINI_MODEL}' initialized successfully (FALLBACK)")
     except Exception as e:
         logger.warning(f"Failed to initialize Gemini (fallback): {e}")
         llms['gemini'] = None
+
     if not any(llms.values()):
-        raise RuntimeError("No LLM models could be initialized. Check your API keys and model names.")
+        raise RuntimeError("No LLM models could be initialized. Check API keys and model names.")
     return llms
 
+
 def create_qa_chain(llm):
-    # This function is unchanged
+    """Creates the main question-answering chain."""
     system_prompt = (
         "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
         "\n\n"
@@ -102,8 +132,9 @@ def create_qa_chain(llm):
     prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
     return create_stuff_documents_chain(llm, prompt)
 
-def create_history_aware_prompt():
-    """Create a prompt template for reformulating questions based on chat history."""
+
+def create_history_aware_prompt() -> ChatPromptTemplate:
+    """Creates a prompt template for reformulating questions based on chat history."""
     contextualize_q_system_prompt = (
         "Given a chat history and the latest user question which might reference the chat history, "
         "formulate a standalone question which can be understood without the chat history. "
@@ -115,171 +146,174 @@ def create_history_aware_prompt():
         ("human", "{input}"),
     ])
 
+
 def get_cache_key(user_input: str) -> Optional[str]:
+    """Generates a SHA256 hash for a given user input string to use as a cache key."""
     if not ENABLE_CACHING or not isinstance(user_input, str):
         return None
-    # Normalize by lowercasing, removing punctuation, and stripping whitespace
     normalized_input = re.sub(r'[^\w\s]', '', user_input.lower()).strip()
     return hashlib.sha256(normalized_input.encode('utf-8')).hexdigest()[:16]
 
+
 def get_cached_response(cache_key: str) -> Optional[str]:
-    # This function is unchanged
+    """Retrieves a final response from the cache if available and not expired."""
     if not cache_key or not ENABLE_CACHING: return None
     if cache_key in _response_cache:
         cached_data = _response_cache[cache_key]
         if time.time() - cached_data['timestamp'] < CACHE_TTL:
-            logger.info("Response cache hit.")
+            logger.info(f"Response cache hit for key: {cache_key}")
             return cached_data['response']
-        else: del _response_cache[cache_key]
+        else:
+            del _response_cache[cache_key]
+            logger.info(f"Stale response cache entry removed: {cache_key}")
     return None
 
-def cache_response(cache_key: str, response_chunks: List[str]):
-    if not cache_key or not ENABLE_CACHING:
-        return
 
-    # Check if cache exceeds size limit and evict oldest entry if needed
+def cache_response(cache_key: str, response_chunks: List[str]):
+    """Caches the final, full response string."""
+    if not cache_key or not ENABLE_CACHING: return
+
     if len(_response_cache) >= MAX_CACHE_SIZE:
-        # Find the oldest cache entry by timestamp
-        oldest_key = min(_response_cache.keys(),
-                        key=lambda k: _response_cache[k]['timestamp'])
+        oldest_key = min(_response_cache, key=lambda k: _response_cache[k]['timestamp'])
         del _response_cache[oldest_key]
         logger.info(f"Evicted oldest response cache entry: {oldest_key}")
 
     full_response = "".join(response_chunks)
     _response_cache[cache_key] = {'response': full_response, 'timestamp': time.time()}
+    logger.info(f"Cached full response for key: {cache_key}")
+
 
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
-    # This function is unchanged
+    """Routes a user query to the most relevant retriever(s) based on keywords."""
     query_lower = query.lower()
     selected_names = set()
+
+    # Keyword-based routing logic
     resume_keywords = ["experience", "job", "work", "skill", "resume", "cv", "company", "role", "hillman", "wisnet", "history"]
     about_keywords = ["about", "background", "who is", "philosophy", "approach"]
     illustration_keywords = ["art", "illustration", "drawing", "picture", "character", "design"]
+
     if any(keyword in query_lower for keyword in resume_keywords): selected_names.add("resume")
     if any(keyword in query_lower for keyword in about_keywords): selected_names.add("about")
     if any(keyword in query_lower for keyword in illustration_keywords): selected_names.add("illustration")
+
+    # Default to broad search if no specific keywords are matched
     if not selected_names:
         selected_names.update(["resume", "about"])
-    return [retrievers[name] for name in selected_names if name in retrievers]
 
-# --- CACHING LOGIC ---
+    selected_retrievers = [retrievers[name] for name in selected_names if name in retrievers]
+    logger.info(f"Query routed to retrievers: {[name for name in selected_names if name in retrievers]}")
+    return selected_retrievers
+
+
 def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
     """Checks the retrieval cache for a list of documents."""
     if not cache_key or not ENABLE_CACHING: return None
     if cache_key in _retrieval_cache:
         cached_data = _retrieval_cache[cache_key]
         if time.time() - cached_data['timestamp'] < CACHE_TTL:
-            logger.info("Retrieval cache hit.")
+            logger.info(f"Retrieval cache hit for key: {cache_key}")
             return cached_data['documents']
         else:
             del _retrieval_cache[cache_key]
-            logger.info("Stale retrieval cache entry removed.")
+            logger.info(f"Stale retrieval cache entry removed: {cache_key}")
     return None
+
 
 def cache_retrieval(cache_key: str, documents: List[Document]):
     """Stores a list of documents in the retrieval cache."""
-    if not cache_key or not ENABLE_CACHING:
-        return
+    if not cache_key or not ENABLE_CACHING: return
 
-    # Check if cache exceeds size limit and evict oldest entry if needed
     if len(_retrieval_cache) >= MAX_CACHE_SIZE:
-        # Find the oldest cache entry by timestamp
-        oldest_key = min(_retrieval_cache.keys(),
-                        key=lambda k: _retrieval_cache[k]['timestamp'])
+        oldest_key = min(_retrieval_cache, key=lambda k: _retrieval_cache[k]['timestamp'])
         del _retrieval_cache[oldest_key]
         logger.info(f"Evicted oldest retrieval cache entry: {oldest_key}")
 
     _retrieval_cache[cache_key] = {'documents': documents, 'timestamp': time.time()}
-    logger.info(f"Stored {len(documents)} documents in retrieval cache.")
-# --- END OF NEW CACHING LOGIC ---
+    logger.info(f"Stored {len(documents)} documents in retrieval cache for key: {cache_key}")
 
 
 async def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_history: List[BaseMessage], user_input: str, preferred_model: Optional[str] = None) -> AsyncIterator[str]:
+    """
+    Main async function to handle user input, perform retrieval (with caching),
+    and stream a response from an LLM with fallback capabilities.
+    """
     cache_key = get_cache_key(user_input)
 
-    # 1. Check for a cached FINAL response first
-    cached_response = get_cached_response(cache_key)
-    if cached_response:
+    # 1. Check for a cached FINAL response
+    if cached_response := get_cached_response(cache_key):
         yield cached_response
         return
 
     try:
         llms = get_llm_instances()
-    except Exception as e:
-        logger.error(f"Failed to initialize LLM instances: {e}")
-        yield "I'm sorry, the AI service is temporarily unavailable."
+    except RuntimeError as e:
+        logger.error(f"Fatal error initializing LLM instances: {e}")
+        yield "I'm sorry, the AI service is temporarily unavailable. Please contact support."
         return
 
     # 2. Check for cached RETRIEVAL results
     unique_docs = get_cached_retrieval(cache_key)
 
     if unique_docs is None:
-        logger.info("Retrieval cache miss. Performing vector search...")
+        logger.info(f"Retrieval cache miss for key: {cache_key}. Performing vector search...")
         selected_retrievers = route_query_to_retrievers(user_input, retrievers)
 
-        # If we have chat history, create history-aware retrievers
-        if chat_history:
+        # Determine if history-aware retrieval is needed
+        if chat_history and (reformulation_llm := llms.get('claude') or llms.get('gemini')):
             try:
-                # Get the first available LLM for query reformulation
-                llms = get_llm_instances()
-                reformulation_llm = llms.get('claude') or llms.get('gemini')
-
-                if reformulation_llm:
-                    history_prompt = create_history_aware_prompt()
-                    history_aware_retrievers = [
-                        create_history_aware_retriever(reformulation_llm, retriever, history_prompt)
-                        for retriever in selected_retrievers
-                    ]
-
-                    # Use history-aware retrievers with both input and chat_history
-                    tasks = [
-                        retriever.ainvoke({"input": user_input, "chat_history": chat_history})
-                        for retriever in history_aware_retrievers
-                    ]
-                else:
-                    # Fallback to regular retrievers if no LLM available
-                    tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
+                history_prompt = create_history_aware_prompt()
+                history_aware_retrievers = [
+                    create_history_aware_retriever(reformulation_llm, retriever, history_prompt)
+                    for retriever in selected_retrievers
+                ]
+                tasks = [r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers]
+                logger.info("Using history-aware retrievers.")
             except Exception as e:
-                logger.warning(f"Failed to create history-aware retrievers: {e}. Using regular retrievers.")
-                tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
+                logger.warning(f"Failed to create history-aware retrievers: {e}. Falling back to regular retrieval.")
+                tasks = [r.ainvoke(user_input) for r in selected_retrievers]
         else:
-            # No chat history, use regular retrievers
-            tasks = [retriever.ainvoke(user_input) for retriever in selected_retrievers]
+            tasks = [r.ainvoke(user_input) for r in selected_retrievers]
 
         if tasks:
-            retrieval_results = await asyncio.gather(*tasks)
-            all_docs = [doc for sublist in retrieval_results for doc in sublist]
+            retrieval_results = await asyncio.gather(*tasks, return_exceptions=True)
+            all_docs = []
+            for result in retrieval_results:
+                if isinstance(result, Exception):
+                    logger.error(f"Error during document retrieval: {result}")
+                elif result:
+                    all_docs.extend(result)
+            # Deduplicate documents based on page_content
             unique_docs = list({doc.page_content: doc for doc in all_docs}.values())
         else:
             unique_docs = []
+            logger.warning("No retrievers were selected for the query, context will be empty.")
 
-        # Store the newly retrieved documents in the cache
         cache_retrieval(cache_key, unique_docs)
 
-    # 3. Proceed to LLM generation with the documents (either from cache or new retrieval)
+    # 3. Proceed to LLM generation
+    llm_order = [('claude', llms.get('claude')), ('gemini', llms.get('gemini'))]
     if preferred_model == "gemini" and llms.get('gemini'):
-        llm_order = [('gemini', llms['gemini']), ('claude', llms.get('claude'))]
-    else:
-        llm_order = [('claude', llms.get('claude')), ('gemini', llms.get('gemini'))]
+        llm_order.reverse()
 
     full_response_chunks = []
     stream_successful = False
     for llm_name, llm_instance in llm_order:
         if not llm_instance: continue
         try:
-            logger.info(f"Attempting to stream using {llm_name.title()}...")
+            logger.info(f"Attempting to stream response using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
             async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
                 yield chunk
                 full_response_chunks.append(chunk)
             stream_successful = True
+            logger.info(f"Successfully streamed response with {llm_name.title()}.")
             break
         except Exception as e:
-            logger.error(f"{llm_name.title()} streaming error: {e}. Trying fallback.")
+            logger.error(f"{llm_name.title()} streaming failed: {e}. Trying next available model.")
 
     if stream_successful:
-        # Cache the FINAL response after successful streaming
         cache_response(cache_key, full_response_chunks)
     else:
         logger.error("All LLM streaming attempts failed.")
-        yield "I'm sorry, I'm currently experiencing technical difficulties."
+        yield "I'm sorry, but I'm currently experiencing technical difficulties and cannot provide a response."

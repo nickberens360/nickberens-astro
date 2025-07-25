@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from backend.core.data_loader import load_all_documents
-from backend.core.llm_chain import create_full_retrieval_chain
+from backend.core.llm_chain import create_multi_vector_retriever
 from langchain_core.messages import HumanMessage
 
 def test_vector_retrieval():
@@ -25,7 +25,7 @@ def test_vector_retrieval():
         # Load documents and create retriever
         print("📚 Loading documents...")
         docs, illustrations_data = load_all_documents()
-        retriever = create_full_retrieval_chain(docs)
+        retriever = create_multi_vector_retriever(docs)
         print(f"✅ Loaded {len(docs)} documents")
 
         # Test queries that previously returned wrong content
