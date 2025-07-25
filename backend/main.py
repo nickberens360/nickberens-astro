@@ -215,6 +215,8 @@ async def query_endpoint(request: Request, query: Query):
         "X-Model-Used": model_used,
         "X-Followup-Questions": json.dumps(followup_questions),
         "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
         "Cache-Control": "no-cache"
     }
 
