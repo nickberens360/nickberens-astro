@@ -313,7 +313,7 @@ async def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_histor
             logger.info(f"Successfully streamed response with {llm_name.title()}.")
             break
         except Exception as e:
-            logger.error(f"{llm_name.title()} streaming failed: {e}. Trying next available model.")
+            logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}. Trying next available model.")
 
     if stream_successful:
         cache_response(cache_key, full_response_chunks)
