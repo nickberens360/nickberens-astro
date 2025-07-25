@@ -74,24 +74,24 @@
       </div>
     </div>
     </div>
-    <!-- Add the clear localStorage button at the bottom -->
-    <button
-      @click="clearLocalStorage"
-      class="clear-storage-button"
-    >
-      <font-awesome-icon
-        icon="trash"
-        class="base-icon"
-      />
-      <span
-        v-if="isVisible"
-        class="ml-2"
-      >Clear localStorage</span>
-    </button>
-    <p
-      v-if="isVisible"
-      class="text-center text-italic text-sm text-hint"
-    >Having issues? Try clearing localStorage.</p>
+    <div class="mt-auto">
+      <p
+        class="text-center text-italic text-hint"
+      >Having issues? Try clearing localStorage.</p>
+      <button
+        @click="clearLocalStorage"
+        class="clear-storage-button"
+      >
+        <font-awesome-icon
+          icon="trash"
+          class="base-icon"
+        />
+        <span
+          v-if="isVisible"
+          class="ml-2"
+        >Clear localStorage</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -444,5 +444,6 @@ export default {
 .text-hint {
   color: #9ca3af;
   margin-top: 0.5rem;
+  font-size: 12px;
 }
 </style>
