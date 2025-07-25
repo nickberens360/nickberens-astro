@@ -62,7 +62,6 @@
                   :play-animation="message.isNewResearch === true"
                   :chat-id="chatId"
                   :message-index="index"
-                  @height-changed="handleHeightChanged"
                 />
               </div>
             </div>
@@ -184,16 +183,11 @@ export default {
         !message.isTyping;
     };
 
-    // Handle height changes from dynamic content
-    const handleHeightChanged = () => {
-      debouncedScrollToBottom();
-    };
 
     return {
       messagesWindow,
       renderMarkdown,
       shouldShowFollowups,
-      handleHeightChanged
     };
   }
 };
@@ -385,4 +379,11 @@ export default {
 .followup-button:hover {
   background-color: #404040
 }
+
+@media (max-width: 640px) {
+  .message-bubble {
+    padding: 0.5rem 0;
+  }
+}
+
 </style>
