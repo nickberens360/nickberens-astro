@@ -97,7 +97,8 @@ class SecurityValidator:
 
     @classmethod
     def sanitize_input(cls, text: str) -> str:
-        if not isinstance(text, str): return ""
+        if not isinstance(text, str):
+            return ""
         # Remove control characters except for common whitespace
         sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
         # Normalize whitespace and limit length
