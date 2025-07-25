@@ -92,10 +92,14 @@ export function useChatAPI() {
 
     try {
       const processedHistory = chatHistory
-        .filter(msg => typeof msg.text === 'string' && msg.text.trim().length > 0) // Filter out invalid or empty text
+        .filter(msg =>
+          (typeof msg.text === 'string' && msg.text.trim().length > 0) || // Include messages with valid text
+          (msg.images && msg.images.length > 0) || // Include messages with images
+          (msg.followups && msg.followups.length > 0) // Include messages with follow-up questions
+        )
         .map(msg => ({
           sender: msg.sender === 'bot' ? 'assistant' : msg.sender,
-          text: msg.text.substring(0, MAX_TEXT_LENGTH)
+          text: msg.text ? msg.text.substring(0, MAX_TEXT_LENGTH) : '' // Ensure text is handled safely
         }));
 
       const response = await fetch(`${apiUrl}/query`, {
