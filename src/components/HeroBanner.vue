@@ -48,12 +48,17 @@ export default {
 
 <style>
 .hero-banner {
-  min-height: 100vh;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: v-bind(backgroundColor);
+}
+
+@supports not (height: 100dvh) {
+  .hero-banner {
+    min-height: 100vh;
+  }
 }
 
 @supports (height: 100dvh) {

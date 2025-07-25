@@ -65,11 +65,13 @@ export default {
   margin: 0 auto;
 }
 
-
-.page-section--full-height {
-  min-height: calc(100vh - var(--site-header-height) + var(--space-5));
-
+@supports not (height: 100dvh) {
+  .page-section--full-height {
+    min-height: calc(100vh - var(--site-header-height) + var(--space-5));
+  }
 }
+
+
 @supports (height: 100dvh) {
   .page-section--full-height {
     min-height: calc(100dvh - var(--site-header-height) + var(--space-5));
