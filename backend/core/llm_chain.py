@@ -287,7 +287,10 @@ async def stream_with_fallback(retrievers: Dict[str, BaseRetriever], chat_histor
                 elif result:
                     all_docs.extend(result)
             # Deduplicate documents based on page_content
-            unique_docs = list({doc.page_content: doc for doc in all_docs}.values())
+            unique_docs = list({
+                                   hashlib.sha256(f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode('utf-8')).hexdigest(): doc
+                                   for doc in all_docs
+                               }.values())
         else:
             unique_docs = []
             logger.warning("No retrievers were selected for the query, context will be empty.")
