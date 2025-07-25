@@ -96,7 +96,7 @@
               </div>
 
               <div
-                v-if="shouldShowFollowups(message)"
+                v-if="shouldShowFollowups(message) && false"
                 class="followup-container fade-in"
               >
                 <p class="followup-label">💡 You might also want to ask:</p>
