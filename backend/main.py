@@ -119,6 +119,20 @@ app = FastAPI(title=AppConfig.APP_TITLE, description=AppConfig.APP_DESCRIPTION, 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """
+    This middleware re-introduces security headers to all outgoing responses,
+    ensuring consistent security across the entire API.
+    """
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 query_router = QueryRouter()
 response_service = ResponseService()
 followup_service = FollowUpService()
@@ -215,10 +229,7 @@ async def query_endpoint(request: Request, query: Query):
     headers = {
         "X-Model-Used": model_used,
         "X-Followup-Questions": json.dumps(followup_questions),
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block",
-        "Cache-Control": "no-cache"
     }
+
 
     return StreamingResponse(text_stream, media_type="text/plain", headers=headers)
