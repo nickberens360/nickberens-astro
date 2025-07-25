@@ -79,7 +79,7 @@
           >
             <div class="result-link-top">
               <font-awesome-icon class="result-icon" icon="globe" />
-              <span class="result-preview-url">www.google.com/search?q={{displayText}}</span>
+              <span class="result-preview-url">www.google.com > {{displayText}}</span>
             </div>
             <div class="result-text">
               {{ displayText }}
