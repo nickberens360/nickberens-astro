@@ -41,7 +41,8 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
         ))
     if resume.get("experience"):
         for job in resume["experience"]:
-            points_str = "\n".join([f"- {p}" for p in job['points']])
+            points = job.get('points', [])
+            points_str = "\n".join([f"- {p}" for p in points]) if points else "No points listed"
             content = (
                 f"Company: {job['company']}\n"
                 f"Role: {job['role']}\n"
