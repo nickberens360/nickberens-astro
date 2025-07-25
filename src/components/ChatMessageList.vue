@@ -120,12 +120,26 @@
   </div>
 </template>
 
+
 <script>
 import { ref, nextTick, watch, onMounted } from 'vue';
 import { useScrollToBottom } from '../composables/useScrollToBottom.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
 import CustomLMGTFY from './CustomLMGTFY.vue';
 import { marked } from 'marked';
+
+// Debounce utility function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 export default {
   components: { ChatBotWelcome, CustomLMGTFY },
@@ -142,15 +156,20 @@ export default {
     const messagesWindow = ref(null);
     const { scrollToBottom } = useScrollToBottom(messagesWindow);
 
+    // Create debounced scroll function with 100ms delay
+    const debouncedScrollToBottom = debounce(() => {
+      nextTick(() => scrollToBottom());
+    }, 100);
+
+    // Watch for message changes
     watch(() => props.messages, () => {
-      nextTick(() => {
-        setTimeout(() => scrollToBottom(), 50);
-      });
+      debouncedScrollToBottom();
     }, { deep: true });
 
+    // Handle initial mount
     onMounted(() => {
       if (props.messages.length > 0) {
-        nextTick(() => setTimeout(() => scrollToBottom(), 100));
+        debouncedScrollToBottom();
       }
     });
 
@@ -165,8 +184,9 @@ export default {
         !message.isTyping;
     };
 
+    // Handle height changes from dynamic content
     const handleHeightChanged = () => {
-      nextTick(() => setTimeout(() => scrollToBottom(), 100));
+      debouncedScrollToBottom();
     };
 
     return {
@@ -180,7 +200,6 @@ export default {
 </script>
 
 <style scoped>
-/* All previous styles are unchanged */
 .messages-window {
   padding: 1rem;
   overflow-y: auto;
