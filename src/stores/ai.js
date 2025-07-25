@@ -172,3 +172,29 @@ export function updateMessageProperty(chatId, messageIndex, property, value) {
     console.warn(`Could not update message property. Chat or message not found. ChatID: ${chatId}, Index: ${messageIndex}`);
   }
 }
+
+/**
+ * Updates a message in the currently active chat.
+ * @param {number} messageIndex - The index of the message to update.
+ * @param {Object} updatedMessage - The updated message object.
+ */
+export function updateMessageInActiveChat(messageIndex, updatedMessage) {
+  const currentChatId = activeChatId.get();
+  if (!currentChatId) {
+    console.warn("Could not update message, no active chat ID.");
+    return;
+  }
+
+  const currentChat = allChats.get()[currentChatId];
+
+  if (currentChat && currentChat.messages && currentChat.messages[messageIndex]) {
+    // Create a new array for messages to ensure reactivity
+    const updatedMessages = [...currentChat.messages];
+    updatedMessages[messageIndex] = updatedMessage;
+
+    // Update the entire chat object in the map
+    allChats.setKey(currentChat.id, { ...currentChat, messages: updatedMessages });
+  } else {
+    console.warn(`Could not update message in active chat. Chat or message not found. Index: ${messageIndex}`);
+  }
+}
