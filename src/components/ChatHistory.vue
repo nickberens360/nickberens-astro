@@ -76,6 +76,7 @@
     </div>
     <div class="mt-auto">
       <p
+        v-if="isVisible"
         class="text-center text-italic text-hint"
       >Having issues? Try clearing localStorage.</p>
       <button
