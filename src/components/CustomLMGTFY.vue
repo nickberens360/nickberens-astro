@@ -45,7 +45,7 @@
         <button
           @click="handleSearch"
           class="search-button"
-          :disabled="!playAnimation"
+          :disabled="!playAnimation || !canSearch"
         >
           <span class="pointer-icon-container">
             <font-awesome-icon
