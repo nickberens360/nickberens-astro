@@ -3,11 +3,9 @@
     class="lmgtfy-container"
     :class="{
       'typing-complete': typingComplete,
-      'results-displayed': showIframe,
       'button-visible': showButtonVisible,
       'pointer-animating': pointerAnimating,
       'letters-bouncing': lettersBouncing,
-      'search-loading': isIframeLoading,
       'animate-button-click': buttonClickAnimating,
     }"
   >
@@ -42,7 +40,11 @@
         Let me Google that for you.
       </p>
 
-      <div class="button-container">
+      <!-- Show button for new animations -->
+      <div
+        v-if="playAnimation"
+        class="button-container"
+      >
         <button
           @click="handleSearch"
           class="search-button"
@@ -55,57 +57,38 @@
             />
             <font-awesome-icon
               icon="arrow-pointer"
-              class="pointer-icon pointer-icon-shadow"
+              class="pointer-icon-shadow"
             />
           </span>
           Google Search
         </button>
       </div>
-    </div>
 
-    <transition name="fade-in-iframe">
+      <!-- Show link for history items -->
       <div
-        v-if="showIframe"
-        class="iframe-container"
+        v-else
+        class="result-container text-on-light"
       >
-        <!-- Skeleton loader -->
-        <div
-          v-if="isIframeLoading"
-          class="skeleton-loader"
-        >
-          <div class="skeleton-header">
-            <div class="skeleton-logo"></div>
-            <div class="skeleton-search-bar"></div>
-          </div>
-          <div class="skeleton-content">
-            <div
-              v-for="i in 3"
-              :key="i"
-              class="skeleton-result"
-            >
-              <div class="skeleton-result-title"></div>
-              <div class="skeleton-result-url"></div>
-              <div class="skeleton-result-desc">
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line"></div>
-              </div>
+        <p class="font-bold">Super Deep Research Results: </p>
+        <div class="result">
+          <a
+            :href="googleSearchUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="result-link"
+          >
+            <div class="result-link-top">
+              <font-awesome-icon class="result-icon" icon="globe" />
+              <span class="result-preview-url">www.google.com/search?q={{displayText}}</span>
             </div>
-          </div>
+            <div class="result-text">
+              {{ displayText }}
+            </div>
+          </a>
+          <p class="mt-2 mb-0">This is just meant to be a joke but the link works if you really want to learn more about <span class="font-bold">{{displayText}}</span>.</p>
         </div>
-
-        <iframe
-          v-if="showIframe"
-          :src="iframeUrl"
-          class="research-iframe"
-          frameborder="0"
-          allowfullscreen
-          sandbox="allow-scripts allow-forms allow-popups"
-          title="Research Results"
-          @load="handleIframeLoad"
-          @error="handleIframeError"
-        />
       </div>
-    </transition>
+    </div>
   </div>
 </template>
 
@@ -159,18 +142,13 @@ export default {
       pointerSpeedMs: ref(1000),
       buttonFadeMs: ref(300),
       bounceAnimationMs: ref(600),
-      skeletonLoopMs: ref(1500),
-      iframeFadeMs: ref(300),
       buttonScaleMs: ref(300),
-      iframeLoadDelayMs: ref(600)
     };
 
     // CSS bindings - computed properties for dynamic CSS
     const pointerSpeedCss = computed(() => `${animationConfig.pointerSpeedMs.value}ms`);
     const buttonFadeCss = computed(() => `${animationConfig.buttonFadeMs.value}ms`);
     const bounceAnimationCss = computed(() => `${animationConfig.bounceAnimationMs.value}ms`);
-    const skeletonLoopCss = computed(() => `${animationConfig.skeletonLoopMs.value}ms`);
-    const iframeFadeCss = computed(() => `${animationConfig.iframeFadeMs.value}ms`);
     const buttonScaleCss = computed(() => `${animationConfig.buttonScaleMs.value}ms`);
 
     const letters = reactive([
@@ -187,24 +165,27 @@ export default {
 
     const displayText = ref('');
     const typingComplete = ref(false);
-    const showIframe = ref(false);
-    const iframeUrl = ref('');
     const showButtonVisible = ref(!props.playAnimation);
     const pointerAnimating = ref(false);
     const buttonClickAnimating = ref(false);
     const lettersBouncing = ref(false);
     const canSearch = ref(!props.playAnimation);
-    const isIframeLoading = ref(false);
 
     const logoBounceTotalMs = computed(() =>
       animationConfig.logoBounceBaseMs.value + animationConfig.logoBounceStaggerMs.value * letters.length
     );
 
     const truncatedQuery = computed(() => {
-      const maxLength = 30;
+      const maxLength = 20;
       return props.searchQuery.length > maxLength
         ? props.searchQuery.substring(0, maxLength) + '...'
         : props.searchQuery;
+    });
+
+    // Computed property for Google search URL
+    const googleSearchUrl = computed(() => {
+      const encodedQuery = encodeURIComponent(props.searchQuery);
+      return `https://google.com/search?q=${encodedQuery}`;
     });
 
     // === Animation functions ===
@@ -237,15 +218,8 @@ export default {
       }, animationConfig.buttonClickDurationMs.value);
     };
     const performSearch = async () => {
-      const encodedQuery = encodeURIComponent(props.searchQuery);
-      iframeUrl.value = `https://google.gprivate.com/search.php?search?q=${encodedQuery}`;
-      await nextTick();
-      createTimeout(() => {
-        showIframe.value = true;
-        isIframeLoading.value = true;
-      }, animationConfig.buttonClickDurationMs.value + 300);
-      await nextTick();
-      emit('height-changed');
+      // Redirect to Google search in new tab
+      window.open(googleSearchUrl.value, '_blank', 'noopener,noreferrer');
     };
 
     const showTextInstantly = () => {
@@ -264,14 +238,12 @@ export default {
       { step: () => showButton(), delay: animationConfig.showButtonDelayMs.value },
       { step: () => animatePointer(), delay: animationConfig.pointerSpeedMs.value + 500 },
       { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
-      { step: () => performSearch(), delay: 0 }
+      { step: () => performSearch(), delay: animationConfig.buttonClickDurationMs.value + 500 }
     ];
 
     const createFastTimeline = () => [
       { step: () => showTextInstantly(), delay: 0 },
-      { step: () => enableSearchInstantly(), delay: 0 },
-      { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
-      { step: () => performSearch(), delay: 0 }
+      { step: () => enableSearchInstantly(), delay: 0 }
     ];
 
     const runTimeline = async (timeline) => {
@@ -287,26 +259,11 @@ export default {
     };
 
     const handleSearch = () => {
-      if (!canSearch.value || showIframe.value) return;
-      runTimeline([{ step: () => performSearch(), delay: 0 }]);
-    };
-
-    const handleIframeLoad = () => {
-      // Give extra time for stylesheets to load and render
-      const checkStylesLoaded = () => {
-        createTimeout(() => {
-          isIframeLoading.value = false;
-          nextTick(() => emit('height-changed'));
-        }, animationConfig.iframeLoadDelayMs.value);
-      };
-
-      // Double-check after a longer delay to ensure styles are rendered
-      createTimeout(checkStylesLoaded, 100);
-    };
-
-    const handleIframeError = () => {
-      isIframeLoading.value = false;
-      console.error('Failed to load search results');
+      if (!canSearch.value) return;
+      runTimeline([
+        { step: () => animateButtonClick(), delay: animationConfig.buttonClickDurationMs.value },
+        { step: () => performSearch(), delay: 0 }
+      ]);
     };
 
     onMounted(() => {
@@ -325,24 +282,18 @@ export default {
       letters,
       displayText,
       typingComplete,
-      showIframe,
-      iframeUrl,
       showButtonVisible,
       pointerAnimating,
       buttonClickAnimating,
       lettersBouncing,
       canSearch,
-      isIframeLoading,
+      googleSearchUrl,
       // CSS binding computed properties
       pointerSpeedCss,
       buttonFadeCss,
       bounceAnimationCss,
-      skeletonLoopCss,
-      iframeFadeCss,
       buttonScaleCss,
-      handleSearch,
-      handleIframeLoad,
-      handleIframeError
+      handleSearch
     };
   }
 };
@@ -361,15 +312,6 @@ export default {
   }
 }
 
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
 .lmgtfy-container {
   display: flex;
   flex-direction: column;
@@ -381,14 +323,13 @@ export default {
   margin: 20px 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: relative;
-  min-height: 400px;
+  min-height: 300px;
 }
 
 .google-container {
   position: relative;
   padding: 20px 10px;
   z-index: 20;
-  margin-bottom: -122px;
   background: #fff;
   width: 100%;
 }
@@ -490,6 +431,50 @@ export default {
   opacity: 0.6;
 }
 
+.result-container {
+  position: relative;
+  min-height: 54px;
+  max-width: 584px;
+  margin: 40px auto;
+}
+
+.result {
+  border-left: 4px solid #4285f4;
+  padding: 0 16px;
+}
+
+.result-link {
+  color: black;
+  text-decoration: none;
+  font-size: 16px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.result-link:hover {
+  background-color: rgba(66, 133, 244, 0.1);
+  text-decoration: none;
+}
+
+.result-link-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #5f6368;
+  margin-bottom: 8px;
+}
+
+.result-text {
+  color: #4285f4;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.result-link:hover .result-text {
+  text-decoration: underline;
+}
+
 .pointer-icon-container {
   position: absolute;
   display: inline-flex;
@@ -518,116 +503,14 @@ export default {
   color: white;
 }
 
-.iframe-container {
-  position: relative;
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.research-iframe {
-  width: 100%;
-  height: 100%;
-  min-height: 500px;
-  border: none;
-}
-
-.iframe-container::before {
-  content: '';
-  position: absolute;
-  z-index: 10;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 82px;
-  background: white;
-  margin-bottom: -100px;
-}
-
-.skeleton-loader {
-  position: absolute;
-  width: 100%;
-  padding: 20px;
-  background: #fff;
-  overflow: hidden;
-}
-
-.skeleton-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 20px;
-  width: 100%;
-}
-
-.skeleton-logo {
-  width: 120px;
-  height: 40px;
-  border-radius: 4px;
-}
-
-.skeleton-search-bar {
-  flex: 1;
-  max-width: 600px;
-  height: 44px;
-  border-radius: 22px;
-}
-
-.skeleton-content {
-  padding: 0 20px;
-}
-
-.skeleton-result {
-  margin-bottom: 30px;
-}
-
-.skeleton-result-title {
-  width: 60%;
-  height: 20px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-}
-
-.skeleton-result-url {
-  width: 40%;
-  height: 14px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-}
-
-.skeleton-result-desc {
-  margin-bottom: 20px;
-}
-
-.skeleton-line {
-  height: 14px;
-  border-radius: 4px;
-  margin-bottom: 6px;
-}
-
-.skeleton-line:first-child {
-  width: 100%;
-}
-
-.skeleton-line:last-child {
-  width: 80%;
-}
-
 @media (max-width: 768px) {
   .lmgtfy-container {
-    min-height: 400px;
+    min-height: 250px;
     padding: 20px 10px;
   }
 
   .google-heading {
     font-size: 60px;
-  }
-
-  .research-iframe {
-    min-height: 400px;
   }
 }
 
@@ -651,23 +534,5 @@ export default {
 
 .lmgtfy-container.animate-button-click .button-container {
   transform: scale(0.95);
-}
-
-.lmgtfy-container.search-loading .skeleton-logo,
-.lmgtfy-container.search-loading .skeleton-search-bar,
-.lmgtfy-container.search-loading .skeleton-result-title,
-.lmgtfy-container.search-loading .skeleton-result-url,
-.lmgtfy-container.search-loading .skeleton-line {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0f0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading v-bind(skeletonLoopCss) infinite;
-}
-
-.fade-in-iframe-enter-active, .fade-in-iframe-leave-active {
-  transition: opacity v-bind(iframeFadeCss) ease;
-}
-
-.fade-in-iframe-enter-from, .fade-in-iframe-leave-to {
-  opacity: 0;
 }
 </style>
