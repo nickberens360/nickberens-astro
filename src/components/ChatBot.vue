@@ -88,7 +88,17 @@ export default {
     onMounted(async () => {
       if (!activeChatId.get() && !isPendingNewChat.get()) createNewChat();
       await checkBackendStatus();
-      statusInterval = setInterval(checkBackendStatus, 15000);
+      onMounted(async () => {
+        if (!activeChatId.get() && !isPendingNewChat.get()) createNewChat();
+        await checkBackendStatus();
+        statusInterval = setInterval(async () => {
+          try {
+            await checkBackendStatus();
+          } catch (error) {
+            console.error('Status check failed:', error);
+          }
+        }, 15000);
+      });
     });
     onUnmounted(() => {
       if (statusInterval) clearInterval(statusInterval);
@@ -123,8 +133,17 @@ export default {
       const onChunk = (chunk) => {
         isLoading.value = false; // Stop loading indicator once first chunk arrives
         const currentMessages = activeChatMessages.get();
+
+        // Defensive check: Ensure the index is within bounds
+        if (botMessageIndex >= currentMessages.length) {
+          console.error('Bot message index out of bounds during chunk update');
+          return;
+        }
+
         const msg = currentMessages[botMessageIndex];
-        if (msg) {
+
+        // Defensive check: Ensure we are updating the correct message
+        if (msg && msg.sender === 'bot') {
           msg.text += chunk;
           updateMessageInActiveChat(botMessageIndex, msg);
         }
