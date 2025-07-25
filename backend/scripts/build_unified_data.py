@@ -144,8 +144,13 @@ def build_unified_data():
     }
 
     # --- Write output ---
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(unified_data, f, indent=2)
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(unified_data, f, indent=2)
+        print(f"✅ Structured unified data file created at {output_path}")
+    except (IOError, OSError) as e:
+        print(f"❌ Failed to write unified data file: {e}")
+        raise
 
     print(f"✅ Structured unified data file created at {output_path}")
 
