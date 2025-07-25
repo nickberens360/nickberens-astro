@@ -142,7 +142,12 @@ except Exception as e:
     retrievers, illustration_service = None, None
     app_initialized = False
 
-app.add_middleware(CORSMiddleware, allow_origins=AppConfig.get_cors_origins(), allow_credentials=True, allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Model-Used", "X-Followup-Questions"])
+app.add_middleware(CORSMiddleware,
+                   allow_origins=AppConfig.get_cors_origins(),
+                   allow_credentials=True,
+                   allow_methods=["GET", "POST"],
+                   allow_headers=["Content-Type", "Authorization"],
+                   expose_headers=["X-Model-Used", "X-Followup-Questions"])
 
 @app.get("/")
 async def root(): return {"status": "healthy" if app_initialized else "degraded"}
