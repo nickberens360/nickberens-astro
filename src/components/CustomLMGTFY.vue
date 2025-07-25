@@ -41,14 +41,11 @@
       </p>
 
       <!-- Show button for new animations -->
-      <div
-        v-if="playAnimation"
-        class="button-container"
-      >
+      <div class="button-container">
         <button
           @click="handleSearch"
           class="search-button"
-          :disabled="!canSearch"
+          :disabled="!playAnimation"
         >
           <span class="pointer-icon-container">
             <font-awesome-icon
@@ -64,8 +61,16 @@
         </button>
       </div>
       <div class="result-container text-on-light">
-        <SkeletonLoader v-if="showSkeletonLoader" />
-        <div v-if="!playAnimation">
+        <SkeletonLoader
+          class="skeleton-loader"
+          :class="{ 'skeleton-fade-out': !showSkeletonLoader }"
+          v-show="showSkeletonLoader"
+        />
+        <div
+          class="result-content"
+          :class="{ 'result-fade-in': !showSkeletonLoader }"
+          v-if="!playAnimation"
+        >
           <p class="font-bold">Super Deep Research Results: </p>
           <div class="result">
             <a
@@ -221,11 +226,9 @@ export default {
 
     const animateButtonClick = async () => {
       buttonClickAnimating.value = true;
-      showSkeletonLoader.value = true;
-
-      // Reset the animation state after the duration to return to normal scale
       createTimeout(() => {
         buttonClickAnimating.value = false;
+      showSkeletonLoader.value = true;
       }, animationConfig.buttonClickDurationMs.value);
     };
 
@@ -268,7 +271,6 @@ export default {
         updateMessageProperty(props.chatId, props.messageIndex, 'isNewResearch', false);
       }
       await nextTick();
-      emit('height-changed');
     };
 
     const handleSearch = () => {
@@ -337,7 +339,7 @@ export default {
   margin: 20px 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: relative;
-  min-height: 300px;
+  min-height: 600px;
 }
 
 .google-container {
@@ -442,14 +444,39 @@ export default {
 
 .search-button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.6 !important;
 }
 
 .result-container {
   position: relative;
-  min-height: 54px;
+  min-height: 120px;
   max-width: 584px;
   margin: 40px auto;
+  transition: min-height 300ms ease;
+}
+
+.skeleton-loader {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  left: 0;
+  width: 100%;
+  opacity: 1;
+  transition: opacity 300ms ease-out;
+}
+
+.skeleton-fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.result-content {
+  opacity: 0;
+  transition: opacity 300ms ease-in;
+}
+
+.result-fade-in {
+  opacity: 1;
 }
 
 .result {
