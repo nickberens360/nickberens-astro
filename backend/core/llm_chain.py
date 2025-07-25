@@ -193,9 +193,12 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
     about_keywords = ["about", "background", "who is", "philosophy", "approach"]
     illustration_keywords = ["art", "illustration", "drawing", "picture", "character", "design"]
 
-    if any(keyword in query_lower for keyword in resume_keywords): selected_names.add("resume")
-    if any(keyword in query_lower for keyword in about_keywords): selected_names.add("about")
-    if any(keyword in query_lower for keyword in illustration_keywords): selected_names.add("illustration")
+    if any(keyword in query_lower for keyword in resume_keywords):
+        selected_names.add("resume")
+    if any(keyword in query_lower for keyword in about_keywords):
+        selected_names.add("about")
+    if any(keyword in query_lower for keyword in illustration_keywords):
+        selected_names.add("illustration")
 
     # Default to broad search if no specific keywords are matched
     if not selected_names:
