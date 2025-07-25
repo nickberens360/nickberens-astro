@@ -242,7 +242,6 @@ export default {
     ];
 
     const createFastTimeline = () => [
-      { step: () => showTextInstantly(), delay: 0 },
       { step: () => enableSearchInstantly(), delay: 0 }
     ];
 
