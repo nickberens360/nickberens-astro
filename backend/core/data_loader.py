@@ -31,7 +31,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
     docs = []
     resume = unified_data.get("resume", {})
     about = unified_data.get("about", {})
-    illustrations = unified_data.get("]illustrations", [])
+    illustrations = unified_data.get("illustrations", [])
 
     # Process Resume: Chunk by logical section
     if resume.get("summary"):
