@@ -18,7 +18,9 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
         with open("public/unified_data.json", "r", encoding="utf-8") as f:
             unified_data = json.load(f)
     except FileNotFoundError:
-        logger.critical("CRITICAL: The unified_data.json file was not found. The application cannot load its knowledge base. Please run the build script.")
+        logger.critical(
+            "The unified_data.json file was not found. The application cannot load its knowledge base. Please run the build script using 'python backend/scripts/build_unified_data.py'.")
+
         # Return empty data to allow the app to start in a degraded state
         return [], []
     except json.JSONDecodeError:
