@@ -218,9 +218,9 @@ export default {
       }, animationConfig.buttonClickDurationMs.value);
     };
     const performSearch = async () => {
-      // Redirect to Google search in new tab
-      window.open(googleSearchUrl.value, '_blank', 'noopener,noreferrer');
+      await sleep(500);
     };
+
 
     const showTextInstantly = () => {
       displayText.value = truncatedQuery.value;
