@@ -387,6 +387,12 @@ export default {
   z-index: 1000;
 }
 
+@supports not (height: 100dvh) {
+  .site-header__mobile-nav {
+    height: 100vh;
+  }
+}
+
 @supports (height: 100dvh) {
   .site-header__mobile-nav {
     height: 100dvh;
