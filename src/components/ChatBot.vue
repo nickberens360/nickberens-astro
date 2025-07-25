@@ -88,17 +88,15 @@ export default {
     onMounted(async () => {
       if (!activeChatId.get() && !isPendingNewChat.get()) createNewChat();
       await checkBackendStatus();
-      onMounted(async () => {
-        if (!activeChatId.get() && !isPendingNewChat.get()) createNewChat();
-        await checkBackendStatus();
-        statusInterval = setInterval(async () => {
-          try {
-            await checkBackendStatus();
-          } catch (error) {
-            console.error('Status check failed:', error);
-          }
-        }, 15000);
-      });
+
+      // Set up the status check interval
+      statusInterval = setInterval(async () => {
+        try {
+          await checkBackendStatus();
+        } catch (error) {
+          console.error('Status check failed:', error);
+        }
+      }, 15000);
     });
     onUnmounted(() => {
       if (statusInterval) clearInterval(statusInterval);
