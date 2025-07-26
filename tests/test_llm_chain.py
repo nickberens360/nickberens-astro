@@ -31,6 +31,7 @@ class TestLLMChain:
         llm_chain._response_cache.clear()
         llm_chain._retrieval_cache.clear()
 
+    @pytest.mark.unit
     def test_get_cache_key_valid_input(self):
         """Test cache key generation with valid input."""
         user_input = "What is Nick's experience?"
@@ -45,6 +46,7 @@ class TestLLMChain:
         cache_key2 = get_cache_key(user_input)
         assert cache_key == cache_key2
 
+    @pytest.mark.unit
     def test_get_cache_key_normalization(self):
         """Test that cache key normalizes input correctly."""
         # Different punctuation and case should produce same key
@@ -60,17 +62,20 @@ class TestLLMChain:
         assert len(set(cache_keys)) == 1
 
     @patch("backend.core.llm_chain.ENABLE_CACHING", False)
+    @pytest.mark.unit
     def test_get_cache_key_caching_disabled(self):
         """Test cache key returns None when caching is disabled."""
         cache_key = get_cache_key("test input")
         assert cache_key is None
 
+    @pytest.mark.unit
     def test_get_cache_key_invalid_input(self):
         """Test cache key with invalid input types."""
         assert get_cache_key(None) is None
         assert get_cache_key(123) is None  # type: ignore
         assert get_cache_key([]) is None  # type: ignore
 
+    @pytest.mark.unit
     def test_cache_response_and_get_cached_response(self):
         """Test response caching and retrieval."""
         cache_key = "test_key_123"
@@ -83,6 +88,7 @@ class TestLLMChain:
         cached = get_cached_response(cache_key)
         assert cached == "Hello world!"
 
+    @pytest.mark.unit
     def test_get_cached_response_expired(self):
         """Test that expired cache entries are removed."""
         cache_key = "expired_key"
@@ -101,12 +107,14 @@ class TestLLMChain:
         assert cached is None
         assert cache_key not in llm_chain._response_cache
 
+    @pytest.mark.unit
     def test_get_cached_response_not_found(self):
         """Test cache miss returns None."""
         cached = get_cached_response("nonexistent_key")
         assert cached is None
 
     @patch("backend.core.llm_chain.ENABLE_CACHING", False)
+    @pytest.mark.unit
     def test_cache_response_caching_disabled(self):
         """Test that caching is skipped when disabled."""
         cache_key = "test_key"
@@ -117,6 +125,7 @@ class TestLLMChain:
 
         assert cached is None
 
+    @pytest.mark.unit
     def test_cache_response_eviction(self):
         """Test cache eviction when max size is reached."""
         import backend.core.llm_chain as llm_chain
@@ -137,6 +146,7 @@ class TestLLMChain:
             assert "key2" in llm_chain._response_cache
             assert "key3" in llm_chain._response_cache
 
+    @pytest.mark.unit
     def test_cache_retrieval_and_get_cached_retrieval(self):
         """Test document retrieval caching and retrieval."""
         cache_key = "retrieval_key"
@@ -155,6 +165,7 @@ class TestLLMChain:
         assert cached_docs[0].page_content == "Test doc 1"
         assert cached_docs[1].page_content == "Test doc 2"
 
+    @pytest.mark.unit
     def test_route_query_to_retrievers_resume_keywords(self):
         """Test query routing for resume-related queries."""
         mock_retrievers = {
@@ -174,6 +185,7 @@ class TestLLMChain:
             retrievers = route_query_to_retrievers(query, mock_retrievers)
             assert mock_retrievers["resume"] in retrievers
 
+    @pytest.mark.unit
     def test_route_query_to_retrievers_about_keywords(self):
         """Test query routing for about-related queries."""
         mock_retrievers = {
@@ -193,6 +205,7 @@ class TestLLMChain:
             retrievers = route_query_to_retrievers(query, mock_retrievers)
             assert mock_retrievers["about"] in retrievers
 
+    @pytest.mark.unit
     def test_route_query_to_retrievers_illustration_keywords(self):
         """Test query routing for illustration-related queries."""
         mock_retrievers = {
@@ -212,6 +225,7 @@ class TestLLMChain:
             retrievers = route_query_to_retrievers(query, mock_retrievers)
             assert mock_retrievers["illustration"] in retrievers
 
+    @pytest.mark.unit
     def test_route_query_to_retrievers_default_fallback(self):
         """Test query routing falls back to resume and about for generic queries."""
         mock_retrievers = {
@@ -229,6 +243,7 @@ class TestLLMChain:
         assert mock_retrievers["about"] in retrievers
         assert len(retrievers) == 2
 
+    @pytest.mark.unit
     def test_route_query_to_retrievers_missing_retriever(self):
         """Test query routing when some retrievers are missing."""
         # Only provide resume retriever
@@ -242,6 +257,7 @@ class TestLLMChain:
 
     @patch("backend.core.llm_chain.ChatAnthropic")
     @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
+    @pytest.mark.unit
     def test_get_llm_instances_success(self, mock_gemini, mock_claude):
         """Test successful LLM instance creation."""
         mock_claude_instance = MagicMock()
@@ -258,6 +274,7 @@ class TestLLMChain:
 
     @patch("backend.core.llm_chain.ChatAnthropic")
     @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
+    @pytest.mark.unit
     def test_get_llm_instances_claude_fails(self, mock_gemini, mock_claude):
         """Test LLM instance creation when Claude fails."""
         mock_claude.side_effect = Exception("Claude API error")
@@ -271,6 +288,7 @@ class TestLLMChain:
 
     @patch("backend.core.llm_chain.ChatAnthropic")
     @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
+    @pytest.mark.unit
     def test_get_llm_instances_all_fail(self, mock_gemini, mock_claude):
         """Test LLM instance creation when all models fail."""
         mock_claude.side_effect = Exception("Claude API error")
@@ -281,6 +299,7 @@ class TestLLMChain:
 
     @patch("backend.core.llm_chain.chromadb.EphemeralClient")
     @patch("backend.core.llm_chain.Chroma")
+    @pytest.mark.unit
     def test_create_multi_vector_retriever_success(self, mock_chroma, mock_client):
         """Test successful creation of multi-vector retrievers."""
         # Mock documents
@@ -316,6 +335,7 @@ class TestLLMChain:
 
     @patch("backend.core.llm_chain.chromadb.EphemeralClient")
     @patch("backend.core.llm_chain.Chroma")
+    @pytest.mark.unit
     def test_create_multi_vector_retriever_missing_sources(self, mock_chroma, mock_client):
         """Test retriever creation with missing document sources."""
         # Only resume documents
@@ -342,6 +362,7 @@ class TestLLMChain:
 
     @patch("backend.core.llm_chain.chromadb.EphemeralClient")
     @patch("backend.core.llm_chain.Chroma")
+    @pytest.mark.unit
     def test_create_multi_vector_retriever_chroma_error(self, mock_chroma, mock_client):
         """Test retriever creation when Chroma fails."""
         docs = [
@@ -354,6 +375,7 @@ class TestLLMChain:
         with pytest.raises(Exception, match="Chroma error"):
             create_multi_vector_retriever(docs, mock_embeddings)
 
+    @pytest.mark.unit
     def test_get_cached_retrieval_expired(self):
         """Test that expired retrieval cache entries are removed."""
         cache_key = "expired_retrieval_key"
@@ -372,6 +394,7 @@ class TestLLMChain:
         assert cached is None
         assert cache_key not in llm_chain._retrieval_cache
 
+    @pytest.mark.unit
     def test_cache_retrieval_eviction(self):
         """Test retrieval cache eviction when max size is reached."""
         import backend.core.llm_chain as llm_chain
