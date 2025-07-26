@@ -207,6 +207,7 @@ export default {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  scroll-behavior: smooth;
 }
 
 .messages-content {
@@ -247,7 +248,7 @@ export default {
 .user .message-bubble {
   background-color: #1c2539;
   color: white;
-  padding: 0.25rem 1.25rem;
+  padding: 0 1.25rem;
   border-bottom-right-radius: 4px;
 }
 
