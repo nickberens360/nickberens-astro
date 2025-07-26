@@ -4,19 +4,25 @@ Test script to verify enhanced vector retrieval improvements.
 Tests that resume queries return resume content instead of illustration content.
 """
 
-import sys
 import os
+import sys
+
 import pytest
+
 # Add project root to path (go up two levels from tests/integration/)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
+
+
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from backend.core.data_loader import load_all_documents
 from backend.core.llm_chain import create_multi_vector_retriever
-from langchain_core.messages import HumanMessage
+
 
 @pytest.mark.integration
 def test_vector_retrieval():
@@ -28,7 +34,8 @@ def test_vector_retrieval():
         # Load documents and create retriever
         print("📚 Loading documents...")
         docs, illustrations_data = load_all_documents()
-        retriever = create_multi_vector_retriever(docs)
+        embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/embedding-001"))
+        retrievers = create_multi_vector_retriever(docs, embeddings)
         print(f"✅ Loaded {len(docs)} documents")
 
         # Test queries that previously returned wrong content
@@ -37,7 +44,7 @@ def test_vector_retrieval():
             "What is your work experience?",
             "Tell me about your professional background",
             "What are your qualifications?",
-            "Show me your CV"
+            "Show me your CV",
         ]
 
         print("\n🧪 Testing Resume Queries:")
@@ -46,8 +53,13 @@ def test_vector_retrieval():
         for query in test_queries:
             print(f"\n📝 Query: '{query}'")
 
-            # Get relevant documents
-            relevant_docs = retriever.get_relevant_documents(query)
+            # Get relevant documents using resume retriever for resume queries
+            resume_retriever = retrievers.get("resume")
+            if resume_retriever:
+                relevant_docs = resume_retriever.get_relevant_documents(query)
+            else:
+                print("❌ No resume retriever available")
+                continue
 
             # Check document sources
             sources = [doc.metadata.get("source", "unknown") for doc in relevant_docs[:3]]
@@ -63,7 +75,11 @@ def test_vector_retrieval():
             if resume_docs:
                 print("✅ SUCCESS: Resume content found for resume query")
                 # Show a snippet of the resume content
-                snippet = resume_docs[0].page_content[:100] + "..." if len(resume_docs[0].page_content) > 100 else resume_docs[0].page_content
+                snippet = (
+                    resume_docs[0].page_content[:100] + "..."
+                    if len(resume_docs[0].page_content) > 100
+                    else resume_docs[0].page_content
+                )
                 print(f"📋 Resume snippet: {snippet}")
             else:
                 print("❌ ISSUE: No resume content found for resume query")
@@ -74,13 +90,23 @@ def test_vector_retrieval():
         print("\n🧪 Testing About Queries:")
         print("-" * 30)
 
-        about_queries = ["Tell me about Nick", "Who is Nick Berens?", "What's Nick's background?"]
+        about_queries = [
+            "Tell me about Nick",
+            "Who is Nick Berens?",
+            "What's Nick's background?",
+        ]
 
         for query in about_queries:
             print(f"\n📝 Query: '{query}'")
-            relevant_docs = retriever.get_relevant_documents(query)
-            about_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "about"]
-            print(f"📖 About documents found: {len(about_docs)}")
+            # Get relevant documents using about retriever for about queries
+            about_retriever = retrievers.get("about")
+            if about_retriever:
+                relevant_docs = about_retriever.get_relevant_documents(query)
+                about_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "about"]
+                print(f"📖 About documents found: {len(about_docs)}")
+            else:
+                print("❌ No about retriever available")
+                continue
 
             if about_docs:
                 print("✅ SUCCESS: About content found for about query")
@@ -97,7 +123,9 @@ def test_vector_retrieval():
     except Exception as e:
         print(f"❌ Error during testing: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     test_vector_retrieval()

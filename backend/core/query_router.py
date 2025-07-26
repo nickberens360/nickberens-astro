@@ -1,16 +1,19 @@
 import logging
-from typing import List, Dict, Any, Optional, Tuple
 from enum import Enum
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+
 class QueryType(Enum):
     """Types of queries the system can handle."""
+
     SPECIFIC_IMAGE_SEARCH = "specific_image_search"
     SHOW_ME_PATTERN = "show_me_pattern"
     ALL_IMAGES = "all_images"
     GENERAL_IMAGE_PATTERN = "general_image_pattern"
     AI_TEXT_RESPONSE = "ai_text_response"
+
 
 class QueryRouter:
     """Service for routing and parsing different types of user queries."""
@@ -18,33 +21,83 @@ class QueryRouter:
     def __init__(self):
         # Define patterns and keywords
         self.image_keywords = [
-            "image", "images", "illustration", "illustrations", "drawing", "drawings",
-            "art", "design", "designs", "pic", "pics", "picture", "pictures"
+            "image",
+            "images",
+            "illustration",
+            "illustrations",
+            "drawing",
+            "drawings",
+            "art",
+            "design",
+            "designs",
+            "pic",
+            "pics",
+            "picture",
+            "pictures",
         ]
 
         self.specific_image_keywords = [
-            "images of", "image of", "drawings of", "drawing of",
-            "illustrations of", "illustration of", "art about", "art of"
+            "images of",
+            "image of",
+            "drawings of",
+            "drawing of",
+            "illustrations of",
+            "illustration of",
+            "art about",
+            "art of",
         ]
 
-        self.show_me_patterns = [
-            "show me", "show", "find", "get", "display"
-        ]
+        self.show_me_patterns = ["show me", "show", "find", "get", "display"]
 
         self.image_indicators = [
-            "images", "image", "illustrations", "illustration", "drawings", "drawing", "art", "pics", "pictures"
+            "images",
+            "image",
+            "illustrations",
+            "illustration",
+            "drawings",
+            "drawing",
+            "art",
+            "pics",
+            "pictures",
         ]
 
         self.ignore_words = {
-            "show", "me", "get", "find", "display", "see", "view", "look", "at",
-            "the", "a", "an", "some", "any", "all", "your", "of", "for"
+            "show",
+            "me",
+            "get",
+            "find",
+            "display",
+            "see",
+            "view",
+            "look",
+            "at",
+            "the",
+            "a",
+            "an",
+            "some",
+            "any",
+            "all",
+            "your",
+            "of",
+            "for",
         }
 
         self.all_image_phrases = [
-            "show me all illustrations", "show all illustrations", "show me your illustrations",
-            "show me all your art", "show me all images", "show me images", "show your art",
-            "all images", "all illustrations", "all art", "show me everything",
-            "show me illustrations", "show me art", "show me pictures", "show me drawings"
+            "show me all illustrations",
+            "show all illustrations",
+            "show me your illustrations",
+            "show me all your art",
+            "show me all images",
+            "show me images",
+            "show your art",
+            "all images",
+            "all illustrations",
+            "all art",
+            "show me everything",
+            "show me illustrations",
+            "show me art",
+            "show me pictures",
+            "show me drawings",
         ]
 
     def route_query(self, question: str) -> Tuple[QueryType, Optional[str]]:
@@ -94,14 +147,12 @@ class QueryRouter:
         """Check for 'show me X images/illustrations' patterns."""
         for show_pattern in self.show_me_patterns:
             if question.startswith(show_pattern):
-                remaining_text = question[len(show_pattern):].strip()
+                remaining_text = question[len(show_pattern) :].strip()
 
                 # Check if it contains image indicators
                 for img_indicator in self.image_indicators:
                     if img_indicator in remaining_text:
-                        search_term = self._extract_search_term_from_show_pattern(
-                            remaining_text, img_indicator
-                        )
+                        search_term = self._extract_search_term_from_show_pattern(remaining_text, img_indicator)
                         if search_term:
                             logger.info(f"Show me pattern detected: '{search_term}'")
                             return search_term
@@ -115,7 +166,7 @@ class QueryRouter:
             return None
 
         # This logic handles terms appearing before or after the image indicator.
-        search_term = ' '.join(remaining_text.split(img_indicator)).strip()
+        search_term = " ".join(remaining_text.split(img_indicator)).strip()
 
         if not search_term:
             return None
@@ -123,7 +174,7 @@ class QueryRouter:
         # For better accuracy, filter out common words that are not part of the search term.
         words = search_term.split()
         filtered_words = [word for word in words if word not in self.ignore_words]
-        search_term = ' '.join(filtered_words).strip()
+        search_term = " ".join(filtered_words).strip()
 
         return search_term if search_term else None
 
@@ -141,7 +192,7 @@ class QueryRouter:
 
                 # Extract words before and after the image indicator
                 words_before = words[:idx]
-                words_after = words[idx+1:]
+                words_after = words[idx + 1 :]
 
                 # Filter out ignore words
                 search_terms_before = [w for w in words_before if w not in self.ignore_words]

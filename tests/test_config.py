@@ -1,8 +1,5 @@
 """Tests for core.config module."""
 
-import pytest
-from unittest.mock import patch, MagicMock
-
 
 class TestConfig:
     """Test cases for configuration module."""

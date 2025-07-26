@@ -3,13 +3,16 @@
 Test script to verify large text input handling improvements.
 """
 
-import sys
 import os
+import sys
+
 import pytest
+
 # Add project root to path to access backend as a module (go up two levels from tests/integration/)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from backend.main import SecurityValidator
+
 
 @pytest.mark.integration
 def test_length_validation():
@@ -31,24 +34,28 @@ def test_length_validation():
     status = SecurityValidator.check_length_status(over_limit_text, "query")
     print(f"Over limit text ({len(over_limit_text)} chars): {status['status']} - {status['message']}")
 
+
 @pytest.mark.integration
 def test_text_chunking():
     """Test the text chunking functionality."""
     print("\nTesting text chunking...")
 
     # Create a long text with sentences
-    long_text = """
-    This is the first sentence of a very long text that needs to be chunked. 
-    This is the second sentence that continues the thought. 
-    Here is another sentence that adds more content to the text. 
-    This sentence is part of the same paragraph but will help test chunking. 
-    Another sentence to make the text even longer for testing purposes. 
-    This is getting quite long now and should definitely need chunking. 
-    More content to ensure we exceed the chunk size limit significantly. 
-    This text is designed to test the intelligent chunking algorithm. 
-    The chunking should preserve sentence boundaries when possible. 
+    long_text = (
+        """
+    This is the first sentence of a very long text that needs to be chunked.
+    This is the second sentence that continues the thought.
+    Here is another sentence that adds more content to the text.
+    This sentence is part of the same paragraph but will help test chunking.
+    Another sentence to make the text even longer for testing purposes.
+    This is getting quite long now and should definitely need chunking.
+    More content to ensure we exceed the chunk size limit significantly.
+    This text is designed to test the intelligent chunking algorithm.
+    The chunking should preserve sentence boundaries when possible.
     This is the final sentence to complete our test text.
-    """ * 10  # Multiply to make it really long
+    """
+        * 10
+    )  # Multiply to make it really long
 
     chunks = SecurityValidator.chunk_text(long_text.strip())
     print(f"Original text length: {len(long_text)} characters")
@@ -57,6 +64,7 @@ def test_text_chunking():
     for i, chunk in enumerate(chunks[:3]):  # Show first 3 chunks
         print(f"Chunk {i+1} length: {len(chunk)} characters")
         print(f"Chunk {i+1} preview: {chunk[:100]}...")
+
 
 @pytest.mark.integration
 def test_input_sanitization():
@@ -68,6 +76,7 @@ def test_input_sanitization():
     clean_text = SecurityValidator.sanitize_input(dirty_text)
     print(f"Original: {repr(dirty_text)}")
     print(f"Sanitized: {repr(clean_text)}")
+
 
 def main():
     """Run all tests."""
@@ -82,6 +91,7 @@ def main():
     print("✓ Text chunking with sentence boundary preservation")
     print("✓ Input sanitization with control character removal")
     print("\nAll backend enhancements are working correctly!")
+
 
 if __name__ == "__main__":
     main()

@@ -1,8 +1,9 @@
 import logging
-from typing import List, Dict, Any, Optional
 import random
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
+
 
 class FollowUpService:
     """Service for generating smart follow-up question suggestions."""
@@ -15,94 +16,90 @@ class FollowUpService:
                 "What technologies do you work with most?",
                 "Tell me about your biggest career achievement",
                 "What's your development philosophy?",
-                "Show me your recent projects"
+                "Show me your recent projects",
             ],
             "wisnet": [
                 "What did you learn at Wisnet?",
                 "Show me projects from your Wisnet days",
                 "How did you grow as a developer there?",
-                "What was your favorite Wisnet project?"
+                "What was your favorite Wisnet project?",
             ],
             "hillman": [
                 "What's exciting about your current role?",
                 "Tell me about the Vue migration project",
                 "What technologies do you use at Hillman?",
-                "Show me your recent work"
+                "Show me your recent work",
             ],
-
             # Technical Skills
             "vue": [
                 "Show me your Vue.js projects",
                 "How do you compare Vue vs React?",
                 "What's your favorite Vue.js feature?",
-                "Tell me about the Vue 2 to 3 migration"
+                "Tell me about the Vue 2 to 3 migration",
             ],
             "javascript": [
                 "What's your favorite JavaScript framework?",
                 "Show me your JavaScript projects",
                 "Tell me about modern JavaScript features you love",
-                "What's your approach to JavaScript testing?"
+                "What's your approach to JavaScript testing?",
             ],
             "frontend": [
                 "What's your design process?",
                 "Show me your UI/UX work",
                 "How do you approach responsive design?",
-                "Tell me about your component library work"
+                "Tell me about your component library work",
             ],
             "backend": [
                 "Do you work with any backend technologies?",
                 "How do you handle API integration?",
                 "Tell me about your full-stack experience",
-                "What databases have you worked with?"
+                "What databases have you worked with?",
             ],
-
             # Creative Work
             "illustration": [
                 "Show me your favorite illustrations",
                 "What's your artistic inspiration?",
                 "Tell me about your creative process",
-                "Show me different art styles you've done"
+                "Show me different art styles you've done",
             ],
             "design": [
                 "Show me your design portfolio",
                 "What design tools do you use?",
                 "Tell me about your UX research experience",
-                "How do you balance creativity and functionality?"
+                "How do you balance creativity and functionality?",
             ],
             "art": [
                 "Show me all your artwork",
                 "What mediums do you work in?",
                 "Tell me about your artistic journey",
-                "Show me your recent creative projects"
+                "Show me your recent creative projects",
             ],
-
             # Projects & Portfolio
             "project": [
                 "Show me your most challenging project",
                 "What's your favorite project you've built?",
                 "Tell me about your development process",
-                "Show me your GitHub repositories"
+                "Show me your GitHub repositories",
             ],
             "portfolio": [
                 "Show me your best work",
                 "What makes you unique as a developer?",
                 "Tell me about your career journey",
-                "How can I contact you for opportunities?"
+                "How can I contact you for opportunities?",
             ],
-
             # Personal & Philosophy
             "learning": [
                 "What are you learning right now?",
                 "How do you stay current with technology?",
                 "What's your approach to professional development?",
-                "Tell me about your problem-solving process"
+                "Tell me about your problem-solving process",
             ],
             "challenge": [
                 "What's been your biggest technical challenge?",
                 "How do you approach difficult problems?",
                 "Tell me about a project that pushed your limits",
-                "What would you do differently on past projects?"
-            ]
+                "What would you do differently on past projects?",
+            ],
         }
 
         # General follow-ups when no specific topic is detected
@@ -112,7 +109,7 @@ class FollowUpService:
             "What technologies do you work with?",
             "Show me your recent projects",
             "What's your development philosophy?",
-            "How can I contact Nick?"
+            "How can I contact Nick?",
         ]
 
         # Context-aware suggestions based on response content
@@ -124,14 +121,14 @@ class FollowUpService:
             "illustration": ["illustration", "drawing", "art", "design"],
             "experience": ["experience", "work", "career", "job"],
             "project": ["project", "built", "developed", "created"],
-            "learning": ["learn", "study", "research", "explore"]
+            "learning": ["learn", "study", "research", "explore"],
         }
 
     def generate_followups(
-            self,
-            user_question: str,
-            ai_response: str,
-            conversation_history: List[Dict[str, str]] = None
+        self,
+        user_question: str,
+        ai_response: str,
+        conversation_history: List[Dict[str, str]] = None,
     ) -> List[str]:
         """
         Generate smart follow-up questions based on context.
@@ -152,9 +149,7 @@ class FollowUpService:
             suggestions = self._get_topic_suggestions(detected_topics)
 
             # Filter out questions that are too similar to what was already asked
-            filtered_suggestions = self._filter_similar_questions(
-                suggestions, user_question, conversation_history
-            )
+            filtered_suggestions = self._filter_similar_questions(suggestions, user_question, conversation_history)
 
             # Return 3 suggestions (or fewer if not enough unique ones)
             return filtered_suggestions[:3]
@@ -208,10 +203,10 @@ class FollowUpService:
         return unique_suggestions
 
     def _filter_similar_questions(
-            self,
-            suggestions: List[str],
-            current_question: str,
-            conversation_history: List[Dict[str, str]] = None
+        self,
+        suggestions: List[str],
+        current_question: str,
+        conversation_history: List[Dict[str, str]] = None,
     ) -> List[str]:
         """Filter out questions that are too similar to what was already asked."""
         filtered = []
@@ -248,7 +243,21 @@ class FollowUpService:
         q2_words = set(q2.split())
 
         # Remove common words
-        common_words = {"tell", "me", "about", "show", "your", "you", "what", "how", "do", "is", "the", "a", "an"}
+        common_words = {
+            "tell",
+            "me",
+            "about",
+            "show",
+            "your",
+            "you",
+            "what",
+            "how",
+            "do",
+            "is",
+            "the",
+            "a",
+            "an",
+        }
         q1_words -= common_words
         q2_words -= common_words
 

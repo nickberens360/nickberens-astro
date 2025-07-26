@@ -1,11 +1,12 @@
-import os
 import logging
+import os
 import re
 from typing import List
 from urllib.parse import urlparse
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
 
 class AppConfig:
     """Centralized configuration management with enhanced security."""
@@ -76,30 +77,31 @@ class AppConfig:
                 return False
 
             # Only allow http/https
-            if parsed.scheme not in ['http', 'https']:
+            if parsed.scheme not in ["http", "https"]:
                 logger.warning(f"Invalid CORS origin scheme: {origin}")
                 return False
 
             # Enforce HTTPS for production domains (not localhost)
             netloc_lower = parsed.netloc.lower()
-            if not netloc_lower.startswith('localhost') and not netloc_lower.startswith('127.0.0.1'):
-                if parsed.scheme != 'https':
+            if not netloc_lower.startswith("localhost") and not netloc_lower.startswith("127.0.0.1"):
+                if parsed.scheme != "https":
                     logger.warning(f"Non-HTTPS origin for production domain: {origin}")
                     return False
 
             # Check domain format - basic validation
-            domain_part = parsed.netloc.split(':')[0]  # Remove port
-            if not re.match(r'^[a-zA-Z0-9.-]+$', domain_part):
+            domain_part = parsed.netloc.split(":")[0]  # Remove port
+            domain_format_valid = re.match(r"^[a-zA-Z0-9.-]+$", domain_part) is not None
+            if not domain_format_valid:
                 logger.warning(f"Invalid domain format: {domain_part}")
-                return False
 
             # Block obviously malicious domains
-            suspicious = ['malware', 'phishing', 'hack', 'exploit', 'evil']
-            if any(keyword in netloc_lower for keyword in suspicious):
+            suspicious = ["malware", "phishing", "hack", "exploit", "evil"]
+            is_malicious = any(keyword in netloc_lower for keyword in suspicious)
+            if is_malicious:
                 logger.error(f"Suspicious domain blocked: {origin}")
-                return False
 
-            return True
+            # Return True only if domain format is valid and not malicious
+            return domain_format_valid and not is_malicious
 
         except Exception as e:
             logger.warning(f"Error validating CORS origin {origin}: {e}")

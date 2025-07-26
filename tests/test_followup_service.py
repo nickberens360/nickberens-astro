@@ -1,8 +1,5 @@
 """Tests for core.followup_service module."""
 
-import pytest
-from unittest.mock import patch, MagicMock
-
 
 class TestFollowupService:
     """Test cases for followup service module."""

@@ -1,23 +1,22 @@
 """Tests for core.llm_chain module."""
 
-import pytest
 import time
-import hashlib
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.retrievers import BaseRetriever
 
 from backend.core.llm_chain import (
+    cache_response,
+    cache_retrieval,
+    create_multi_vector_retriever,
     get_cache_key,
     get_cached_response,
-    cache_response,
     get_cached_retrieval,
-    cache_retrieval,
-    route_query_to_retrievers,
     get_llm_instances,
-    create_multi_vector_retriever,
-    stream_with_fallback
+    route_query_to_retrievers,
+    stream_with_fallback,
 )
 
 
@@ -28,6 +27,7 @@ class TestLLMChain:
         """Setup method to clear caches before each test."""
         # Clear caches before each test
         import backend.core.llm_chain as llm_chain
+
         llm_chain._response_cache.clear()
         llm_chain._retrieval_cache.clear()
 
@@ -39,7 +39,7 @@ class TestLLMChain:
         # Should return a 16-character hex string
         assert cache_key is not None
         assert len(cache_key) == 16
-        assert all(c in '0123456789abcdef' for c in cache_key)
+        assert all(c in "0123456789abcdef" for c in cache_key)
 
         # Same input should produce same key
         cache_key2 = get_cache_key(user_input)
@@ -52,14 +52,14 @@ class TestLLMChain:
             "What is Nick's experience?",
             "what is nicks experience",
             "WHAT IS NICK'S EXPERIENCE!!!",
-            "What... is Nick's experience???"
+            "What... is Nick's experience???",
         ]
 
         cache_keys = [get_cache_key(inp) for inp in inputs]
         # All should be the same after normalization
         assert len(set(cache_keys)) == 1
 
-    @patch('backend.core.llm_chain.ENABLE_CACHING', False)
+    @patch("backend.core.llm_chain.ENABLE_CACHING", False)
     def test_get_cache_key_caching_disabled(self):
         """Test cache key returns None when caching is disabled."""
         cache_key = get_cache_key("test input")
@@ -68,8 +68,8 @@ class TestLLMChain:
     def test_get_cache_key_invalid_input(self):
         """Test cache key with invalid input types."""
         assert get_cache_key(None) is None
-        assert get_cache_key(123) is None
-        assert get_cache_key([]) is None
+        assert get_cache_key(123) is None  # type: ignore
+        assert get_cache_key([]) is None  # type: ignore
 
     def test_cache_response_and_get_cached_response(self):
         """Test response caching and retrieval."""
@@ -93,7 +93,8 @@ class TestLLMChain:
 
         # Manually set timestamp to past expiry
         import backend.core.llm_chain as llm_chain
-        llm_chain._response_cache[cache_key]['timestamp'] = time.time() - 7200  # 2 hours ago
+
+        llm_chain._response_cache[cache_key]["timestamp"] = time.time() - 7200  # 2 hours ago
 
         # Should return None and remove expired entry
         cached = get_cached_response(cache_key)
@@ -105,7 +106,7 @@ class TestLLMChain:
         cached = get_cached_response("nonexistent_key")
         assert cached is None
 
-    @patch('backend.core.llm_chain.ENABLE_CACHING', False)
+    @patch("backend.core.llm_chain.ENABLE_CACHING", False)
     def test_cache_response_caching_disabled(self):
         """Test that caching is skipped when disabled."""
         cache_key = "test_key"
@@ -121,7 +122,7 @@ class TestLLMChain:
         import backend.core.llm_chain as llm_chain
 
         # Mock MAX_CACHE_SIZE to be small
-        with patch('backend.core.llm_chain.MAX_CACHE_SIZE', 2):
+        with patch("backend.core.llm_chain.MAX_CACHE_SIZE", 2):
             # Add entries up to limit
             cache_response("key1", ["response1"])
             cache_response("key2", ["response2"])
@@ -141,7 +142,7 @@ class TestLLMChain:
         cache_key = "retrieval_key"
         documents = [
             Document(page_content="Test doc 1", metadata={"source": "test"}),
-            Document(page_content="Test doc 2", metadata={"source": "test"})
+            Document(page_content="Test doc 2", metadata={"source": "test"}),
         ]
 
         # Cache the documents
@@ -159,14 +160,14 @@ class TestLLMChain:
         mock_retrievers = {
             "resume": MagicMock(spec=BaseRetriever),
             "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever)
+            "illustration": MagicMock(spec=BaseRetriever),
         }
 
         queries = [
             "What is Nick's work experience?",
             "Tell me about his job history",
             "What skills does he have?",
-            "What companies has he worked for?"
+            "What companies has he worked for?",
         ]
 
         for query in queries:
@@ -178,14 +179,14 @@ class TestLLMChain:
         mock_retrievers = {
             "resume": MagicMock(spec=BaseRetriever),
             "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever)
+            "illustration": MagicMock(spec=BaseRetriever),
         }
 
         queries = [
             "Tell me about Nick",
             "What is his background?",
             "Who is Nick?",
-            "What's his philosophy?"
+            "What's his philosophy?",
         ]
 
         for query in queries:
@@ -197,14 +198,14 @@ class TestLLMChain:
         mock_retrievers = {
             "resume": MagicMock(spec=BaseRetriever),
             "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever)
+            "illustration": MagicMock(spec=BaseRetriever),
         }
 
         queries = [
             "Show me his art",
             "What illustrations has he done?",
             "Tell me about his drawings",
-            "What's his design style?"
+            "What's his design style?",
         ]
 
         for query in queries:
@@ -216,7 +217,7 @@ class TestLLMChain:
         mock_retrievers = {
             "resume": MagicMock(spec=BaseRetriever),
             "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever)
+            "illustration": MagicMock(spec=BaseRetriever),
         }
 
         # Generic query with no specific keywords
@@ -231,9 +232,7 @@ class TestLLMChain:
     def test_route_query_to_retrievers_missing_retriever(self):
         """Test query routing when some retrievers are missing."""
         # Only provide resume retriever
-        mock_retrievers = {
-            "resume": MagicMock(spec=BaseRetriever)
-        }
+        mock_retrievers = {"resume": MagicMock(spec=BaseRetriever)}
 
         query = "Tell me about Nick's background"  # Should route to 'about' but it's missing
         retrievers = route_query_to_retrievers(query, mock_retrievers)
@@ -241,8 +240,8 @@ class TestLLMChain:
         # Should only return available retrievers
         assert len(retrievers) == 0  # 'about' is not available
 
-    @patch('backend.core.llm_chain.ChatAnthropic')
-    @patch('backend.core.llm_chain.ChatGoogleGenerativeAI')
+    @patch("backend.core.llm_chain.ChatAnthropic")
+    @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
     def test_get_llm_instances_success(self, mock_gemini, mock_claude):
         """Test successful LLM instance creation."""
         mock_claude_instance = MagicMock()
@@ -252,13 +251,13 @@ class TestLLMChain:
 
         llms = get_llm_instances()
 
-        assert llms['claude'] == mock_claude_instance
-        assert llms['gemini'] == mock_gemini_instance
+        assert llms["claude"] == mock_claude_instance
+        assert llms["gemini"] == mock_gemini_instance
         mock_claude.assert_called_once()
         mock_gemini.assert_called_once()
 
-    @patch('backend.core.llm_chain.ChatAnthropic')
-    @patch('backend.core.llm_chain.ChatGoogleGenerativeAI')
+    @patch("backend.core.llm_chain.ChatAnthropic")
+    @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
     def test_get_llm_instances_claude_fails(self, mock_gemini, mock_claude):
         """Test LLM instance creation when Claude fails."""
         mock_claude.side_effect = Exception("Claude API error")
@@ -267,11 +266,11 @@ class TestLLMChain:
 
         llms = get_llm_instances()
 
-        assert llms['claude'] is None
-        assert llms['gemini'] == mock_gemini_instance
+        assert llms["claude"] is None
+        assert llms["gemini"] == mock_gemini_instance
 
-    @patch('backend.core.llm_chain.ChatAnthropic')
-    @patch('backend.core.llm_chain.ChatGoogleGenerativeAI')
+    @patch("backend.core.llm_chain.ChatAnthropic")
+    @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
     def test_get_llm_instances_all_fail(self, mock_gemini, mock_claude):
         """Test LLM instance creation when all models fail."""
         mock_claude.side_effect = Exception("Claude API error")
@@ -280,15 +279,15 @@ class TestLLMChain:
         with pytest.raises(RuntimeError, match="No LLM models could be initialized"):
             get_llm_instances()
 
-    @patch('backend.core.llm_chain.chromadb.EphemeralClient')
-    @patch('backend.core.llm_chain.Chroma')
+    @patch("backend.core.llm_chain.chromadb.EphemeralClient")
+    @patch("backend.core.llm_chain.Chroma")
     def test_create_multi_vector_retriever_success(self, mock_chroma, mock_client):
         """Test successful creation of multi-vector retrievers."""
         # Mock documents
         docs = [
             Document(page_content="Resume content", metadata={"source": "resume"}),
             Document(page_content="About content", metadata={"source": "about"}),
-            Document(page_content="Art content", metadata={"source": "illustration"})
+            Document(page_content="Art content", metadata={"source": "illustration"}),
         ]
 
         # Mock embeddings
@@ -315,8 +314,8 @@ class TestLLMChain:
         # Verify Chroma was called for each source
         assert mock_chroma.from_documents.call_count == 3
 
-    @patch('backend.core.llm_chain.chromadb.EphemeralClient')
-    @patch('backend.core.llm_chain.Chroma')
+    @patch("backend.core.llm_chain.chromadb.EphemeralClient")
+    @patch("backend.core.llm_chain.Chroma")
     def test_create_multi_vector_retriever_missing_sources(self, mock_chroma, mock_client):
         """Test retriever creation with missing document sources."""
         # Only resume documents
@@ -341,8 +340,8 @@ class TestLLMChain:
         assert "about" not in retrievers
         assert "illustration" not in retrievers
 
-    @patch('backend.core.llm_chain.chromadb.EphemeralClient')
-    @patch('backend.core.llm_chain.Chroma')
+    @patch("backend.core.llm_chain.chromadb.EphemeralClient")
+    @patch("backend.core.llm_chain.Chroma")
     def test_create_multi_vector_retriever_chroma_error(self, mock_chroma, mock_client):
         """Test retriever creation when Chroma fails."""
         docs = [
@@ -365,7 +364,8 @@ class TestLLMChain:
 
         # Manually set timestamp to past expiry
         import backend.core.llm_chain as llm_chain
-        llm_chain._retrieval_cache[cache_key]['timestamp'] = time.time() - 7200  # 2 hours ago
+
+        llm_chain._retrieval_cache[cache_key]["timestamp"] = time.time() - 7200  # 2 hours ago
 
         # Should return None and remove expired entry
         cached = get_cached_retrieval(cache_key)
@@ -377,7 +377,7 @@ class TestLLMChain:
         import backend.core.llm_chain as llm_chain
 
         # Mock MAX_CACHE_SIZE to be small
-        with patch('backend.core.llm_chain.MAX_CACHE_SIZE', 2):
+        with patch("backend.core.llm_chain.MAX_CACHE_SIZE", 2):
             doc1 = [Document(page_content="Doc 1", metadata={"source": "test"})]
             doc2 = [Document(page_content="Doc 2", metadata={"source": "test"})]
             doc3 = [Document(page_content="Doc 3", metadata={"source": "test"})]
@@ -396,17 +396,19 @@ class TestLLMChain:
             assert "key2" in llm_chain._retrieval_cache
             assert "key3" in llm_chain._retrieval_cache
 
-    @patch('backend.core.llm_chain.get_llm_instances')
-    @patch('backend.core.llm_chain.get_cached_response')
-    @patch('backend.core.llm_chain.get_cached_retrieval')
-    @patch('backend.core.llm_chain.route_query_to_retrievers')
+    @patch("backend.core.llm_chain.get_llm_instances")
+    @patch("backend.core.llm_chain.get_cached_response")
+    @patch("backend.core.llm_chain.get_cached_retrieval")
+    @patch("backend.core.llm_chain.route_query_to_retrievers")
     @pytest.mark.asyncio
-    async def test_stream_with_fallback_cached_response(self, mock_route, mock_cached_retrieval, mock_cached_response, mock_get_llms):
+    async def test_stream_with_fallback_cached_response(
+        self, mock_route, mock_cached_retrieval, mock_cached_response, mock_get_llms
+    ):
         """Test stream_with_fallback returns cached response when available."""
         mock_cached_response.return_value = "Cached response"
 
         retrievers = {"resume": MagicMock(spec=BaseRetriever)}
-        chat_history = []
+        chat_history: list = []
         user_input = "Test question"
 
         result = []
@@ -419,14 +421,14 @@ class TestLLMChain:
         mock_cached_retrieval.assert_not_called()
         mock_route.assert_not_called()
 
-    @patch('backend.core.llm_chain.get_llm_instances')
+    @patch("backend.core.llm_chain.get_llm_instances")
     @pytest.mark.asyncio
     async def test_stream_with_fallback_llm_init_error(self, mock_get_llms):
         """Test stream_with_fallback handles LLM initialization errors."""
         mock_get_llms.side_effect = RuntimeError("LLM init failed")
 
         retrievers = {"resume": MagicMock(spec=BaseRetriever)}
-        chat_history = []
+        chat_history: list = []
         user_input = "Test question"
 
         result = []
