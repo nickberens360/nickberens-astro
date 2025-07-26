@@ -9,112 +9,118 @@
         :theme="theme"
         @select-prompt="$emit('prompt-select', $event)"
       />
-      <div
-        v-for="(message, index) in messages"
-        :key="index"
-        :class="['message', message.sender]"
-      >
-        <div class="message-bubble">
-          <p v-if="message.sender === 'user'">{{ message.text }}</p>
+
+      <template v-for="(message, index) in messages" :key="index">
+        <div
+          v-if="message.sender === 'user'"
+          class="conversation-pair"
+        >
+          <div class="message user">
+          <div class="message-bubble">
+              <p>{{ message.text }}</p>
+            </div>
+          </div>
 
           <div
-            v-else
-            class="bot-message-wrapper"
+            v-if="messages[index + 1] && messages[index + 1].sender === 'bot'"
+            class="message bot"
           >
-            <div>
-              <div
-                v-if="message.text"
-                class="markdown-content-wrapper"
-              >
-                <span
-                  v-html="renderMarkdown(message.text)"
-                  class="markdown-content"
-                ></span>
-                <span
-                  v-if="message.isTyping"
-                  class="typing-cursor"
-                >|</span>
-              </div>
+            <div class="message-bubble">
+              <div class="bot-message-wrapper">
 
-              <div
-                v-if="!message.text && message.isTyping"
-                class="typing-indicator"
-              >
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-              </div>
-
-              <div
-                v-if="message.wasStopped && !message.isTyping"
-                class="stopped-indicator"
-              >
-                <span class="stopped-icon">⏹</span>
-                Response stopped
-              </div>
-
-              <div
-                v-if="message.lmgtfyQuery && !message.isTyping"
-                class="lmgtfy-wrapper fade-in"
-              >
-                <CustomLMGTFY
-                  :search-query="message.lmgtfyQuery"
-                  :play-animation="message.isNewResearch === true"
-                  :chat-id="chatId"
-                  :message-index="index"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div
-                v-if="message.images && message.images.length && !message.isTyping"
-                class="image-gallery fade-in"
-              >
-                <img
-                  v-for="src in message.images"
-                  :key="src"
-                  :src="src"
-                  alt="Illustration"
-                  class="chat-image"
-                  @click="$emit('image-click', src)"
-                />
-              </div>
-
-              <div
-                v-if="message.model && !message.isTyping"
-                class="model-indicator"
-              >
-                <span
-                  class="model-badge"
-                  :class="{
-                   'error': message.model === 'error' || backendStatus === 'offline'
-                  }"
-                >
-                  {{ message.model }}
-                </span>
-              </div>
-
-              <div
-                v-if="shouldShowFollowups(message) && false"
-                class="followup-container fade-in"
-              >
-                <p class="followup-label">💡 You might also want to ask:</p>
-                <div class="followup-buttons">
-                  <button
-                    v-for="(question, qIndex) in message.followup_questions"
-                    :key="qIndex"
-                    @click="$emit('followup-click', question)"
-                    class="followup-button"
+                  <div
+                    v-if="messages[index + 1].text"
+                    class="markdown-content-wrapper"
                   >
-                    {{ question }}
-                  </button>
-                </div>
+                    <span
+                      v-html="renderMarkdown(messages[index + 1].text)"
+                      class="markdown-content"
+                    ></span>
+                    <span
+                      v-if="messages[index + 1].isTyping"
+                      class="typing-cursor"
+                    >|</span>
+                  </div>
+
+                  <div
+                    v-if="!messages[index + 1].text && messages[index + 1].isTyping"
+                    class="typing-indicator"
+                  >
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                  </div>
+
+                  <div
+                    v-if="messages[index + 1].wasStopped && !messages[index + 1].isTyping"
+                    class="stopped-indicator"
+                  >
+                    <span class="stopped-icon">⏹</span>
+                    Response stopped
+                  </div>
+
+                  <div
+                    v-if="messages[index + 1].lmgtfyQuery && !messages[index + 1].isTyping"
+                    class="lmgtfy-wrapper fade-in"
+                  >
+                    <CustomLMGTFY
+                      :search-query="messages[index + 1].lmgtfyQuery"
+                      :play-animation="messages[index + 1].isNewResearch === true"
+                      :chat-id="chatId"
+                      :message-index="index + 1"
+                    />
+                  </div>
+
+
+                  <div
+                    v-if="messages[index + 1].images && messages[index + 1].images.length && !messages[index + 1].isTyping"
+                    class="image-gallery fade-in"
+                  >
+                    <img
+                      v-for="src in messages[index + 1].images"
+                      :key="src"
+                      :src="src"
+                      alt="Illustration"
+                      class="chat-image"
+                      @click="$emit('image-click', src)"
+                    />
+                  </div>
+
+                  <div
+                    v-if="messages[index + 1].model && !messages[index + 1].isTyping"
+                    class="model-indicator"
+                  >
+                    <span
+                      class="model-badge"
+                      :class="{
+                       'error': messages[index + 1].model === 'error' || backendStatus === 'offline'
+                      }"
+                    >
+                      {{ messages[index + 1].model }}
+                    </span>
+                  </div>
+
+                  <div
+                    v-if="shouldShowFollowups(messages[index + 1]) && false"
+                    class="followup-container fade-in"
+                  >
+                    <p class="followup-label">💡 You might also want to ask:</p>
+                    <div class="followup-buttons">
+                      <button
+                        v-for="(question, qIndex) in messages[index + 1].followup_questions"
+                        :key="qIndex"
+                        @click="$emit('followup-click', question)"
+                        class="followup-button"
+                      >
+                        {{ question }}
+                      </button>
+                    </div>
+                  </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -200,6 +206,7 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .messages-content {
@@ -210,6 +217,16 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.conversation-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.conversation-pair:last-child {
+  margin-bottom: 0;
 }
 
 .message {
@@ -243,6 +260,9 @@ export default {
   background: none;
   color: #f9fafb;
   border-bottom-left-radius: 4px;
+}
+.conversation-pair:last-of-type {
+  height: calc(100dvh - 175px);
 }
 
 /* Real typing cursor style */
@@ -379,6 +399,23 @@ export default {
 .followup-button:hover {
   background-color: #404040
 }
+
+:deep(.markdown-content) {
+  display: block;
+}
+:deep(.markdown-content h1) {
+  font-size: 2.5rem;
+  margin: 0 0 1rem;
+}
+:deep(.markdown-content h2) {
+  font-size: 1.75rem;
+  margin: 0 0 1rem;
+}
+:deep(.markdown-content h3) {
+  font-size: 1.25rem;
+  margin: 0 0 1rem;
+}
+
 
 @media (max-width: 640px) {
   .message-bubble {
