@@ -5,8 +5,8 @@ from thefuzz import process
 # Implement the search_illustrations function directly in the test script
 def search_illustrations(search_term: str):
     try:
-        # Adjust the path to work from the backend directory
-        illustrations_path = os.path.join("..", "public", "illustrations.json")
+        # Adjust the path to work from the tests/integration directory
+        illustrations_path = os.path.join("..", "..", "public", "illustrations.json")
         with open(illustrations_path, "r") as f:
             illustrations = json.load(f)
 

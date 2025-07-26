@@ -5,7 +5,7 @@ import json
 import logging
 import asyncio
 import re
-from typing import List, Optional, Dict, Any, AsyncIterator
+from typing import List, Optional, Dict, Any, AsyncIterator, Union
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
@@ -91,7 +91,7 @@ def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str,
     return final_retrievers
 
 
-def get_llm_instances() -> Dict[str, Optional[ChatGoogleGenerativeAI | ChatAnthropic]]:
+def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
     """Initializes and returns a dictionary of available LLM instances."""
     llms = {}
     try:

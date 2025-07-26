@@ -104,8 +104,6 @@ The project is organized into two main parts: the Astro frontend and the FastAPI
 │   └── utils/                       # Utility functions
 ├── backend/                         # FastAPI backend
 │   ├── main.py                      # FastAPI application entrypoint
-│   ├── test_large_input.py          # Input testing script
-│   ├── test_search.py               # Search functionality tests
 │   ├── core/                        # Core backend logic
 │   │   ├── __init__.py              # Package initialization
 │   │   ├── config.py                # Backend configuration
@@ -116,3 +114,16 @@ The project is organized into two main parts: the Astro frontend and the FastAPI
 │   │   ├── illustration_service.py  # Image search service
 │   │   └── response_service.py      # Response formatting
 │   └── scripts/                     # Utility scripts
+├── tests/                           # Test suite
+│   ├── integration/                 # Integration tests
+│   │   ├── test_vector_retrieval.py # RAG system integration tests
+│   │   ├── test_search.py           # Search functionality tests
+│   │   └── test_large_input.py      # Input handling tests
+│   ├── test_config.py               # Unit tests for config module
+│   ├── test_data_loader.py          # Unit tests for data loader
+│   ├── test_llm_chain.py            # Unit tests for LLM chain
+│   ├── test_query_router.py         # Unit tests for query router
+│   ├── test_followup_service.py     # Unit tests for followup service
+│   ├── test_illustration_service.py # Unit tests for illustration service
+│   └── test_response_service.py     # Unit tests for response service
+└── pytest.ini                      # Pytest configuration

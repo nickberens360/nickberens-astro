@@ -6,7 +6,8 @@ Tests that resume queries return resume content instead of illustration content.
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add project root to path (go up two levels from tests/integration/)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Load environment variables
 from dotenv import load_dotenv

@@ -104,6 +104,117 @@ class SecurityValidator:
         # Normalize whitespace and limit length
         return re.sub(r"\s+", " ", sanitized).strip()[:cls.MAX_QUERY_LENGTH]
 
+    @classmethod
+    def check_length_status(cls, text: str, input_type: str) -> dict:
+        """
+        Check the length status of input text and return status information.
+
+        Args:
+            text: The input text to check
+            input_type: The type of input (e.g., "query", "message")
+
+        Returns:
+            dict: Contains 'status' and 'message' keys with length validation info
+        """
+        if not isinstance(text, str):
+            return {"status": "ERROR", "message": "Invalid input: text must be a string"}
+
+        text_length = len(text)
+
+        # Define thresholds based on test expectations
+        if text_length < 1850:
+            return {
+                "status": "OK",
+                "message": f"{input_type.capitalize()} length is acceptable ({text_length} characters)"
+            }
+        elif text_length <= 2100:
+            return {
+                "status": "WARNING",
+                "message": f"{input_type.capitalize()} is getting long ({text_length} characters). Consider shortening for better processing."
+            }
+        else:
+            return {
+                "status": "ERROR",
+                "message": f"{input_type.capitalize()} is too long ({text_length} characters). Maximum recommended length is 2100 characters."
+            }
+
+    @classmethod
+    def chunk_text(cls, text: str) -> List[str]:
+        """
+        Split long text into smaller chunks while preserving sentence boundaries.
+
+        Args:
+            text: The long text to be chunked
+
+        Returns:
+            List[str]: List of text chunks
+        """
+        if not isinstance(text, str) or not text.strip():
+            return []
+
+        # Target chunk size (aim for around 1500 characters per chunk)
+        target_chunk_size = 1500
+        max_chunk_size = 2000
+
+        # If text is short enough, return as single chunk
+        if len(text) <= target_chunk_size:
+            return [text.strip()]
+
+        chunks = []
+        current_chunk = ""
+
+        # Split by sentences first (look for sentence endings)
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+
+            # If adding this sentence would exceed max chunk size, start new chunk
+            if current_chunk and len(current_chunk) + len(sentence) + 1 > max_chunk_size:
+                if current_chunk.strip():
+                    chunks.append(current_chunk.strip())
+                current_chunk = sentence
+            else:
+                # Add sentence to current chunk
+                if current_chunk:
+                    current_chunk += " " + sentence
+                else:
+                    current_chunk = sentence
+
+                # If current chunk is at target size, start new chunk
+                if len(current_chunk) >= target_chunk_size:
+                    chunks.append(current_chunk.strip())
+                    current_chunk = ""
+
+        # Add any remaining text as final chunk
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+
+        # Handle edge case where a single sentence is too long
+        final_chunks = []
+        for chunk in chunks:
+            if len(chunk) <= max_chunk_size:
+                final_chunks.append(chunk)
+            else:
+                # Split long chunk by words if sentence boundary preservation fails
+                words = chunk.split()
+                temp_chunk = ""
+                for word in words:
+                    if temp_chunk and len(temp_chunk) + len(word) + 1 > max_chunk_size:
+                        final_chunks.append(temp_chunk.strip())
+                        temp_chunk = word
+                    else:
+                        if temp_chunk:
+                            temp_chunk += " " + word
+                        else:
+                            temp_chunk = word
+                if temp_chunk.strip():
+                    final_chunks.append(temp_chunk.strip())
+
+        return final_chunks if final_chunks else [text.strip()]
+
 # --- END OF RESTORED SECURITY LOGIC ---
 
 class Message(BaseModel):
@@ -112,7 +223,7 @@ class Message(BaseModel):
 
 class Query(BaseModel):
     question: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_QUERY_LENGTH, description="The user's question")
-    chat_history: List[Message] = Field(default=[], max_items=SecurityValidator.MAX_CHAT_HISTORY_LENGTH, description="Previous conversation history")
+    chat_history: List[Message] = Field(default=[], max_length=SecurityValidator.MAX_CHAT_HISTORY_LENGTH, description="Previous conversation history")
     preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
 
 app = FastAPI(title=AppConfig.APP_TITLE, description=AppConfig.APP_DESCRIPTION, version=AppConfig.APP_VERSION)

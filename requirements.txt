@@ -10,3 +10,7 @@ chromadb
 slowapi
 thefuzz[speed]
 langchain-anthropic
+pytest
+pytest-asyncio
+pytest-mock
+pytest-cov
