@@ -58,12 +58,61 @@ The project is organized into two main parts: the Astro frontend and the FastAPI
 
 ```text
 /
-├── public/              # Static assets and the unified_data.json knowledge base
-├── src/
-│   ├── components/      # Reusable Vue components
-│   ├── layouts/         # Astro layout components
-│   └── pages/           # Astro pages (routes)
-├── backend/
-│   ├── core/            # Core backend logic (LLM chains, data loading, etc.)
-│   └── main.py          # FastAPI application entrypoint
-└── package.json
+├── .env.example                     # Environment variables template
+├── .gitignore                       # Git ignore rules
+├── README.md                        # Project documentation
+├── astro.config.mjs                 # Astro configuration
+├── package.json                     # Node.js dependencies and scripts
+├── package-lock.json                # Locked dependency versions
+├── requirements.txt                 # Python dependencies
+├── tsconfig.json                    # TypeScript configuration
+├── server.log                       # Server log file
+├── public/                          # Static assets and knowledge base
+│   ├── favicon.svg                  # Site favicon
+│   ├── Nick_Berens_Resume.pdf       # PDF resume
+│   ├── about-nick-berens.md         # About content
+│   ├── unified_data.json            # AI knowledge base
+│   ├── illustrations.json           # Illustration metadata
+│   └── illustrations/               # Illustration image files
+├── src/                             # Frontend source code
+│   ├── assets/                      # Static assets
+│   │   └── images/                  # Image assets
+│   ├── components/                  # Reusable Vue components
+│   │   ├── blog/                    # Blog-specific components
+│   │   ├── ChatBot.vue              # Main chatbot component
+│   │   ├── ChatInput.vue            # Chat input interface
+│   │   ├── ChatMessageList.vue      # Message display
+│   │   ├── CustomLMGTFY.vue         # Terminal component
+│   │   ├── SiteHeader.vue           # Site navigation
+│   │   ├── SiteFooter.vue           # Site footer
+│   │   └── ...                      # Other UI components
+│   ├── composables/                 # Vue composables
+│   ├── config/                      # Configuration files
+│   ├── content/                     # Content management
+│   │   └── blog/                    # Blog posts
+│   ├── layouts/                     # Astro layout components
+│   ├── lib/                         # Utility libraries
+│   ├── pages/                       # Astro pages (routes)
+│   │   ├── blog/                    # Blog page routes
+│   │   ├── index.astro              # Homepage
+│   │   ├── illustrations.astro      # Gallery page
+│   │   ├── resume.astro             # Resume page
+│   │   └── nick-ai.astro            # Chatbot page
+│   ├── plugins/                     # Astro plugins
+│   ├── stores/                      # State management (Nanostores)
+│   ├── styles/                      # Global CSS styles
+│   └── utils/                       # Utility functions
+├── backend/                         # FastAPI backend
+│   ├── main.py                      # FastAPI application entrypoint
+│   ├── test_large_input.py          # Input testing script
+│   ├── test_search.py               # Search functionality tests
+│   ├── core/                        # Core backend logic
+│   │   ├── __init__.py              # Package initialization
+│   │   ├── config.py                # Backend configuration
+│   │   ├── data_loader.py           # Data loading utilities
+│   │   ├── llm_chain.py             # LangChain LLM integration
+│   │   ├── query_router.py          # Query routing logic
+│   │   ├── followup_service.py      # Follow-up suggestions
+│   │   ├── illustration_service.py  # Image search service
+│   │   └── response_service.py      # Response formatting
+│   └── scripts/                     # Utility scripts
