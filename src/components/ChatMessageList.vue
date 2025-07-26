@@ -294,8 +294,16 @@ export default {
   color: #f9fafb;
   border-bottom-left-radius: 4px;
 }
-.conversation-pair:last-of-type {
-  height: calc(100dvh - var(--chat-bot-form-height) - 25px);
+
+@supports not (height: 100dvh) {
+  .conversation-pair:last-of-type {
+    height: calc(100vh - var(--chat-bot-form-height) - 25px);
+  }
+}
+@supports (height: 100dvh) {
+  .conversation-pair:last-of-type {
+    height: calc(100dvh - var(--chat-bot-form-height) - 25px);
+  }
 }
 
 /* Real typing cursor style */
