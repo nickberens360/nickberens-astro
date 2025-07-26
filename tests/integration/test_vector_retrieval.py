@@ -6,6 +6,7 @@ Tests that resume queries return resume content instead of illustration content.
 
 import sys
 import os
+import pytest
 # Add project root to path (go up two levels from tests/integration/)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -17,6 +18,7 @@ from backend.core.data_loader import load_all_documents
 from backend.core.llm_chain import create_multi_vector_retriever
 from langchain_core.messages import HumanMessage
 
+@pytest.mark.integration
 def test_vector_retrieval():
     """Test the enhanced vector retrieval system."""
     print("🔍 Testing Enhanced Vector Retrieval System")

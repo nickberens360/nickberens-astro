@@ -5,11 +5,13 @@ Test script to verify large text input handling improvements.
 
 import sys
 import os
+import pytest
 # Add project root to path to access backend as a module (go up two levels from tests/integration/)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from backend.main import SecurityValidator
 
+@pytest.mark.integration
 def test_length_validation():
     """Test the enhanced length validation functionality."""
     print("Testing length validation...")
@@ -29,6 +31,7 @@ def test_length_validation():
     status = SecurityValidator.check_length_status(over_limit_text, "query")
     print(f"Over limit text ({len(over_limit_text)} chars): {status['status']} - {status['message']}")
 
+@pytest.mark.integration
 def test_text_chunking():
     """Test the text chunking functionality."""
     print("\nTesting text chunking...")
@@ -55,6 +58,7 @@ def test_text_chunking():
         print(f"Chunk {i+1} length: {len(chunk)} characters")
         print(f"Chunk {i+1} preview: {chunk[:100]}...")
 
+@pytest.mark.integration
 def test_input_sanitization():
     """Test the input sanitization functionality."""
     print("\nTesting input sanitization...")

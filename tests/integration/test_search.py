@@ -1,5 +1,6 @@
 import json
 import os
+import pytest
 from thefuzz import process
 
 # Implement the search_illustrations function directly in the test script
@@ -57,6 +58,7 @@ def search_illustrations(search_term: str):
         print(f"Error: {e}")
         return []
 
+@pytest.mark.integration
 def test_search_illustrations():
     # Test searching for "snakes" (plural)
     results = search_illustrations("snakes")
