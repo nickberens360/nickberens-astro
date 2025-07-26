@@ -66,7 +66,7 @@
                   :search-query="pair.botMessage.lmgtfyQuery"
                   :play-animation="pair.botMessage.isNewResearch === true"
                   :chat-id="chatId"
-                  :message-index="messages.findIndex(msg => msg === pair.botMessage)"
+                  :message-index="pair.botMessageIndex"
                 />
               </div>
 
@@ -190,24 +190,29 @@ export default {
       const pairs = [];
       let currentPair = null;
 
-      props.messages.forEach((message) => {
+      props.messages.forEach((message, messageIndex) => {
         if (message.sender === 'user') {
           // Start a new conversation pair
           currentPair = {
             userMessage: message,
-            botMessage: null
+            userMessageIndex: messageIndex,
+            botMessage: null,
+            botMessageIndex: null
           };
           pairs.push(currentPair);
         } else if (message.sender === 'bot') {
           if (currentPair) {
             // Add bot message to current pair
             currentPair.botMessage = message;
+            currentPair.botMessageIndex = messageIndex;
             currentPair = null; // Reset for next pair
           } else {
             // Handle orphaned bot message (e.g., welcome message)
             pairs.push({
               userMessage: null,
-              botMessage: message
+              userMessageIndex: null,
+              botMessage: message,
+              botMessageIndex: messageIndex
             });
           }
         }
@@ -290,7 +295,7 @@ export default {
   border-bottom-left-radius: 4px;
 }
 .conversation-pair:last-of-type {
-  height: calc(100dvh - var(--chat-bot-form-height) * 25px);
+  height: calc(100dvh - var(--chat-bot-form-height) - 25px);
 }
 
 /* Real typing cursor style */
