@@ -480,8 +480,10 @@ export default {
 }
 
 .result {
+  padding: 8px 16px;
+  background: #eee;
   border-left: 4px solid #4285f4;
-  padding: 0 16px;
+  border-radius: 6px;
 }
 
 .result-link {
