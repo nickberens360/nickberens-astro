@@ -40,6 +40,14 @@ class SecurityValidator:
     MAX_QUERY_LENGTH: int = 1000
     MAX_CHAT_HISTORY_LENGTH: int = 10
     MAX_MESSAGE_LENGTH: int = 1000
+
+    # Length validation thresholds
+    LENGTH_WARN_THRESHOLD: int = 1850
+    LENGTH_ERROR_THRESHOLD: int = 2100
+
+    # Text chunking configuration
+    CHUNK_TARGET_SIZE: int = 1500
+    CHUNK_MAX_SIZE: int = 2000
     SUSPICIOUS_PATTERNS: List[str] = [
         r"ignore\s+(previous|above|all)\s+instructions?",
         r"system\s*:?\s*you\s+are\s+now",
@@ -142,20 +150,24 @@ class SecurityValidator:
         text_length = len(text)
 
         # Define thresholds based on test expectations
-        if text_length < 1850:
+        if text_length < cls.LENGTH_WARN_THRESHOLD:
             return {
                 "status": "OK",
                 "message": f"{input_type.capitalize()} length is acceptable ({text_length} characters)",
             }
-        elif text_length <= 2100:
+        elif text_length <= cls.LENGTH_ERROR_THRESHOLD:
             return {
                 "status": "WARNING",
-                "message": f"{input_type.capitalize()} is getting long ({text_length} characters). Consider shortening for better processing.",
+                "message": (
+                    f"{input_type.capitalize()} is getting long ({text_length} characters). "
+                    "Consider shortening for better processing."
+                ),
             }
         else:
             return {
                 "status": "ERROR",
-                "message": f"{input_type.capitalize()} is too long ({text_length} characters). Maximum recommended length is 2100 characters.",
+                "message": f"{input_type.capitalize()} is too long ({text_length} characters). "
+                "Maximum recommended length is {cls.LENGTH_ERROR_THRESHOLD} characters.",
             }
 
     @classmethod
@@ -173,8 +185,8 @@ class SecurityValidator:
             return []
 
         # Target chunk size (aim for around 1500 characters per chunk)
-        target_chunk_size = 1500
-        max_chunk_size = 2000
+        target_chunk_size = cls.CHUNK_TARGET_SIZE
+        max_chunk_size = cls.CHUNK_MAX_SIZE
 
         # If text is short enough, return as single chunk
         if len(text) <= target_chunk_size:
