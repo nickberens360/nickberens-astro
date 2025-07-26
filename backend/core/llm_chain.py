@@ -282,7 +282,7 @@ async def stream_with_fallback(
     cache_key = get_cache_key(user_input)
 
     # 1. Check for a cached FINAL response
-    if cached_response := get_cached_response(cache_key):
+    if cache_key and (cached_response := get_cached_response(cache_key)):
         yield cached_response
         return
 
@@ -294,7 +294,7 @@ async def stream_with_fallback(
         return
 
     # 2. Check for cached RETRIEVAL results
-    unique_docs = get_cached_retrieval(cache_key)
+    unique_docs = get_cached_retrieval(cache_key) if cache_key else None
 
     if unique_docs is None:
         logger.info(f"Retrieval cache miss for key: {cache_key}. Performing vector search...")
@@ -339,7 +339,8 @@ async def stream_with_fallback(
             unique_docs = []
             logger.warning("No retrievers were selected for the query, context will be empty.")
 
-        cache_retrieval(cache_key, unique_docs)
+        if cache_key:
+            cache_retrieval(cache_key, unique_docs)
 
     # 3. Proceed to LLM generation
     llm_order = [("claude", llms.get("claude")), ("gemini", llms.get("gemini"))]
@@ -364,7 +365,8 @@ async def stream_with_fallback(
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}. Trying next available model.")
 
     if stream_successful:
-        cache_response(cache_key, full_response_chunks)
+        if cache_key:
+            cache_response(cache_key, full_response_chunks)
     else:
         logger.error("All LLM streaming attempts failed.")
         yield "I'm sorry, but I'm currently experiencing technical difficulties and cannot provide a response."
