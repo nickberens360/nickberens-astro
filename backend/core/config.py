@@ -90,18 +90,26 @@ class AppConfig:
 
             # Check domain format - basic validation
             domain_part = parsed.netloc.split(":")[0]  # Remove port
-            domain_format_valid = re.match(r"^[a-zA-Z0-9.-]+$", domain_part) is not None
+            # More strict domain validation: no consecutive dots, no leading/trailing dots
+            domain_format_valid = re.match(
+                r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$", domain_part
+            ) is not None or domain_part in [
+                "localhost",
+                "127.0.0.1",
+            ]  # Allow special local addresses
             if not domain_format_valid:
                 logger.warning(f"Invalid domain format: {domain_part}")
+                return False
 
             # Block obviously malicious domains
             suspicious = ["malware", "phishing", "hack", "exploit", "evil"]
             is_malicious = any(keyword in netloc_lower for keyword in suspicious)
             if is_malicious:
                 logger.error(f"Suspicious domain blocked: {origin}")
+                return False
 
-            # Return True only if domain format is valid and not malicious
-            return domain_format_valid and not is_malicious
+            # If we reach here, domain format is valid and not malicious
+            return True
 
         except Exception as e:
             logger.warning(f"Error validating CORS origin {origin}: {e}")
