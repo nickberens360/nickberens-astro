@@ -29,7 +29,7 @@
               <div class="bot-message-wrapper">
 
                   <div
-                    v-if="messages[index + 1].text"
+                    v-if="messages[index + 1] && messages[index + 1].text"
                     class="markdown-content-wrapper"
                   >
                     <span
