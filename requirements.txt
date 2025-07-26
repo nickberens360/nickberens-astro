@@ -10,14 +10,4 @@ chromadb
 slowapi
 thefuzz[speed]
 langchain-anthropic
-pytest
-pytest-asyncio
-pytest-mock
-pytest-cov
-urllib3==1.26.18
-
-# Code quality and linting tools
-black
-flake8
-isort
-mypy
+urllib3>=2.0.0,<3.0.0
