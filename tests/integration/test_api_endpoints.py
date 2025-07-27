@@ -10,7 +10,7 @@ This is a "black box" testing approach, focusing on the API's external behavior
 rather than its internal logic (which is already covered by unit tests).
 """
 
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -59,32 +59,37 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
     async def mock_stream():
         yield "This is a mocked AI response."
 
-    with patch("backend.routes.query.stream_with_fallback") as mock_stream_with_fallback:
-        mock_stream_with_fallback.return_value = (mock_stream(), "claude-3-sonnet")
+    # Mock the app state to have truthy retrievers
+    mock_retrievers = {"mock": "retrievers"}
 
-        # Make a POST request to "/query" with a valid JSON payload
-        response = await client.post(
-            "/query", json={"question": "Tell me about your experience", "chat_history": [], "preferred_model": None}
-        )
+    with patch.object(app.state, "retrievers", mock_retrievers):
+        with patch("backend.routes.query.stream_with_fallback") as mock_stream_with_fallback:
+            mock_stream_with_fallback.return_value = (mock_stream(), "claude-3-sonnet")
 
-        assert response.status_code == 200
-        # For streaming responses, check the content type
-        assert response.headers.get("content-type") == "text/plain; charset=utf-8"
+            # Make a POST request to "/query" with a valid JSON payload
+            response = await client.post(
+                "/query",
+                json={"question": "Tell me about your experience", "chat_history": [], "preferred_model": None},
+            )
 
-        # Read the streamed response
-        content = ""
-        async for chunk in response.aiter_text():
-            content += chunk
+            assert response.status_code == 200
+            # For streaming responses, check the content type
+            assert response.headers.get("content-type") == "text/plain; charset=utf-8"
 
-        assert "This is a mocked AI response." in content
+            # Read the streamed response
+            content = ""
+            async for chunk in response.aiter_text():
+                content += chunk
 
-        # Verify the mock was called with the correct arguments
-        mock_stream_with_fallback.assert_called_once_with(
-            ANY,  # retrievers
-            [],  # formatted_chat_history
-            "Tell me about your experience",  # sanitized_question
-            None,  # preferred_model
-        )
+            assert "This is a mocked AI response." in content
+
+            # Verify the mock was called with the correct arguments
+            mock_stream_with_fallback.assert_called_once_with(
+                mock_retrievers,  # mocked retrievers
+                [],  # formatted_chat_history
+                "Tell me about your experience",  # sanitized_question
+                None,  # preferred_model
+            )
 
 
 async def test_query_endpoint_invalid_payload_returns_422(client: AsyncClient):
