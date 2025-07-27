@@ -19,10 +19,3 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Cache-Control"] = "no-cache"
     return response
-
-
-def get_security_middleware():
-    """
-    Returns the security middleware function for app registration.
-    """
-    return add_security_headers
