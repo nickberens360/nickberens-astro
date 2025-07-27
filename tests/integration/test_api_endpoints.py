@@ -1,16 +1,16 @@
 """
-E2E tests for FastAPI backend endpoints.
+Integration tests for FastAPI backend endpoints.
 
-This module contains end-to-end tests that validate the entire request/response
+This module contains integration tests that validate the entire request/response
 lifecycle of the FastAPI application. These tests ensure that the API endpoints
 are correctly configured, requests are properly processed, and responses conform
 to the expected schemas, including error handling.
 
 This is a "black box" testing approach, focusing on the API's external behavior
-rather than its internal logic (which is already covered by unit and integration tests).
+rather than its internal logic (which is already covered by unit tests).
 """
 
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -78,8 +78,13 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
 
         assert "This is a mocked AI response." in content
 
-        # Verify the mock was called
-        mock_stream_with_fallback.assert_called_once()
+        # Verify the mock was called with the correct arguments
+        mock_stream_with_fallback.assert_called_once_with(
+            ANY,  # retrievers
+            [],  # formatted_chat_history
+            "Tell me about your experience",  # sanitized_question
+            None,  # preferred_model
+        )
 
 
 async def test_query_endpoint_invalid_payload_returns_422(client: AsyncClient):
