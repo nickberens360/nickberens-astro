@@ -320,27 +320,6 @@ export default {
   box-shadow: none !important;
 }
 
-/* Input controls styles */
-.d-flex {
-  display: flex;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.pt-2 {
-  padding-top: 0.5rem;
-}
-
 /* Model selector styles */
 .model-selector-bar {
   padding-left: .5rem;
@@ -463,8 +442,6 @@ export default {
     opacity: 0.7;
   }
 }
-
-/* Responsive styles */
 
 /* Input info and character count styles */
 .input-info {
