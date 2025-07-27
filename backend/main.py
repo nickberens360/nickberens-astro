@@ -14,6 +14,9 @@ from dotenv import load_dotenv
 from .core.app_factory import create_app
 from .core.app_initializer import initialize_app_state
 from .core.config import AppConfig
+from .core.followup_service import FollowUpService
+from .core.query_router import QueryRouter
+from .core.response_service import ResponseService
 
 # Load environment variables and setup logging
 load_dotenv()
@@ -32,6 +35,11 @@ except Exception as e:
     retrievers, illustration_service = None, None
     app_initialized = False
 
+# Initialize singleton services
+query_router = QueryRouter()
+response_service = ResponseService()
+followup_service = FollowUpService()
+
 # Create the FastAPI app
 app = create_app()
 
@@ -39,3 +47,6 @@ app = create_app()
 app.state.app_initialized = app_initialized
 app.state.retrievers = retrievers
 app.state.illustration_service = illustration_service
+app.state.query_router = query_router
+app.state.response_service = response_service
+app.state.followup_service = followup_service

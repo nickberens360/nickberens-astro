@@ -7,10 +7,6 @@ stored in app.state, following FastAPI best practices for dependency injection.
 
 from fastapi import Request
 
-from .core.followup_service import FollowUpService
-from .core.query_router import QueryRouter
-from .core.response_service import ResponseService
-
 
 def get_app_state(request: Request):
     """
@@ -41,7 +37,7 @@ def get_services(request: Request):
     return {
         "retrievers": getattr(request.app.state, "retrievers", None),
         "illustration_service": getattr(request.app.state, "illustration_service", None),
-        "query_router": QueryRouter(),
-        "response_service": ResponseService(),
-        "followup_service": FollowUpService(),
+        "query_router": getattr(request.app.state, "query_router", None),
+        "response_service": getattr(request.app.state, "response_service", None),
+        "followup_service": getattr(request.app.state, "followup_service", None),
     }
