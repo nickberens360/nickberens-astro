@@ -174,9 +174,10 @@ async def test_query_handles_primary_llm_failure_and_uses_fallback(client: Async
     mock_gemini_chain.astream = MagicMock(side_effect=successful_stream)
 
     # Mock get_llm_instances to return our mock instances
-    with patch("backend.core.llm_chain.get_llm_instances") as mock_get_llms, patch(
-        "backend.core.llm_chain.create_qa_chain"
-    ) as mock_create_chain:
+    with (
+        patch("backend.core.llm_chain.get_llm_instances") as mock_get_llms,
+        patch("backend.core.llm_chain.create_qa_chain") as mock_create_chain,
+    ):
         # Configure get_llm_instances to return both models
         mock_get_llms.return_value = {"claude": mock_claude, "gemini": mock_gemini}
 
