@@ -227,3 +227,67 @@ async def test_query_handles_primary_llm_failure_and_uses_fallback(client: Async
 
         # Verify that the fallback chain was called and succeeded
         mock_gemini_chain.astream.assert_called_once()
+
+
+@patch("backend.core.illustration_service.IllustrationService.get_all")
+async def test_chat_handles_illustration_query_correctly(mock_get_all, client: AsyncClient):
+    """
+    SPEC: Verifies that a query for an illustration is routed to the
+    illustration service and returns image data.
+    """
+    # 1. Configure the mock
+    # This is the data we expect the illustration service to find.
+    mock_image_data = [{"file": "cosmic_dragon.webp"}]
+    mock_get_all.return_value = mock_image_data
+
+    # 2. Make the API call with an image-related query
+    # Note: The actual endpoint is /query, not /api/chat as in the original spec.
+    # Using "show me images" which is explicitly in the all_image_phrases list
+    response = await client.post(
+        "/query", json={"question": "show me images", "chat_history": [], "preferred_model": None}
+    )
+
+    # 3. Assert the outcome
+    assert response.status_code == 200
+
+    # The response should contain the mocked image data in the expected format.
+    # Based on the ResponseService, the response has an 'images' field with full URLs.
+    response_json = response.json()
+    assert "images" in response_json
+    assert response_json["images"] == ["/illustrations/cosmic_dragon.webp"]
+    assert "answer" in response_json
+    assert "illustrations" in response_json["answer"].lower()
+
+    # Verify that the illustration service was called
+    mock_get_all.assert_called_once()
+
+
+@patch("backend.core.illustration_service.IllustrationService.search")
+async def test_chat_handles_specific_illustration_search_correctly(mock_search, client: AsyncClient):
+    """
+    SPEC: Verifies that a specific query for an illustration is routed to the
+    illustration service search method and returns image data.
+    """
+    # 1. Configure the mock
+    # This is the data we expect the illustration service to find.
+    mock_image_data = [{"file": "cosmic_dragon.webp"}]
+    mock_search.return_value = mock_image_data
+
+    # 2. Make the API call with a specific image search query
+    # Using "images of dragon" which should trigger SPECIFIC_IMAGE_SEARCH
+    response = await client.post(
+        "/query", json={"question": "images of dragon", "chat_history": [], "preferred_model": None}
+    )
+
+    # 3. Assert the outcome
+    assert response.status_code == 200
+
+    # The response should contain the mocked image data in the expected format.
+    response_json = response.json()
+    assert "images" in response_json
+    assert response_json["images"] == ["/illustrations/cosmic_dragon.webp"]
+    assert "answer" in response_json
+    assert "dragon" in response_json["answer"].lower()
+
+    # Verify that the illustration service search was called with the correct term
+    mock_search.assert_called_once_with("dragon")
