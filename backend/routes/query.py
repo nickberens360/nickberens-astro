@@ -11,7 +11,7 @@ This module contains the primary query endpoint that:
 import json
 import time
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 from slowapi import Limiter
@@ -31,8 +31,7 @@ router = APIRouter()
 
 @router.post("/query")
 @limiter.limit(AppConfig.RATE_LIMIT)
-async def query_endpoint(request: Request, query: Query):
-    services = get_services(request)
+async def query_endpoint(request: Request, query: Query, services: dict = Depends(get_services)):
     # Restore validation and sanitization calls
     client_ip = get_remote_address(request)
     is_valid, error_msg = SecurityValidator.validate_query(query, client_ip)

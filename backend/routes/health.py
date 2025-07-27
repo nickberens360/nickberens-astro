@@ -9,7 +9,7 @@ This module contains health-related endpoints:
 
 import time
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 
 from ..core.config import AppConfig
 from ..dependencies import get_app_state
@@ -18,15 +18,13 @@ router = APIRouter()
 
 
 @router.get("/")
-async def root(request: Request):
-    state = get_app_state(request)
+async def root(state: dict = Depends(get_app_state)):
     return {"status": "healthy" if state["app_initialized"] else "degraded"}
 
 
 @router.get("/status")
-async def status(request: Request):
+async def status(state: dict = Depends(get_app_state)):
     """Simple status check."""
-    state = get_app_state(request)
     return {
         "status": "online",
         "timestamp": time.time(),
@@ -36,8 +34,7 @@ async def status(request: Request):
 
 
 @router.get("/health")
-async def health_check(request: Request):
-    state = get_app_state(request)
+async def health_check(state: dict = Depends(get_app_state)):
     count = state["illustration_service"].get_all() if state["illustration_service"] else []
     return {
         "status": "healthy" if state["app_initialized"] else "degraded",
