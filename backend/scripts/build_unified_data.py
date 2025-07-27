@@ -29,30 +29,15 @@ def build_unified_data():
 
     # --- Illustrations JSON (already structured) ---
     illustrations_path = base_path / "illustrations.json"
-    if illustrations_path.exists():
-        with open(illustrations_path, "r", encoding="utf-8") as f:
-            illustrations_data = json.load(f)
-    else:
-        illustrations_data = []
-        print(f"⚠️ Illustrations file not found at {illustrations_path}")
+    illustrations_data = _load_json_or_default(illustrations_path, [])
 
     # --- Resume Data (loaded from JSON) ---
     resume_path = base_path / "resume.json"
-    if resume_path.exists():
-        with open(resume_path, "r", encoding="utf-8") as f:
-            resume_data = json.load(f)
-    else:
-        resume_data = {}
-        print(f"⚠️ Resume file not found at {resume_path}")
+    resume_data = _load_json_or_default(resume_path, {})
 
     # --- About Data (loaded from JSON) ---
     about_path = base_path / "about.json"
-    if about_path.exists():
-        with open(about_path, "r", encoding="utf-8") as f:
-            about_data = json.load(f)
-    else:
-        about_data = {}
-        print(f"⚠️ About file not found at {about_path}")
+    about_data = _load_json_or_default(about_path, {})
 
     # --- Build unified structure ---
     unified_data = {
