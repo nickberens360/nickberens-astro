@@ -34,7 +34,7 @@ A Vue component that creates a macOS-style terminal window in dark mode. It can 
 
 ```vue
 <template>
-  <TerminalWindow 
+  <TerminalWindow
     title="nickberens ~ bash"
     :initialOutput="['Welcome to Terminal', 'Type help for available commands']"
     @close="handleClose"
@@ -65,7 +65,7 @@ export default {
   <div>
     <button @click="toggleTheme">Toggle Theme</button>
 
-    <TerminalWindow 
+    <TerminalWindow
       v-model:theme="currentTheme"
       title="Terminal"
       :initialOutput="['Type \'theme\' to toggle between light and dark mode']"

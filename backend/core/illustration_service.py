@@ -1,8 +1,10 @@
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from langchain_core.retrievers import BaseRetriever
 
 logger = logging.getLogger(__name__)
+
 
 class IllustrationService:
     """Service for managing and searching illustration data using a dedicated vector retriever."""
