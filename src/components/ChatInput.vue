@@ -37,7 +37,7 @@
         </div>
       </div>
 
-      <div class="d-flex justify-between items-center pt-2">
+      <div class="d-flex justify-between items-center w-full pt-2">
         <!-- ChatModelSelector functionality -->
         <div class="model-selector-bar">
           <div class="model-selector-container">
