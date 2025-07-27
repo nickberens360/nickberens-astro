@@ -71,7 +71,7 @@ class TestLLMChain:
     @pytest.mark.unit
     def test_get_cache_key_invalid_input(self):
         """Test cache key with invalid input types."""
-        assert get_cache_key(None) is None  # type: ignore
+        assert get_cache_key(None) is None
         assert get_cache_key(123) is None  # type: ignore
         assert get_cache_key([]) is None  # type: ignore
 

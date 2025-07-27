@@ -159,7 +159,7 @@ def create_history_aware_prompt() -> ChatPromptTemplate:
     )
 
 
-def get_cache_key(user_input: str) -> Optional[str]:
+def get_cache_key(user_input: Optional[str]) -> Optional[str]:
     """Generates a SHA256 hash for a given user input string to use as a cache key."""
     if not ENABLE_CACHING or not isinstance(user_input, str):
         return None
