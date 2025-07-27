@@ -6,9 +6,62 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+# Security: Limit job permissions
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
-  test:
+  # --- FRONTEND LINTING JOB ---
+  frontend-lint:
+    name: Frontend Linting
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # LTS version
+          cache: 'npm' # Built-in npm caching
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+  # --- FRONTEND TEST JOB ---
+  frontend-test:
+    name: Frontend Tests (Vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [frontend-lint]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # LTS version
+          cache: 'npm' # Built-in npm caching
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run Vitest tests
+        run: npm test
+
+  # --- EXISTING BACKEND TEST JOB ---
+  test:
+    name: Backend Tests (Pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       matrix:
@@ -76,6 +129,8 @@ jobs:
   # Optional: Separate job for different test types
   test-categories:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [frontend-test, test]
     if: github.event_name == 'pull_request'
 
     strategy:
@@ -115,7 +170,10 @@ jobs:
           pytest -m "${{ matrix.test-type }}" -n auto -v
 
   lint:
+    name: Backend Linting & Security
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -136,16 +194,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Auto-fix formatting
+      - name: Check code formatting
         run: |
-          black .
-          isort .
+          black --check .
+          isort --check-only .
 
-      - name: Check remaining issues
+      - name: Run linting
         run: |
-          flake8 . || echo "⚠️ Flake8 issues found - please fix manually"
-          mypy backend/core --ignore-missing-imports || echo "⚠️ Type checking issues found - please fix manually"
+          flake8 .
+          mypy backend/core --ignore-missing-imports
 
       - name: Security scan
         run: |
-          safety check || echo "⚠️ Security vulnerabilities found - please review"
+          safety check
+        continue-on-error: true
