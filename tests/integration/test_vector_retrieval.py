@@ -8,17 +8,18 @@ import os
 import sys
 
 import pytest
-from dotenv import load_dotenv
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
+# Load environment variables FIRST, before importing modules that read them
+from dotenv import load_dotenv
+load_dotenv()
+
+# NOW import modules that depend on environment variables
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from backend.core.data_loader import load_all_documents
 from backend.core.llm_chain import create_multi_vector_retriever
 
 # Add project root to path (go up three levels from tests/integration/)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-# Load environment variables
-load_dotenv()
 
 
 @pytest.mark.integration
