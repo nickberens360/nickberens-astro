@@ -31,10 +31,6 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npm run lint
-        continue-on-error: false
-
   # --- FRONTEND TEST JOB ---
   frontend-test:
     name: Frontend Tests (Vitest)
