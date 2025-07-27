@@ -6,9 +6,38 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+# Security: Limit job permissions
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 jobs:
-  test:
+  # --- FRONTEND TEST JOB ---
+  frontend-test:
+    name: Frontend Tests (Vitest)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # LTS version
+          cache: 'npm' # Built-in npm caching
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run Vitest tests
+        run: npm test
+
+  # --- EXISTING BACKEND TEST JOB ---
+  test:
+    name: Backend Tests (Pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       matrix:
