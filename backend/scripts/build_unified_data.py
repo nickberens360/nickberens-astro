@@ -2,6 +2,22 @@ import json
 from pathlib import Path
 
 
+def _load_json_or_default(path, default_value):
+    """Loads a JSON file or returns a default value if not found or corrupt."""
+    if not path.exists():
+        print(f"⚠️ Data file not found at {path}")
+        return default_value
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"❌ Error decoding JSON from {path}: {e}")
+        return default_value
+    except (IOError, OSError) as e:
+        print(f"❌ Error reading file {path}: {e}")
+        return default_value
+
+
 def build_unified_data():
     """
     Builds a single, structured JSON data file from various sources.
