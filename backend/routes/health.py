@@ -12,24 +12,9 @@ import time
 from fastapi import APIRouter, Depends
 
 from ..core.config import AppConfig
+from ..dependencies import get_app_state
 
 router = APIRouter()
-
-# Global state variables that will be set by the main application
-app_initialized = False
-illustration_service = None
-
-
-def get_app_state():
-    """Dependency to get current app state."""
-    return {"app_initialized": app_initialized, "illustration_service": illustration_service}
-
-
-def set_app_state(initialized: bool, service):
-    """Set the global app state."""
-    global app_initialized, illustration_service
-    app_initialized = initialized
-    illustration_service = service
 
 
 @router.get("/")

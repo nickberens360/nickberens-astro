@@ -19,41 +19,15 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from ..core.config import AppConfig
-from ..core.followup_service import FollowUpService
 from ..core.llm_chain import stream_with_fallback
-from ..core.query_router import QueryRouter, QueryType
-from ..core.response_service import ResponseService
+from ..core.query_router import QueryType
+from ..dependencies import get_services
 from ..models.request_models import Query
 from ..security.validator import SecurityValidator
 
 # Initialize router with rate limiting
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
-
-# Global state variables that will be set by the main application
-retrievers = None
-illustration_service = None
-query_router = QueryRouter()
-response_service = ResponseService()
-followup_service = FollowUpService()
-
-
-def get_services():
-    """Dependency to get current services state."""
-    return {
-        "retrievers": retrievers,
-        "illustration_service": illustration_service,
-        "query_router": query_router,
-        "response_service": response_service,
-        "followup_service": followup_service,
-    }
-
-
-def set_services(all_retrievers, illus_service):
-    """Set the global services state."""
-    global retrievers, illustration_service
-    retrievers = all_retrievers
-    illustration_service = illus_service
 
 
 @router.post("/query")

@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 from .core.app_factory import create_app
 from .core.app_initializer import initialize_app_state
 from .core.config import AppConfig
-from .routes import health, query
 
 # Load environment variables and setup logging
 load_dotenv()
@@ -36,6 +35,7 @@ except Exception as e:
 # Create the FastAPI app
 app = create_app()
 
-# Set global state for routes
-health.set_app_state(app_initialized, illustration_service)
-query.set_services(retrievers, illustration_service)
+# Store state in app.state for dependency injection
+app.state.app_initialized = app_initialized
+app.state.retrievers = retrievers
+app.state.illustration_service = illustration_service
