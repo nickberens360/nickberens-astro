@@ -18,13 +18,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from .config import AppConfig
+
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
-PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20240620")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
+PRIMARY_LLM = AppConfig.PRIMARY_LLM
+GEMINI_MODEL = AppConfig.GEMINI_MODEL
+CLAUDE_MODEL = AppConfig.CLAUDE_MODEL
+EMBEDDING_MODEL = AppConfig.EMBEDDING_MODEL
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
 ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))

@@ -9,11 +9,11 @@ This module handles the initialization of the application state, including:
 """
 
 import logging
-import os
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from ..scripts.build_unified_data import build_unified_data
+from .config import AppConfig
 from .data_loader import load_all_documents
 from .illustration_service import IllustrationService
 from .llm_chain import create_multi_vector_retriever
@@ -32,7 +32,7 @@ def initialize_app_state():
     build_unified_data()
     logger.info("Initializing application state with Multi-Vector RAG...")
     docs, illustrations_data = load_all_documents()
-    embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/embedding-001"))
+    embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
     all_retrievers = create_multi_vector_retriever(docs, embeddings)
     illustration_service = IllustrationService(all_retrievers.get("illustration"), illustrations_data)
     is_valid, message = illustration_service.validate_data()

@@ -15,6 +15,7 @@ class AppConfig:
     PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")
     CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
 
     # Search Configuration with basic validation
     try:
