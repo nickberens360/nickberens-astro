@@ -35,6 +35,6 @@ def initialize_app_state():
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
     all_retrievers = create_multi_vector_retriever(docs, embeddings)
     illustration_service = IllustrationService(all_retrievers.get("illustration"), illustrations_data)
-    is_valid, message = illustration_service.validate_data()
+    _, message = illustration_service.validate_data()
     logger.info(message)
     return all_retrievers, illustration_service
