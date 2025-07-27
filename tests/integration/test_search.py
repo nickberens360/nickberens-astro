@@ -1,12 +1,15 @@
 import json
 import os
+
+import pytest
 from thefuzz import process
+
 
 # Implement the search_illustrations function directly in the test script
 def search_illustrations(search_term: str):
     try:
-        # Adjust the path to work from the backend directory
-        illustrations_path = os.path.join("..", "public", "illustrations.json")
+        # Adjust the path to work from the tests/integration directory
+        illustrations_path = os.path.join("..", "..", "public", "illustrations.json")
         with open(illustrations_path, "r") as f:
             illustrations = json.load(f)
 
@@ -15,18 +18,15 @@ def search_illustrations(search_term: str):
 
         # Handle common singular/plural conversions
         search_terms = [search_term]
-        if search_term.endswith('s'):
+        if search_term.endswith("s"):
             # Add singular form (remove trailing 's')
             search_terms.append(search_term[:-1])
         else:
             # Add plural form (add 's')
-            search_terms.append(search_term + 's')
+            search_terms.append(search_term + "s")
 
         # Create a dictionary where keys are image files and values are searchable strings
-        choices = {
-            img["file"]: f"{img['title']} {' '.join(img['tags'])}"
-            for img in illustrations
-        }
+        choices = {img["file"]: f"{img['title']} {' '.join(img['tags'])}" for img in illustrations}
 
         all_matches = []
         for term in search_terms:
@@ -57,6 +57,8 @@ def search_illustrations(search_term: str):
         print(f"Error: {e}")
         return []
 
+
+@pytest.mark.integration
 def test_search_illustrations():
     # Test searching for "snakes" (plural)
     results = search_illustrations("snakes")
@@ -67,7 +69,7 @@ def test_search_illustrations():
         print(f"- {img['file']}: {img['title']} (tags: {', '.join(img['tags'])})")
 
     # Check if any results contain "snake" in tags
-    snake_images = [img for img in results if "snake" in img['tags']]
+    snake_images = [img for img in results if "snake" in img["tags"]]
     print(f"\nFound {len(snake_images)} images with 'snake' tag:")
     for img in snake_images:
         print(f"- {img['file']}: {img['title']} (tags: {', '.join(img['tags'])})")
@@ -77,6 +79,7 @@ def test_search_illustrations():
     print(f"\nFound {len(results_singular)} results for 'snake':")
     for img in results_singular:
         print(f"- {img['file']}: {img['title']} (tags: {', '.join(img['tags'])})")
+
 
 if __name__ == "__main__":
     test_search_illustrations()

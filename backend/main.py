@@ -1,54 +1,59 @@
-import logging
-import time
-import re
-import os
 import json
-from typing import List, Optional
+import logging
+import os
+import re
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
+
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from fastapi.responses import StreamingResponse, JSONResponse
+from slowapi.util import get_remote_address
 
 from .core.config import AppConfig
 from .core.data_loader import load_all_documents
-from .core.llm_chain import create_multi_vector_retriever, stream_with_fallback
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from .core.followup_service import FollowUpService
 from .core.illustration_service import IllustrationService
+from .core.llm_chain import create_multi_vector_retriever, stream_with_fallback
 from .core.query_router import QueryRouter, QueryType
 from .core.response_service import ResponseService
-from .core.followup_service import FollowUpService
-from langchain_core.messages import HumanMessage, AIMessage
 from .scripts.build_unified_data import build_unified_data
 
 load_dotenv()
-logging.basicConfig(level=getattr(logging, AppConfig.LOG_LEVEL), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=getattr(logging, AppConfig.LOG_LEVEL),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
+
 class SecurityValidator:
-    MAX_QUERY_LENGTH = 1000
-    MAX_CHAT_HISTORY_LENGTH = 10
-    MAX_MESSAGE_LENGTH = 1000
-    SUSPICIOUS_PATTERNS = [
-        r'ignore\s+(previous|above|all)\s+instructions?',
-        r'system\s*:?\s*you\s+are\s+now',
-        r'forget\s+everything\s+(above|before)',
-        r'new\s+instructions?\s*:',
-        r'</?\s*(script|iframe|object|embed|form)',
-        r'javascript\s*:',
-        r'data\s*:\s*text/html',
-        r'(prompt|system)\s+(injection|hack|override)',
-        r'act\s+as\s+if\s+you\s+are',
-        r'pretend\s+(you\s+are|to\s+be)',
+    MAX_QUERY_LENGTH: int = 1000
+    MAX_CHAT_HISTORY_LENGTH: int = 10
+    MAX_MESSAGE_LENGTH: int = 1000
+    SUSPICIOUS_PATTERNS: List[str] = [
+        r"ignore\s+(previous|above|all)\s+instructions?",
+        r"system\s*:?\s*you\s+are\s+now",
+        r"forget\s+everything\s+(above|before)",
+        r"new\s+instructions?\s*:",
+        r"</?\s*(script|iframe|object|embed|form)",
+        r"javascript\s*:",
+        r"data\s*:\s*text/html",
+        r"(prompt|system)\s+(injection|hack|override)",
+        r"act\s+as\s+if\s+you\s+are",
+        r"pretend\s+(you\s+are|to\s+be)",
     ]
-    ALLOWED_MODELS = ["claude", "gemini", None]
-    _user_requests = defaultdict(list)
+    ALLOWED_MODELS: List[Optional[str]] = ["claude", "gemini", None]
+    _user_requests: Dict[str, List[datetime]] = defaultdict(list)
 
     @classmethod
     def validate_query(cls, query, client_ip: str) -> tuple[bool, str]:
@@ -56,13 +61,22 @@ class SecurityValidator:
             if not query.question or not isinstance(query.question, str):
                 return False, "Question is required and must be text"
             if len(query.question) > cls.MAX_QUERY_LENGTH:
-                return False, f"Question too long (max {cls.MAX_QUERY_LENGTH} characters)"
+                return (
+                    False,
+                    f"Question too long (max {cls.MAX_QUERY_LENGTH} characters)",
+                )
             if query.chat_history:
                 if len(query.chat_history) > cls.MAX_CHAT_HISTORY_LENGTH:
-                    return False, f"Chat history too long (max {cls.MAX_CHAT_HISTORY_LENGTH} messages)"
+                    return (
+                        False,
+                        f"Chat history too long (max {cls.MAX_CHAT_HISTORY_LENGTH} messages)",
+                    )
                 for i, msg in enumerate(query.chat_history):
                     if not isinstance(msg.text, str) or len(msg.text) > cls.MAX_MESSAGE_LENGTH:
-                        return False, f"Message {i+1} invalid or too long (max {cls.MAX_MESSAGE_LENGTH} characters)"
+                        return (
+                            False,
+                            f"Message {i + 1} invalid or too long (max {cls.MAX_MESSAGE_LENGTH} characters)",
+                        )
             if query.preferred_model and query.preferred_model not in cls.ALLOWED_MODELS:
                 return False, "Invalid model preference"
 
@@ -88,7 +102,10 @@ class SecurityValidator:
         now = datetime.now()
         minute_ago = now - timedelta(minutes=1)
         # Prune old requests
-        cls._user_requests[client_ip] = [req_time for req_time in cls._user_requests[client_ip] if req_time > minute_ago]
+        cls._user_requests[client_ip] = [
+            req_time for req_time in cls._user_requests[client_ip] if req_time > minute_ago
+        ]
+
         # Check limit (e.g., 20 requests per minute)
         if len(cls._user_requests[client_ip]) >= 20:
             return False
@@ -96,28 +113,53 @@ class SecurityValidator:
         return True
 
     @classmethod
-    def sanitize_input(cls, text: str) -> str:
+    def sanitize_input(cls, text: Optional[str]) -> str:
         if not isinstance(text, str):
             return ""
         # Remove control characters except for common whitespace
         sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
         # Normalize whitespace and limit length
-        return re.sub(r"\s+", " ", sanitized).strip()[:cls.MAX_QUERY_LENGTH]
+        return re.sub(r"\s+", " ", sanitized).strip()[: cls.MAX_QUERY_LENGTH]
 
-# --- END OF RESTORED SECURITY LOGIC ---
 
 class Message(BaseModel):
-    sender: str = Field(..., min_length=1, max_length=50, description="The sender of the message (user or assistant)")
-    text: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_MESSAGE_LENGTH, description="The message content")
+    sender: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="The sender of the message (user or assistant)",
+    )
+    text: str = Field(
+        ...,
+        min_length=1,
+        max_length=SecurityValidator.MAX_MESSAGE_LENGTH,
+        description="The message content",
+    )
+
 
 class Query(BaseModel):
-    question: str = Field(..., min_length=1, max_length=SecurityValidator.MAX_QUERY_LENGTH, description="The user's question")
-    chat_history: List[Message] = Field(default=[], max_items=SecurityValidator.MAX_CHAT_HISTORY_LENGTH, description="Previous conversation history")
+    question: str = Field(
+        ...,
+        min_length=1,
+        max_length=SecurityValidator.MAX_QUERY_LENGTH,
+        description="The user's question",
+    )
+    chat_history: List[Message] = Field(
+        default=[],
+        max_length=SecurityValidator.MAX_CHAT_HISTORY_LENGTH,
+        description="Previous conversation history",
+    )
     preferred_model: Optional[str] = Field(default=None, description="User's preferred model (claude or gemini)")
 
-app = FastAPI(title=AppConfig.APP_TITLE, description=AppConfig.APP_DESCRIPTION, version=AppConfig.APP_VERSION)
+
+app = FastAPI(
+    title=AppConfig.APP_TITLE,
+    description=AppConfig.APP_DESCRIPTION,
+    version=AppConfig.APP_VERSION,
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
@@ -137,6 +179,7 @@ query_router = QueryRouter()
 response_service = ResponseService()
 followup_service = FollowUpService()
 
+
 def initialize_app_state():
     logger.info("Building structured unified data file...")
     build_unified_data()
@@ -149,6 +192,7 @@ def initialize_app_state():
     logger.info(message)
     return all_retrievers, illustration_service
 
+
 try:
     retrievers, illustration_service = initialize_app_state()
     app_initialized = True
@@ -157,15 +201,20 @@ except Exception as e:
     retrievers, illustration_service = None, None
     app_initialized = False
 
-app.add_middleware(CORSMiddleware,
-                   allow_origins=AppConfig.get_cors_origins(),
-                   allow_credentials=True,
-                   allow_methods=["GET", "POST", "OPTIONS"],
-                   allow_headers=["Content-Type", "Authorization"],
-                   expose_headers=["X-Model-Used", "X-Followup-Questions"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=AppConfig.get_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["X-Model-Used", "X-Followup-Questions"],
+)
+
 
 @app.get("/")
-async def root(): return {"status": "healthy" if app_initialized else "degraded"}
+async def root():
+    return {"status": "healthy" if app_initialized else "degraded"}
+
 
 @app.get("/status")
 async def status():
@@ -174,13 +223,18 @@ async def status():
         "status": "online",
         "timestamp": time.time(),
         "primary_llm": AppConfig.PRIMARY_LLM,
-        "app_initialized": app_initialized
+        "app_initialized": app_initialized,
     }
+
 
 @app.get("/health")
 async def health_check():
     count = illustration_service.get_all() if illustration_service else []
-    return {"status": "healthy" if app_initialized else "degraded", "illustration_count": len(count)}
+    return {
+        "status": "healthy" if app_initialized else "degraded",
+        "illustration_count": len(count),
+    }
+
 
 @app.post("/query")
 @limiter.limit(AppConfig.RATE_LIMIT)
@@ -195,8 +249,7 @@ async def query_endpoint(request: Request, query: Query):
 
     # Sanitize chat history as well
     sanitized_history = [
-        {"sender": msg.sender, "text": SecurityValidator.sanitize_input(msg.text)}
-        for msg in query.chat_history
+        {"sender": msg.sender, "text": SecurityValidator.sanitize_input(msg.text)} for msg in query.chat_history
     ]
 
     query_type, search_term = query_router.route_query(sanitized_question.lower().strip())
@@ -207,7 +260,11 @@ async def query_endpoint(request: Request, query: Query):
             found_images = illustration_service.get_all()
         else:
             found_images = illustration_service.search(search_term)
-        ai_response = f"Here are illustrations for '{search_term}'." if found_images else f"Sorry, no illustrations found for '{search_term}'."
+        ai_response = (
+            f"Here are illustrations for '{search_term}'."
+            if found_images
+            else f"Sorry, no illustrations found for '{search_term}'."
+        )
         followup_questions = followup_service.generate_followups(sanitized_question, ai_response, sanitized_history)
         response_data = response_service.build_image_response(search_term, found_images, start_time, followup_questions)
         return JSONResponse(content=response_data.model_dump())
@@ -216,7 +273,7 @@ async def query_endpoint(request: Request, query: Query):
         raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
 
     formatted_chat_history = [
-        HumanMessage(content=msg["text"]) if msg["sender"] == "user" else AIMessage(content=msg["text"])
+        (HumanMessage(content=msg["text"]) if msg["sender"] == "user" else AIMessage(content=msg["text"]))
         for msg in sanitized_history
     ]
 
@@ -230,6 +287,5 @@ async def query_endpoint(request: Request, query: Query):
         "X-Model-Used": model_used,
         "X-Followup-Questions": json.dumps(followup_questions),
     }
-
 
     return StreamingResponse(text_stream, media_type="text/plain", headers=headers)
