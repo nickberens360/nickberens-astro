@@ -10,6 +10,7 @@ This is a "black box" testing approach, focusing on the API's external behavior
 rather than its internal logic (which is already covered by unit tests).
 """
 
+from typing import List
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +18,7 @@ from httpx import ASGITransport, AsyncClient
 
 # Import the FastAPI app instance
 from backend.main import app
+from backend.models.request_models import Message
 
 # Mark the entire module to be run with asyncio
 pytestmark = pytest.mark.asyncio
@@ -54,10 +56,15 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
     Note: The actual endpoint is /query, not /api/chat as in the original spec.
     The request field is 'question', not 'message'.
     """
+    # Test data constants
+    test_question = "Tell me about your experience"
+    expected_response = "This is a mocked AI response."
+    empty_chat_history: List[Message] = []
+    preferred_model = None
 
     # Configure the mock to return a sample successful response
     async def mock_stream():
-        yield "This is a mocked AI response."
+        yield expected_response
 
     # Mock the app state to have truthy retrievers
     mock_retrievers = {"mock": "retrievers"}
@@ -69,7 +76,11 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
             # Make a POST request to "/query" with a valid JSON payload
             response = await client.post(
                 "/query",
-                json={"question": "Tell me about your experience", "chat_history": [], "preferred_model": None},
+                json={
+                    "question": test_question,
+                    "chat_history": empty_chat_history,
+                    "preferred_model": preferred_model,
+                },
             )
 
             assert response.status_code == 200
@@ -81,14 +92,14 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
             async for chunk in response.aiter_text():
                 content += chunk
 
-            assert "This is a mocked AI response." in content
+            assert expected_response in content
 
             # Verify the mock was called with the correct arguments
             mock_stream_with_fallback.assert_called_once_with(
                 mock_retrievers,  # mocked retrievers
-                [],  # formatted_chat_history
-                "Tell me about your experience",  # sanitized_question
-                None,  # preferred_model
+                empty_chat_history,  # formatted_chat_history
+                test_question,  # sanitized_question
+                preferred_model,  # preferred_model
             )
 
 
@@ -120,16 +131,23 @@ async def test_query_endpoint_service_unavailable(client: AsyncClient):
     Additional test: Verifies the POST /query endpoint returns 503 when retrievers are not available.
     This tests the error handling when the AI service is temporarily unavailable.
     """
+    # Test data constants
+    test_question = "Test question"
+    empty_chat_history: List[Message] = []
+    preferred_model = None
+    expected_error_message = "AI service temporarily unavailable"
+
     # Mock the app state to have no retrievers
     with patch.object(app.state, "retrievers", None):
         response = await client.post(
-            "/query", json={"question": "Test question", "chat_history": [], "preferred_model": None}
+            "/query",
+            json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
         )
 
         assert response.status_code == 503
         response_json = response.json()
         assert "detail" in response_json
-        assert response_json["detail"] == "AI service temporarily unavailable"
+        assert response_json["detail"] == expected_error_message
 
 
 async def test_root_endpoint_returns_status(client: AsyncClient):
@@ -196,9 +214,15 @@ async def test_query_handles_primary_llm_failure_and_uses_fallback(client: Async
 
         mock_create_chain.side_effect = create_chain_side_effect
 
+        # Test data constants
+        test_question = "Does the fallback work?"
+        empty_chat_history: List[Message] = []
+        preferred_model = None
+
         # Make the API call
         response = await client.post(
-            "/query", json={"question": "Does the fallback work?", "chat_history": [], "preferred_model": None}
+            "/query",
+            json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
         )
 
         # Assert the outcome
@@ -235,6 +259,12 @@ async def test_chat_handles_illustration_query_correctly(mock_get_all, client: A
     SPEC: Verifies that a query for an illustration is routed to the
     illustration service and returns image data.
     """
+    # Test data constants
+    test_question = "show me images"
+    empty_chat_history: List[Message] = []
+    preferred_model = None
+    expected_image_path = "/illustrations/cosmic_dragon.webp"
+
     # 1. Configure the mock
     # This is the data we expect the illustration service to find.
     mock_image_data = [{"file": "cosmic_dragon.webp"}]
@@ -244,7 +274,8 @@ async def test_chat_handles_illustration_query_correctly(mock_get_all, client: A
     # Note: The actual endpoint is /query, not /api/chat as in the original spec.
     # Using "show me images" which is explicitly in the all_image_phrases list
     response = await client.post(
-        "/query", json={"question": "show me images", "chat_history": [], "preferred_model": None}
+        "/query",
+        json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
     )
 
     # 3. Assert the outcome
@@ -254,7 +285,7 @@ async def test_chat_handles_illustration_query_correctly(mock_get_all, client: A
     # Based on the ResponseService, the response has an 'images' field with full URLs.
     response_json = response.json()
     assert "images" in response_json
-    assert response_json["images"] == ["/illustrations/cosmic_dragon.webp"]
+    assert response_json["images"] == [expected_image_path]
     assert "answer" in response_json
     assert "illustrations" in response_json["answer"].lower()
 
@@ -268,6 +299,13 @@ async def test_chat_handles_specific_illustration_search_correctly(mock_search, 
     SPEC: Verifies that a specific query for an illustration is routed to the
     illustration service search method and returns image data.
     """
+    # Test data constants
+    test_question = "images of dragon"
+    empty_chat_history: List[Message] = []
+    preferred_model = None
+    search_term = "dragon"
+    expected_image_path = "/illustrations/cosmic_dragon.webp"
+
     # 1. Configure the mock
     # This is the data we expect the illustration service to find.
     mock_image_data = [{"file": "cosmic_dragon.webp"}]
@@ -276,7 +314,8 @@ async def test_chat_handles_specific_illustration_search_correctly(mock_search, 
     # 2. Make the API call with a specific image search query
     # Using "images of dragon" which should trigger SPECIFIC_IMAGE_SEARCH
     response = await client.post(
-        "/query", json={"question": "images of dragon", "chat_history": [], "preferred_model": None}
+        "/query",
+        json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
     )
 
     # 3. Assert the outcome
@@ -285,9 +324,9 @@ async def test_chat_handles_specific_illustration_search_correctly(mock_search, 
     # The response should contain the mocked image data in the expected format.
     response_json = response.json()
     assert "images" in response_json
-    assert response_json["images"] == ["/illustrations/cosmic_dragon.webp"]
+    assert response_json["images"] == [expected_image_path]
     assert "answer" in response_json
-    assert "dragon" in response_json["answer"].lower()
+    assert search_term in response_json["answer"].lower()
 
     # Verify that the illustration service search was called with the correct term
-    mock_search.assert_called_once_with("dragon")
+    mock_search.assert_called_once_with(search_term)
