@@ -10,6 +10,7 @@ This is a "black box" testing approach, focusing on the API's external behavior
 rather than its internal logic (which is already covered by unit tests).
 """
 
+import json
 from unittest.mock import patch
 
 import pytest
@@ -291,3 +292,83 @@ async def test_chat_handles_specific_illustration_search_correctly(mock_search, 
 
     # Verify that the illustration service search was called with the correct term
     mock_search.assert_called_once_with("dragon")
+
+
+async def test_chat_response_includes_follow_up_questions(client: AsyncClient):
+    """
+    SPEC: Verifies that the /query endpoint's response correctly includes AI-generated
+    follow-up questions alongside the primary chat message. This ensures the followup_service
+    is properly integrated into the main chat workflow.
+    """
+
+    # 1. Configure the mocks
+    # Mock the main RAG chain to return a predictable text response
+    async def mock_stream():
+        yield "Here is a summary of my skills."
+
+    # Mock the follow-up service to return predictable suggestions
+    mock_followup_questions = [
+        "Tell me more about your frontend skills.",
+        "What backend technologies do you use?",
+        "Show me a relevant project.",
+    ]
+
+    # Mock the app state to have truthy retrievers
+    mock_retrievers = {"mock": "retrievers"}
+
+    with patch.object(app.state, "retrievers", mock_retrievers):
+        with patch("backend.routes.query.stream_with_fallback") as mock_stream_with_fallback:
+            with patch.object(app.state.followup_service, "generate_followups") as mock_generate_followups:
+                with patch.object(app.state, "limiter") as mock_limiter:
+                    # Configure the limiter mock to bypass rate limiting
+                    mock_limiter.limit.return_value = lambda func: func
+
+                    mock_stream_with_fallback.return_value = (mock_stream(), "claude")
+                    mock_generate_followups.return_value = mock_followup_questions
+
+                    # 2. Make the API call
+                    response = await client.post(
+                        "/query",
+                        json={"question": "Tell me about your skills", "chat_history": [], "preferred_model": None},
+                    )
+
+                    # 3. Assert the outcome
+                    assert response.status_code == 200
+
+                    # Verify the response has the correct content type for streaming
+                    assert response.headers.get("content-type") == "text/plain; charset=utf-8"
+
+                    # Verify the model used is included in headers
+                    assert response.headers.get("X-Model-Used") == "claude"
+
+                    # Verify the follow-up questions are included in headers
+                    followup_header = response.headers.get("X-Followup-Questions")
+                    assert followup_header is not None
+
+                    # Parse the JSON-encoded follow-up questions from headers
+                    parsed_followups = json.loads(followup_header)
+                    assert parsed_followups == mock_followup_questions
+
+                    # Read the streamed response content
+                    content = ""
+                    async for chunk in response.aiter_text():
+                        content += chunk
+
+                    # Verify the main message content
+                    assert "Here is a summary of my skills." in content
+
+                    # 4. Verify service calls
+                    # Verify that the LLM chain was called
+                    mock_stream_with_fallback.assert_called_once_with(
+                        mock_retrievers,  # mocked retrievers
+                        [],  # formatted_chat_history
+                        "Tell me about your skills",  # sanitized_question
+                        None,  # preferred_model
+                    )
+
+                    # Verify that the follow-up service was called with correct parameters
+                    mock_generate_followups.assert_called_once()
+                    call_args = mock_generate_followups.call_args
+                    assert call_args[0][0] == "Tell me about your skills"  # sanitized_question
+                    assert call_args[0][1] == ""  # empty ai_response for text queries
+                    assert call_args[0][2] == []  # sanitized_history
