@@ -2,37 +2,27 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { atom } from 'nanostores';
 import SiteHeader from '../SiteHeader.vue';
 
 // Mock the stores
 vi.mock('../../stores/ui', () => ({
-  navItems: {
-    get: () => [
-      { text: 'nick.AI', url: '/nick-ai' },
-      { text: 'Illustrations', url: '/illustrations' },
-      { text: 'Atomic Docs', url: '/atomic-docs' },
-      { text: 'Resume', url: '/resume' },
-      { text: 'Contact', url: '/#contact' },
-      {
-        text: 'GitHub',
-        url: 'https://github.com/nickberens360',
-        isExternal: true,
-        icon: ['fab', 'github'],
-        ariaLabel: 'GitHub Profile'
-      }
-    ]
-  },
-  isTerminalHiddenStore: {
-    get: () => false
-  },
-  isTerminalMinimizedStore: {
-    get: () => true
-  }
-}));
-
-// Mock @nanostores/vue
-vi.mock('@nanostores/vue', () => ({
-  useStore: (store) => store.get()
+  navItems: atom([
+    { text: 'nick.AI', url: '/nick-ai' },
+    { text: 'Illustrations', url: '/illustrations' },
+    { text: 'Atomic Docs', url: '/atomic-docs' },
+    { text: 'Resume', url: '/resume' },
+    { text: 'Contact', url: '/#contact' },
+    {
+      text: 'GitHub',
+      url: 'https://github.com/nickberens360',
+      isExternal: true,
+      icon: ['fab', 'github'],
+      ariaLabel: 'GitHub Profile'
+    }
+  ]),
+  isTerminalHiddenStore: atom(false),
+  isTerminalMinimizedStore: atom(true)
 }));
 
 // Mock FontAwesome component
@@ -45,21 +35,13 @@ const FontAwesomeIcon = {
 describe('SiteHeader.vue', () => {
   beforeEach(() => {
     // Mock browser APIs that aren't available in jsdom
-    Object.defineProperty(document, 'elementFromPoint', {
-      value: vi.fn(() => null),
-      writable: true
-    });
-
-    // Mock window.addEventListener and removeEventListener
-    Object.defineProperty(window, 'addEventListener', {
-      value: vi.fn(),
-      writable: true
-    });
-
-    Object.defineProperty(window, 'removeEventListener', {
-      value: vi.fn(),
-      writable: true
-    });
+    if (!document.elementFromPoint) {
+      document.elementFromPoint = vi.fn(() => null);
+    } else {
+      vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
+    }
+    vi.spyOn(window, 'addEventListener').mockImplementation(() => {});
+    vi.spyOn(window, 'removeEventListener').mockImplementation(() => {});
   });
 
   it('renders correctly with navigation links', () => {
