@@ -146,3 +146,73 @@ async def test_health_endpoint_returns_detailed_status(client: AsyncClient):
     assert response_json["status"] in ["healthy", "degraded"]
     assert "illustration_count" in response_json
     assert isinstance(response_json["illustration_count"], int)
+
+
+async def test_query_handles_primary_llm_failure_and_uses_fallback(client: AsyncClient):
+    """
+    SPEC: Verifies the /query endpoint correctly falls back to the secondary LLM
+    when the primary one fails.
+    """
+    from unittest.mock import MagicMock
+
+    # Create mock LLM instances
+    mock_claude = MagicMock()
+    mock_gemini = MagicMock()
+
+    # Create a working mock chain for Gemini
+    mock_gemini_chain = MagicMock()
+
+    # Configure the fallback (Gemini) chain to succeed
+    async def successful_stream(*args, **kwargs):
+        yield "Successful response from fallback model."
+
+    mock_gemini_chain.astream = MagicMock(side_effect=successful_stream)
+
+    # Mock get_llm_instances to return our mock instances
+    with patch("backend.core.llm_chain.get_llm_instances") as mock_get_llms, patch(
+        "backend.core.llm_chain.create_qa_chain"
+    ) as mock_create_chain:
+        # Configure get_llm_instances to return both models
+        mock_get_llms.return_value = {"claude": mock_claude, "gemini": mock_gemini}
+
+        # Configure create_qa_chain to fail for Claude and succeed for Gemini
+        def create_chain_side_effect(llm_instance):
+            if llm_instance == mock_claude:
+                raise Exception("Primary LLM service is down")
+            elif llm_instance == mock_gemini:
+                return mock_gemini_chain
+            return MagicMock()
+
+        mock_create_chain.side_effect = create_chain_side_effect
+
+        # Make the API call
+        response = await client.post(
+            "/query", json={"question": "Does the fallback work?", "chat_history": [], "preferred_model": None}
+        )
+
+        # Assert the outcome
+        # The API should handle the internal exception and still return 200 OK
+        assert response.status_code == 200
+
+        # Check that the response has the correct content type
+        assert response.headers.get("content-type") == "text/plain; charset=utf-8"
+
+        # Check that the fallback model was used (indicated in headers)
+        assert response.headers.get("X-Model-Used") == "gemini"
+
+        # Read the streamed response
+        content = ""
+        async for chunk in response.aiter_text():
+            content += chunk
+
+        # The response should contain the message from the fallback LLM
+        assert "Successful response from fallback model." in content
+
+        # Verify that both LLM instances were retrieved
+        mock_get_llms.assert_called_once()
+
+        # Verify that both chains were attempted (primary failed, then fallback succeeded)
+        assert mock_create_chain.call_count == 2
+
+        # Verify that the fallback chain was called and succeeded
+        mock_gemini_chain.astream.assert_called_once()
