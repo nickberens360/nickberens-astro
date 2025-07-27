@@ -11,12 +11,15 @@ This module handles:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
+from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from ..middleware.security import add_security_headers
-from ..routes import health, query
 from .config import AppConfig
+
+# Initialize the limiter - centralized application-wide rate limiting
+limiter = Limiter(key_func=get_remote_address)
 
 
 def create_app() -> FastAPI:
@@ -33,8 +36,8 @@ def create_app() -> FastAPI:
         version=AppConfig.APP_VERSION,
     )
 
-    # Setup rate limiter - use the single limiter instance from the query router
-    app.state.limiter = query.limiter
+    # Setup rate limiter - use the centralized limiter instance
+    app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # Add security middleware
@@ -50,7 +53,9 @@ def create_app() -> FastAPI:
         expose_headers=["X-Model-Used", "X-Followup-Questions"],
     )
 
-    # Register routers
+    # Register routers - import here to avoid circular imports
+    from ..routes import health, query
+
     app.include_router(health.router)
     app.include_router(query.router)
 

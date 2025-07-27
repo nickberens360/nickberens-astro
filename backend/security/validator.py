@@ -1,18 +1,15 @@
 """
-Security validation module for input sanitization and rate limiting.
+Security validation module for input sanitization and security checks.
 
 This module contains the SecurityValidator class that handles:
 - Query validation and sanitization
-- Rate limiting per client IP
 - Detection of suspicious patterns and injection attempts
 - Input length validation
 """
 
 import logging
 import re
-from collections import defaultdict
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +31,6 @@ class SecurityValidator:
         r"pretend\s+(you\s+are|to\s+be)",
     ]
     ALLOWED_MODELS: List[Optional[str]] = ["claude", "gemini", None]
-    _user_requests: Dict[str, List[datetime]] = defaultdict(list)
 
     @classmethod
     def validate_query(cls, query, client_ip: str) -> tuple[bool, str]:
@@ -69,29 +65,10 @@ class SecurityValidator:
                     logger.warning(f"Suspicious pattern detected from {client_ip}: {pattern}")
                     return False, "Content not allowed"
 
-            # This internal rate limiting can be a secondary check to the main SlowAPI one.
-            if not cls._check_rate_limit(client_ip):
-                return False, "Rate limit exceeded"
-
             return True, ""
         except Exception as e:
             logger.error(f"Error validating query: {e}")
             return False, "Validation error"
-
-    @classmethod
-    def _check_rate_limit(cls, client_ip: str) -> bool:
-        now = datetime.now()
-        minute_ago = now - timedelta(minutes=1)
-        # Prune old requests
-        cls._user_requests[client_ip] = [
-            req_time for req_time in cls._user_requests[client_ip] if req_time > minute_ago
-        ]
-
-        # Check limit (e.g., 20 requests per minute)
-        if len(cls._user_requests[client_ip]) >= 20:
-            return False
-        cls._user_requests[client_ip].append(now)
-        return True
 
     @classmethod
     def sanitize_input(cls, text: Optional[str]) -> str:

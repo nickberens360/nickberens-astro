@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 
 import chromadb
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -276,24 +276,33 @@ async def stream_with_fallback(
     chat_history: List[BaseMessage],
     user_input: str,
     preferred_model: Optional[str] = None,
-) -> AsyncIterator[str]:
+) -> Tuple[AsyncIterator[str], str]:
     """
     Main async function to handle user input, perform retrieval (with caching),
     and stream a response from an LLM with fallback capabilities.
+
+    Returns:
+        Tuple containing the async stream iterator and the name of the model that was actually used.
     """
     cache_key = get_cache_key(user_input)
 
     # 1. Check for a cached FINAL response
     if cache_key and (cached_response := get_cached_response(cache_key)):
-        yield cached_response
-        return
+
+        async def cached_stream():
+            yield cached_response
+
+        return cached_stream(), "cached"
 
     try:
         llms = get_llm_instances()
     except RuntimeError as e:
         logger.error(f"Fatal error initializing LLM instances: {e}")
-        yield "I'm sorry, the AI service is temporarily unavailable. Please contact support."
-        return
+
+        async def error_stream():
+            yield "I'm sorry, the AI service is temporarily unavailable. Please contact support."
+
+        return error_stream(), "error"
 
     # 2. Check for cached RETRIEVAL results
     unique_docs = get_cached_retrieval(cache_key) if cache_key else None
@@ -349,26 +358,34 @@ async def stream_with_fallback(
     if preferred_model == "gemini" and llms.get("gemini"):
         llm_order.reverse()
 
-    full_response_chunks = []
-    stream_successful = False
+    # Try each LLM in order and return the first successful one
     for llm_name, llm_instance in llm_order:
         if not llm_instance:
             continue
         try:
             logger.info(f"Attempting to stream response using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
-            async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
-                yield chunk
-                full_response_chunks.append(chunk)
-            stream_successful = True
-            logger.info(f"Successfully streamed response with {llm_name.title()}.")
-            break
+
+            async def llm_stream():
+                full_response_chunks = []
+                async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
+                    yield chunk
+                    full_response_chunks.append(chunk)
+
+                # Cache the response if successful
+                if cache_key:
+                    cache_response(cache_key, full_response_chunks)
+
+            logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
+            return llm_stream(), llm_name
+
         except Exception as e:
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}. Trying next available model.")
 
-    if stream_successful:
-        if cache_key:
-            cache_response(cache_key, full_response_chunks)
-    else:
-        logger.error("All LLM streaming attempts failed.")
+    # If all LLMs failed
+    logger.error("All LLM streaming attempts failed.")
+
+    async def fallback_stream():
         yield "I'm sorry, but I'm currently experiencing technical difficulties and cannot provide a response."
+
+    return fallback_stream(), "error"

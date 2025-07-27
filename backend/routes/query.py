@@ -14,9 +14,9 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
-from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from ..core.app_factory import limiter
 from ..core.config import AppConfig
 from ..core.llm_chain import stream_with_fallback
 from ..core.query_router import QueryType
@@ -24,8 +24,7 @@ from ..dependencies import get_services
 from ..models.request_models import Query
 from ..security.validator import SecurityValidator
 
-# Initialize router with rate limiting
-limiter = Limiter(key_func=get_remote_address)
+# Initialize router
 router = APIRouter()
 
 
@@ -74,16 +73,14 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         for msg in sanitized_history
     ]
 
-    text_stream = stream_with_fallback(
+    text_stream, actual_model_used = await stream_with_fallback(
         services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
     )
 
-    primary_llm = AppConfig.PRIMARY_LLM
-    model_used = query.preferred_model if query.preferred_model in ["claude", "gemini"] else primary_llm
     followup_questions = services["followup_service"].generate_followups(sanitized_question, "", sanitized_history)
 
     headers = {
-        "X-Model-Used": model_used,
+        "X-Model-Used": actual_model_used,
         "X-Followup-Questions": json.dumps(followup_questions),
     }
 
