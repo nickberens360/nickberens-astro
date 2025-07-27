@@ -53,3 +53,6 @@ env/
 
 # jetbrains setting folder
 .idea/
+
+# Generated data files
+public/unified_data.json
