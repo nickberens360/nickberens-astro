@@ -13,7 +13,6 @@ rather than its internal logic (which is already covered by unit and integration
 from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 # Import the FastAPI app instance
@@ -23,7 +22,7 @@ from backend.main import app
 pytestmark = pytest.mark.asyncio
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def client():
     """
     Pytest fixture to create an AsyncClient for making requests to the test app.
