@@ -9,10 +9,9 @@ This module contains the primary query endpoint that:
 """
 
 import json
-import os
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 from slowapi import Limiter
@@ -32,7 +31,8 @@ router = APIRouter()
 
 @router.post("/query")
 @limiter.limit(AppConfig.RATE_LIMIT)
-async def query_endpoint(request: Request, query: Query, services: dict = Depends(get_services)):
+async def query_endpoint(request: Request, query: Query):
+    services = get_services(request)
     # Restore validation and sanitization calls
     client_ip = get_remote_address(request)
     is_valid, error_msg = SecurityValidator.validate_query(query, client_ip)
@@ -79,7 +79,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
     )
 
-    primary_llm = os.getenv("PRIMARY_LLM", "claude")
+    primary_llm = AppConfig.PRIMARY_LLM
     model_used = query.preferred_model if query.preferred_model in ["claude", "gemini"] else primary_llm
     followup_questions = services["followup_service"].generate_followups(sanitized_question, "", sanitized_history)
 
