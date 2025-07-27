@@ -76,7 +76,7 @@ jobs:
   # Optional: Separate job for different test types
   test-categories:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'  # Only run on PRs for faster feedback
+    if: github.event_name == 'pull_request'
 
     strategy:
       matrix:
