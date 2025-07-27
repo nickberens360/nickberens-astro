@@ -434,11 +434,14 @@ class TestLLMChain:
         chat_history: list = []
         user_input = "Test question"
 
+        stream, model_used = await stream_with_fallback(retrievers, chat_history, user_input)
+
         result = []
-        async for chunk in stream_with_fallback(retrievers, chat_history, user_input):
+        async for chunk in stream:
             result.append(chunk)
 
         assert result == ["Cached response"]
+        assert model_used == "cached"
         # Should not call other functions when cache hit
         mock_get_llms.assert_not_called()
         mock_cached_retrieval.assert_not_called()
@@ -454,9 +457,12 @@ class TestLLMChain:
         chat_history: list = []
         user_input = "Test question"
 
+        stream, model_used = await stream_with_fallback(retrievers, chat_history, user_input)
+
         result = []
-        async for chunk in stream_with_fallback(retrievers, chat_history, user_input):
+        async for chunk in stream:
             result.append(chunk)
 
         assert len(result) == 1
         assert "AI service is temporarily unavailable" in result[0]
+        assert model_used == "error"

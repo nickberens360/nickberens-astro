@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ class FollowUpService:
         self,
         user_question: str,
         ai_response: str,
-        conversation_history: List[Dict[str, str]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> List[str]:
         """
         Generate smart follow-up questions based on context.
@@ -206,7 +206,7 @@ class FollowUpService:
         self,
         suggestions: List[str],
         current_question: str,
-        conversation_history: List[Dict[str, str]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> List[str]:
         """Filter out questions that are too similar to what was already asked."""
         filtered = []
