@@ -1,5 +1,13 @@
 import json
+import os
 from pathlib import Path
+from typing import Any, Dict, List
+
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from backend/.env file
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 
 def _load_json_or_default(path, default_value):
@@ -16,6 +24,27 @@ def _load_json_or_default(path, default_value):
     except (IOError, OSError) as e:
         print(f"❌ Error reading file {path}: {e}")
         return default_value
+
+
+def fetch_github_repos() -> List[Dict[str, Any]]:
+    """Fetches public repositories from GitHub."""
+    username = os.getenv("PUBLIC_GITHUB_USERNAME")
+    if not username:
+        print("⚠️ PUBLIC_GITHUB_USERNAME environment variable not set. Skipping GitHub fetch.")
+        return []
+
+    token = os.getenv("GITHUB_TOKEN")
+    headers = {"Authorization": f"token {token}"} if token else {}
+    url = f"https://api.github.com/users/{username}/repos"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        print(f"✅ Successfully fetched {len(response.json())} GitHub repositories.")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Failed to fetch GitHub repositories: {e}")
+        return []
 
 
 def build_unified_data():
@@ -39,11 +68,15 @@ def build_unified_data():
     about_path = base_path / "about.json"
     about_data = _load_json_or_default(about_path, {})
 
+    # --- Fetch GitHub Repositories ---
+    github_repos = fetch_github_repos()
+
     # --- Build unified structure ---
     unified_data = {
         "resume": resume_data,
         "about": about_data,
         "illustrations": illustrations_data,
+        "github_repositories": github_repos,
     }
 
     # --- Write output ---

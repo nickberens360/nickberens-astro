@@ -53,6 +53,7 @@ def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str,
         "resume": [doc for doc in docs if doc.metadata.get("source") == "resume"],
         "about": [doc for doc in docs if doc.metadata.get("source") == "about"],
         "illustration": [doc for doc in docs if doc.metadata.get("source") == "illustration"],
+        "github": [doc for doc in docs if doc.metadata.get("source") == "github"],
     }
 
     for source, source_docs in docs_by_source.items():
@@ -86,6 +87,10 @@ def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str,
         },
         "illustration": {
             "description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.",
+            "search_kwargs": {"k": 5},
+        },
+        "github": {
+            "description": "Good for answering questions about Nick's GitHub repositories, projects, and code.",
             "search_kwargs": {"k": 5},
         },
     }
@@ -225,6 +230,7 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
         "character",
         "design",
     ]
+    github_keywords = ["repository", "repo", "github", "project", "code", "portfolio"]
 
     if any(keyword in query_lower for keyword in resume_keywords):
         selected_names.add("resume")
@@ -232,6 +238,8 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
         selected_names.add("about")
     if any(keyword in query_lower for keyword in illustration_keywords):
         selected_names.add("illustration")
+    if any(keyword in query_lower for keyword in github_keywords):
+        selected_names.add("github")
 
     # Default to broad search if no specific keywords are matched
     if not selected_names:

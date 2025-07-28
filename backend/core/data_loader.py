@@ -37,6 +37,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
     resume = unified_data.get("resume", {})
     about = unified_data.get("about", {})
     illustrations = unified_data.get("illustrations", [])
+    github_repos = unified_data.get("github_repositories", [])
 
     # Process Resume: Chunk by logical section
     if resume.get("summary"):
@@ -117,6 +118,26 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
                     "source": "illustration",
                     "file": img.get("file"),
                     "title": img.get("title"),
+                },
+            )
+        )
+
+    # Process GitHub Repositories: One document per repository
+    for repo in github_repos:
+        content = (
+            f"Repository: {repo.get('name', '')}\n"
+            f"Description: {repo.get('description', 'No description available.')}\n"
+            f"Language: {repo.get('language', 'N/A')}\n"
+            f"Stars: {repo.get('stargazers_count', 0)}\n"
+            f"Forks: {repo.get('forks_count', 0)}"
+        )
+        docs.append(
+            Document(
+                page_content=content,
+                metadata={
+                    "source": "github",
+                    "name": repo.get("name"),
+                    "url": repo.get("html_url"),
                 },
             )
         )

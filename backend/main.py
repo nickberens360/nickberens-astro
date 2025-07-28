@@ -8,6 +8,7 @@ This is the main entry point for the FastAPI application that:
 """
 
 import logging
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -19,7 +20,9 @@ from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
 
 # Load environment variables and setup logging
-load_dotenv()
+# Load .env file from project root (two levels up from backend/main.py)
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(env_path)
 logging.basicConfig(
     level=getattr(logging, AppConfig.LOG_LEVEL),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
