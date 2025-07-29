@@ -27,7 +27,7 @@ PRIMARY_LLM = AppConfig.PRIMARY_LLM
 GEMINI_MODEL = AppConfig.GEMINI_MODEL
 CLAUDE_MODEL = AppConfig.CLAUDE_MODEL
 EMBEDDING_MODEL = AppConfig.EMBEDDING_MODEL
-REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "60"))
 ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
 MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
@@ -121,7 +121,13 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
         logger.warning(f"Failed to initialize Claude (primary): {e}")
         llms["claude"] = None
     try:
-        llms["gemini"] = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
+        llms["gemini"] = ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL,
+            temperature=0.7,
+            timeout=REQUEST_TIMEOUT,
+            request_timeout=REQUEST_TIMEOUT,  # Additional parameter
+            max_retries=2  # Add retry logic
+        )
         logger.info(f"Gemini model '{GEMINI_MODEL}' initialized successfully (FALLBACK)")
     except Exception as e:
         logger.warning(f"Failed to initialize Gemini (fallback): {e}")
@@ -130,6 +136,16 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
     if not any(llms.values()):
         raise RuntimeError("No LLM models could be initialized. Check API keys and model names.")
     return llms
+
+
+async def test_gemini_health(llm_instance) -> bool:
+    """Test Gemini health with a simple query."""
+    try:
+        await llm_instance.ainvoke("Hello")
+        return True
+    except Exception as e:
+        logger.warning(f"Gemini health check failed: {e}")
+        return False
 
 
 def create_qa_chain(llm):
@@ -380,19 +396,58 @@ async def stream_with_fallback(
     for llm_name, llm_instance in llm_order:
         if not llm_instance:
             continue
+
+        # Perform health check for Gemini before using it
+        if llm_name == "gemini":
+            is_healthy = await test_gemini_health(llm_instance)
+            if not is_healthy:
+                logger.warning("Gemini health check failed, skipping to next LLM")
+                continue
+
         try:
             logger.info(f"Attempting to stream response using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
 
             async def llm_stream():
+                logger.info(f"Starting {llm_name.title()} stream for query: {user_input[:50]}...")
+                start_time = time.time()
                 full_response_chunks = []
-                async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
-                    yield chunk
-                    full_response_chunks.append(chunk)
 
-                # Cache the response if successful
-                if cache_key:
-                    cache_response(cache_key, full_response_chunks)
+                try:
+                    timeout_seconds = REQUEST_TIMEOUT + 10
+
+                    async def stream_generator():
+                        async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
+                            logger.debug(f"Received chunk after {time.time() - start_time:.2f}s")
+                            yield chunk
+                            full_response_chunks.append(chunk)
+
+                    # Use asyncio.wait_for with proper timeout handling for Python 3.9
+                    try:
+                        stream_gen = stream_generator()
+                        while True:
+                            try:
+                                chunk = await asyncio.wait_for(stream_gen.__anext__(), timeout=timeout_seconds)
+                                yield chunk
+                            except StopAsyncIteration:
+                                break
+                    except asyncio.TimeoutError:
+                        logger.error(f"{llm_name.title()} streaming timed out after {timeout_seconds} seconds")
+                        yield "I apologize, but the response is taking longer than expected. Please try again."
+                        return
+
+                    # Cache the response if successful
+                    if cache_key:
+                        cache_response(cache_key, full_response_chunks)
+
+                    logger.info(f"{llm_name.title()} streaming completed successfully in {time.time() - start_time:.2f}s")
+
+                except Exception as e:
+                    if "timeout" in str(e).lower():
+                        logger.error(f"{llm_name.title()} streaming timed out: {e}")
+                        yield "I apologize, but the response is taking longer than expected. Please try again."
+                    else:
+                        raise
 
             logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
             return llm_stream(), llm_name

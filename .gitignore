@@ -5,6 +5,7 @@ dist/
 .BAK/
 *.bak
 *.BAK
+generate_context.py
 # dependencies
 node_modules/
 
