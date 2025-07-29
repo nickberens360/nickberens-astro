@@ -14,7 +14,7 @@ from typing import Optional, Tuple
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from ..scripts.build_unified_data import build_unified_data
+from ..scripts.build_unified_data import build_unified_data, should_rebuild_unified_data
 from .config import AppConfig
 from .data_loader import load_all_documents
 from .illustration_service import IllustrationService
@@ -31,8 +31,13 @@ def initialize_app_state() -> Tuple[Optional[dict], Optional[IllustrationService
         tuple: (all_retrievers, illustration_service) - The initialized retrievers and illustration service
                Returns (None, None) if Google credentials are not available
     """
-    logger.info("Building structured unified data file...")
-    build_unified_data()
+    # Only rebuild if necessary
+    if should_rebuild_unified_data():
+        logger.info("Data sources have changed. Building structured unified data file...")
+        build_unified_data()
+    else:
+        logger.info("Unified data is up to date. Skipping rebuild.")
+
     logger.info("Initializing application state with Multi-Vector RAG...")
 
     # Check for Google API key

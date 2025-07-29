@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -8,6 +9,42 @@ from dotenv import load_dotenv
 
 # Load environment variables from backend/.env file
 load_dotenv(Path(__file__).parent.parent / ".env")
+
+
+def should_rebuild_unified_data() -> bool:
+    """Check if unified_data.json needs rebuilding based on source file changes."""
+    base_path = Path("public")
+    output_path = base_path / "unified_data.json"
+
+    # If output doesn't exist, always rebuild
+    if not output_path.exists():
+        print("📝 unified_data.json doesn't exist. Building...")
+        return True
+
+    output_mtime = output_path.stat().st_mtime
+
+    # Check local JSON source files
+    source_files = [
+        base_path / "resume.json",
+        base_path / "about.json",
+        base_path / "illustrations.json"
+    ]
+
+    for source_file in source_files:
+        if source_file.exists() and source_file.stat().st_mtime > output_mtime:
+            print(f"📝 Source file {source_file.name} has been modified. Rebuilding...")
+            return True
+
+    # For GitHub data, check if it's been more than 24 hours since last build
+    current_time = datetime.now().timestamp()
+    hours_since_last_build = (current_time - output_mtime) / 3600
+
+    if hours_since_last_build > 24:
+        print(f"📝 GitHub data is stale ({hours_since_last_build:.1f} hours old). Rebuilding...")
+        return True
+
+    print("✅ unified_data.json is up to date. Skipping rebuild.")
+    return False
 
 
 def _load_json_or_default(path, default_value):
