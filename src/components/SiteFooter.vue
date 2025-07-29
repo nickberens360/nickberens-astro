@@ -1,17 +1,22 @@
 <template>
-  <footer class="site-footer theme-dark" :class="[`theme-${theme}`]">
+  <footer
+    v-if="!hideFooter"
+    class="site-footer"
+    :class="[`theme-${computedTheme}`]"
+    :style="computedBackgroundColor ? { backgroundColor: computedBackgroundColor } : {}"
+  >
     <div class="site-footer__container">
       <div class="site-footer__content">
         <p class="copyright">
-          <span style="color: rgba(255,255,0,0.74)">© 2025 Nick Berens</span>
+          <span class="font-bold">© 2025 Nick Berens</span>
         </p>
         <p class="site-footer__text">
-          <span class="git">git: <span class="git-paren">(</span><span class="git-hash">
+          <span class="git">latest-commit: <span class="git-paren">(</span><span class="git-hash">
             <span class="tooltip-container">
               <a :href="`${repoUrl}/commit/${commitHash}`" target="_blank" rel="noopener noreferrer">
                 {{ commitHash }}
               </a>
-              <span class="tooltip">{{ commitMessage }}</span>
+              <span class="tooltip">{{ typeof commitMessage === 'object' ? commitMessage.message : commitMessage }}</span>
             </span>
           </span><span class="git-paren">)</span></span>
         </p>
@@ -29,7 +34,7 @@ export default {
       default: 'unknown'
     },
     commitMessage: {
-      type: String,
+      type: [String, Object],
       default: 'No commit message available'
     },
     repoUrl: {
@@ -39,6 +44,48 @@ export default {
     theme: {
       type: String,
       default: 'light'
+    },
+    backgroundColor: {
+      type: String,
+      default: null
+    },
+    hideFooter: {
+      type: Boolean,
+      default: false,
+    }
+  },
+  data() {
+    return {
+      lastSectionColor: null,
+      lastSectionTheme: null
+    }
+  },
+  computed: {
+    computedTheme() {
+      return this.lastSectionTheme || this.theme;
+    },
+    computedBackgroundColor() {
+      return this.lastSectionColor || this.backgroundColor;
+    }
+  },
+  mounted() {
+    // Find all page sections
+    const pageSections = document.querySelectorAll('.page-section');
+
+    // If there are page sections, get the last one
+    if (pageSections.length > 0) {
+      const lastSection = pageSections[pageSections.length - 1];
+
+      if (lastSection.dataset.footerColor) {
+        this.lastSectionColor = lastSection.dataset.footerColor;
+      } else {
+        this.lastSectionColor = lastSection.dataset.sectionColor || null;
+      }
+      if (lastSection.dataset.footerTheme) {
+        this.lastSectionTheme = lastSection.dataset.footerTheme;
+      } else if (lastSection.dataset.sectionTheme) {
+        this.lastSectionTheme = lastSection.dataset.sectionTheme;
+      }
     }
   }
 }
@@ -56,6 +103,12 @@ export default {
 .tooltip-container {
   position: relative;
   display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .site-footer__text {
+    font-size: 0.8rem;
+  }
 }
 
 .tooltip {
@@ -134,11 +187,6 @@ export default {
   text-decoration: underline;
 }
 
-/*.site-footer.theme-dark {
-  color: #ffffff;
-  background-color: #333333;
-}*/
-
 .site-footer.theme-dark .git {
   color: #82aaff;
 }
@@ -162,9 +210,26 @@ export default {
   margin-right: 2rem;
 }
 
+.theme-light .copyright {
+  color: black;
+}
+
+.theme-dark .copyright {
+  color: yellow;
+}
+
+
+
 @media (max-width: 768px) {
-  .site-footer__text, .copyright {
-    font-size: 0.8rem;
+  .site-footer {
+    text-align: center;
+    padding: .5rem 0;
+  }
+  .site-footer__container, .site-footer__content {
+    display: block;
+  }
+  .copyright {
+    margin: 0;
   }
 }
 </style>

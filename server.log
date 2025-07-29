@@ -1,0 +1,22 @@
+INFO:     Will watch for changes in these directories: ['/Users/nickberens/Webstorm/nickberens']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [58857] using WatchFiles
+2025-07-24 09:10:00,041 - backend.main - INFO - Building unified data file...
+2025-07-24 09:10:00,132 - backend.main - INFO - Initializing application state...
+2025-07-24 09:10:00,133 - backend.core.llm_chain - INFO - Creating retrieval chain components...
+2025-07-24 09:10:00,155 - backend.core.llm_chain - INFO - Split 22 documents into 26 chunks
+2025-07-24 09:10:00,174 - chromadb.telemetry.product.posthog - INFO - Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2025-07-24 09:10:02,595 - backend.core.llm_chain - INFO - Retrieval chain created successfully
+2025-07-24 09:10:02,595 - backend.main - INFO - ✅ 16 illustrations validated
+INFO:     Started server process [58888]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+✅ Unified data file created at public/unified_data.json
+Loading unified data...
+Loaded 22 chunks from unified data.
+INFO:     127.0.0.1:62125 - "GET /health HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [58888]
+INFO:     Stopping reloader process [58857]

@@ -4,18 +4,24 @@ import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
-import { getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl } from '../utils/gitInfo.js';
+import TerminalWindow from '../components/TerminalWindow.vue';
+import {getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl} from '../utils/gitInfo.js';
 
 export interface Props {
     title?: string;
     description?: string;
     favicon?: string;
+    headerVariant?: string;
+    hideFooter?: boolean;
+    hideTerminal?: boolean;
+    hideHeader?: boolean;
 }
 
-const {title, description, favicon} = Astro.props;
-const gitBranch = getGitBranch();
-const commitHash = getLatestCommitHash();
-const commitMessage = getLatestCommitMessage();
+const {
+    hideHeader = false,title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false} = Astro.props;
+const gitBranch = await getGitBranch();
+const commitHash = await getLatestCommitHash();
+const commitMessage = await getLatestCommitMessage();
 const repoUrl = getGitHubRepoUrl();
 ---
 
@@ -27,27 +33,44 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<SiteHeader gitBranch={gitBranch} client:load />
+<SiteHeader
+    gitBranch={gitBranch}
+    variant={headerVariant}
+    client:only="vue"
+    hideHeader={hideHeader}
+/>
 <slot/>
-<SiteFooter commitHash={commitHash} commitMessage={commitMessage} repoUrl={repoUrl} client:load />
+<SiteFooter
+    commitHash={commitHash}
+    commitMessage={commitMessage}
+    repoUrl={repoUrl}
+    hideFooter={hideFooter}
+    client:load
+/>
+<TerminalWindow
+    client:only="vue"
+    title="Nick's Terminal"
+    initialOutput={[
+        "Welcome to Nick Berens' Terminal",
+        "Type 'help' for available commands"
+    ]}
+    hideTerminal={hideTerminal}
+></TerminalWindow>
+
+<script>
+    console.log(`
+%c███╗   ██╗██╗ ██████╗██╗  ██╗    █████╗ ██╗
+████╗  ██║██║██╔════╝██║ ██╔╝   ██╔══██╗██║
+██╔██╗ ██║██║██║     █████╔╝    ███████║██║
+██║╚██╗██║██║██║     ██╔═██╗    ██╔══██║██║
+██║ ╚████║██║╚██████╗██║  ██╗██╗██║  ██║██║
+╚═╝  ╚═══╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝`,
+        "background: linear-gradient(to right, #ff0000, #00ff00, #5959ff);; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; font-size: 24px;"
+    )
+    console.log(
+        `%cWelcome to my website!`,
+        "color: #00ff00; font-weight: bold; font-size: 20px;"
+    );
+</script>
 </body>
 </html>
-
-<style is:global>
-    html {
-        font-family: 'JetBrains Mono', sans-serif;
-        background-color: #f6f6f6;
-        color: #111;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        margin: 0;
-    }
-
-    body {
-        margin: 0;
-        padding: 0;
-        max-width: 100%;
-        min-height: 100vh;
-    }
-</style>

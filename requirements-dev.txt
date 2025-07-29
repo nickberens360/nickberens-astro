@@ -1,0 +1,23 @@
+# Include production dependencies
+-r requirements.txt
+
+# Testing dependencies
+pytest
+pytest-asyncio
+pytest-mock
+pytest-cov>=4.0.0
+pytest-xdist>=3.0.0
+
+# Code quality and linting tools
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+mypy>=1.0.0
+autoflake>=2.0.0
+types-requests>=2.32.0
+
+# Pre-commit hooks
+pre-commit>=3.0.0
+
+# Security scanning
+safety>=2.0.0
