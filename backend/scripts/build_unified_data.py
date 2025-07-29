@@ -40,10 +40,41 @@ def fetch_github_repos() -> List[Dict[str, Any]]:
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        print(f"✅ Successfully fetched {len(response.json())} GitHub repositories.")
-        return response.json()
+        repos_data: List[Dict[str, Any]] = response.json()
+        print(f"✅ Successfully fetched {len(repos_data)} GitHub repositories.")
+        return repos_data
     except requests.exceptions.RequestException as e:
         print(f"❌ Failed to fetch GitHub repositories: {e}")
+        return []
+
+
+def fetch_github_commits(username: str, repo: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """Fetches recent commits from a GitHub repository."""
+    token = os.getenv("GITHUB_TOKEN")
+    headers = {"Authorization": f"token {token}"} if token else {}
+    url = f"https://api.github.com/repos/{username}/{repo}/commits?per_page={limit}"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        commits = response.json()
+
+        # Format commits for vector storage
+        formatted_commits = []
+        for commit in commits:
+            formatted_commits.append({
+                "sha": commit["sha"][:7],
+                "message": commit["commit"]["message"].split('\n')[0],
+                "author": commit["commit"]["author"]["name"],
+                "date": commit["commit"]["author"]["date"],
+                "url": commit["html_url"],
+                "full_message": commit["commit"]["message"]
+            })
+
+        print(f"✅ Successfully fetched {len(formatted_commits)} commits from {repo}.")
+        return formatted_commits
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Failed to fetch commits from {repo}: {e}")
         return []
 
 
@@ -71,12 +102,19 @@ def build_unified_data():
     # --- Fetch GitHub Repositories ---
     github_repos = fetch_github_repos()
 
+    # --- Fetch GitHub Commits ---
+    username = os.getenv("PUBLIC_GITHUB_USERNAME")
+    github_commits = []
+    if username:
+        github_commits = fetch_github_commits(username, "nickberens-astro", 10)
+
     # --- Build unified structure ---
     unified_data = {
         "resume": resume_data,
         "about": about_data,
         "illustrations": illustrations_data,
         "github_repositories": github_repos,
+        "github_commits": github_commits,
     }
 
     # --- Write output ---

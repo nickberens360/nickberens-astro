@@ -12,6 +12,7 @@ class QueryType(Enum):
     SHOW_ME_PATTERN = "show_me_pattern"
     ALL_IMAGES = "all_images"
     GENERAL_IMAGE_PATTERN = "general_image_pattern"
+    COMMIT_QUERY = "commit_query"
     AI_TEXT_RESPONSE = "ai_text_response"
 
 
@@ -59,6 +60,18 @@ class QueryRouter:
             "art",
             "pics",
             "pictures",
+        ]
+
+        self.commit_keywords = [
+            "commit",
+            "commits",
+            "latest commits",
+            "recent commits",
+            "commit history",
+            "recent changes",
+            "development activity",
+            "code changes",
+            "updates",
         ]
 
         self.ignore_words = {
@@ -119,6 +132,10 @@ class QueryRouter:
         # This prevents "show me images" from being incorrectly parsed as "show me 's'"
         if self._check_all_images_pattern(question):
             return QueryType.ALL_IMAGES, "all"
+
+        # Route to commit queries
+        if self._check_commit_query(question):
+            return QueryType.COMMIT_QUERY, "commits"
 
         # Route to "show me X" patterns
         search_term = self._check_show_me_pattern(question)
@@ -181,6 +198,10 @@ class QueryRouter:
     def _check_all_images_pattern(self, question: str) -> bool:
         """Check for patterns that request all images."""
         return question in self.all_image_phrases
+
+    def _check_commit_query(self, question: str) -> bool:
+        """Check for commit-related queries."""
+        return any(keyword in question for keyword in self.commit_keywords)
 
     def _check_general_image_pattern(self, question: str) -> Optional[str]:
         """Check for general patterns like 'X images' or 'X art'."""

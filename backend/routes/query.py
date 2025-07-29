@@ -46,7 +46,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
     query_type, search_term = services["query_router"].route_query(sanitized_question.lower().strip())
 
-    if query_type != QueryType.AI_TEXT_RESPONSE:
+    if query_type not in [QueryType.AI_TEXT_RESPONSE, QueryType.COMMIT_QUERY]:
         start_time = time.time()
         if query_type == QueryType.ALL_IMAGES:
             found_images = services["illustration_service"].get_all()

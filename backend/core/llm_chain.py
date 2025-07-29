@@ -54,6 +54,7 @@ def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str,
         "about": [doc for doc in docs if doc.metadata.get("source") == "about"],
         "illustration": [doc for doc in docs if doc.metadata.get("source") == "illustration"],
         "github": [doc for doc in docs if doc.metadata.get("source") == "github"],
+        "github_commits": [doc for doc in docs if doc.metadata.get("source") == "github_commits"],
     }
 
     for source, source_docs in docs_by_source.items():
@@ -91,6 +92,10 @@ def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str,
         },
         "github": {
             "description": "Good for answering questions about Nick's GitHub repositories, projects, and code.",
+            "search_kwargs": {"k": 5},
+        },
+        "github_commits": {
+            "description": "Good for answering questions about recent development activity, commit history, and code changes in Nick's projects.",
             "search_kwargs": {"k": 5},
         },
     }
@@ -141,6 +146,8 @@ def create_qa_chain(llm):
         "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers."
         "\n"
         "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work experience or skills for readability."
+        "\n"
+        "5.  **GitHub Links:** When discussing GitHub repositories or commits, ALWAYS include clickable links using markdown format [Repository Name](URL) or [Commit Message](URL). Extract URLs from the metadata provided in the context."
         "\n\n"
         "**Provided Context:**\n{context}"
     )
@@ -231,6 +238,10 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
         "design",
     ]
     github_keywords = ["repository", "repo", "github", "project", "code", "portfolio"]
+    commit_keywords = [
+        "commit", "commits", "latest commits", "recent changes",
+        "development activity", "code changes", "updates"
+    ]
 
     if any(keyword in query_lower for keyword in resume_keywords):
         selected_names.add("resume")
@@ -240,6 +251,8 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
         selected_names.add("illustration")
     if any(keyword in query_lower for keyword in github_keywords):
         selected_names.add("github")
+    if any(keyword in query_lower for keyword in commit_keywords):
+        selected_names.add("github_commits")
 
     # Default to broad search if no specific keywords are matched
     if not selected_names:

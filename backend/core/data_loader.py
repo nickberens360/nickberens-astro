@@ -38,6 +38,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
     about = unified_data.get("about", {})
     illustrations = unified_data.get("illustrations", [])
     github_repos = unified_data.get("github_repositories", [])
+    github_commits = unified_data.get("github_commits", [])
 
     # Process Resume: Chunk by logical section
     if resume.get("summary"):
@@ -129,7 +130,8 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
             f"Description: {repo.get('description', 'No description available.')}\n"
             f"Language: {repo.get('language', 'N/A')}\n"
             f"Stars: {repo.get('stargazers_count', 0)}\n"
-            f"Forks: {repo.get('forks_count', 0)}"
+            f"Forks: {repo.get('forks_count', 0)}\n"
+            f"URL: {repo.get('html_url', '')}"
         )
         docs.append(
             Document(
@@ -138,6 +140,29 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
                     "source": "github",
                     "name": repo.get("name"),
                     "url": repo.get("html_url"),
+                },
+            )
+        )
+
+    # Process GitHub Commits: One document per commit
+    for commit in github_commits:
+        content = (
+            f"Commit: {commit.get('sha', '')}\n"
+            f"Message: {commit.get('message', '')}\n"
+            f"Author: {commit.get('author', '')}\n"
+            f"Date: {commit.get('date', '')}\n"
+            f"Full Message: {commit.get('full_message', '')}\n"
+            f"URL: {commit.get('url', '')}"
+        )
+        docs.append(
+            Document(
+                page_content=content,
+                metadata={
+                    "source": "github_commits",
+                    "sha": commit.get("sha"),
+                    "author": commit.get("author"),
+                    "date": commit.get("date"),
+                    "url": commit.get("url"),
                 },
             )
         )

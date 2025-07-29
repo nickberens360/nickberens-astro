@@ -444,6 +444,11 @@ export default {
 :deep(.markdown-content) {
   display: block;
 }
+:deep(.markdown-content a) {
+  color: #60a5fa;
+}
+
+
 :deep(.markdown-content h1) {
   font-size: 2.5rem;
   margin: 0 0 1rem;
