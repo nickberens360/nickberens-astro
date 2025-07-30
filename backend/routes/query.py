@@ -28,20 +28,6 @@ from ..security.validator import SecurityValidator
 router = APIRouter()
 
 
-@router.get("/rate-limits")
-async def get_rate_limits():
-    """Get current rate limit status for all LLM providers"""
-    try:
-        status = get_rate_limit_status()
-        return JSONResponse(content={"rate_limits": status})
-    except Exception as e:
-        print(f"Error getting rate limits: {e}")
-        return JSONResponse(
-            content={"error": "Failed to get rate limit status", "rate_limits": {}},
-            status_code=500
-        )
-
-
 @router.post("/query")
 @limiter.limit(AppConfig.RATE_LIMIT)
 async def query_endpoint(request: Request, query: Query, services: dict = Depends(get_services)):

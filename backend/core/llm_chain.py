@@ -33,8 +33,23 @@ ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
 MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
 
-# --- Rate Limit Tracking ---
+# --- LLM Provider Configuration ---
+LLM_PROVIDERS = [
+    {
+        'name': 'claude',
+        'class': ChatAnthropic,
+        'model': CLAUDE_MODEL,
+        'init_kwargs': {'model': CLAUDE_MODEL, 'temperature': 0.7, 'timeout': REQUEST_TIMEOUT}
+    },
+    {
+        'name': 'gemini',
+        'class': ChatGoogleGenerativeAI,
+        'model': GEMINI_MODEL,
+        'init_kwargs': {'model': GEMINI_MODEL, 'temperature': 0.7, 'timeout': REQUEST_TIMEOUT}
+    }
+]
 
+# --- Rate Limit Tracking ---
 
 class RateLimitTracker:
 
@@ -89,62 +104,96 @@ _response_cache: Dict[str, Dict[str, Any]] = {}
 _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 
 
-def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
-    """
-    Creates and returns a dictionary of Chroma vector store retrievers,
-    one for each document source.
-    """
-    vectorstores = {}
-    docs_by_source = {
-        "resume": [doc for doc in docs if doc.metadata.get("source") == "resume"],
-        "about": [doc for doc in docs if doc.metadata.get("source") == "about"],
-        "illustration": [doc for doc in docs if doc.metadata.get("source") == "illustration"],
-    }
+class VectorStoreManager:
+    """Manages vector store creation and retrieval routing"""
 
-    for source, source_docs in docs_by_source.items():
-        if not source_docs:
-            logger.warning(f"No documents found for source '{source}'. Skipping vector store creation.")
-            continue
-        try:
-            # Using EphemeralClient for in-memory storage
-            client = chromadb.EphemeralClient()
-            vectorstore = Chroma.from_documents(
-                documents=source_docs,
-                embedding=embeddings,
-                client=client,
-                collection_name=f"nickberens_{source}",
-            )
-            vectorstores[source] = vectorstore
-            logger.info(f"Created Chroma vector store for '{source}' with {len(source_docs)} documents.")
-        except Exception as e:
-            logger.error(f"Failed to create vector store for source '{source}': {e}")
-            raise
-
-    # **FIXED**: Safely create retrievers only for successfully created vector stores
-    retriever_definitions = {
+    RETRIEVER_DEFINITIONS = {
         "resume": {
             "description": "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills.",
             "search_kwargs": {"k": 8},
+            "keywords": ["experience", "job", "work", "skill", "resume", "cv", "company", "role", "hillman", "wisnet", "history"]
         },
         "about": {
             "description": "Good for answering questions about Nick's background, personal interests, and general professional philosophy.",
             "search_kwargs": {"k": 5},
+            "keywords": ["about", "background", "who is", "philosophy", "approach"]
         },
         "illustration": {
             "description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.",
             "search_kwargs": {"k": 5},
+            "keywords": ["art", "illustration", "drawing", "picture", "character", "design"]
         },
     }
 
-    final_retrievers = {}
-    for name, store in vectorstores.items():
-        if name in retriever_definitions:
-            final_retrievers[name] = store.as_retriever(search_kwargs=retriever_definitions[name]["search_kwargs"])
+    @classmethod
+    def create_multi_vector_retriever(cls, docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
+        """Creates and returns a dictionary of Chroma vector store retrievers, one for each document source."""
+        vectorstores = {}
+        docs_by_source = {
+            source: [doc for doc in docs if doc.metadata.get("source") == source]
+            for source in cls.RETRIEVER_DEFINITIONS.keys()
+        }
 
-    if not final_retrievers:
-        logger.warning("No retrievers were created. The application may not be able to answer questions.")
+        for source, source_docs in docs_by_source.items():
+            if not source_docs:
+                logger.warning(f"No documents found for source '{source}'. Skipping vector store creation.")
+                continue
 
-    return final_retrievers
+            try:
+                # Using EphemeralClient for in-memory storage
+                client = chromadb.EphemeralClient()
+                vectorstore = Chroma.from_documents(
+                    documents=source_docs,
+                    embedding=embeddings,
+                    client=client,
+                    collection_name=f"nickberens_{source}",
+                )
+                vectorstores[source] = vectorstore
+                logger.info(f"Created Chroma vector store for '{source}' with {len(source_docs)} documents.")
+            except Exception as e:
+                logger.error(f"Failed to create vector store for source '{source}': {e}")
+                raise
+
+        # Create retrievers only for successfully created vector stores
+        final_retrievers = {}
+        for name, store in vectorstores.items():
+            if name in cls.RETRIEVER_DEFINITIONS:
+                search_kwargs = cls.RETRIEVER_DEFINITIONS[name]["search_kwargs"]
+                final_retrievers[name] = store.as_retriever(search_kwargs=search_kwargs)
+
+        if not final_retrievers:
+            logger.warning("No retrievers were created. The application may not be able to answer questions.")
+
+        return final_retrievers
+
+    @classmethod
+    def route_query_to_retrievers(cls, query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
+        """Routes a user query to the most relevant retriever(s) based on keywords."""
+        query_lower = query.lower()
+        selected_names = set()
+
+        # Check each retriever's keywords
+        for source, config in cls.RETRIEVER_DEFINITIONS.items():
+            if any(keyword in query_lower for keyword in config["keywords"]):
+                selected_names.add(source)
+
+        # Default to broad search if no specific keywords are matched
+        if not selected_names:
+            selected_names.update(["resume", "about"])
+
+        selected_retrievers = [retrievers[name] for name in selected_names if name in retrievers]
+        logger.info(f"Query routed to retrievers: {[name for name in selected_names if name in retrievers]}")
+        return selected_retrievers
+
+
+def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
+    """Wrapper function for backward compatibility"""
+    return VectorStoreManager.create_multi_vector_retriever(docs, embeddings)
+
+
+def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
+    """Wrapper function for backward compatibility"""
+    return VectorStoreManager.route_query_to_retrievers(query, retrievers)
 
 
 def is_rate_limit_error(error: Exception) -> bool:
@@ -158,41 +207,32 @@ def is_rate_limit_error(error: Exception) -> bool:
         "resource exhausted",
         "rate_limit_exceeded"
     ]
-    for indicator in rate_limit_indicators:
-        if indicator in error_str:
-            return True
-    return False
+    return any(indicator in error_str for indicator in rate_limit_indicators)
 
 
 def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
     """Initializes and returns a dictionary of available LLM instances."""
     llms = {}
 
-    # Check rate limits before initializing
-    try:
-        if not rate_limit_tracker.is_rate_limited("claude"):
-            llms["claude"] = ChatAnthropic(model=CLAUDE_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-            logger.info(f"Claude model '{CLAUDE_MODEL}' initialized successfully")
-        else:
-            logger.warning("Claude is rate limited, skipping initialization")
-            llms["claude"] = None
-    except Exception as e:
-        logger.warning(f"Failed to initialize Claude: {e}")
-        llms["claude"] = None
+    for provider_config in LLM_PROVIDERS:
+        provider_name = provider_config['name']
+        provider_class = provider_config['class']
+        init_kwargs = provider_config['init_kwargs']
 
-    try:
-        if not rate_limit_tracker.is_rate_limited("gemini"):
-            llms["gemini"] = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-            logger.info(f"Gemini model '{GEMINI_MODEL}' initialized successfully")
-        else:
-            logger.warning("Gemini is rate limited, skipping initialization")
-            llms["gemini"] = None
-    except Exception as e:
-        logger.warning(f"Failed to initialize Gemini: {e}")
-        llms["gemini"] = None
+        try:
+            if not rate_limit_tracker.is_rate_limited(provider_name):
+                llms[provider_name] = provider_class(**init_kwargs)
+                logger.info(f"{provider_name.title()} model initialized successfully")
+            else:
+                logger.warning(f"{provider_name.title()} is rate limited, skipping initialization")
+                llms[provider_name] = None
+        except Exception as e:
+            logger.warning(f"Failed to initialize {provider_name.title()}: {e}")
+            llms[provider_name] = None
 
     if not any(llms.values()):
         raise RuntimeError("No LLM models could be initialized. Check API keys and model names.")
+
     return llms
 
 
@@ -224,125 +264,101 @@ def create_history_aware_prompt() -> ChatPromptTemplate:
         "formulate a standalone question which can be understood without the chat history. "
         "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
     )
-    return ChatPromptTemplate.from_messages(
-        [
-            ("system", contextualize_q_system_prompt),
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-        ]
-    )
+    return ChatPromptTemplate.from_messages([
+        ("system", contextualize_q_system_prompt),
+        ("placeholder", "{chat_history}"),
+        ("human", "{input}"),
+    ])
 
 
-def get_cache_key(user_input: Optional[str]) -> Optional[str]:
-    """Generates a SHA256 hash for a given user input string to use as a cache key."""
-    if not ENABLE_CACHING or not isinstance(user_input, str):
+class CacheManager:
+    """Manages caching operations for responses and retrievals"""
+
+    @staticmethod
+    def get_cache_key(user_input: Optional[str]) -> Optional[str]:
+        """Generates a SHA256 hash for a given user input string to use as a cache key."""
+        if not ENABLE_CACHING or not isinstance(user_input, str):
+            return None
+        normalized_input = re.sub(r"[^\w\s]", "", user_input.lower()).strip()
+        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()[:16]
+
+    @staticmethod
+    def get_cached_response(cache_key: str) -> Optional[str]:
+        """Retrieves a final response from the cache if available and not expired."""
+        if not cache_key or not ENABLE_CACHING:
+            return None
+
+        if cache_key in _response_cache:
+            cached_data = _response_cache[cache_key]
+            if time.time() - cached_data["timestamp"] < CACHE_TTL:
+                logger.info(f"Response cache hit for key: {cache_key}")
+                return str(cached_data["response"])
+            else:
+                del _response_cache[cache_key]
+                logger.info(f"Stale response cache entry removed: {cache_key}")
         return None
-    normalized_input = re.sub(r"[^\w\s]", "", user_input.lower()).strip()
-    return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()[:16]
 
+    @staticmethod
+    def cache_response(cache_key: str, response_chunks: List[str]):
+        """Caches the final, full response string."""
+        if not cache_key or not ENABLE_CACHING:
+            return
+
+        if len(_response_cache) >= MAX_CACHE_SIZE:
+            oldest_key = min(_response_cache, key=lambda k: _response_cache[k]["timestamp"])
+            del _response_cache[oldest_key]
+            logger.info(f"Evicted oldest response cache entry: {oldest_key}")
+
+        full_response = "".join(response_chunks)
+        _response_cache[cache_key] = {"response": full_response, "timestamp": time.time()}
+        logger.info(f"Cached full response for key: {cache_key}")
+
+    @staticmethod
+    def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
+        """Checks the retrieval cache for a list of documents."""
+        if not cache_key or not ENABLE_CACHING:
+            return None
+
+        if cache_key in _retrieval_cache:
+            cached_data = _retrieval_cache[cache_key]
+            if time.time() - cached_data["timestamp"] < CACHE_TTL:
+                logger.info(f"Retrieval cache hit for key: {cache_key}")
+                return cast(List[Document], cached_data["documents"])
+            else:
+                del _retrieval_cache[cache_key]
+                logger.info(f"Stale retrieval cache entry removed: {cache_key}")
+        return None
+
+    @staticmethod
+    def cache_retrieval(cache_key: str, documents: List[Document]):
+        """Stores a list of documents in the retrieval cache."""
+        if not cache_key or not ENABLE_CACHING:
+            return
+
+        if len(_retrieval_cache) >= MAX_CACHE_SIZE:
+            oldest_key = min(_retrieval_cache, key=lambda k: _retrieval_cache[k]["timestamp"])
+            del _retrieval_cache[oldest_key]
+            logger.info(f"Evicted oldest retrieval cache entry: {oldest_key}")
+
+        _retrieval_cache[cache_key] = {"documents": documents, "timestamp": time.time()}
+        logger.info(f"Stored {len(documents)} documents in retrieval cache for key: {cache_key}")
+
+
+# Wrapper functions for backward compatibility
+def get_cache_key(user_input: Optional[str]) -> Optional[str]:
+    return CacheManager.get_cache_key(user_input)
 
 def get_cached_response(cache_key: str) -> Optional[str]:
-    """Retrieves a final response from the cache if available and not expired."""
-    if not cache_key or not ENABLE_CACHING:
-        return None
-    if cache_key in _response_cache:
-        cached_data = _response_cache[cache_key]
-        if time.time() - cached_data["timestamp"] < CACHE_TTL:
-            logger.info(f"Response cache hit for key: {cache_key}")
-            return str(cached_data["response"])
-        else:
-            del _response_cache[cache_key]
-            logger.info(f"Stale response cache entry removed: {cache_key}")
-    return None
-
+    return CacheManager.get_cached_response(cache_key)
 
 def cache_response(cache_key: str, response_chunks: List[str]):
-    """Caches the final, full response string."""
-    if not cache_key or not ENABLE_CACHING:
-        return
-
-    if len(_response_cache) >= MAX_CACHE_SIZE:
-        oldest_key = min(_response_cache, key=lambda k: _response_cache[k]["timestamp"])
-        del _response_cache[oldest_key]
-        logger.info(f"Evicted oldest response cache entry: {oldest_key}")
-
-    full_response = "".join(response_chunks)
-    _response_cache[cache_key] = {"response": full_response, "timestamp": time.time()}
-    logger.info(f"Cached full response for key: {cache_key}")
-
-
-def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
-    """Routes a user query to the most relevant retriever(s) based on keywords."""
-    query_lower = query.lower()
-    selected_names = set()
-
-    # Keyword-based routing logic
-    resume_keywords = [
-        "experience",
-        "job",
-        "work",
-        "skill",
-        "resume",
-        "cv",
-        "company",
-        "role",
-        "hillman",
-        "wisnet",
-        "history",
-    ]
-    about_keywords = ["about", "background", "who is", "philosophy", "approach"]
-    illustration_keywords = [
-        "art",
-        "illustration",
-        "drawing",
-        "picture",
-        "character",
-        "design",
-    ]
-
-    if any(keyword in query_lower for keyword in resume_keywords):
-        selected_names.add("resume")
-    if any(keyword in query_lower for keyword in about_keywords):
-        selected_names.add("about")
-    if any(keyword in query_lower for keyword in illustration_keywords):
-        selected_names.add("illustration")
-
-    # Default to broad search if no specific keywords are matched
-    if not selected_names:
-        selected_names.update(["resume", "about"])
-
-    selected_retrievers = [retrievers[name] for name in selected_names if name in retrievers]
-    logger.info(f"Query routed to retrievers: {[name for name in selected_names if name in retrievers]}")
-    return selected_retrievers
-
+    return CacheManager.cache_response(cache_key, response_chunks)
 
 def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
-    """Checks the retrieval cache for a list of documents."""
-    if not cache_key or not ENABLE_CACHING:
-        return None
-    if cache_key in _retrieval_cache:
-        cached_data = _retrieval_cache[cache_key]
-        if time.time() - cached_data["timestamp"] < CACHE_TTL:
-            logger.info(f"Retrieval cache hit for key: {cache_key}")
-            return cast(List[Document], cached_data["documents"])
-        else:
-            del _retrieval_cache[cache_key]
-            logger.info(f"Stale retrieval cache entry removed: {cache_key}")
-    return None
-
+    return CacheManager.get_cached_retrieval(cache_key)
 
 def cache_retrieval(cache_key: str, documents: List[Document]):
-    """Stores a list of documents in the retrieval cache."""
-    if not cache_key or not ENABLE_CACHING:
-        return
-
-    if len(_retrieval_cache) >= MAX_CACHE_SIZE:
-        oldest_key = min(_retrieval_cache, key=lambda k: _retrieval_cache[k]["timestamp"])
-        del _retrieval_cache[oldest_key]
-        logger.info(f"Evicted oldest retrieval cache entry: {oldest_key}")
-
-    _retrieval_cache[cache_key] = {"documents": documents, "timestamp": time.time()}
-    logger.info(f"Stored {len(documents)} documents in retrieval cache for key: {cache_key}")
+    return CacheManager.cache_retrieval(cache_key, documents)
 
 
 async def stream_with_fallback(
@@ -359,33 +375,29 @@ async def stream_with_fallback(
         Tuple containing the async stream iterator, the name of the model that was used,
         and additional metadata including rate limit status.
     """
-    cache_key = get_cache_key(user_input)
+    cache_key = CacheManager.get_cache_key(user_input)
     metadata = {"rate_limit_status": rate_limit_tracker.get_status()}
 
     # 1. Check for a cached FINAL response
-    if cache_key and (cached_response := get_cached_response(cache_key)):
-
+    if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
         async def cached_stream():
             yield cached_response
-
         return cached_stream(), "cached", metadata
 
     try:
         llms = get_llm_instances()
     except RuntimeError as e:
         logger.error(f"Fatal error initializing LLM instances: {e}")
-
         async def error_stream():
             yield "I'm sorry, the AI service is temporarily unavailable. Please contact support."
-
         return error_stream(), "error", {"rate_limit_status": {}}
 
     # 2. Check for cached RETRIEVAL results
-    unique_docs = get_cached_retrieval(cache_key) if cache_key else None
+    unique_docs = CacheManager.get_cached_retrieval(cache_key) if cache_key else None
 
     if unique_docs is None:
         logger.info(f"Retrieval cache miss for key: {cache_key}. Performing vector search...")
-        selected_retrievers = route_query_to_retrievers(user_input, retrievers)
+        selected_retrievers = VectorStoreManager.route_query_to_retrievers(user_input, retrievers)
 
         # Determine if history-aware retrieval is needed
         if chat_history and (reformulation_llm := llms.get("claude") or llms.get("gemini")):
@@ -396,7 +408,8 @@ async def stream_with_fallback(
                     for retriever in selected_retrievers
                 ]
                 tasks = [
-                    r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers
+                    r.ainvoke({"input": user_input, "chat_history": chat_history})
+                    for r in history_aware_retrievers
                 ]
                 logger.info("Using history-aware retrievers.")
             except Exception as e:
@@ -413,40 +426,23 @@ async def stream_with_fallback(
                     logger.error(f"Error during document retrieval: {result}")
                 elif result:
                     all_docs.extend(cast(List[Document], result))
+
             # Deduplicate documents based on page_content
-            unique_docs = list(
-                {
-                    hashlib.sha256(
-                        f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
-                    ).hexdigest(): doc
-                    for doc in all_docs
-                }.values()
-            )
+            unique_docs = list({
+                hashlib.sha256(
+                    f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
+                ).hexdigest(): doc
+                for doc in all_docs
+            }.values())
         else:
             unique_docs = []
             logger.warning("No retrievers were selected for the query, context will be empty.")
 
         if cache_key:
-            cache_retrieval(cache_key, unique_docs)
+            CacheManager.cache_retrieval(cache_key, unique_docs)
 
     # 3. Proceed to LLM generation with smart model selection
-    llm_order = []
-
-    # If user prefers a specific model and it's available, try it first
-    if preferred_model == "gemini" and llms.get("gemini"):
-        llm_order.append(("gemini", llms.get("gemini")))
-        if llms.get("claude"):
-            llm_order.append(("claude", llms.get("claude")))
-    elif preferred_model == "claude" and llms.get("claude"):
-        llm_order.append(("claude", llms.get("claude")))
-        if llms.get("gemini"):
-            llm_order.append(("gemini", llms.get("gemini")))
-    else:
-        # Default order: Claude first, then Gemini
-        if llms.get("claude"):
-            llm_order.append(("claude", llms.get("claude")))
-        if llms.get("gemini"):
-            llm_order.append(("gemini", llms.get("gemini")))
+    llm_order = _determine_llm_order(preferred_model, llms)
 
     # Try each LLM in order and return the first successful one
     for llm_name, llm_instance in llm_order:
@@ -465,13 +461,12 @@ async def stream_with_fallback(
 
                 # Cache the response if successful
                 if cache_key:
-                    cache_response(cache_key, full_response_chunks)
+                    CacheManager.cache_response(cache_key, full_response_chunks)
 
             logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
 
             # Update metadata with final rate limit status
             metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-
             return llm_stream(), llm_name, metadata
 
         except Exception as e:
@@ -487,11 +482,32 @@ async def stream_with_fallback(
 
     # If all LLMs failed
     logger.error("All LLM streaming attempts failed.")
-
     async def fallback_stream():
         yield "I'm sorry, but I'm currently experiencing technical difficulties and cannot provide a response."
 
     return fallback_stream(), "error", metadata
+
+
+def _determine_llm_order(preferred_model: Optional[str], llms: Dict[str, Any]) -> List[Tuple[str, Any]]:
+    """Determine the order in which to try LLMs based on preference and availability."""
+    llm_order = []
+
+    # If user prefers a specific model and it's available, try it first
+    if preferred_model and preferred_model in llms and llms[preferred_model]:
+        llm_order.append((preferred_model, llms[preferred_model]))
+        # Add other available models as fallbacks
+        for name, instance in llms.items():
+            if name != preferred_model and instance:
+                llm_order.append((name, instance))
+    else:
+        # Default order: Claude first, then others
+        if llms.get("claude"):
+            llm_order.append(("claude", llms["claude"]))
+        for name, instance in llms.items():
+            if name != "claude" and instance:
+                llm_order.append((name, instance))
+
+    return llm_order
 
 
 def get_rate_limit_status() -> Dict[str, bool]:
