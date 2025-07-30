@@ -1,22 +1,23 @@
 """Tests for core.llm_chain module."""
 
 import time
-from unittest.mock import MagicMock, patch
+from typing import List
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+from langchain_core.messages import BaseMessage
 
 from backend.core.llm_chain import (
     cache_response,
     cache_retrieval,
-    create_multi_vector_retriever,
     get_cache_key,
     get_cached_response,
     get_cached_retrieval,
     get_llm_instances,
-    route_query_to_retrievers,
     stream_with_fallback,
+    VectorStoreManager,
 )
 
 
@@ -125,6 +126,18 @@ class TestLLMChain:
 
         assert cached is None
 
+    @patch("backend.core.llm_chain.ENABLE_CACHING", False)
+    @pytest.mark.unit
+    def test_cache_retrieval_caching_disabled(self):
+        """Test that retrieval caching is skipped when disabled."""
+        cache_key = "test_key"
+        documents = [Document(page_content="Test", metadata={"source": "test"})]
+
+        cache_retrieval(cache_key, documents)
+        cached = get_cached_retrieval(cache_key)
+
+        assert cached is None
+
     @pytest.mark.unit
     def test_cache_response_eviction(self):
         """Test cache eviction when max size is reached."""
@@ -182,7 +195,7 @@ class TestLLMChain:
         ]
 
         for query in queries:
-            retrievers = route_query_to_retrievers(query, mock_retrievers)
+            retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
             assert mock_retrievers["resume"] in retrievers
 
     @pytest.mark.unit
@@ -202,7 +215,7 @@ class TestLLMChain:
         ]
 
         for query in queries:
-            retrievers = route_query_to_retrievers(query, mock_retrievers)
+            retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
             assert mock_retrievers["about"] in retrievers
 
     @pytest.mark.unit
@@ -222,7 +235,7 @@ class TestLLMChain:
         ]
 
         for query in queries:
-            retrievers = route_query_to_retrievers(query, mock_retrievers)
+            retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
             assert mock_retrievers["illustration"] in retrievers
 
     @pytest.mark.unit
@@ -236,7 +249,7 @@ class TestLLMChain:
 
         # Generic query with no specific keywords
         query = "Tell me something interesting"
-        retrievers = route_query_to_retrievers(query, mock_retrievers)
+        retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
 
         # Should default to resume and about
         assert mock_retrievers["resume"] in retrievers
@@ -250,7 +263,7 @@ class TestLLMChain:
         mock_retrievers = {"resume": MagicMock(spec=BaseRetriever)}
 
         query = "Tell me about Nick's background"  # Should route to 'about' but it's missing
-        retrievers = route_query_to_retrievers(query, mock_retrievers)
+        retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
 
         # Should only return available retrievers
         assert len(retrievers) == 0  # 'about' is not available
@@ -324,7 +337,7 @@ class TestLLMChain:
         mock_client_instance = MagicMock()
         mock_client.return_value = mock_client_instance
 
-        retrievers = create_multi_vector_retriever(docs, mock_embeddings)
+        retrievers = VectorStoreManager.create_multi_vector_retriever(docs, mock_embeddings)
 
         # Should create retrievers for all three sources
         assert len(retrievers) == 3
@@ -354,7 +367,7 @@ class TestLLMChain:
         mock_client_instance = MagicMock()
         mock_client.return_value = mock_client_instance
 
-        retrievers = create_multi_vector_retriever(docs, mock_embeddings)
+        retrievers = VectorStoreManager.create_multi_vector_retriever(docs, mock_embeddings)
 
         # Should only create retriever for resume
         assert len(retrievers) == 1
@@ -375,7 +388,7 @@ class TestLLMChain:
         mock_chroma.from_documents.side_effect = Exception("Chroma error")
 
         with pytest.raises(Exception, match="Chroma error"):
-            create_multi_vector_retriever(docs, mock_embeddings)
+            VectorStoreManager.create_multi_vector_retriever(docs, mock_embeddings)
 
     @pytest.mark.unit
     def test_get_cached_retrieval_expired(self):
@@ -421,19 +434,19 @@ class TestLLMChain:
             assert "key2" in llm_chain._retrieval_cache
             assert "key3" in llm_chain._retrieval_cache
 
+    @patch("backend.core.llm_chain.CacheManager.get_cached_response")
+    @patch("backend.core.llm_chain.CacheManager.get_cache_key")
     @patch("backend.core.llm_chain.get_llm_instances")
-    @patch("backend.core.llm_chain.get_cached_response")
-    @patch("backend.core.llm_chain.get_cached_retrieval")
-    @patch("backend.core.llm_chain.route_query_to_retrievers")
     @pytest.mark.asyncio
     async def test_stream_with_fallback_cached_response(
-            self, mock_route, mock_cached_retrieval, mock_cached_response, mock_get_llms
+            self, mock_get_llms, mock_get_cache_key, mock_cached_response
     ):
         """Test stream_with_fallback returns cached response when available."""
+        mock_get_cache_key.return_value = "test_cache_key"
         mock_cached_response.return_value = "Cached response"
 
         retrievers = {"resume": MagicMock(spec=BaseRetriever)}
-        chat_history: list = []
+        chat_history: List[BaseMessage] = []
         user_input = "Test question"
 
         stream, model_used, metadata = await stream_with_fallback(retrievers, chat_history, user_input)
@@ -446,17 +459,21 @@ class TestLLMChain:
         assert model_used == "cached"
         # Should not call other functions when cache hit
         mock_get_llms.assert_not_called()
-        mock_cached_retrieval.assert_not_called()
-        mock_route.assert_not_called()
 
+    @patch("backend.core.llm_chain.CacheManager.get_cached_response")
+    @patch("backend.core.llm_chain.CacheManager.get_cache_key")
     @patch("backend.core.llm_chain.get_llm_instances")
     @pytest.mark.asyncio
-    async def test_stream_with_fallback_llm_init_error(self, mock_get_llms):
+    async def test_stream_with_fallback_llm_init_error(
+            self, mock_get_llms, mock_get_cache_key, mock_cached_response
+    ):
         """Test stream_with_fallback handles LLM initialization errors."""
+        mock_get_cache_key.return_value = "test_cache_key"
+        mock_cached_response.return_value = None  # No cached response
         mock_get_llms.side_effect = RuntimeError("LLM init failed")
 
         retrievers = {"resume": MagicMock(spec=BaseRetriever)}
-        chat_history: list = []
+        chat_history: List[BaseMessage] = []
         user_input = "Test question"
 
         stream, model_used, metadata = await stream_with_fallback(retrievers, chat_history, user_input)
@@ -468,3 +485,55 @@ class TestLLMChain:
         assert len(result) == 1
         assert "AI service is temporarily unavailable" in result[0]
         assert model_used == "error"
+
+    @patch("backend.core.llm_chain.VectorStoreManager.route_query_to_retrievers")
+    @patch("backend.core.llm_chain.CacheManager.get_cached_retrieval")
+    @patch("backend.core.llm_chain.CacheManager.get_cached_response")
+    @patch("backend.core.llm_chain.CacheManager.get_cache_key")
+    @patch("backend.core.llm_chain.get_llm_instances")
+    @patch("backend.core.llm_chain.create_qa_chain")
+    @pytest.mark.asyncio
+    async def test_stream_with_fallback_normal_flow(
+            self, mock_create_qa_chain, mock_get_llms, mock_get_cache_key,
+            mock_cached_response, mock_cached_retrieval, mock_route
+    ):
+        """Test stream_with_fallback normal execution flow."""
+        # Setup mocks
+        mock_get_cache_key.return_value = "test_cache_key"
+        mock_cached_response.return_value = None  # No cached response
+        mock_cached_retrieval.return_value = None  # No cached retrieval
+
+        # Mock LLM instances
+        mock_claude = MagicMock()
+        mock_get_llms.return_value = {"claude": mock_claude, "gemini": None}
+
+        # Mock QA chain
+        mock_qa_chain = AsyncMock()
+
+        async def mock_astream(*args, **kwargs):
+            for chunk in ["Hello", " world"]:
+                yield chunk
+
+        mock_qa_chain.astream = mock_astream
+        mock_create_qa_chain.return_value = mock_qa_chain
+
+        # Mock retrievers and routing
+        mock_retriever = AsyncMock(spec=BaseRetriever)
+        mock_retriever.ainvoke.return_value = [
+            Document(page_content="Test content", metadata={"source": "test"})
+        ]
+        mock_route.return_value = [mock_retriever]
+
+        retrievers = {"resume": mock_retriever}
+        chat_history: List[BaseMessage] = []
+        user_input = "Test question"
+
+        stream, model_used, metadata = await stream_with_fallback(retrievers, chat_history, user_input)
+
+        result = []
+        async for chunk in stream:
+            result.append(chunk)
+
+        assert result == ["Hello", " world"]
+        assert model_used == "claude"
+        assert "rate_limit_status" in metadata
