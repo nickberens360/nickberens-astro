@@ -41,6 +41,11 @@ wheels/
 .installed.cfg
 *.egg
 
+# Coverage files
+.coverage
+.coverage.*
+htmlcov/
+
 # Virtual environment
 .venv/
 venv/
