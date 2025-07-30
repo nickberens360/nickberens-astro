@@ -5,6 +5,9 @@ dist/
 .BAK/
 *.bak
 *.BAK
+
+podman-commands.sh
+
 # dependencies
 node_modules/
 
