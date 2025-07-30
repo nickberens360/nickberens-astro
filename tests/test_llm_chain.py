@@ -434,7 +434,7 @@ class TestLLMChain:
         chat_history: list = []
         user_input = "Test question"
 
-        stream, model_used = await stream_with_fallback(retrievers, chat_history, user_input)
+        stream, model_used, metadata = await stream_with_fallback(retrievers, chat_history, user_input)
 
         result = []
         async for chunk in stream:
@@ -457,7 +457,7 @@ class TestLLMChain:
         chat_history: list = []
         user_input = "Test question"
 
-        stream, model_used = await stream_with_fallback(retrievers, chat_history, user_input)
+        stream, model_used, metadata = await stream_with_fallback(retrievers, chat_history, user_input)
 
         result = []
         async for chunk in stream:

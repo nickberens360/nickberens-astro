@@ -71,7 +71,7 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
 
     with patch.object(app.state, "retrievers", mock_retrievers):
         with patch("backend.routes.query.stream_with_fallback") as mock_stream_with_fallback:
-            mock_stream_with_fallback.return_value = (mock_stream(), "claude-3-sonnet")
+            mock_stream_with_fallback.return_value = (mock_stream(), "claude-3-sonnet", {"rate_limit_status": {}})
 
             # Make a POST request to "/query" with a valid JSON payload
             response = await client.post(
