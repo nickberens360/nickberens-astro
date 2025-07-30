@@ -1,28 +1,42 @@
-# Backend container matching Railway setup
-FROM python:3.11-slim
+# ---- Builder Stage ----
+FROM python:3.11-slim as builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies for building python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a virtual environment to isolate dependencies
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 # Copy and install Python requirements
+# This is done in a separate step to leverage Docker's layer caching.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
-COPY backend/ ./backend/
+# ---- Final Stage ----
+FROM python:3.11-slim
 
-# Copy public directory (same as Railway has access to)
-COPY public/ ./public/
+# Create a non-root user and group for security
+RUN groupadd --system app && useradd --system --gid app app
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash app
-RUN chown -R app:app /app
+WORKDIR /app
+
+# Copy virtual environment from builder stage
+COPY --chown=app:app --from=builder /opt/venv /opt/venv
+
+# Activate virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application code
+COPY --chown=app:app backend/ ./backend/
+COPY --chown=app:app public/ ./public/
+
 USER app
 
 # Expose port
