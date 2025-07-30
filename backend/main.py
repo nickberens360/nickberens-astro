@@ -11,6 +11,7 @@ import logging
 
 from dotenv import load_dotenv
 
+
 from .core.app_factory import create_app
 from .core.app_initializer import initialize_app_state
 from .core.config import AppConfig
@@ -18,8 +19,8 @@ from .core.followup_service import FollowUpService
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
 
-# Load environment variables and setup logging
-load_dotenv()
+load_dotenv(dotenv_path="../.env")
+
 logging.basicConfig(
     level=getattr(logging, AppConfig.LOG_LEVEL),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
