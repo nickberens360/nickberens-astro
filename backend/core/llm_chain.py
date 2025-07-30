@@ -37,6 +37,7 @@ MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
 
 
 class RateLimitTracker:
+
     """Track rate limit status for different LLM providers"""
 
     def __init__(self):
@@ -79,9 +80,8 @@ class RateLimitTracker:
 
         return self._rate_limit_status.copy()
 
+
 # Global rate limit tracker
-
-
 rate_limit_tracker = RateLimitTracker()
 
 # --- Caching Layers ---
@@ -158,7 +158,10 @@ def is_rate_limit_error(error: Exception) -> bool:
         "resource exhausted",
         "rate_limit_exceeded"
     ]
-    return any(indicator in error_str for indicator in rate_limit_indicators)
+    for indicator in rate_limit_indicators:
+        if indicator in error_str:
+            return True
+    return False
 
 
 def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
@@ -375,7 +378,7 @@ async def stream_with_fallback(
         async def error_stream():
             yield "I'm sorry, the AI service is temporarily unavailable. Please contact support."
 
-        return error_stream(), "error", metadata
+        return error_stream(), "error", {"rate_limit_status": {}}
 
     # 2. Check for cached RETRIEVAL results
     unique_docs = get_cached_retrieval(cache_key) if cache_key else None
