@@ -267,8 +267,9 @@ class TestLLMChain:
 
         llms = get_llm_instances()
 
-        assert llms["claude"] == mock_claude_instance
-        assert llms["gemini"] == mock_gemini_instance
+        # Check that the returned instances are the mocked ones
+        assert llms["claude"] is mock_claude_instance
+        assert llms["gemini"] is mock_gemini_instance
         mock_claude.assert_called_once()
         mock_gemini.assert_called_once()
 
@@ -284,7 +285,7 @@ class TestLLMChain:
         llms = get_llm_instances()
 
         assert llms["claude"] is None
-        assert llms["gemini"] == mock_gemini_instance
+        assert llms["gemini"] is mock_gemini_instance
 
     @patch("backend.core.llm_chain.ChatAnthropic")
     @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
@@ -294,6 +295,7 @@ class TestLLMChain:
         mock_claude.side_effect = Exception("Claude API error")
         mock_gemini.side_effect = Exception("Gemini API error")
 
+        # The function should raise RuntimeError when no models can be initialized
         with pytest.raises(RuntimeError, match="No LLM models could be initialized"):
             get_llm_instances()
 
@@ -425,7 +427,7 @@ class TestLLMChain:
     @patch("backend.core.llm_chain.route_query_to_retrievers")
     @pytest.mark.asyncio
     async def test_stream_with_fallback_cached_response(
-        self, mock_route, mock_cached_retrieval, mock_cached_response, mock_get_llms
+            self, mock_route, mock_cached_retrieval, mock_cached_response, mock_get_llms
     ):
         """Test stream_with_fallback returns cached response when available."""
         mock_cached_response.return_value = "Cached response"
