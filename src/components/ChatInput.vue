@@ -38,7 +38,7 @@
       </div>
 
       <div class="d-flex justify-between items-center w-full pt-2">
-        <!-- ChatModelSelector functionality -->
+        <!-- ChatModelSelector functionality with rate limit awareness -->
         <div class="model-selector-bar">
           <div class="model-selector-container">
             <select
@@ -47,8 +47,14 @@
               class="model-selector"
               :disabled="hasTypingMessage || backendStatus !== 'online'"
             >
-              <option value="claude">Claude</option>
-              <option value="gemini">Gemini</option>
+              <option
+                v-for="option in modelOptions"
+                :key="option.value"
+                :value="option.value"
+                :disabled="option.disabled"
+              >
+                {{ option.label }}
+              </option>
             </select>
           </div>
         </div>
@@ -106,6 +112,10 @@ export default {
       type: String,
       required: true
     },
+    rateLimits: {
+      type: Object,
+      default: () => ({ claude: false, gemini: false })
+    },
     isLoading: {
       type: Boolean,
       default: false
@@ -139,6 +149,22 @@ export default {
     const characterCount = computed(() => props.userInput.length);
     const isNearLimit = computed(() => characterCount.value >= warningThreshold && characterCount.value < maxLength);
     const isOverLimit = computed(() => characterCount.value >= maxLength);
+
+    // Model options with rate limit awareness
+    const modelOptions = computed(() => {
+      return [
+        {
+          value: 'claude',
+          label: props.rateLimits.claude ? 'Claude (rate limit exhausted)' : 'Claude',
+          disabled: props.rateLimits.claude
+        },
+        {
+          value: 'gemini',
+          label: props.rateLimits.gemini ? 'Gemini (rate limit exhausted)' : 'Gemini',
+          disabled: props.rateLimits.gemini
+        }
+      ];
+    });
 
     // Auto-resize textarea
     const autoResize = () => {
@@ -249,6 +275,7 @@ export default {
       characterCount,
       isNearLimit,
       isOverLimit,
+      modelOptions,
       handleInput,
       handleKeydown,
       inputPlaceholder,
@@ -350,6 +377,12 @@ export default {
 .model-selector:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Style for disabled options in the select dropdown */
+.model-selector option:disabled {
+  color: #666666;
+  font-style: italic;
 }
 
 .research-button {
@@ -492,5 +525,4 @@ export default {
     display: none;
   }
 }
-
 </style>

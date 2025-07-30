@@ -6,6 +6,7 @@ import os
 import re
 import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
+from datetime import datetime, timedelta
 
 import chromadb
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -32,17 +33,62 @@ ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
 MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
 
+# --- Rate Limit Tracking ---
+
+
+class RateLimitTracker:
+    """Track rate limit status for different LLM providers"""
+
+    def __init__(self):
+        self._rate_limit_status: Dict[str, bool] = {}
+        self._rate_limit_reset_time: Dict[str, datetime] = {}
+
+    def is_rate_limited(self, provider: str) -> bool:
+        """Check if a provider is currently rate limited"""
+        if provider not in self._rate_limit_status:
+            return False
+
+        # Check if rate limit has expired
+        if provider in self._rate_limit_reset_time:
+            if datetime.now() > self._rate_limit_reset_time[provider]:
+                self.clear_rate_limit(provider)
+                return False
+
+        return self._rate_limit_status.get(provider, False)
+
+    def set_rate_limited(self, provider: str, reset_minutes: int = 60):
+        """Mark a provider as rate limited"""
+        self._rate_limit_status[provider] = True
+        self._rate_limit_reset_time[provider] = datetime.now() + timedelta(minutes=reset_minutes)
+        logger.warning(f"{provider} rate limit hit, will reset at {self._rate_limit_reset_time[provider]}")
+
+    def clear_rate_limit(self, provider: str):
+        """Clear rate limit status for a provider"""
+        self._rate_limit_status[provider] = False
+        if provider in self._rate_limit_reset_time:
+            del self._rate_limit_reset_time[provider]
+        logger.info(f"{provider} rate limit cleared")
+
+    def get_status(self) -> Dict[str, bool]:
+        """Get current rate limit status for all providers"""
+        # Clean up expired rate limits
+        current_time = datetime.now()
+        for provider, reset_time in list(self._rate_limit_reset_time.items()):
+            if current_time > reset_time:
+                self.clear_rate_limit(provider)
+
+        return self._rate_limit_status.copy()
+
+# Global rate limit tracker
+
+
+rate_limit_tracker = RateLimitTracker()
+
 # --- Caching Layers ---
 _response_cache: Dict[str, Dict[str, Any]] = {}
 _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 
 
-# ---
-# NOTE: The 'embeddings' object should be created outside this script and passed in.
-# Example:
-# embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
-# retrievers = create_multi_vector_retriever(docs, embeddings)
-# ---
 def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
     """
     Creates and returns a dictionary of Chroma vector store retrievers,
@@ -101,20 +147,45 @@ def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str,
     return final_retrievers
 
 
+def is_rate_limit_error(error: Exception) -> bool:
+    """Check if an error is a rate limit error"""
+    error_str = str(error).lower()
+    rate_limit_indicators = [
+        "rate limit",
+        "quota exceeded",
+        "too many requests",
+        "429",
+        "resource exhausted",
+        "rate_limit_exceeded"
+    ]
+    return any(indicator in error_str for indicator in rate_limit_indicators)
+
+
 def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
     """Initializes and returns a dictionary of available LLM instances."""
     llms = {}
+
+    # Check rate limits before initializing
     try:
-        llms["claude"] = ChatAnthropic(model=CLAUDE_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-        logger.info(f"Claude model '{CLAUDE_MODEL}' initialized successfully (PRIMARY)")
+        if not rate_limit_tracker.is_rate_limited("claude"):
+            llms["claude"] = ChatAnthropic(model=CLAUDE_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
+            logger.info(f"Claude model '{CLAUDE_MODEL}' initialized successfully")
+        else:
+            logger.warning("Claude is rate limited, skipping initialization")
+            llms["claude"] = None
     except Exception as e:
-        logger.warning(f"Failed to initialize Claude (primary): {e}")
+        logger.warning(f"Failed to initialize Claude: {e}")
         llms["claude"] = None
+
     try:
-        llms["gemini"] = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
-        logger.info(f"Gemini model '{GEMINI_MODEL}' initialized successfully (FALLBACK)")
+        if not rate_limit_tracker.is_rate_limited("gemini"):
+            llms["gemini"] = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7, timeout=REQUEST_TIMEOUT)
+            logger.info(f"Gemini model '{GEMINI_MODEL}' initialized successfully")
+        else:
+            logger.warning("Gemini is rate limited, skipping initialization")
+            llms["gemini"] = None
     except Exception as e:
-        logger.warning(f"Failed to initialize Gemini (fallback): {e}")
+        logger.warning(f"Failed to initialize Gemini: {e}")
         llms["gemini"] = None
 
     if not any(llms.values()):
@@ -276,15 +347,17 @@ async def stream_with_fallback(
     chat_history: List[BaseMessage],
     user_input: str,
     preferred_model: Optional[str] = None,
-) -> Tuple[AsyncIterator[str], str]:
+) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
     Main async function to handle user input, perform retrieval (with caching),
     and stream a response from an LLM with fallback capabilities.
 
     Returns:
-        Tuple containing the async stream iterator and the name of the model that was actually used.
+        Tuple containing the async stream iterator, the name of the model that was used,
+        and additional metadata including rate limit status.
     """
     cache_key = get_cache_key(user_input)
+    metadata = {"rate_limit_status": rate_limit_tracker.get_status()}
 
     # 1. Check for a cached FINAL response
     if cache_key and (cached_response := get_cached_response(cache_key)):
@@ -292,7 +365,7 @@ async def stream_with_fallback(
         async def cached_stream():
             yield cached_response
 
-        return cached_stream(), "cached"
+        return cached_stream(), "cached", metadata
 
     try:
         llms = get_llm_instances()
@@ -302,7 +375,7 @@ async def stream_with_fallback(
         async def error_stream():
             yield "I'm sorry, the AI service is temporarily unavailable. Please contact support."
 
-        return error_stream(), "error"
+        return error_stream(), "error", metadata
 
     # 2. Check for cached RETRIEVAL results
     unique_docs = get_cached_retrieval(cache_key) if cache_key else None
@@ -353,15 +426,30 @@ async def stream_with_fallback(
         if cache_key:
             cache_retrieval(cache_key, unique_docs)
 
-    # 3. Proceed to LLM generation
-    llm_order = [("claude", llms.get("claude")), ("gemini", llms.get("gemini"))]
+    # 3. Proceed to LLM generation with smart model selection
+    llm_order = []
+
+    # If user prefers a specific model and it's available, try it first
     if preferred_model == "gemini" and llms.get("gemini"):
-        llm_order.reverse()
+        llm_order.append(("gemini", llms.get("gemini")))
+        if llms.get("claude"):
+            llm_order.append(("claude", llms.get("claude")))
+    elif preferred_model == "claude" and llms.get("claude"):
+        llm_order.append(("claude", llms.get("claude")))
+        if llms.get("gemini"):
+            llm_order.append(("gemini", llms.get("gemini")))
+    else:
+        # Default order: Claude first, then Gemini
+        if llms.get("claude"):
+            llm_order.append(("claude", llms.get("claude")))
+        if llms.get("gemini"):
+            llm_order.append(("gemini", llms.get("gemini")))
 
     # Try each LLM in order and return the first successful one
     for llm_name, llm_instance in llm_order:
         if not llm_instance:
             continue
+
         try:
             logger.info(f"Attempting to stream response using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
@@ -377,10 +465,22 @@ async def stream_with_fallback(
                     cache_response(cache_key, full_response_chunks)
 
             logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
-            return llm_stream(), llm_name
+
+            # Update metadata with final rate limit status
+            metadata["rate_limit_status"] = rate_limit_tracker.get_status()
+
+            return llm_stream(), llm_name, metadata
 
         except Exception as e:
-            logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}. Trying next available model.")
+            logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}")
+
+            # Check if this is a rate limit error
+            if is_rate_limit_error(e):
+                rate_limit_tracker.set_rate_limited(llm_name)
+                logger.warning(f"Rate limit detected for {llm_name}, marking as rate limited")
+                metadata["rate_limit_status"] = rate_limit_tracker.get_status()
+
+            logger.info("Trying next available model.")
 
     # If all LLMs failed
     logger.error("All LLM streaming attempts failed.")
@@ -388,4 +488,9 @@ async def stream_with_fallback(
     async def fallback_stream():
         yield "I'm sorry, but I'm currently experiencing technical difficulties and cannot provide a response."
 
-    return fallback_stream(), "error"
+    return fallback_stream(), "error", metadata
+
+
+def get_rate_limit_status() -> Dict[str, bool]:
+    """Get current rate limit status for all providers"""
+    return rate_limit_tracker.get_status()

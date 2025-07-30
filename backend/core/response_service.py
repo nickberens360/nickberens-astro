@@ -10,10 +10,11 @@ logger = logging.getLogger(__name__)
 class QueryResponse(BaseModel):
     answer: str
     images: Optional[List[str]] = None
-    followup_questions: Optional[List[str]] = None  # New field
+    followup_questions: Optional[List[str]] = None
     processing_time: Optional[float] = None
     llm_used: Optional[str] = None  # Keep for backward compatibility
     model_used: Optional[str] = None  # New field for frontend
+    rate_limits: Optional[Dict[str, bool]] = None  # New field for rate limit status
 
 
 class ResponseService:
@@ -30,6 +31,7 @@ class ResponseService:
         followup_questions: Optional[List[str]] = None,
         success_message_template: str = "Here are the illustrations I found for '{}':",
         model_used: str = "image_search",
+        rate_limits: Optional[Dict[str, bool]] = None,
     ) -> QueryResponse:
         """Build a response for successful image searches."""
         if found_images:
@@ -50,6 +52,7 @@ class ResponseService:
                 processing_time=processing_time,
                 llm_used="image_search",
                 model_used=model_used,
+                rate_limits=rate_limits,
             )
         else:
             processing_time = time.time() - start_time
@@ -59,6 +62,7 @@ class ResponseService:
                 processing_time=processing_time,
                 llm_used="image_search",
                 model_used=model_used,
+                rate_limits=rate_limits,
             )
 
     def build_no_images_response(
@@ -66,6 +70,7 @@ class ResponseService:
         start_time: float,
         followup_questions: Optional[List[str]] = None,
         model_used: str = "image_search",
+        rate_limits: Optional[Dict[str, bool]] = None,
     ) -> QueryResponse:
         """Build a response when no images are available."""
         processing_time = time.time() - start_time
@@ -75,6 +80,7 @@ class ResponseService:
             processing_time=processing_time,
             llm_used="image_search",
             model_used=model_used,
+            rate_limits=rate_limits,
         )
 
     def build_ai_response(
@@ -84,6 +90,7 @@ class ResponseService:
         llm_used: str,
         followup_questions: Optional[List[str]] = None,
         model_used: Optional[str] = None,
+        rate_limits: Optional[Dict[str, bool]] = None,
     ) -> QueryResponse:
         """Build a response for AI-generated text."""
         processing_time = time.time() - start_time
@@ -95,6 +102,7 @@ class ResponseService:
             processing_time=processing_time,
             llm_used=llm_used,
             model_used=model_used or llm_used,  # Use model_used if provided, fallback to llm_used
+            rate_limits=rate_limits,
         )
 
     def build_error_response(
@@ -104,6 +112,7 @@ class ResponseService:
         llm_used: str = "fallback",
         followup_questions: Optional[List[str]] = None,
         model_used: Optional[str] = None,
+        rate_limits: Optional[Dict[str, bool]] = None,
     ) -> QueryResponse:
         """Build a response for errors."""
         processing_time = time.time() - start_time
@@ -114,4 +123,5 @@ class ResponseService:
             processing_time=processing_time,
             llm_used=llm_used,
             model_used=model_used or llm_used,  # Use model_used if provided, fallback to llm_used
+            rate_limits=rate_limits,
         )
