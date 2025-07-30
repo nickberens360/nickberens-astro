@@ -28,8 +28,5 @@ USER app
 # Expose port
 EXPOSE 8000
 
-# Set environment for file watching in containers
-ENV WATCHFILES_FORCE_POLLING=true
-
-# Run the application with reload for development
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/backend"]
+# Production-ready command (no reload)
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
