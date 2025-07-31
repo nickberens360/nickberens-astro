@@ -16,6 +16,12 @@ export function useChatAPI() {
   const abortController = ref(null);
   const isUserStopped = ref(false);
 
+  // Add rate limit state
+  const rateLimits = ref({
+    claude: false,
+    gemini: false
+  });
+
   const checkBackendStatus = async () => {
     // This function is correct and does not need changes
     const now = Date.now();
@@ -65,6 +71,26 @@ export function useChatAPI() {
       updateBackendStatus(status);
       return status;
     }
+  };
+
+  // New function to check rate limits
+  const checkRateLimits = async () => {
+    const apiUrl = getApiUrl();
+    try {
+      const response = await fetch(`${apiUrl}/rate-limits`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        rateLimits.value = { ...rateLimits.value, ...data.rate_limits };
+        return data.rate_limits;
+      }
+    } catch (error) {
+      console.warn('Failed to check rate limits:', error);
+    }
+    return rateLimits.value;
   };
 
   const sendChatMessage = async (question, chatHistory, selectedModel, onChunk, onComplete, onError, onStop) => {
@@ -124,16 +150,34 @@ export function useChatAPI() {
         return;
       }
 
+      // Extract rate limits from headers
+      const rateLimitsHeader = response.headers.get('X-Rate-Limits');
+      if (rateLimitsHeader) {
+        try {
+          const newRateLimits = JSON.parse(rateLimitsHeader);
+          rateLimits.value = { ...rateLimits.value, ...newRateLimits };
+        } catch (e) {
+          console.warn('Failed to parse rate limits from header:', e);
+        }
+      }
+
       // Check the content type to decide how to process the response
       const contentType = response.headers.get('content-type');
 
       if (contentType && contentType.includes('application/json')) {
         // --- HANDLE JSON RESPONSE (for image queries) ---
         const data = await response.json();
+
+        // Update rate limits from JSON response if available
+        if (data.rate_limits) {
+          rateLimits.value = { ...rateLimits.value, ...data.rate_limits };
+        }
+
         onComplete({
           model: data.model_used,
           followups: data.followup_questions,
           images: data.images,
+          rateLimits: rateLimits.value,
           isInitial: true
         });
         onChunk(data.answer);
@@ -145,7 +189,12 @@ export function useChatAPI() {
         const followupHeader = response.headers.get('X-Followup-Questions');
         const followupQuestions = followupHeader ? JSON.parse(followupHeader) : [];
 
-        onComplete({ model: modelUsed, followups: followupQuestions, isInitial: true });
+        onComplete({
+          model: modelUsed,
+          followups: followupQuestions,
+          rateLimits: rateLimits.value,
+          isInitial: true
+        });
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -184,5 +233,12 @@ export function useChatAPI() {
     }
   };
 
-  return { sendChatMessage, stopLoading, abortController, checkBackendStatus };
+  return {
+    sendChatMessage,
+    stopLoading,
+    abortController,
+    checkBackendStatus,
+    checkRateLimits,
+    rateLimits
+  };
 }

@@ -19,7 +19,8 @@ class SecurityValidator:
     MAX_CHAT_HISTORY_LENGTH: int = 10
     MAX_MESSAGE_LENGTH: int = 1000
     SUSPICIOUS_PATTERNS: List[str] = [
-        r"ignore\s+(previous|above|all)\s+instructions?",
+        r"ignore\s+(?:all\s+)?(previous|above)\s+instructions?",
+        r"ignore\s+all\s+previous\s+instructions?",
         r"system\s*:?\s*you\s+are\s+now",
         r"forget\s+everything\s+(above|before)",
         r"new\s+instructions?\s*:",

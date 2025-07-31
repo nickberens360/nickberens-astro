@@ -56,7 +56,7 @@ def test_vector_retrieval():
             # Get relevant documents using resume retriever for resume queries
             resume_retriever = retrievers.get("resume")
             if resume_retriever:
-                relevant_docs = resume_retriever.get_relevant_documents(query)
+                relevant_docs = resume_retriever.invoke(query)
             else:
                 print("❌ No resume retriever available")
                 continue
@@ -101,7 +101,7 @@ def test_vector_retrieval():
             # Get relevant documents using about retriever for about queries
             about_retriever = retrievers.get("about")
             if about_retriever:
-                relevant_docs = about_retriever.get_relevant_documents(query)
+                relevant_docs = about_retriever.invoke(query)
                 about_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "about"]
                 print(f"📖 About documents found: {len(about_docs)}")
             else:
