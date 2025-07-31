@@ -18,7 +18,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from ..core.app_factory import limiter
 from ..core.config import AppConfig
-from ..core.llm_chain import stream_with_fallback, get_rate_limit_status
+from ..core.llm_chain import get_rate_limit_status, stream_with_fallback
 from ..core.query_router import QueryType
 from ..dependencies import get_services
 from ..models.request_models import Query
@@ -92,16 +92,17 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
     # If user's preferred model is rate limited, log a warning and let the system fallback
     if query.preferred_model and current_rate_limits.get(query.preferred_model, False):
         from logging import getLogger
+
         logger = getLogger(__name__)
-        logger.warning(f"User requested {query.preferred_model} but it's rate limited. Will fallback to available model.")
+        logger.warning(
+            f"User requested {query.preferred_model} but it's rate limited. Will fallback to available model."
+        )
 
     text_stream, actual_model_used, metadata = await stream_with_fallback(
         services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
     )
 
-    followup_questions = services["followup_service"].generate_followups(
-        sanitized_question, "", sanitized_history
-    )
+    followup_questions = services["followup_service"].generate_followups(sanitized_question, "", sanitized_history)
 
     # Include rate limit status in headers
     headers = {

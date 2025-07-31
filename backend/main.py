@@ -8,6 +8,10 @@ This is the main entry point for the FastAPI application that:
 """
 
 import logging
+from pathlib import Path
+
+from dotenv import load_dotenv
+
 from .core.app_factory import create_app
 from .core.app_initializer import initialize_app_state
 from .core.config import AppConfig
@@ -15,8 +19,6 @@ from .core.followup_service import FollowUpService
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
 
-from pathlib import Path
-from dotenv import load_dotenv
 project_root = Path(__file__).resolve().parent.parent
 
 load_dotenv(project_root / ".env")

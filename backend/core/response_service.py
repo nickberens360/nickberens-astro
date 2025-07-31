@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class QueryResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     answer: str
     images: Optional[List[str]] = None
     followup_questions: Optional[List[str]] = None

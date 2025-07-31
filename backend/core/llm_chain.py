@@ -5,8 +5,8 @@ import logging
 import os
 import re
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 from datetime import datetime, timedelta
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 
 import chromadb
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -36,23 +36,23 @@ MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
 # --- LLM Provider Configuration ---
 LLM_PROVIDERS = [
     {
-        'name': 'claude',
-        'class': ChatAnthropic,
-        'model': CLAUDE_MODEL,
-        'init_kwargs': {'model': CLAUDE_MODEL, 'temperature': 0.7, 'timeout': REQUEST_TIMEOUT}
+        "name": "claude",
+        "class": ChatAnthropic,
+        "model": CLAUDE_MODEL,
+        "init_kwargs": {"model": CLAUDE_MODEL, "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
     },
     {
-        'name': 'gemini',
-        'class': ChatGoogleGenerativeAI,
-        'model': GEMINI_MODEL,
-        'init_kwargs': {'model': GEMINI_MODEL, 'temperature': 0.7, 'timeout': REQUEST_TIMEOUT}
-    }
+        "name": "gemini",
+        "class": ChatGoogleGenerativeAI,
+        "model": GEMINI_MODEL,
+        "init_kwargs": {"model": GEMINI_MODEL, "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
+    },
 ]
 
 # --- Rate Limit Tracking ---
 
-class RateLimitTracker:
 
+class RateLimitTracker:
     """Track rate limit status for different LLM providers"""
 
     def __init__(self):
@@ -111,17 +111,29 @@ class VectorStoreManager:
         "resume": {
             "description": "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills.",
             "search_kwargs": {"k": 8},
-            "keywords": ["experience", "job", "work", "skill", "resume", "cv", "company", "role", "hillman", "wisnet", "history"]
+            "keywords": [
+                "experience",
+                "job",
+                "work",
+                "skill",
+                "resume",
+                "cv",
+                "company",
+                "role",
+                "hillman",
+                "wisnet",
+                "history",
+            ],
         },
         "about": {
             "description": "Good for answering questions about Nick's background, personal interests, and general professional philosophy.",
             "search_kwargs": {"k": 5},
-            "keywords": ["about", "background", "who is", "philosophy", "approach"]
+            "keywords": ["about", "background", "who is", "philosophy", "approach"],
         },
         "illustration": {
             "description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.",
             "search_kwargs": {"k": 5},
-            "keywords": ["art", "illustration", "drawing", "picture", "character", "design"]
+            "keywords": ["art", "illustration", "drawing", "picture", "character", "design"],
         },
     }
 
@@ -198,6 +210,11 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
 
 def is_rate_limit_error(error: Exception) -> bool:
     """Check if an error is a rate limit error"""
+    # Check for status code 429 in exception attributes
+    if hasattr(error, "status_code") and error.status_code == 429:
+        return True
+
+    # Check error message for rate limit indicators
     error_str = str(error).lower()
     rate_limit_indicators = [
         "rate limit",
@@ -205,7 +222,8 @@ def is_rate_limit_error(error: Exception) -> bool:
         "too many requests",
         "429",
         "resource exhausted",
-        "rate_limit_exceeded"
+        "rate_limit_exceeded",
+        "rate_limit_error",
     ]
     return any(indicator in error_str for indicator in rate_limit_indicators)
 
@@ -215,9 +233,9 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
     llms = {}
 
     for provider_config in LLM_PROVIDERS:
-        provider_name = provider_config['name']
-        provider_class = provider_config['class']
-        init_kwargs = provider_config['init_kwargs']
+        provider_name = provider_config["name"]
+        provider_class = provider_config["class"]
+        init_kwargs = provider_config["init_kwargs"]
 
         try:
             if not rate_limit_tracker.is_rate_limited(provider_name):
@@ -264,11 +282,13 @@ def create_history_aware_prompt() -> ChatPromptTemplate:
         "formulate a standalone question which can be understood without the chat history. "
         "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
     )
-    return ChatPromptTemplate.from_messages([
-        ("system", contextualize_q_system_prompt),
-        ("placeholder", "{chat_history}"),
-        ("human", "{input}"),
-    ])
+    return ChatPromptTemplate.from_messages(
+        [
+            ("system", contextualize_q_system_prompt),
+            ("placeholder", "{chat_history}"),
+            ("human", "{input}"),
+        ]
+    )
 
 
 class CacheManager:
@@ -348,14 +368,18 @@ class CacheManager:
 def get_cache_key(user_input: Optional[str]) -> Optional[str]:
     return CacheManager.get_cache_key(user_input)
 
+
 def get_cached_response(cache_key: str) -> Optional[str]:
     return CacheManager.get_cached_response(cache_key)
+
 
 def cache_response(cache_key: str, response_chunks: List[str]):
     return CacheManager.cache_response(cache_key, response_chunks)
 
+
 def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
     return CacheManager.get_cached_retrieval(cache_key)
+
 
 def cache_retrieval(cache_key: str, documents: List[Document]):
     return CacheManager.cache_retrieval(cache_key, documents)
@@ -380,16 +404,20 @@ async def stream_with_fallback(
 
     # 1. Check for a cached FINAL response
     if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
+
         async def cached_stream():
             yield cached_response
+
         return cached_stream(), "cached", metadata
 
     try:
         llms = get_llm_instances()
     except RuntimeError as e:
         logger.error(f"Fatal error initializing LLM instances: {e}")
+
         async def error_stream():
             yield "I'm sorry, the AI service is temporarily unavailable. Please contact support."
+
         return error_stream(), "error", {"rate_limit_status": {}}
 
     # 2. Check for cached RETRIEVAL results
@@ -408,8 +436,7 @@ async def stream_with_fallback(
                     for retriever in selected_retrievers
                 ]
                 tasks = [
-                    r.ainvoke({"input": user_input, "chat_history": chat_history})
-                    for r in history_aware_retrievers
+                    r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers
                 ]
                 logger.info("Using history-aware retrievers.")
             except Exception as e:
@@ -428,12 +455,14 @@ async def stream_with_fallback(
                     all_docs.extend(cast(List[Document], result))
 
             # Deduplicate documents based on page_content
-            unique_docs = list({
-                hashlib.sha256(
-                    f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
-                ).hexdigest(): doc
-                for doc in all_docs
-            }.values())
+            unique_docs = list(
+                {
+                    hashlib.sha256(
+                        f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
+                    ).hexdigest(): doc
+                    for doc in all_docs
+                }.values()
+            )
         else:
             unique_docs = []
             logger.warning("No retrievers were selected for the query, context will be empty.")
@@ -482,6 +511,7 @@ async def stream_with_fallback(
 
     # If all LLMs failed
     logger.error("All LLM streaming attempts failed.")
+
     async def fallback_stream():
         yield "I'm sorry, but I'm currently experiencing technical difficulties and cannot provide a response."
 

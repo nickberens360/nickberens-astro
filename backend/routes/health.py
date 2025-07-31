@@ -30,6 +30,7 @@ async def status(state: dict = Depends(get_app_state)):
     try:
         # Import here to avoid circular imports
         from ..core.llm_chain import get_rate_limit_status
+
         rate_limits = get_rate_limit_status()
     except Exception as e:
         # Fallback if rate limit checking fails
@@ -60,15 +61,13 @@ async def get_rate_limits():
     try:
         # Import here to avoid circular imports
         from ..core.llm_chain import get_rate_limit_status
+
         rate_limits = get_rate_limit_status()
 
         return JSONResponse(content={"rate_limits": rate_limits})
     except Exception as e:
         print(f"Error getting rate limits: {e}")
         return JSONResponse(
-            content={
-                "error": "Failed to get rate limit status",
-                "rate_limits": {"claude": False, "gemini": False}
-            },
-            status_code=500
+            content={"error": "Failed to get rate limit status", "rate_limits": {"claude": False, "gemini": False}},
+            status_code=500,
         )

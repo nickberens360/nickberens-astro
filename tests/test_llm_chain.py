@@ -2,22 +2,25 @@
 
 import time
 from typing import List
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.documents import Document
-from langchain_core.retrievers import BaseRetriever
 from langchain_core.messages import BaseMessage
+from langchain_core.retrievers import BaseRetriever
 
 from backend.core.llm_chain import (
+    RateLimitTracker,
+    VectorStoreManager,
     cache_response,
     cache_retrieval,
     get_cache_key,
     get_cached_response,
     get_cached_retrieval,
     get_llm_instances,
+    get_rate_limit_status,
+    is_rate_limit_error,
     stream_with_fallback,
-    VectorStoreManager,
 )
 
 
@@ -31,6 +34,10 @@ class TestLLMChain:
 
         llm_chain._response_cache.clear()
         llm_chain._retrieval_cache.clear()
+
+        # Reset rate limit tracker to clean state
+        llm_chain.rate_limit_tracker._rate_limit_status.clear()
+        llm_chain.rate_limit_tracker._rate_limit_reset_time.clear()
 
     @pytest.mark.unit
     def test_get_cache_key_valid_input(self):
@@ -73,8 +80,8 @@ class TestLLMChain:
     def test_get_cache_key_invalid_input(self):
         """Test cache key with invalid input types."""
         assert get_cache_key(None) is None
-        assert get_cache_key(123) is None  # type: ignore
-        assert get_cache_key([]) is None  # type: ignore
+        assert get_cache_key(123) is None  # type: ignore[arg-type]
+        assert get_cache_key([]) is None  # type: ignore[arg-type]
 
     @pytest.mark.unit
     def test_cache_response_and_get_cached_response(self):
@@ -268,45 +275,111 @@ class TestLLMChain:
         # Should only return available retrievers
         assert len(retrievers) == 0  # 'about' is not available
 
-    @patch("backend.core.llm_chain.ChatAnthropic")
-    @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
+    @patch("backend.core.llm_chain.LLM_PROVIDERS")
     @pytest.mark.unit
-    def test_get_llm_instances_success(self, mock_gemini, mock_claude):
+    def test_get_llm_instances_success(self, mock_providers):
         """Test successful LLM instance creation."""
+        mock_claude_class = MagicMock()
+        mock_gemini_class = MagicMock()
         mock_claude_instance = MagicMock()
         mock_gemini_instance = MagicMock()
-        mock_claude.return_value = mock_claude_instance
-        mock_gemini.return_value = mock_gemini_instance
+
+        mock_claude_class.return_value = mock_claude_instance
+        mock_gemini_class.return_value = mock_gemini_instance
+
+        # Mock the LLM_PROVIDERS configuration
+        mock_providers.__iter__ = MagicMock(
+            return_value=iter(
+                [
+                    {
+                        "name": "claude",
+                        "class": mock_claude_class,
+                        "model": "claude-3-sonnet",
+                        "init_kwargs": {"model": "claude-3-sonnet", "temperature": 0.7, "timeout": 30},
+                    },
+                    {
+                        "name": "gemini",
+                        "class": mock_gemini_class,
+                        "model": "gemini-pro",
+                        "init_kwargs": {"model": "gemini-pro", "temperature": 0.7, "timeout": 30},
+                    },
+                ]
+            )
+        )
 
         llms = get_llm_instances()
 
         # Check that the returned instances are the mocked ones
         assert llms["claude"] is mock_claude_instance
         assert llms["gemini"] is mock_gemini_instance
-        mock_claude.assert_called_once()
-        mock_gemini.assert_called_once()
+        mock_claude_class.assert_called_once()
+        mock_gemini_class.assert_called_once()
 
-    @patch("backend.core.llm_chain.ChatAnthropic")
-    @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
+    @patch("backend.core.llm_chain.LLM_PROVIDERS")
     @pytest.mark.unit
-    def test_get_llm_instances_claude_fails(self, mock_gemini, mock_claude):
+    def test_get_llm_instances_claude_fails(self, mock_providers):
         """Test LLM instance creation when Claude fails."""
-        mock_claude.side_effect = Exception("Claude API error")
+        mock_claude_class = MagicMock()
+        mock_gemini_class = MagicMock()
         mock_gemini_instance = MagicMock()
-        mock_gemini.return_value = mock_gemini_instance
+
+        mock_claude_class.side_effect = Exception("Claude API error")
+        mock_gemini_class.return_value = mock_gemini_instance
+
+        # Mock the LLM_PROVIDERS configuration
+        mock_providers.__iter__ = MagicMock(
+            return_value=iter(
+                [
+                    {
+                        "name": "claude",
+                        "class": mock_claude_class,
+                        "model": "claude-3-sonnet",
+                        "init_kwargs": {"model": "claude-3-sonnet", "temperature": 0.7, "timeout": 30},
+                    },
+                    {
+                        "name": "gemini",
+                        "class": mock_gemini_class,
+                        "model": "gemini-pro",
+                        "init_kwargs": {"model": "gemini-pro", "temperature": 0.7, "timeout": 30},
+                    },
+                ]
+            )
+        )
 
         llms = get_llm_instances()
 
         assert llms["claude"] is None
         assert llms["gemini"] is mock_gemini_instance
 
-    @patch("backend.core.llm_chain.ChatAnthropic")
-    @patch("backend.core.llm_chain.ChatGoogleGenerativeAI")
+    @patch("backend.core.llm_chain.LLM_PROVIDERS")
     @pytest.mark.unit
-    def test_get_llm_instances_all_fail(self, mock_gemini, mock_claude):
+    def test_get_llm_instances_all_fail(self, mock_providers):
         """Test LLM instance creation when all models fail."""
-        mock_claude.side_effect = Exception("Claude API error")
-        mock_gemini.side_effect = Exception("Gemini API error")
+        mock_claude_class = MagicMock()
+        mock_gemini_class = MagicMock()
+
+        mock_claude_class.side_effect = Exception("Claude API error")
+        mock_gemini_class.side_effect = Exception("Gemini API error")
+
+        # Mock the LLM_PROVIDERS configuration
+        mock_providers.__iter__ = MagicMock(
+            return_value=iter(
+                [
+                    {
+                        "name": "claude",
+                        "class": mock_claude_class,
+                        "model": "claude-3-sonnet",
+                        "init_kwargs": {"model": "claude-3-sonnet", "temperature": 0.7, "timeout": 30},
+                    },
+                    {
+                        "name": "gemini",
+                        "class": mock_gemini_class,
+                        "model": "gemini-pro",
+                        "init_kwargs": {"model": "gemini-pro", "temperature": 30},
+                    },
+                ]
+            )
+        )
 
         # The function should raise RuntimeError when no models can be initialized
         with pytest.raises(RuntimeError, match="No LLM models could be initialized"):
@@ -438,9 +511,7 @@ class TestLLMChain:
     @patch("backend.core.llm_chain.CacheManager.get_cache_key")
     @patch("backend.core.llm_chain.get_llm_instances")
     @pytest.mark.asyncio
-    async def test_stream_with_fallback_cached_response(
-            self, mock_get_llms, mock_get_cache_key, mock_cached_response
-    ):
+    async def test_stream_with_fallback_cached_response(self, mock_get_llms, mock_get_cache_key, mock_cached_response):
         """Test stream_with_fallback returns cached response when available."""
         mock_get_cache_key.return_value = "test_cache_key"
         mock_cached_response.return_value = "Cached response"
@@ -464,9 +535,7 @@ class TestLLMChain:
     @patch("backend.core.llm_chain.CacheManager.get_cache_key")
     @patch("backend.core.llm_chain.get_llm_instances")
     @pytest.mark.asyncio
-    async def test_stream_with_fallback_llm_init_error(
-            self, mock_get_llms, mock_get_cache_key, mock_cached_response
-    ):
+    async def test_stream_with_fallback_llm_init_error(self, mock_get_llms, mock_get_cache_key, mock_cached_response):
         """Test stream_with_fallback handles LLM initialization errors."""
         mock_get_cache_key.return_value = "test_cache_key"
         mock_cached_response.return_value = None  # No cached response
@@ -494,8 +563,13 @@ class TestLLMChain:
     @patch("backend.core.llm_chain.create_qa_chain")
     @pytest.mark.asyncio
     async def test_stream_with_fallback_normal_flow(
-            self, mock_create_qa_chain, mock_get_llms, mock_get_cache_key,
-            mock_cached_response, mock_cached_retrieval, mock_route
+        self,
+        mock_create_qa_chain,
+        mock_get_llms,
+        mock_get_cache_key,
+        mock_cached_response,
+        mock_cached_retrieval,
+        mock_route,
     ):
         """Test stream_with_fallback normal execution flow."""
         # Setup mocks
@@ -519,9 +593,7 @@ class TestLLMChain:
 
         # Mock retrievers and routing
         mock_retriever = AsyncMock(spec=BaseRetriever)
-        mock_retriever.ainvoke.return_value = [
-            Document(page_content="Test content", metadata={"source": "test"})
-        ]
+        mock_retriever.ainvoke.return_value = [Document(page_content="Test content", metadata={"source": "test"})]
         mock_route.return_value = [mock_retriever]
 
         retrievers = {"resume": mock_retriever}
@@ -537,3 +609,173 @@ class TestLLMChain:
         assert result == ["Hello", " world"]
         assert model_used == "claude"
         assert "rate_limit_status" in metadata
+
+
+class TestRateLimitTracker:
+    """Test cases for RateLimitTracker class."""
+
+    def setup_method(self):
+        """Setup method to create fresh tracker for each test."""
+        self.tracker = RateLimitTracker()
+
+    @pytest.mark.unit
+    def test_initial_state(self):
+        """Test tracker starts with no rate limits."""
+        assert not self.tracker.is_rate_limited("claude")
+        assert not self.tracker.is_rate_limited("gemini")
+        assert self.tracker.get_status() == {}
+
+    @pytest.mark.unit
+    def test_set_rate_limited(self):
+        """Test setting a provider as rate limited."""
+        self.tracker.set_rate_limited("claude", reset_minutes=60)
+
+        assert self.tracker.is_rate_limited("claude")
+        assert not self.tracker.is_rate_limited("gemini")
+
+        status = self.tracker.get_status()
+        assert status["claude"] is True
+        assert "gemini" not in status
+
+    @pytest.mark.unit
+    def test_clear_rate_limit(self):
+        """Test clearing rate limit for a provider."""
+        self.tracker.set_rate_limited("claude", reset_minutes=60)
+        assert self.tracker.is_rate_limited("claude")
+
+        self.tracker.clear_rate_limit("claude")
+        assert not self.tracker.is_rate_limited("claude")
+
+        status = self.tracker.get_status()
+        assert status.get("claude", False) is False
+
+    @pytest.mark.unit
+    def test_rate_limit_expiration(self):
+        """Test that rate limits expire after the specified time."""
+        # Set rate limit with very short duration (1 minute minimum for int)
+        self.tracker.set_rate_limited("claude", reset_minutes=1)
+
+        assert self.tracker.is_rate_limited("claude")
+
+        # Manually expire the rate limit by setting past reset time
+        import datetime
+        past_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
+        self.tracker._rate_limit_reset_time["claude"] = past_time
+
+        # Should automatically clear when checked
+        assert not self.tracker.is_rate_limited("claude")
+
+    @pytest.mark.unit
+    def test_multiple_providers_rate_limited(self):
+        """Test handling multiple providers being rate limited."""
+        self.tracker.set_rate_limited("claude", reset_minutes=60)
+        self.tracker.set_rate_limited("gemini", reset_minutes=30)
+
+        assert self.tracker.is_rate_limited("claude")
+        assert self.tracker.is_rate_limited("gemini")
+
+        status = self.tracker.get_status()
+        assert status["claude"] is True
+        assert status["gemini"] is True
+
+    @pytest.mark.unit
+    def test_get_status_cleans_expired_limits(self):
+        """Test that get_status() cleans up expired rate limits."""
+        # Set rate limit
+        self.tracker.set_rate_limited("claude", reset_minutes=1)
+
+        assert self.tracker.is_rate_limited("claude")
+
+        # Manually expire the rate limit
+        import datetime
+        past_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
+        self.tracker._rate_limit_reset_time["claude"] = past_time
+
+        # get_status should clean up expired limits
+        status = self.tracker.get_status()
+        assert status.get("claude", False) is False
+
+    @pytest.mark.unit
+    def test_unknown_provider_not_rate_limited(self):
+        """Test that unknown providers are not considered rate limited."""
+        assert not self.tracker.is_rate_limited("unknown_provider")
+
+    @pytest.mark.unit
+    def test_rate_limit_reset_time_tracking(self):
+        """Test that reset times are properly tracked."""
+        import datetime
+
+        before_time = datetime.datetime.now()
+        self.tracker.set_rate_limited("claude", reset_minutes=60)
+        after_time = datetime.datetime.now() + datetime.timedelta(minutes=60)
+
+        # Check that reset time is stored and reasonable
+        reset_time = self.tracker._rate_limit_reset_time["claude"]
+        assert before_time < reset_time < after_time
+
+    @pytest.mark.unit
+    def test_global_rate_limit_status_function(self):
+        """Test the global get_rate_limit_status function."""
+        # This tests the module-level function that uses the global tracker
+        from backend.core.llm_chain import rate_limit_tracker
+
+        # Clear any existing state
+        rate_limit_tracker.clear_rate_limit("claude")
+        rate_limit_tracker.clear_rate_limit("gemini")
+
+        # Test initial state
+        status = get_rate_limit_status()
+        assert isinstance(status, dict)
+
+        # Set a rate limit and test
+        rate_limit_tracker.set_rate_limited("claude", reset_minutes=60)
+        status = get_rate_limit_status()
+        assert status.get("claude", False) is True
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "error_message,expected",
+        [
+            ("Rate limit exceeded", True),
+            ("rate limit", True),
+            ("RATE_LIMIT_ERROR", True),
+            ("429 Too Many Requests", True),
+            ("quota exceeded", True),
+            ("Normal error message", False),
+            ("Connection timeout", False),
+            ("Invalid API key", False),
+            ("", False),
+        ],
+    )
+    def test_is_rate_limit_error_detection(self, error_message, expected):
+        """Test rate limit error detection with various error messages."""
+
+        class MockError(Exception):
+            def __init__(self, message):
+                self.message = message
+                super().__init__(message)
+
+            def __str__(self):
+                return self.message
+
+        error = MockError(error_message)
+        result = is_rate_limit_error(error)
+        assert result == expected
+
+    @pytest.mark.unit
+    def test_is_rate_limit_error_with_nested_exceptions(self):
+        """Test rate limit error detection with nested exception attributes."""
+
+        class MockError(Exception):
+            def __init__(self, message, status_code=None):
+                self.message = message
+                self.status_code = status_code
+                super().__init__(message)
+
+        # Test with status code 429
+        error_429 = MockError("Some error", status_code=429)
+        assert is_rate_limit_error(error_429) is True
+
+        # Test with other status codes
+        error_500 = MockError("Some error", status_code=500)
+        assert is_rate_limit_error(error_500) is False
