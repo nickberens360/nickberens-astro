@@ -98,6 +98,21 @@ class QueryRouter:
             "show me art",
             "show me pictures",
             "show me drawings",
+            "find illustrations",
+            "find images",
+            "find art",
+            "find pictures",
+            "find drawings",
+            "get illustrations",
+            "get images",
+            "get art",
+            "get pictures",
+            "get drawings",
+            "display illustrations",
+            "display images",
+            "display art",
+            "display pictures",
+            "display drawings",
         ]
 
     def route_query(self, question: str) -> Tuple[QueryType, Optional[str]]:
@@ -150,37 +165,68 @@ class QueryRouter:
                 remaining_text = question[len(show_pattern) :].strip()
 
                 # Check if it contains image indicators
+                found_image_indicator = False
                 for img_indicator in self.image_indicators:
                     if img_indicator in remaining_text:
+                        found_image_indicator = True
                         search_term = self._extract_search_term_from_show_pattern(remaining_text, img_indicator)
                         if search_term:
                             logger.info(f"Show me pattern detected: '{search_term}'")
                             return search_term
+
+                # If we found an image indicator but no valid search term (only ignore words),
+                # return None to let it fall through to other patterns
+                if found_image_indicator:
+                    return None
         return None
 
     def _extract_search_term_from_show_pattern(self, remaining_text: str, img_indicator: str) -> Optional[str]:
         """Extract search term from 'show me X images' pattern."""
         # Check if the remaining text is exactly just the image indicator
-        # This handles cases like "show me images" where we want to show all images
+        # This handles cases like "show me images" or "find illustrations" where we want to show all
         if remaining_text.strip() == img_indicator:
             return None
 
-        # This logic handles terms appearing before or after the image indicator.
-        search_term = " ".join(remaining_text.split(img_indicator)).strip()
+        # Split into words to handle whole word matching
+        words = remaining_text.split()
 
+        # Find the image indicator word and remove it, keeping other words
+        search_words = []
+        for word in words:
+            if word != img_indicator:
+                search_words.append(word)
+
+        if not search_words:
+            return None
+
+        # Filter out common words that are not part of the search term
+        filtered_words = [word for word in search_words if word not in self.ignore_words]
+        search_term = " ".join(filtered_words).strip()
+
+        # If the search term is empty after filtering ignore words, return None
+        # This handles cases like "show me the images" where "the" gets filtered out
+        # but preserves cases like "find illustrations" where there are no ignore words to filter
         if not search_term:
             return None
 
-        # For better accuracy, filter out common words that are not part of the search term.
-        words = search_term.split()
-        filtered_words = [word for word in words if word not in self.ignore_words]
-        search_term = " ".join(filtered_words).strip()
+        # If the search term consists only of image indicators, return None
+        if search_term in self.image_indicators:
+            return None
 
-        return search_term if search_term else None
+        return search_term
 
     def _check_all_images_pattern(self, question: str) -> bool:
         """Check for patterns that request all images."""
-        return question in self.all_image_phrases
+        # First check exact match
+        if question in self.all_image_phrases:
+            return True
+
+        # Then check with ignore words filtered out
+        words = question.split()
+        filtered_words = [word for word in words if word not in self.ignore_words]
+        filtered_question = " ".join(filtered_words)
+
+        return filtered_question in self.all_image_phrases
 
     def _check_general_image_pattern(self, question: str) -> Optional[str]:
         """Check for general patterns like 'X images' or 'X art'."""

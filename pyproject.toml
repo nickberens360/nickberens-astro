@@ -9,6 +9,7 @@ asyncio_mode = "auto"
 python_files = "test_*.py"
 python_functions = "test_*"
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = [
     "-ra",
     "-q",
@@ -64,7 +65,7 @@ line_length = 120
 known_first_party = ["backend", "tests"]
 
 [tool.flake8]
-extend-ignore = ["E203", "W503", "E501"]
+extend-ignore = ["E203", "W503", "E501", "E301", "E302", "E303", "E305"]
 per-file-ignores = [
     "tests/*:E402",
     "tests/**/*:E402"
