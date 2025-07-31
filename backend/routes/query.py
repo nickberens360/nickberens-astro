@@ -106,6 +106,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
     except Exception as e:
         # Only return 503 if both retrievers and LLM fallback fail
         from logging import getLogger
+
         logger = getLogger(__name__)
         logger.error(f"Both retrievers and LLM fallback failed: {e}")
         raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
