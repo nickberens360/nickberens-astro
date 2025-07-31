@@ -92,14 +92,15 @@ class RateLimitTracker:
         logger.info(f"{provider} rate limit cleared")
 
     def get_status(self) -> Dict[str, bool]:
-        """Get current rate limit status for all providers"""
+        """Get current rate limit status for all providers, clearing expired ones."""
         with self._lock:
             current_time = datetime.now()
-        for provider, reset_time in list(self._rate_limit_reset_time.items()):
-            if current_time > reset_time:
-                self.clear_rate_limit(provider)
-
-        return self._rate_limit_status.copy()
+            for provider, reset_time in list(self._rate_limit_reset_time.items()):
+                if current_time > reset_time:
+                    self._rate_limit_status[provider] = False
+                    if provider in self._rate_limit_reset_time:
+                        del self._rate_limit_reset_time[provider]
+            return self._rate_limit_status.copy()
 
 
 # Global rate limit tracker
@@ -526,22 +527,17 @@ async def stream_with_fallback(
 
 def _determine_llm_order(preferred_model: Optional[str], llms: Dict[str, Any]) -> List[Tuple[str, Any]]:
     """Determine the order in which to try LLMs based on preference and availability."""
-    llm_order = []
+    provider_names = [p["name"] for p in LLM_PROVIDERS]
 
-    # If user prefers a specific model and it's available, try it first
-    if preferred_model and preferred_model in llms and llms[preferred_model]:
-        llm_order.append((preferred_model, llms[preferred_model]))
-        # Add other available models as fallbacks
-        for name, instance in llms.items():
-            if name != preferred_model and instance:
-                llm_order.append((name, instance))
-    else:
-        # Default order: Claude first, then others
-        if llms.get("claude"):
-            llm_order.append(("claude", llms["claude"]))
-        for name, instance in llms.items():
-            if name != "claude" and instance:
-                llm_order.append((name, instance))
+    # If a valid preferred model is given, move it to the front
+    if preferred_model and preferred_model in provider_names and llms.get(preferred_model):
+        provider_names.insert(0, provider_names.pop(provider_names.index(preferred_model)))
+
+    # Build the final list of available LLM instances in the determined order
+    llm_order = []
+    for name in provider_names:
+        if instance := llms.get(name):
+            llm_order.append((name, instance))
 
     return llm_order
 
