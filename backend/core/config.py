@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 # Set up logging
@@ -28,10 +28,19 @@ class AppConfig:
                 "description": "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills.",
                 "search_kwargs": {"k": 8},
                 "keywords": [
-                    "experience", "job", "work", "skill", "resume", "cv",
-                    "company", "role", "hillman", "wisnet", "history"
-                ]
-            }
+                    "experience",
+                    "job",
+                    "work",
+                    "skill",
+                    "resume",
+                    "cv",
+                    "company",
+                    "role",
+                    "hillman",
+                    "wisnet",
+                    "history",
+                ],
+            },
         },
         {
             "name": "about",
@@ -39,8 +48,8 @@ class AppConfig:
             "retriever_options": {
                 "description": "Good for answering questions about Nick's background, personal interests, and general professional philosophy.",
                 "search_kwargs": {"k": 5},
-                "keywords": ["about", "background", "who is", "philosophy", "approach"]
-            }
+                "keywords": ["about", "background", "who is", "philosophy", "approach"],
+            },
         },
         {
             "name": "illustration",
@@ -48,9 +57,9 @@ class AppConfig:
             "retriever_options": {
                 "description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.",
                 "search_kwargs": {"k": 5},
-                "keywords": ["art", "illustrations", "drawings", "design", "creative", "artwork", "visual", "graphic"]
-            }
-        }
+                "keywords": ["art", "illustrations", "drawings", "design", "creative", "artwork", "visual", "graphic"],
+            },
+        },
     ]
 
     # Search Configuration with basic validation
