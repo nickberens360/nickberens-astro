@@ -6,7 +6,7 @@ import os
 import re
 import time
 from datetime import datetime, timedelta
-from threading import Lock
+from threading import RLock
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 
 import chromadb
@@ -59,7 +59,7 @@ class RateLimitTracker:
     def __init__(self):
         self._rate_limit_status: Dict[str, bool] = {}
         self._rate_limit_reset_time: Dict[str, datetime] = {}
-        self._lock = Lock()
+        self._lock = RLock()
 
     def is_rate_limited(self, provider: str) -> bool:
         """Check if a provider is currently rate limited"""
