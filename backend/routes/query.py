@@ -78,9 +78,6 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         return JSONResponse(content=response_dict)
 
     # Handle AI text responses
-    if not services["retrievers"]:
-        raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
-
     formatted_chat_history = [
         (HumanMessage(content=msg["text"]) if msg["sender"] == "user" else AIMessage(content=msg["text"]))
         for msg in sanitized_history
@@ -98,9 +95,20 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             f"User requested {query.preferred_model} but it's rate limited. Will fallback to available model."
         )
 
-    text_stream, actual_model_used, metadata = await stream_with_fallback(
-        services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
-    )
+    # Attempt LLM fallback even if retrievers are not available
+    # The stream_with_fallback function will handle the case where retrievers are None
+    try:
+        text_stream, actual_model_used, metadata = await stream_with_fallback(
+            services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
+        )
+
+        # If we get here, the LLM fallback succeeded, so return 200
+    except Exception as e:
+        # Only return 503 if both retrievers and LLM fallback fail
+        from logging import getLogger
+        logger = getLogger(__name__)
+        logger.error(f"Both retrievers and LLM fallback failed: {e}")
+        raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
 
     followup_questions = services["followup_service"].generate_followups(sanitized_question, "", sanitized_history)
 
