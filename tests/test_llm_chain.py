@@ -659,6 +659,7 @@ class TestRateLimitTracker:
 
         # Manually expire the rate limit by setting past reset time
         import datetime
+
         past_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
         self.tracker._rate_limit_reset_time["claude"] = past_time
 
@@ -688,6 +689,7 @@ class TestRateLimitTracker:
 
         # Manually expire the rate limit
         import datetime
+
         past_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
         self.tracker._rate_limit_reset_time["claude"] = past_time
 

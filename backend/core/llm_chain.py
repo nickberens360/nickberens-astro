@@ -6,6 +6,7 @@ import os
 import re
 import time
 from datetime import datetime, timedelta
+from threading import Lock
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 
 import chromadb
@@ -58,37 +59,42 @@ class RateLimitTracker:
     def __init__(self):
         self._rate_limit_status: Dict[str, bool] = {}
         self._rate_limit_reset_time: Dict[str, datetime] = {}
+        self._lock = Lock()
 
     def is_rate_limited(self, provider: str) -> bool:
         """Check if a provider is currently rate limited"""
-        if provider not in self._rate_limit_status:
-            return False
+        with self._lock:
 
-        # Check if rate limit has expired
-        if provider in self._rate_limit_reset_time:
-            if datetime.now() > self._rate_limit_reset_time[provider]:
-                self.clear_rate_limit(provider)
+            if provider not in self._rate_limit_status:
                 return False
+
+            # Check if rate limit has expired
+            if provider in self._rate_limit_reset_time:
+                if datetime.now() > self._rate_limit_reset_time[provider]:
+                    self.clear_rate_limit(provider)
+                    return False
 
         return self._rate_limit_status.get(provider, False)
 
     def set_rate_limited(self, provider: str, reset_minutes: int = 60):
         """Mark a provider as rate limited"""
-        self._rate_limit_status[provider] = True
-        self._rate_limit_reset_time[provider] = datetime.now() + timedelta(minutes=reset_minutes)
+        with self._lock:
+            self._rate_limit_status[provider] = True
+            self._rate_limit_reset_time[provider] = datetime.now() + timedelta(minutes=reset_minutes)
         logger.warning(f"{provider} rate limit hit, will reset at {self._rate_limit_reset_time[provider]}")
 
     def clear_rate_limit(self, provider: str):
         """Clear rate limit status for a provider"""
-        self._rate_limit_status[provider] = False
-        if provider in self._rate_limit_reset_time:
-            del self._rate_limit_reset_time[provider]
+        with self._lock:
+            self._rate_limit_status[provider] = False
+            if provider in self._rate_limit_reset_time:
+                del self._rate_limit_reset_time[provider]
         logger.info(f"{provider} rate limit cleared")
 
     def get_status(self) -> Dict[str, bool]:
         """Get current rate limit status for all providers"""
-        # Clean up expired rate limits
-        current_time = datetime.now()
+        with self._lock:
+            current_time = datetime.now()
         for provider, reset_time in list(self._rate_limit_reset_time.items()):
             if current_time > reset_time:
                 self.clear_rate_limit(provider)

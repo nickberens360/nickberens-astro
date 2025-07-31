@@ -5,13 +5,14 @@ This module contains comprehensive tests for the SecurityValidator class,
 covering input validation, sanitization, and security pattern detection.
 """
 
+import re
 from unittest.mock import patch
 
 import pytest
 
 from backend.models.request_models import Message, Query
 from backend.security.validator import SecurityValidator
-import re
+
 
 class TestSecurityValidator:
     """Test cases for SecurityValidator class."""
@@ -258,8 +259,6 @@ class TestSecurityValidator:
         assert SecurityValidator.MAX_CHAT_HISTORY_LENGTH > 0
         assert SecurityValidator.MAX_MESSAGE_LENGTH > 0
         assert len(SecurityValidator.SUSPICIOUS_PATTERNS) > 0
-
-
 
         for pattern in SecurityValidator.SUSPICIOUS_PATTERNS:
             try:

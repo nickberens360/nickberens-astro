@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import sys
 from unittest.mock import MagicMock
+
 from backend.security.validator import SecurityValidator
-import re
+
 sys.path.insert(0, os.path.abspath("."))
 
 # Recreate the failing test scenario
