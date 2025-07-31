@@ -368,6 +368,7 @@ export default {
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   cursor: pointer;
+  width: 100px;
 }
 
 .model-selector:focus {
