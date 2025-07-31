@@ -62,19 +62,18 @@ class RateLimitTracker:
         self._lock = RLock()
 
     def is_rate_limited(self, provider: str) -> bool:
-        """Check if a provider is currently rate limited"""
+        """Check if a provider is currently rate limited - FIXED thread safety"""
         with self._lock:
-
             if provider not in self._rate_limit_status:
                 return False
 
-            # Check if rate limit has expired
-            if provider in self._rate_limit_reset_time:
-                if datetime.now() > self._rate_limit_reset_time[provider]:
-                    self.clear_rate_limit(provider)
-                    return False
+            # Check if rate limit has expired - simplified condition
+            if provider in self._rate_limit_reset_time and datetime.now() > self._rate_limit_reset_time[provider]:
+                self.clear_rate_limit(provider)
+                return False
 
-        return self._rate_limit_status.get(provider, False)
+            # Return status while still holding the lock - CRITICAL FIX
+            return self._rate_limit_status.get(provider, False)
 
     def set_rate_limited(self, provider: str, reset_minutes: int = 60):
         """Mark a provider as rate limited"""
