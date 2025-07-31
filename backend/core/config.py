@@ -1,7 +1,9 @@
+# backend/core/config.py
+
 import logging
 import os
 import re
-from typing import List
+from typing import List, Dict, Any
 from urllib.parse import urlparse
 
 # Set up logging
@@ -16,6 +18,40 @@ class AppConfig:
     CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
+
+    # Data Sources Configuration
+    DATA_SOURCES: List[Dict[str, Any]] = [
+        {
+            "name": "resume",
+            "path": "public/resume.json",
+            "retriever_options": {
+                "description": "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills.",
+                "search_kwargs": {"k": 8},
+                "keywords": [
+                    "experience", "job", "work", "skill", "resume", "cv",
+                    "company", "role", "hillman", "wisnet", "history"
+                ]
+            }
+        },
+        {
+            "name": "about",
+            "path": "public/about.json",
+            "retriever_options": {
+                "description": "Good for answering questions about Nick's background, personal interests, and general professional philosophy.",
+                "search_kwargs": {"k": 5},
+                "keywords": ["about", "background", "who is", "philosophy", "approach"]
+            }
+        },
+        {
+            "name": "illustration",
+            "path": "public/illustrations.json",
+            "retriever_options": {
+                "description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.",
+                "search_kwargs": {"k": 5},
+                "keywords": ["art", "illustrations", "drawings", "design", "creative", "artwork", "visual", "graphic"]
+            }
+        }
+    ]
 
     # Search Configuration with basic validation
     try:

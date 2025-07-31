@@ -1,5 +1,8 @@
+# backend/scripts/build_unified_data.py
+
 import json
 from pathlib import Path
+from backend.core.config import AppConfig
 
 
 def _load_json_or_default(path, default_value):
@@ -27,24 +30,13 @@ def build_unified_data():
     base_path = Path("public")
     output_path = base_path / "unified_data.json"
 
-    # --- Illustrations JSON (already structured) ---
-    illustrations_path = base_path / "illustrations.json"
-    illustrations_data = _load_json_or_default(illustrations_path, [])
+    unified_data = {}
 
-    # --- Resume Data (loaded from JSON) ---
-    resume_path = base_path / "resume.json"
-    resume_data = _load_json_or_default(resume_path, {})
+    for source in AppConfig.DATA_SOURCES:
+        source_name = source["name"]
+        source_path = Path(source["path"])
+        unified_data[source_name] = _load_json_or_default(source_path, {} if 'json' in source_path.suffix else [])
 
-    # --- About Data (loaded from JSON) ---
-    about_path = base_path / "about.json"
-    about_data = _load_json_or_default(about_path, {})
-
-    # --- Build unified structure ---
-    unified_data = {
-        "resume": resume_data,
-        "about": about_data,
-        "illustrations": illustrations_data,
-    }
 
     # --- Write output ---
     try:

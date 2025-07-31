@@ -1,3 +1,5 @@
+# backend/core/data_loader.py
+
 import json
 import logging
 from typing import Any, Dict, List, Tuple
@@ -34,77 +36,79 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
     # --- END OF UPDATE ---
 
     docs = []
-    resume = unified_data.get("resume", {})
-    about = unified_data.get("about", {})
     illustrations = unified_data.get("illustrations", [])
 
     # Process Resume: Chunk by logical section
-    if resume.get("summary"):
-        docs.append(
-            Document(
-                page_content=f"Summary: {resume['summary']}",
-                metadata={"source": "resume", "section": "summary"},
-            )
-        )
-    if resume.get("experience"):
-        for job in resume["experience"]:
-            points = job.get("points", [])
-            points_str = "\n".join([f"- {p}" for p in points]) if points else "No points listed"
-            content = (
-                f"Company: {job['company']}\n"
-                f"Role: {job['role']}\n"
-                f"Dates: {job['dates']}\n"
-                f"Responsibilities:\n{points_str}"
-            )
+    resume = unified_data.get("resume", {})
+    if resume:
+        if resume.get("summary"):
             docs.append(
                 Document(
-                    page_content=content,
-                    metadata={
-                        "source": "resume",
-                        "section": "experience",
-                        "company": job["company"],
-                        "role": job["role"],
-                    },
+                    page_content=f"Summary: {resume['summary']}",
+                    metadata={"source": "resume", "section": "summary"},
                 )
             )
-    if resume.get("education"):
-        for edu in resume["education"]:
-            content = f"Institution: {edu['institution']}\n" f"Degree: {edu['degree']}\n" f"Dates: {edu['dates']}"
-            docs.append(
-                Document(
-                    page_content=content,
-                    metadata={
-                        "source": "resume",
-                        "section": "education",
-                        "institution": edu["institution"],
-                    },
+        if resume.get("experience"):
+            for job in resume["experience"]:
+                points = job.get("points", [])
+                points_str = "\n".join([f"- {p}" for p in points]) if points else "No points listed"
+                content = (
+                    f"Company: {job['company']}\n"
+                    f"Role: {job['role']}\n"
+                    f"Dates: {job['dates']}\n"
+                    f"Responsibilities:\n{points_str}"
                 )
-            )
-    if resume.get("accomplishments"):
-        for acc in resume["accomplishments"]:
-            docs.append(
-                Document(
-                    page_content=f"{acc['title']}: {acc['description']}",
-                    metadata={"source": "resume", "section": "accomplishments"},
+                docs.append(
+                    Document(
+                        page_content=content,
+                        metadata={
+                            "source": "resume",
+                            "section": "experience",
+                            "company": job["company"],
+                            "role": job["role"],
+                        },
+                    )
                 )
-            )
+        if resume.get("education"):
+            for edu in resume["education"]:
+                content = f"Institution: {edu['institution']}\n" f"Degree: {edu['degree']}\n" f"Dates: {edu['dates']}"
+                docs.append(
+                    Document(
+                        page_content=content,
+                        metadata={
+                            "source": "resume",
+                            "section": "education",
+                            "institution": edu["institution"],
+                        },
+                    )
+                )
+        if resume.get("accomplishments"):
+            for acc in resume["accomplishments"]:
+                docs.append(
+                    Document(
+                        page_content=f"{acc['title']}: {acc['description']}",
+                        metadata={"source": "resume", "section": "accomplishments"},
+                    )
+                )
 
     # Process About: Chunk by section heading
-    if about.get("introduction"):
-        docs.append(
-            Document(
-                page_content=about["introduction"],
-                metadata={"source": "about", "section": "introduction"},
-            )
-        )
-    if about.get("sections"):
-        for section in about["sections"]:
+    about = unified_data.get("about", {})
+    if about:
+        if about.get("introduction"):
             docs.append(
                 Document(
-                    page_content=f"{section['heading']}: {section['content']}",
-                    metadata={"source": "about", "section": section["heading"]},
+                    page_content=about["introduction"],
+                    metadata={"source": "about", "section": "introduction"},
                 )
             )
+        if about.get("sections"):
+            for section in about["sections"]:
+                docs.append(
+                    Document(
+                        page_content=f"{section['heading']}: {section['content']}",
+                        metadata={"source": "about", "section": section["heading"]},
+                    )
+                )
 
     # Process Illustrations: One document per illustration
     for img in illustrations:

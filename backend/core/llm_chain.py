@@ -1,3 +1,5 @@
+# backend/core/llm_chain.py
+
 import asyncio
 import hashlib
 import json
@@ -113,43 +115,22 @@ _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 class VectorStoreManager:
     """Manages vector store creation and retrieval routing"""
 
-    RETRIEVER_DEFINITIONS = {
-        "resume": {
-            "description": "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills.",
-            "search_kwargs": {"k": 8},
-            "keywords": [
-                "experience",
-                "job",
-                "work",
-                "skill",
-                "resume",
-                "cv",
-                "company",
-                "role",
-                "hillman",
-                "wisnet",
-                "history",
-            ],
-        },
-        "about": {
-            "description": "Good for answering questions about Nick's background, personal interests, and general professional philosophy.",
-            "search_kwargs": {"k": 5},
-            "keywords": ["about", "background", "who is", "philosophy", "approach"],
-        },
-        "illustration": {
-            "description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.",
-            "search_kwargs": {"k": 5},
-            "keywords": ["art", "illustration", "drawing", "picture", "character", "design"],
-        },
-    }
+    @staticmethod
+    def get_retriever_definitions() -> Dict[str, Any]:
+        return {
+            source["name"]: source["retriever_options"]
+            for source in AppConfig.DATA_SOURCES
+            if "retriever_options" in source
+        }
 
     @classmethod
     def create_multi_vector_retriever(cls, docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
         """Creates and returns a dictionary of Chroma vector store retrievers, one for each document source."""
         vectorstores = {}
+        retriever_definitions = cls.get_retriever_definitions()
         docs_by_source = {
             source: [doc for doc in docs if doc.metadata.get("source") == source]
-            for source in cls.RETRIEVER_DEFINITIONS.keys()
+            for source in retriever_definitions.keys()
         }
 
         for source, source_docs in docs_by_source.items():
@@ -175,8 +156,8 @@ class VectorStoreManager:
         # Create retrievers only for successfully created vector stores
         final_retrievers = {}
         for name, store in vectorstores.items():
-            if name in cls.RETRIEVER_DEFINITIONS:
-                search_kwargs = cls.RETRIEVER_DEFINITIONS[name]["search_kwargs"]
+            if name in retriever_definitions:
+                search_kwargs = retriever_definitions[name]["search_kwargs"]
                 final_retrievers[name] = store.as_retriever(search_kwargs=search_kwargs)
 
         if not final_retrievers:
@@ -189,9 +170,10 @@ class VectorStoreManager:
         """Routes a user query to the most relevant retriever(s) based on keywords."""
         query_lower = query.lower()
         selected_names = set()
+        retriever_definitions = cls.get_retriever_definitions()
 
         # Check each retriever's keywords
-        for source, config in cls.RETRIEVER_DEFINITIONS.items():
+        for source, config in retriever_definitions.items():
             if any(keyword in query_lower for keyword in config["keywords"]):
                 selected_names.add(source)
 
