@@ -191,6 +191,33 @@ async def test_query_endpoint_query_processing_failure(client: AsyncClient):
         assert "Query processing failed: Processing failed" in response.json()["detail"]
 
 
+async def test_query_endpoint_unpacking_error_handling(client: AsyncClient):
+    """
+    Test that POST /query handles ValueError and TypeError (unpacking errors) with specific hint message.
+    """
+    # Test ValueError (common unpacking error)
+    with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
+        mock_rag_system.query.side_effect = ValueError("too many values to unpack (expected 2)")
+
+        response = await client.post(
+            "/query",
+            json={"question": "Test question"},
+        )
+        assert response.status_code == 500
+        assert "Query processing failed: too many values to unpack (expected 2)" in response.json()["detail"]
+
+    # Test TypeError (another common unpacking error)
+    with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
+        mock_rag_system.query.side_effect = TypeError("cannot unpack non-sequence NoneType")
+
+        response = await client.post(
+            "/query",
+            json={"question": "Test question"},
+        )
+        assert response.status_code == 500
+        assert "Query processing failed: cannot unpack non-sequence NoneType" in response.json()["detail"]
+
+
 async def test_documents_stats_endpoint(client: AsyncClient):
     """
     Test the GET /documents/stats endpoint.

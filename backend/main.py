@@ -224,11 +224,12 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
             model_used=rag_system.get_model_name(),
         )
 
+    except (ValueError, TypeError) as e:
+        logger.error(f"❌ Query failed with a possible signature mismatch: {e}")
+        logger.error("💡 Hint: Ensure 'AutoRAGSystem.query' returns a tuple of (response_text, source_nodes).")
+        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
     except Exception as e:
         logger.error(f"❌ Query failed: {e}")
-        # Be more specific if the query method signature has changed
-        if "unpack" in str(e):
-            logger.error("💡 Hint: Ensure 'AutoRAGSystem.query' returns a tuple of (response_text, source_nodes).")
         raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
 
 
