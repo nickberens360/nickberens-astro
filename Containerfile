@@ -1,23 +1,17 @@
 # ---- Builder Stage ----
 FROM python:3.11-slim as builder
 
+# Install poetry
+RUN pip install poetry
+
 WORKDIR /app
 
-# Install system dependencies for building python packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
+# Copy only files needed for dependency installation
+COPY poetry.lock pyproject.toml ./
 
-# Create a virtual environment to isolate dependencies
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
-# Copy and install Python requirements
-# This is done in a separate step to leverage Docker's layer caching.
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Configure poetry to create the virtualenv in the project's root
+# Then, install dependencies from the lock file
+RUN poetry config virtualenvs.in-project true && poetry install --no-root --without dev
 
 # ---- Final Stage ----
 FROM python:3.11-slim
@@ -27,11 +21,11 @@ RUN groupadd --system app && useradd --system --gid app app
 
 WORKDIR /app
 
-# Copy virtual environment from builder stage
-COPY --chown=app:app --from=builder /opt/venv /opt/venv
+# Copy the virtual environment from the builder stage
+COPY --chown=app:app --from=builder /app/.venv /app/.venv
 
-# Activate virtual environment
-ENV PATH="/opt/venv/bin:$PATH"
+# Activate the virtual environment for all subsequent commands
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Set environment variables to disable tokenizer warnings and fix permissions
 ENV TOKENIZERS_PARALLELISM=false

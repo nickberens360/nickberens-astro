@@ -33,7 +33,7 @@ jobs:
       - name: Run Vitest tests
         run: npm test
 
-  # --- EXISTING BACKEND TEST JOB ---
+  # --- BACKEND TEST JOB ---
   test:
     name: Backend Tests (Pytest)
     runs-on: ubuntu-latest
@@ -52,19 +52,19 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip dependencies
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Cache Poetry virtualenv
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-dev.txt') }}
+          path: .venv
+          key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-poetry-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+        run: poetry install
 
       - name: Set up environment variables
         run: |
@@ -75,7 +75,7 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          pytest -n auto \
+          poetry run pytest -n auto \
             --cov=backend/core \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -102,47 +102,7 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  # Optional: Separate job for different test types
-  test-categories:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    strategy:
-      matrix:
-        test-type: ["unit", "integration"]
-        python-version: ["3.11"]  # Use latest for faster feedback
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-dev.txt') }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-
-      - name: Set up environment variables
-        run: |
-          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
-
-      - name: Run ${{ matrix.test-type }} tests
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          pytest -m "${{ matrix.test-type }}" -n auto -v
-
+  # --- LINT JOB ---
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -154,27 +114,26 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache linting tools
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Cache Poetry virtualenv for linting
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-lint-${{ hashFiles('**/requirements-dev.txt') }}
+          path: .venv
+          key: ${{ runner.os }}-poetry-lint-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-lint-
 
-      - name: Install linting tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+      - name: Install dependencies for linting
+        run: poetry install
 
       - name: Auto-fix formatting
         run: |
-          black .
-          isort .
+          poetry run black .
+          poetry run isort .
 
       - name: Check remaining issues
         run: |
-          flake8 . || echo "⚠️ Flake8 issues found - please fix manually"
-          mypy backend/core --ignore-missing-imports || echo "⚠️ Type checking issues found - please fix manually"
-
-      - name: Security scan
-        run: |
-          safety check || echo "⚠️ Security vulnerabilities found - please review"
+          poetry run flake8 . || echo "⚠️ Flake8 issues found - please fix manually"
+          poetry run mypy backend/core --ignore-missing-imports || echo "⚠️ Type checking issues found - please fix manually"
