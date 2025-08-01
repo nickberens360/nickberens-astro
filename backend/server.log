@@ -1,0 +1,21 @@
+INFO:     Started server process [19755]
+INFO:     Waiting for application startup.
+INFO:__main__:🚀 Initializing Auto-Discovery RAG System...
+WARNING:__main__:⚠️ ANTHROPIC_API_KEY not set - some features may not work
+INFO:core.auto_rag:📁 Using data directory: /Users/nickberens/Webstorm/nickberens/backend/../public
+WARNING:core.auto_rag:⚠️ ANTHROPIC_API_KEY not set - using embeddings only
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+INFO:sentence_transformers.SentenceTransformer:2 prompts are loaded, with the keys: ['query', 'text']
+WARNING:core.auto_rag:Error loading cached index: 'AutoRAGSystem' object has no attribute 'service_context', rebuilding...
+INFO:core.auto_rag:🔍 Auto-discovering documents...
+INFO:core.auto_rag:📄 Discovered 4 documents using SimpleDirectoryReader
+INFO:core.auto_rag:💾 Index cached for faster startup
+INFO:__main__:✅ RAG system initialized successfully
+INFO:__main__:📊 Discovered 24 files across 6 types
+INFO:     Application startup complete.
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): address already in use
+INFO:     Waiting for application shutdown.
+INFO:__main__:🛑 Shutting down RAG system...
+INFO:     Application shutdown complete.
+Loading llama_index.core.storage.kvstore.simple_kvstore from .rag_cache/vector_index/docstore.json.
+Loading llama_index.core.storage.kvstore.simple_kvstore from .rag_cache/vector_index/index_store.json.

@@ -94,3 +94,4 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = false
 strict_equality = true
+
