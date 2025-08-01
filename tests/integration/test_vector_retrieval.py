@@ -15,10 +15,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # NOW import modules that depend on environment variables
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-from backend.core.data_loader import load_all_documents
-from backend.core.llm_chain import create_multi_vector_retriever
+from backend.core.auto_rag import create_auto_rag
 
 # Add project root to path (go up three levels from tests/integration/)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -31,12 +29,11 @@ def test_vector_retrieval():
     print("=" * 50)
 
     try:
-        # Load documents and create retriever
-        print("📚 Loading documents...")
-        docs, illustrations_data = load_all_documents()
-        embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/embedding-001"))
-        retrievers = create_multi_vector_retriever(docs, embeddings)
-        print(f"✅ Loaded {len(docs)} documents")
+        # Create AutoRAG system
+        print("📚 Initializing AutoRAG system...")
+        rag_system = create_auto_rag()
+        doc_stats = rag_system.get_document_stats()
+        print(f"✅ Loaded {doc_stats.get('total_documents', 0)} documents")
 
         # Test queries that previously returned wrong content
         test_queries = [
@@ -53,38 +50,30 @@ def test_vector_retrieval():
         for query in test_queries:
             print(f"\n📝 Query: '{query}'")
 
-            # Get relevant documents using resume retriever for resume queries
-            resume_retriever = retrievers.get("resume")
-            if resume_retriever:
-                relevant_docs = resume_retriever.invoke(query)
-            else:
-                print("❌ No resume retriever available")
-                continue
+            # Query the AutoRAG system
+            try:
+                response = rag_system.query(query)
+                print("✅ SUCCESS: AutoRAG system responded to resume query")
 
-            # Check document sources
-            sources = [doc.metadata.get("source", "unknown") for doc in relevant_docs[:3]]
-            print(f"📊 Top 3 document sources: {sources}")
-
-            # Check if resume content is prioritized
-            resume_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "resume"]
-            illustration_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "illustration"]
-
-            print(f"📄 Resume documents found: {len(resume_docs)}")
-            print(f"🎨 Illustration documents found: {len(illustration_docs)}")
-
-            if resume_docs:
-                print("✅ SUCCESS: Resume content found for resume query")
-                # Show a snippet of the resume content
+                # Show a snippet of the response
                 snippet = (
-                    resume_docs[0].page_content[:100] + "..."
-                    if len(resume_docs[0].page_content) > 100
-                    else resume_docs[0].page_content
+                    response[:100] + "..."
+                    if len(response) > 100
+                    else response
                 )
-                print(f"📋 Resume snippet: {snippet}")
-            else:
-                print("❌ ISSUE: No resume content found for resume query")
-                if illustration_docs:
-                    print("⚠️  WARNING: Illustration content returned instead")
+                print(f"📋 Response snippet: {snippet}")
+
+                # Check if response contains resume-related content
+                resume_keywords = ["experience", "work", "professional", "skills", "education", "career"]
+                found_keywords = [kw for kw in resume_keywords if kw.lower() in response.lower()]
+
+                if found_keywords:
+                    print(f"✅ Resume-related keywords found: {found_keywords}")
+                else:
+                    print("⚠️  WARNING: No obvious resume keywords in response")
+
+            except Exception as e:
+                print(f"❌ ERROR: Failed to query AutoRAG system: {e}")
 
         # Test about queries
         print("\n🧪 Testing About Queries:")
@@ -98,20 +87,31 @@ def test_vector_retrieval():
 
         for query in about_queries:
             print(f"\n📝 Query: '{query}'")
-            # Get relevant documents using about retriever for about queries
-            about_retriever = retrievers.get("about")
-            if about_retriever:
-                relevant_docs = about_retriever.invoke(query)
-                about_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "about"]
-                print(f"📖 About documents found: {len(about_docs)}")
-            else:
-                print("❌ No about retriever available")
-                continue
 
-            if about_docs:
-                print("✅ SUCCESS: About content found for about query")
-            else:
-                print("❌ ISSUE: No about content found for about query")
+            # Query the AutoRAG system
+            try:
+                response = rag_system.query(query)
+                print("✅ SUCCESS: AutoRAG system responded to about query")
+
+                # Show a snippet of the response
+                snippet = (
+                    response[:100] + "..."
+                    if len(response) > 100
+                    else response
+                )
+                print(f"📖 Response snippet: {snippet}")
+
+                # Check if response contains about-related content
+                about_keywords = ["Nick", "Berens", "background", "about", "developer", "engineer"]
+                found_keywords = [kw for kw in about_keywords if kw.lower() in response.lower()]
+
+                if found_keywords:
+                    print(f"✅ About-related keywords found: {found_keywords}")
+                else:
+                    print("⚠️  WARNING: No obvious about keywords in response")
+
+            except Exception as e:
+                print(f"❌ ERROR: Failed to query AutoRAG system: {e}")
 
         print("\n🎯 Summary:")
         print("=" * 50)

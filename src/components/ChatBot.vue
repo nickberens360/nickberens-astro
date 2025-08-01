@@ -16,14 +16,6 @@
       <p>❌ Backend service is currently offline. Please try again later.</p>
     </div>
 
-    <!-- Rate limit notification -->
-    <div
-      v-if="rateLimitNotification"
-      class="status-notification rate-limit"
-    >
-      <p>{{ rateLimitNotification }}</p>
-    </div>
-
     <ChatMessageList
       :messages="messages"
       :is-loading="isLoading"
@@ -88,8 +80,6 @@ export default {
     const currentPrompt = ref(''); // Track the current prompt being processed
     const selectedModel = ref('claude');
     const backendStatusValue = useStore(backendStatus);
-    const rateLimitNotification = ref('');
-    const rateLimitNotificationTimeout = ref(null);
 
     const { sendChatMessage, stopLoading, checkBackendStatus, checkRateLimits, rateLimits } = useChatAPI();
 
@@ -99,21 +89,6 @@ export default {
     const availableModels = computed(() => {
       return Object.keys(rateLimits.value).filter(model => !rateLimits.value[model]);
     });
-
-    // Function to show rate limit notification
-    const showRateLimitNotification = (message) => {
-      rateLimitNotification.value = message;
-
-      // Clear any existing timeout
-      if (rateLimitNotificationTimeout.value) {
-        clearTimeout(rateLimitNotificationTimeout.value);
-      }
-
-      // Auto-hide after 5 seconds
-      rateLimitNotificationTimeout.value = setTimeout(() => {
-        rateLimitNotification.value = '';
-      }, 5000);
-    };
 
     // Function to handle model switching due to rate limits
     const handleModelRateLimit = (currentModel, newRateLimits) => {
@@ -126,7 +101,6 @@ export default {
         selectedModel.value = availableModels.value[0];
 
         console.log(`Switched from ${oldModel} to ${selectedModel.value} due to rate limit`);
-        showRateLimitNotification(`⚠️ Switched to ${selectedModel.value} - ${oldModel} rate limit reached`);
 
         return true; // Model was switched
       }
@@ -155,9 +129,6 @@ export default {
 
     onUnmounted(() => {
       if (statusInterval) clearInterval(statusInterval);
-      if (rateLimitNotificationTimeout.value) {
-        clearTimeout(rateLimitNotificationTimeout.value);
-      }
     });
 
     watch(userInput, (newValue) => {
@@ -217,11 +188,7 @@ export default {
 
           // Handle rate limit updates
           if (newRateLimits) {
-            const modelSwitched = handleModelRateLimit(selectedModel.value, newRateLimits);
-            // If user requested one model but got another due to rate limits, notify user
-            if (model && model !== selectedModel.value && model !== 'cached' && !modelSwitched && model !== 'image_search' && model !== 'auto-rag') {
-              showRateLimitNotification(`ℹ️ Response generated using ${model} instead of ${selectedModel.value}`);
-            }
+            handleModelRateLimit(selectedModel.value, newRateLimits);
           }
         }
         if (isFinal) {
@@ -326,7 +293,6 @@ export default {
       hasTypingMessage,
       selectedModel,
       rateLimits,
-      rateLimitNotification,
       lastStoppedPrompt,
       backendStatus: backendStatusValue,
       chatId,
@@ -355,20 +321,18 @@ export default {
   padding: 10px;
   text-align: center;
   font-weight: bold;
+  border: 1px solid transparent;
 }
 
 .status-notification.checking {
-  background-color: #334155;
-  color: #f1f5f9;
+  background-color: rgba(59, 130, 246, 0.27);
+  color: #2563eb;
+  border-color: #2563eb;
 }
 
 .status-notification.offline {
-  background-color: #7f1d1d;
-  color: #fecaca;
-}
-
-.status-notification.rate-limit {
-  background-color: #92400e;
-  color: #fed7aa;
+  background-color: rgba(185, 28, 28, 0.27);
+  color: #d01818;
+  border-color: #d01818;
 }
 </style>
