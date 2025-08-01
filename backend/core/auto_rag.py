@@ -158,7 +158,7 @@ class AutoRAGSystem:
         for file_path in self.data_dir.rglob("*"):
             if file_path.is_file() and not file_path.name.startswith("."):
                 try:
-                    if file_path.suffix.lower() in [".json", ".txt", ".md"]:
+                    if file_path.suffix.lower() in [".json", ".txt", ".md", ".csv", ".docx"]:
                         with open(file_path, "r", encoding="utf-8") as f:
                             content = f.read()
 
@@ -198,7 +198,7 @@ class AutoRAGSystem:
                 input_dir=str(self.data_dir),
                 recursive=True,
                 exclude_hidden=True,
-                required_exts=[".json", ".txt", ".md", ".csv"],  # Start with basic types
+                required_exts=[".json", ".txt", ".md", ".csv", ".docx"],  # Start with basic types
             ).load_data()
 
             logger.info(f"📄 Discovered {len(documents)} documents using SimpleDirectoryReader")

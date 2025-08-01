@@ -1,8 +1,9 @@
 # ---- Builder Stage ----
 FROM python:3.11-slim as builder
 
-# Install poetry
-RUN pip install poetry
+# Install build-essential tools for compiling Python packages, then install poetry
+# This prevents build failures for packages that don't have pre-compiled wheels
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/* && pip install poetry
 
 WORKDIR /app
 
@@ -27,7 +28,7 @@ COPY --chown=app:app --from=builder /app/.venv /app/.venv
 # Activate the virtual environment for all subsequent commands
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Set environment variables to disable tokenizer warnings and fix permissions
+# [cite_start]Set environment variables to disable tokenizer warnings and fix permissions [cite: 2]
 ENV TOKENIZERS_PARALLELISM=false
 ENV HF_HOME=/app/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/app/.cache/huggingface
@@ -49,7 +50,7 @@ EXPOSE 8000
 
 # Update healthcheck to use the correct endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+  [cite_start]CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1 [cite: 3]
 
 # Production-ready command (no reload)
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
