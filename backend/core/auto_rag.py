@@ -2,22 +2,25 @@
 
 import json
 import logging
-from pathlib import Path
-from typing import Dict, List, Any, Optional
 import mimetypes
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 try:
-    from llama_index.core import VectorStoreIndex, Document, SimpleDirectoryReader, Settings
+    from llama_index.core import Document, Settings, SimpleDirectoryReader, VectorStoreIndex
     from llama_index.core.node_parser import SimpleNodeParser
-    from llama_index.llms.anthropic import Anthropic
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+    from llama_index.llms.anthropic import Anthropic
+
     LLAMA_INDEX_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"LlamaIndex not installed: {e}")
-    logger.warning("Install with: pip install llama-index llama-index-llms-anthropic llama-index-embeddings-huggingface")
+    logger.warning(
+        "Install with: pip install llama-index llama-index-llms-anthropic llama-index-embeddings-huggingface"
+    )
     LLAMA_INDEX_AVAILABLE = False
 
 
@@ -59,6 +62,7 @@ class AutoRAGSystem:
         try:
             # Check for API key first
             import os
+
             if not os.getenv("ANTHROPIC_API_KEY"):
                 logger.warning("⚠️ ANTHROPIC_API_KEY not set - using embeddings only")
                 self.llm = None
@@ -67,6 +71,7 @@ class AutoRAGSystem:
                 # Use the model from config if available
                 try:
                     from backend.core.config import AppConfig
+
                     model_name = AppConfig.CLAUDE_MODEL
                 except ImportError:
                     model_name = "claude-3-5-sonnet-20241022"
@@ -104,7 +109,7 @@ class AutoRAGSystem:
             return file_info
 
         for file_path in self.data_dir.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith('.'):
+            if file_path.is_file() and not file_path.name.startswith("."):
                 try:
                     stat = file_path.stat()
                     relative_path = str(file_path.relative_to(self.data_dir))
@@ -112,7 +117,7 @@ class AutoRAGSystem:
                     file_info[relative_path] = {
                         "size": stat.st_size,
                         "modified": stat.st_mtime,
-                        "type": mimetypes.guess_type(file_path)[0] or "unknown"
+                        "type": mimetypes.guess_type(file_path)[0] or "unknown",
                     }
                 except Exception as e:
                     logger.warning(f"Error reading file {file_path}: {e}")
@@ -125,7 +130,7 @@ class AutoRAGSystem:
             return True
 
         try:
-            with open(self.file_registry, 'r') as f:
+            with open(self.file_registry, "r") as f:
                 old_registry = json.load(f)
         except Exception:
             return True
@@ -137,7 +142,7 @@ class AutoRAGSystem:
         """Save current file registry for change detection."""
         current_registry = self._get_file_info()
         try:
-            with open(self.file_registry, 'w') as f:
+            with open(self.file_registry, "w") as f:
                 json.dump(current_registry, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving file registry: {e}")
@@ -150,14 +155,14 @@ class AutoRAGSystem:
             return documents
 
         for file_path in self.data_dir.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith('.'):
+            if file_path.is_file() and not file_path.name.startswith("."):
                 try:
-                    if file_path.suffix.lower() in ['.json', '.txt', '.md']:
-                        with open(file_path, 'r', encoding='utf-8') as f:
+                    if file_path.suffix.lower() in [".json", ".txt", ".md"]:
+                        with open(file_path, "r", encoding="utf-8") as f:
                             content = f.read()
 
                         # Special handling for JSON files
-                        if file_path.suffix.lower() == '.json':
+                        if file_path.suffix.lower() == ".json":
                             try:
                                 data = json.loads(content)
                                 content = json.dumps(data, indent=2)
@@ -167,11 +172,11 @@ class AutoRAGSystem:
                         doc = Document(
                             text=content,
                             metadata={
-                                'file_path': str(file_path),
-                                'file_name': file_path.name,
-                                'file_type': file_path.suffix.lower(),
-                                'file_size': file_path.stat().st_size
-                            }
+                                "file_path": str(file_path),
+                                "file_name": file_path.name,
+                                "file_type": file_path.suffix.lower(),
+                                "file_size": file_path.stat().st_size,
+                            },
                         )
                         documents.append(doc)
 
@@ -192,7 +197,7 @@ class AutoRAGSystem:
                 input_dir=str(self.data_dir),
                 recursive=True,
                 exclude_hidden=True,
-                required_exts=['.json', '.txt', '.md', '.csv']  # Start with basic types
+                required_exts=[".json", ".txt", ".md", ".csv"],  # Start with basic types
             ).load_data()
 
             logger.info(f"📄 Discovered {len(documents)} documents using SimpleDirectoryReader")
@@ -215,6 +220,7 @@ class AutoRAGSystem:
             try:
                 if self.index_cache.exists():
                     import shutil
+
                     shutil.rmtree(self.index_cache)
 
                 index.storage_context.persist(persist_dir=str(self.index_cache))
@@ -240,7 +246,8 @@ class AutoRAGSystem:
         else:
             # Try to load from cache
             try:
-                from llama_index.core import load_index_from_storage, StorageContext
+                from llama_index.core import StorageContext, load_index_from_storage
+
                 storage_context = StorageContext.from_defaults(persist_dir=str(self.index_cache))
                 self.index = load_index_from_storage(storage_context)
                 logger.info("⚡ Loaded index from cache")
@@ -258,7 +265,7 @@ class AutoRAGSystem:
             return "LLM not available - please set ANTHROPIC_API_KEY environment variable for querying capabilities."
 
         try:
-            query_engine = self.index.as_query_engine(similarity_top_k=kwargs.get('top_k', 5))
+            query_engine = self.index.as_query_engine(similarity_top_k=kwargs.get("top_k", 5))
 
             response = query_engine.query(question)
             return str(response)
@@ -281,7 +288,7 @@ class AutoRAGSystem:
             "total_files": len(file_info),
             "file_types": {},
             "total_size": 0,
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
         }
 
         for file_data in file_info.values():
@@ -297,7 +304,7 @@ class AutoRAGSystem:
 
     def get_model_name(self) -> str:
         """Get the name of the model being used."""
-        return getattr(self, 'model_name', 'auto-rag')
+        return getattr(self, "model_name", "auto-rag")
 
 
 # Simple factory function

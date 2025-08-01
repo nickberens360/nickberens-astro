@@ -56,11 +56,7 @@ def test_vector_retrieval():
                 print("✅ SUCCESS: AutoRAG system responded to resume query")
 
                 # Show a snippet of the response
-                snippet = (
-                    response[:100] + "..."
-                    if len(response) > 100
-                    else response
-                )
+                snippet = response[:100] + "..." if len(response) > 100 else response
                 print(f"📋 Response snippet: {snippet}")
 
                 # Check if response contains resume-related content
@@ -94,11 +90,7 @@ def test_vector_retrieval():
                 print("✅ SUCCESS: AutoRAG system responded to about query")
 
                 # Show a snippet of the response
-                snippet = (
-                    response[:100] + "..."
-                    if len(response) > 100
-                    else response
-                )
+                snippet = response[:100] + "..." if len(response) > 100 else response
                 print(f"📖 Response snippet: {snippet}")
 
                 # Check if response contains about-related content
