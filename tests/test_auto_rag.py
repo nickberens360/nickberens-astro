@@ -101,7 +101,7 @@ class TestAutoRAGSystem:
 
     @patch("backend.core.auto_rag.VectorStoreIndex")
     def test_query_successful(
-            self, mock_vector_store_index, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic
+        self, mock_vector_store_index, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic
     ):
         """Test a successful query call."""
         mock_query_engine = MagicMock()
