@@ -1,46 +1,36 @@
 # backend/main.py - Updated FastAPI integration with fixed type annotations
 
-import importlib
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Type
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+# --- Start of Refactored Section ---
 
-# Import config - try different import paths
-def _import_app_config() -> Any:
-    """Import AppConfig from available module paths."""
-    for module_path in ["backend.core.config", ".core.config", "core.config"]:
-        try:
-            module = importlib.import_module(module_path)
-            return getattr(module, "AppConfig")
-        except (ImportError, AttributeError):
-            continue
-    raise ImportError("Could not import AppConfig from any expected location")
+# Use a standard try-except block that mypy can understand
+try:
+    # This is the standard path when running from the project root
+    from backend.core.config import AppConfig
+except (ImportError, AttributeError):
+    # This is a fallback for different execution contexts (like some tests)
+    from core.config import AppConfig
 
 
-AppConfig = _import_app_config()
+# Handle optional dependency for AutoRAGSystem
+try:
+    from backend.core.auto_rag import AutoRAGSystem
+    AutoRAGSystemClass: Optional[Type[AutoRAGSystem]] = AutoRAGSystem
+    AUTO_RAG_AVAILABLE = True
+except (ImportError, AttributeError):
+    AutoRAGSystemClass = None
+    AUTO_RAG_AVAILABLE = False
 
+# --- End of Refactored Section ---
 
-# Try to import the auto RAG system
-def _import_auto_rag_system() -> Optional[Any]:
-    """Import AutoRAGSystem from available module paths."""
-    for module_path in ["backend.core.auto_rag", ".core.auto_rag", "core.auto_rag"]:
-        try:
-            module = importlib.import_module(module_path)
-            return getattr(module, "AutoRAGSystem")
-        except (ImportError, AttributeError) as e:
-            logging.warning(f"Could not import AutoRAGSystem from {module_path}: {e}")
-            continue
-    return None
-
-
-AutoRAGSystemClass = _import_auto_rag_system()
-AUTO_RAG_AVAILABLE = AutoRAGSystemClass is not None
 
 if not AUTO_RAG_AVAILABLE:
     print("⚠️ Auto RAG system not available")

@@ -6,6 +6,7 @@ import mimetypes
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ class AutoRAGSystem:
             return True
 
         try:
-            with open(self.file_registry, "r") as f:
+            with open(self.file_registry, "r", encoding="utf-8") as f:
                 old_registry = json.load(f)
         except Exception:
             return True
@@ -142,7 +143,7 @@ class AutoRAGSystem:
         """Save current file registry for change detection."""
         current_registry = self._get_file_info()
         try:
-            with open(self.file_registry, "w") as f:
+            with open(self.file_registry, "w", encoding="utf-8") as f:
                 json.dump(current_registry, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving file registry: {e}")
@@ -219,7 +220,6 @@ class AutoRAGSystem:
             # Try to cache the index
             try:
                 if self.index_cache.exists():
-                    import shutil
 
                     shutil.rmtree(self.index_cache)
 
