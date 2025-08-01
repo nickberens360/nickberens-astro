@@ -96,16 +96,21 @@ class TestAutoRAGSystem:
         with patch("os.getenv", return_value=None):
             rag = AutoRAGSystem()
             rag.index = MagicMock()  # Mock the index to avoid building it
-            response = rag.query("test question")
-            assert "LLM not available" in response
+            response_text, source_nodes = rag.query("test question")
+            assert "LLM not available" in response_text
+            assert source_nodes == []  # Should return empty source nodes
 
     @patch("backend.core.auto_rag.VectorStoreIndex")
     def test_query_successful(
-        self, mock_vector_store_index, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic
+            self, mock_vector_store_index, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic
     ):
         """Test a successful query call."""
         mock_query_engine = MagicMock()
-        mock_query_engine.query.return_value = "Mocked response"
+        mock_response = MagicMock()
+        mock_response.response = "Mocked response"
+        mock_response.source_nodes = []
+        mock_query_engine.query.return_value = mock_response
+
         mock_index_instance = MagicMock()
         mock_index_instance.as_query_engine.return_value = mock_query_engine
 
@@ -113,9 +118,10 @@ class TestAutoRAGSystem:
             rag = AutoRAGSystem()
             rag.index = mock_index_instance
 
-            response = rag.query("test question")
+            response_text, source_nodes = rag.query("test question")
 
-            assert response == "Mocked response"
+            assert response_text == "Mocked response"
+            assert source_nodes == []
             mock_index_instance.as_query_engine.assert_called_once_with(similarity_top_k=5)
             mock_query_engine.query.assert_called_once_with("test question")
 

@@ -7,7 +7,7 @@ are correctly configured, requests are properly processed, and responses conform
 to the expected schemas.
 """
 
-from typing import Dict, List
+from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -75,10 +75,12 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
         "total_size": 1024,
         "last_updated": "2025-01-01T00:00:00Z",
     }
+    mock_source_nodes: List[Dict[str, Any]] = []  # Mock empty source nodes
 
     # Mock the global rag_system object in the main module
     with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
-        mock_rag_system.query.return_value = expected_response
+        # Update mock to return tuple (response_text, source_nodes)
+        mock_rag_system.query.return_value = (expected_response, mock_source_nodes)
         mock_rag_system.get_document_stats.return_value = mock_stats
         mock_rag_system.get_model_name.return_value = "claude-3-sonnet"
 
@@ -149,13 +151,14 @@ async def test_query_endpoint_with_chat_history(client: AsyncClient):
     """
     test_question = "Follow up question"
     expected_response = "Response with context"
+    mock_source_nodes: List[Dict[str, Any]] = []
     chat_history = [
         {"sender": "user", "text": "Previous question"},
         {"sender": "assistant", "text": "Previous response"},
     ]
 
     with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
-        mock_rag_system.query.return_value = expected_response
+        mock_rag_system.query.return_value = (expected_response, mock_source_nodes)
         mock_rag_system.get_document_stats.return_value = {}
         mock_rag_system.get_model_name.return_value = "claude-3-sonnet"
 
@@ -276,7 +279,8 @@ async def test_illustrations_legacy_endpoint(client: AsyncClient):
     Test the legacy GET /illustrations endpoint.
     """
     with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
-        mock_rag_system.query.return_value = "Here are some illustrations..."
+        # Mock query to return tuple (response_text, source_nodes)
+        mock_rag_system.query.return_value = ("Here are some illustrations...", [])
         response = await client.get("/illustrations")
         assert response.status_code == 200
         response_json = response.json()
