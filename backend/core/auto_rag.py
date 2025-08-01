@@ -6,8 +6,10 @@ import mimetypes
 import shutil
 from datetime import datetime
 from pathlib import Path
+
 # --- Start of Changed Section ---
 from typing import Any, Dict, List, Optional, Tuple
+
 # --- End of Changed Section ---
 
 logger = logging.getLogger(__name__)
@@ -21,8 +23,10 @@ try:
         VectorStoreIndex,
         load_index_from_storage,
     )
+
     # --- Start of Changed Section ---
     from llama_index.core.base.response.schema import RESPONSE_TYPE
+
     # --- End of Changed Section ---
     from llama_index.core.node_parser import SimpleNodeParser
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
@@ -299,7 +303,10 @@ class AutoRAGSystem:
             return "No documents available for querying.", []
 
         if not self.llm:
-            return "LLM not available - please set ANTHROPIC_API_KEY environment variable for querying capabilities.", []
+            return (
+                "LLM not available - please set ANTHROPIC_API_KEY environment variable for querying capabilities.",
+                [],
+            )
 
         try:
             query_engine = self.index.as_query_engine(similarity_top_k=kwargs.get("top_k", 5))
@@ -307,13 +314,14 @@ class AutoRAGSystem:
             response: RESPONSE_TYPE = query_engine.query(question)
 
             # Extract source nodes
-            source_nodes = response.source_nodes if hasattr(response, 'source_nodes') else []
+            source_nodes = response.source_nodes if hasattr(response, "source_nodes") else []
 
             return str(response), source_nodes
 
         except Exception as e:
             logger.error(f"Error querying index: {e}")
             return f"Error processing query: {str(e)}", []
+
     # --- End of Changed Section ---
 
     def refresh(self):

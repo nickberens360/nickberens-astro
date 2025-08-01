@@ -3,7 +3,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional, Union, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +23,7 @@ except (ImportError, AttributeError):
 # Handle optional dependency for AutoRAGSystem
 try:
     from backend.core.auto_rag import AutoRAGSystem
+
     AutoRAGSystemClass: Optional[Type[AutoRAGSystem]] = AutoRAGSystem
     AUTO_RAG_AVAILABLE = True
 except (ImportError, AttributeError):
@@ -205,13 +206,15 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
         sources: List[Dict[str, Any]] = []
         if request.include_sources and source_nodes:
             for node in source_nodes:
-                sources.append({
-                    "file_name": node.metadata.get("file_name"),
-                    "file_path": node.metadata.get("file_path"),
-                    "score": node.score,
-                    # Optional: include a snippet of the node's text
-                    # "snippet": node.get_content(metadata_mode="all")[:200] + "..."
-                })
+                sources.append(
+                    {
+                        "file_name": node.metadata.get("file_name"),
+                        "file_path": node.metadata.get("file_path"),
+                        "score": node.score,
+                        # Optional: include a snippet of the node's text
+                        # "snippet": node.get_content(metadata_mode="all")[:200] + "..."
+                    }
+                )
 
         # --- This is the section that was missing ---
         return QueryResponse(
