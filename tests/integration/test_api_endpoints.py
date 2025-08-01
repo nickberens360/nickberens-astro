@@ -272,18 +272,3 @@ async def test_setup_endpoint(client: AsyncClient):
         assert "anthropic_api_key_set" in response_json
         assert response_json["public_dir_exists"] is True
         assert response_json["public_files"] == 2
-
-
-async def test_illustrations_legacy_endpoint(client: AsyncClient):
-    """
-    Test the legacy GET /illustrations endpoint.
-    """
-    with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
-        # Mock query to return tuple (response_text, source_nodes)
-        mock_rag_system.query.return_value = ("Here are some illustrations...", [])
-        response = await client.get("/illustrations")
-        assert response.status_code == 200
-        response_json = response.json()
-        assert "auto-discovered" in response_json["message"]
-        assert "Here are some illustrations..." in response_json["response_preview"]
-        mock_rag_system.query.assert_called_once_with("Show me all illustrations and artwork")

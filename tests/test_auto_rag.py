@@ -109,6 +109,7 @@ class TestAutoRAGSystem:
         mock_response = MagicMock()
         mock_response.response = "Mocked response"
         mock_response.source_nodes = []
+        mock_response.configure_mock(**{"__str__.return_value": "Mocked response"})
         mock_query_engine.query.return_value = mock_response
 
         mock_index_instance = MagicMock()
