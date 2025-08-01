@@ -323,12 +323,11 @@ async def get_illustrations() -> Dict[str, str]:
 
     try:
         # Query for illustration-related content
-        response = rag_system.query("Show me all illustrations and artwork")
-
+        response_text, _ = rag_system.query("Show me all illustrations and artwork")
         return {
             "message": "Illustrations are now auto-discovered! Use the /query endpoint.",
             "query_example": "Ask: 'Show me Nick's illustrations' or 'What artwork does Nick have?'",
-            "response_preview": response[:200] + "..." if len(response) > 200 else response,
+            "response_preview": response_text[:200] + "..." if len(response_text) > 200 else response_text,
         }
 
     except Exception as e:
