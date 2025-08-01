@@ -1,13 +1,30 @@
-fastapi
-uvicorn[standard]
+# Core RAG Framework - Let LlamaIndex manage its own dependencies
+llama-index==0.13.0
+llama-index-llms-anthropic==0.8.0
+llama-index-embeddings-huggingface==0.6.0
+
+# FastAPI and web server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
 python-dotenv
-pypdf
-unstructured
-langchain
-langchain-google-genai
-langchain-community
-chromadb
+
+# Don't pin versions that conflict - let pip resolve
+# anthropic - will be installed by llama-index-llms-anthropic
+# pypdf - will be installed by llama-index-readers-file
+
+# Document processing (only non-conflicting ones)
+python-docx==1.1.0
+pandas>=2.1.0
+
+# Optional: For better image processing
+pillow>=10.0.0
+pytesseract>=0.3.10
+
+# Utilities
 slowapi
-thefuzz[speed]
-langchain-anthropic
 urllib3>=2.0.0,<3.0.0
+
+# Remove potential conflicts - install only what we actually need
+# langchain dependencies removed to avoid conflicts
+# chromadb removed to avoid conflicts
+# unstructured removed to avoid conflicts

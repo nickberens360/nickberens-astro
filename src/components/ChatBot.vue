@@ -219,7 +219,7 @@ export default {
           if (newRateLimits) {
             const modelSwitched = handleModelRateLimit(selectedModel.value, newRateLimits);
             // If user requested one model but got another due to rate limits, notify user
-            if (model && model !== selectedModel.value && model !== 'cached' && !modelSwitched && model !== 'image_search') {
+            if (model && model !== selectedModel.value && model !== 'cached' && !modelSwitched && model !== 'image_search' && model !== 'auto-rag') {
               showRateLimitNotification(`ℹ️ Response generated using ${model} instead of ${selectedModel.value}`);
             }
           }

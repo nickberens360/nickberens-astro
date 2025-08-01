@@ -40,7 +40,7 @@ export function useChatAPI() {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(`${apiUrl}/status`, {
+      const response = await fetch(`${apiUrl}/health`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal
@@ -54,8 +54,8 @@ export function useChatAPI() {
       const data = await response.json();
       const status = {
         online: true,
-        initialized: data.app_initialized,
-        building: data.status === "online" && !data.app_initialized
+        initialized: data.rag_system === "initialized",
+        building: data.status === "healthy" && data.rag_system === "not_initialized"
       };
       updateBackendStatus(status);
       return status;
@@ -73,24 +73,13 @@ export function useChatAPI() {
     }
   };
 
-  // New function to check rate limits
+  // Rate limits function - simplified since /rate-limits endpoint no longer exists
   const checkRateLimits = async () => {
-    const apiUrl = getApiUrl();
-    try {
-      const response = await fetch(`${apiUrl}/rate-limits`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        rateLimits.value = { ...rateLimits.value, ...data.rate_limits };
-        return data.rate_limits;
-      }
-    } catch (error) {
-      console.warn('Failed to check rate limits:', error);
-    }
-    return rateLimits.value;
+    // Return default rate limits since the endpoint is no longer available
+    // The new backend handles rate limiting internally and will provide updates via response headers
+    const defaultLimits = { claude: false, gemini: false };
+    rateLimits.value = { ...rateLimits.value, ...defaultLimits };
+    return defaultLimits;
   };
 
   const sendChatMessage = async (question, chatHistory, selectedModel, onChunk, onComplete, onError, onStop) => {
@@ -165,7 +154,7 @@ export function useChatAPI() {
       const contentType = response.headers.get('content-type');
 
       if (contentType && contentType.includes('application/json')) {
-        // --- HANDLE JSON RESPONSE (for image queries) ---
+        // --- HANDLE JSON RESPONSE (for Auto-RAG and image queries) ---
         const data = await response.json();
 
         // Update rate limits from JSON response if available
@@ -174,13 +163,16 @@ export function useChatAPI() {
         }
 
         onComplete({
-          model: data.model_used,
-          followups: data.followup_questions,
-          images: data.images,
+          model: data.model_used || 'auto-rag',
+          followups: data.followup_questions || [],
+          images: data.images || [],
           rateLimits: rateLimits.value,
           isInitial: true
         });
-        onChunk(data.answer);
+
+        // Handle both old format (answer) and new Auto-RAG format (response)
+        const responseText = data.answer || data.response || '';
+        onChunk(responseText);
         onComplete({ isFinal: true });
 
       } else {

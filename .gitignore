@@ -6,6 +6,9 @@ dist/
 *.bak
 *.BAK
 
+# Auto-RAG cache directory
+.rag_cache/
+
 podman-commands.sh
 
 # dependencies
