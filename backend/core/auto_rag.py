@@ -6,7 +6,9 @@ import mimetypes
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+# --- Start of Changed Section ---
+from typing import Any, Dict, List, Optional, Tuple
+# --- End of Changed Section ---
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,9 @@ try:
         VectorStoreIndex,
         load_index_from_storage,
     )
+    # --- Start of Changed Section ---
+    from llama_index.core.base.response.schema import RESPONSE_TYPE
+    # --- End of Changed Section ---
     from llama_index.core.node_parser import SimpleNodeParser
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.llms.anthropic import Anthropic
@@ -30,6 +35,8 @@ except ImportError as e:
         "Install with: pip install llama-index llama-index-llms-anthropic llama-index-embeddings-huggingface"
     )
     LLAMA_INDEX_AVAILABLE = False
+    # Add a placeholder for the missing type
+    RESPONSE_TYPE = Any
 
 
 class AutoRAGSystem:
@@ -82,7 +89,7 @@ class AutoRAGSystem:
 
                     model_name = AppConfig.CLAUDE_MODEL
                 except ImportError:
-                    model_name = "claude-3-5-sonnet-20241022"
+                    model_name = "claude-3-5-sonnet-20240620"
 
                 self.llm = Anthropic(model=model_name)
                 self.model_name = model_name
@@ -285,23 +292,29 @@ class AutoRAGSystem:
                 self.index = self._build_index()
                 self._save_registry()
 
-    def query(self, question: str, **kwargs) -> str:
+    # --- Start of Changed Section ---
+    def query(self, question: str, **kwargs) -> Tuple[str, List[Any]]:
         """Query the auto-built knowledge base."""
         if not self.index:
-            return "No documents available for querying."
+            return "No documents available for querying.", []
 
         if not self.llm:
-            return "LLM not available - please set ANTHROPIC_API_KEY environment variable for querying capabilities."
+            return "LLM not available - please set ANTHROPIC_API_KEY environment variable for querying capabilities.", []
 
         try:
             query_engine = self.index.as_query_engine(similarity_top_k=kwargs.get("top_k", 5))
 
-            response = query_engine.query(question)
-            return str(response)
+            response: RESPONSE_TYPE = query_engine.query(question)
+
+            # Extract source nodes
+            source_nodes = response.source_nodes if hasattr(response, 'source_nodes') else []
+
+            return str(response), source_nodes
 
         except Exception as e:
             logger.error(f"Error querying index: {e}")
-            return f"Error processing query: {str(e)}"
+            return f"Error processing query: {str(e)}", []
+    # --- End of Changed Section ---
 
     def refresh(self):
         """Force refresh of the index."""
@@ -355,8 +368,14 @@ if __name__ == "__main__":
 
         if stats["total_files"] > 0:
             print("\n🤖 Testing Query:")
-            response = rag.query("What can you tell me about this content?")
-            print(response)
+            # --- Start of Changed Section ---
+            text_response, nodes = rag.query("What can you tell me about this content?")
+            print("Response:", text_response)
+            if nodes:
+                print("\n🔍 Sources:")
+                for node in nodes:
+                    print(f"  - File: {node.metadata.get('file_name', 'N/A')}, Score: {node.score:.4f}")
+            # --- End of Changed Section ---
         else:
             print("\n⚠️ No files found in public/ directory")
             print("Add some files to test the system!")

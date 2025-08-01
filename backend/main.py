@@ -195,16 +195,25 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
         else:
             full_question = request.question
 
-        # Query the system
-        response_text = rag_system.query(full_question, top_k=request.max_results)
+        # Query the system - now expecting a tuple (response, source_nodes)
+        response_text, source_nodes = rag_system.query(full_question, top_k=request.max_results)
 
         # Get document stats for transparency
         stats = rag_system.get_document_stats()
 
-        # TODO: Extract source information from LlamaIndex response
-        # This would require accessing the response.source_nodes
+        # Extract source information from the LlamaIndex response
         sources: List[Dict[str, Any]] = []
+        if request.include_sources and source_nodes:
+            for node in source_nodes:
+                sources.append({
+                    "file_name": node.metadata.get("file_name"),
+                    "file_path": node.metadata.get("file_path"),
+                    "score": node.score,
+                    # Optional: include a snippet of the node's text
+                    # "snippet": node.get_content(metadata_mode="all")[:200] + "..."
+                })
 
+        # --- This is the section that was missing ---
         return QueryResponse(
             response=response_text,
             sources=sources,
@@ -214,6 +223,9 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
 
     except Exception as e:
         logger.error(f"❌ Query failed: {e}")
+        # Be more specific if the query method signature has changed
+        if "unpack" in str(e):
+            logger.error("💡 Hint: Ensure 'AutoRAGSystem.query' returns a tuple of (response_text, source_nodes).")
         raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
 
 
