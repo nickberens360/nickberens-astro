@@ -3,15 +3,22 @@
 import json
 import logging
 import mimetypes
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-import shutil
 
 logger = logging.getLogger(__name__)
 
 try:
-    from llama_index.core import Document, Settings, SimpleDirectoryReader, VectorStoreIndex
+    from llama_index.core import (
+        Document,
+        Settings,
+        SimpleDirectoryReader,
+        StorageContext,
+        VectorStoreIndex,
+        load_index_from_storage,
+    )
     from llama_index.core.node_parser import SimpleNodeParser
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.llms.anthropic import Anthropic
@@ -217,16 +224,40 @@ class AutoRAGSystem:
             # Build index - Settings are already configured globally
             index = VectorStoreIndex.from_documents(documents)
 
-            # Try to cache the index
+            # Try to cache the index using atomic replacement pattern
             try:
                 if self.index_cache.exists():
+                    # Build in temporary directory first for atomic replacement
+                    temp_cache = self.index_cache.parent / f"{self.index_cache.name}_temp"
 
-                    shutil.rmtree(self.index_cache)
+                    # Clean up any existing temp directory
+                    if temp_cache.exists():
+                        shutil.rmtree(temp_cache)
 
-                index.storage_context.persist(persist_dir=str(self.index_cache))
-                logger.info("💾 Index cached for faster startup")
+                    # Persist to temporary location
+                    index.storage_context.persist(persist_dir=str(temp_cache))
+
+                    # Atomic replacement: only if persist succeeded
+                    backup_cache = self.index_cache.parent / f"{self.index_cache.name}_backup"
+                    if backup_cache.exists():
+                        shutil.rmtree(backup_cache)
+                    shutil.move(str(self.index_cache), str(backup_cache))
+
+                    shutil.move(str(temp_cache), str(self.index_cache))
+
+                    # Clean up backup after successful replacement
+                    if backup_cache.exists():
+                        shutil.rmtree(backup_cache)
+
+                    logger.info("💾 Index cached for faster startup")
+                else:
+                    # First time caching - direct persist is safe
+                    index.storage_context.persist(persist_dir=str(self.index_cache))
+                    logger.info("💾 Index cached for faster startup")
+
             except Exception as e:
                 logger.warning(f"Could not cache index: {e}")
+                # Original cache remains intact if it existed
 
             return index
 
@@ -246,8 +277,6 @@ class AutoRAGSystem:
         else:
             # Try to load from cache
             try:
-                from llama_index.core import StorageContext, load_index_from_storage
-
                 storage_context = StorageContext.from_defaults(persist_dir=str(self.index_cache))
                 self.index = load_index_from_storage(storage_context)
                 logger.info("⚡ Loaded index from cache")

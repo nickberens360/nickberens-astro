@@ -349,6 +349,8 @@ export default {
 
 /* Model selector styles */
 .model-selector-bar {
+  /*temporary hidden until backend fix*/
+  display: none;
   padding-left: .5rem;
 }
 
