@@ -6,6 +6,7 @@ This module provides service instances for the application including:
 - Query router for routing different types of queries
 - Response service for building API responses
 - Followup service for generating followup questions
+- App state management
 """
 
 import json
@@ -90,15 +91,15 @@ class QueryRouter:
 
         # Check for "all illustrations" or similar requests
         if any(
-                phrase in question_lower
-                for phrase in [
-                    "all illustrations",
-                    "show me all",
-                    "all artwork",
-                    "all images",
-                    "every illustration",
-                    "complete collection",
-                ]
+            phrase in question_lower
+            for phrase in [
+                "all illustrations",
+                "show me all",
+                "all artwork",
+                "all images",
+                "every illustration",
+                "complete collection",
+            ]
         ):
             return QueryType.ALL_IMAGES, ""
 
@@ -116,7 +117,7 @@ class QueryRouter:
             "i need",
             "can you show",
             "can you find",
-            "can you get"
+            "can you get",
         ]
 
         visual_content_words = ["illustration", "artwork", "image", "drawing"]
@@ -138,7 +139,7 @@ class ResponseService:
     """Service for building API responses."""
 
     def build_image_response(
-            self, search_term: str, images: List[Dict[str, Any]], start_time: float, followup_questions: List[str]
+        self, search_term: str, images: List[Dict[str, Any]], start_time: float, followup_questions: List[str]
     ):
         """Build response for image queries."""
         import time
@@ -195,10 +196,11 @@ _illustration_service = None
 _query_router = None
 _response_service = None
 _followup_service = None
+_app_state = None
 
 
 def get_services() -> Dict[str, Any]:
-    """Get all service instances for dependency injection. """
+    """Get all service instances for dependency injection."""
     global _illustration_service, _query_router, _response_service, _followup_service
 
     if _illustration_service is None:
@@ -220,3 +222,20 @@ def get_services() -> Dict[str, Any]:
         "followup_service": _followup_service,
         "retrievers": None,  # RAG retrievers - not needed for illustration queries
     }
+
+
+def get_app_state() -> Dict[str, Any]:
+    """Get application state for dependency injection."""
+    global _app_state, _illustration_service
+
+    if _app_state is None:
+        # Initialize illustration service if not already done
+        if _illustration_service is None:
+            _illustration_service = IllustrationService()
+
+        _app_state = {
+            "app_initialized": True,
+            "illustration_service": _illustration_service,
+        }
+
+    return _app_state

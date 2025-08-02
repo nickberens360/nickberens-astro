@@ -8,9 +8,10 @@ This module sets up global test configuration including:
 - Performance optimizations
 """
 
-import os
 import asyncio
+import os
 from unittest.mock import MagicMock, patch
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -33,20 +34,18 @@ def event_loop():
 @pytest.fixture(scope="session", autouse=True)
 def mock_external_services():
     """Mock all external services to prevent network calls."""
-    with patch('backend.core.auto_rag.HuggingFaceEmbedding') as mock_hf, \
-            patch('backend.core.auto_rag.Anthropic') as mock_anthropic, \
-            patch('backend.core.auto_rag.VectorStoreIndex') as mock_index:
+    with (
+        patch("backend.core.auto_rag.HuggingFaceEmbedding") as mock_hf,
+        patch("backend.core.auto_rag.Anthropic") as mock_anthropic,
+        patch("backend.core.auto_rag.VectorStoreIndex") as mock_index,
+    ):
 
         # Configure mocks to return sensible defaults
         mock_hf.return_value = MagicMock()
         mock_anthropic.return_value = MagicMock()
         mock_index.return_value = MagicMock()
 
-        yield {
-            'hf_embedding': mock_hf,
-            'anthropic': mock_anthropic,
-            'vector_index': mock_index
-        }
+        yield {"hf_embedding": mock_hf, "anthropic": mock_anthropic, "vector_index": mock_index}
 
 
 @pytest.fixture(scope="session")
@@ -58,7 +57,7 @@ def mock_rag_system():
         "total_files": 0,
         "file_types": {},
         "total_size": 0,
-        "last_updated": "2025-01-01T00:00:00Z"
+        "last_updated": "2025-01-01T00:00:00Z",
     }
     mock_system.get_model_name.return_value = "test-model"
     return mock_system
@@ -70,7 +69,7 @@ async def fast_client(mock_rag_system):
     Fast AsyncClient fixture that uses mocked RAG system.
     Use this for API tests that don't need real RAG functionality.
     """
-    with patch('backend.main.rag_system', mock_rag_system):
+    with patch("backend.main.rag_system", mock_rag_system):
         # Import here to avoid circular imports
         from backend.main import app
 
@@ -98,10 +97,12 @@ async def client():
 @pytest.fixture(scope="function")
 def mock_file_system():
     """Mock file system operations for consistent test environment."""
-    with patch('os.path.exists') as mock_exists, \
-            patch('os.listdir') as mock_listdir, \
-            patch('os.path.isfile') as mock_isfile, \
-            patch('pathlib.Path.exists') as mock_path_exists:
+    with (
+        patch("os.path.exists") as mock_exists,
+        patch("os.listdir") as mock_listdir,
+        patch("os.path.isfile") as mock_isfile,
+        patch("pathlib.Path.exists") as mock_path_exists,
+    ):
 
         # Configure reasonable defaults
         mock_exists.return_value = True
@@ -109,12 +110,7 @@ def mock_file_system():
         mock_isfile.return_value = True
         mock_path_exists.return_value = True
 
-        yield {
-            'exists': mock_exists,
-            'listdir': mock_listdir,
-            'isfile': mock_isfile,
-            'path_exists': mock_path_exists
-        }
+        yield {"exists": mock_exists, "listdir": mock_listdir, "isfile": mock_isfile, "path_exists": mock_path_exists}
 
 
 # Performance optimization: Skip heavy imports during test collection
@@ -131,7 +127,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.api)
 
         # Mark slow tests (auto-detect based on certain patterns)
-        if any(keyword in item.name.lower() for keyword in ['slow', 'heavy', 'large', 'full']):
+        if any(keyword in item.name.lower() for keyword in ["slow", "heavy", "large", "full"]):
             item.add_marker(pytest.mark.slow)
 
         # Mark security tests

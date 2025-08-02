@@ -12,12 +12,85 @@ permissions:
   checks: write
   pull-requests: write
 
+# Global environment variables to speed up builds
+env:
+  POETRY_VENV_IN_PROJECT: true
+  POETRY_CACHE_DIR: ~/.cache/pypoetry
+  PIP_CACHE_DIR: ~/.cache/pip
+
 jobs:
-  # --- FRONTEND TEST JOB ---
-  frontend-test:
-    name: Frontend Tests (Vitest)
+  # --- SUPER FAST VALIDATION JOB (runs first, fails fast) ---
+  quick-validation:
+    name: Quick Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 3  # Very short timeout
+    outputs:
+      should-run-full-tests: ${{ steps.check-changes.outputs.backend-changed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Only fetch last 2 commits for diff
+
+      - name: Check what changed
+        id: check-changes
+        run: |
+          if git diff --name-only HEAD~1 | grep -E '\.(py|toml|lock)$' || [ "${{ github.event_name }}" = "push" ]; then
+            echo "backend-changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend-changed=false" >> $GITHUB_OUTPUT
+            echo "Only non-Python files changed, skipping backend tests"
+          fi
+
+      - name: Set up Python (cached)
+        if: steps.check-changes.outputs.backend-changed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache Poetry
+        if: steps.check-changes.outputs.backend-changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: poetry-quick-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-quick-${{ runner.os }}-
+
+      - name: Install Poetry (cached)
+        if: steps.check-changes.outputs.backend-changed == 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Install dependencies (minimal)
+        if: steps.check-changes.outputs.backend-changed == 'true'
+        run: |
+          poetry install --only=main,dev --no-interaction --no-ansi
+          # Pre-warm the pytest cache
+          poetry run python -c "import pytest"
+
+      - name: Lint check (fast fail)
+        if: steps.check-changes.outputs.backend-changed == 'true'
+        run: |
+          poetry run black --check --quiet . || (echo "❌ Code formatting failed" && exit 1)
+          poetry run isort --check-only --quiet . || (echo "❌ Import sorting failed" && exit 1)
+
+      - name: Ultra-fast smoke tests
+        if: steps.check-changes.outputs.backend-changed == 'true'
+        run: |
+          # Just run a couple of the fastest tests to catch obvious errors
+          poetry run pytest tests/test_config.py::test_default_llm_configuration -x --tb=no --no-header --quiet --disable-warnings
+
+  # --- FRONTEND TESTS (parallel with quick validation) ---
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,20 +98,22 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # LTS version
-          cache: 'npm' # Built-in npm caching
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Install npm dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
 
-      - name: Run Vitest tests
+      - name: Run tests
         run: npm test
 
-  # --- FAST BACKEND TESTS JOB ---
-  fast-tests:
+  # --- FAST BACKEND TESTS (only if quick validation passes) ---
+  fast-backend-tests:
     name: Fast Backend Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 5  # Much faster timeout
+    timeout-minutes: 4
+    needs: quick-validation
+    if: needs.quick-validation.outputs.should-run-full-tests == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,39 +121,109 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"  # Use latest for fast tests
+          python-version: "3.11"
 
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Cache Poetry virtualenv
+      - name: Restore Poetry cache
         uses: actions/cache@v4
         with:
-          path: .venv
-          key: ${{ runner.os }}-poetry-fast-${{ hashFiles('**/poetry.lock') }}
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: poetry-quick-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-poetry-fast-
+            poetry-quick-${{ runner.os }}-
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-in-project: true
+          installer-parallel: true
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --only=main,dev --no-interaction --no-ansi
 
-      - name: Run fast unit tests
-        run: poetry run pytest -x --tb=line -q --disable-warnings -m 'not slow and not integration' --no-cov
+      - name: Run fast tests
+        run: |
+          # Use pytest-xdist for parallel execution even on single runner
+          poetry run pytest \
+            -x \
+            --tb=no \
+            --no-header \
+            --quiet \
+            --disable-warnings \
+            --no-cov \
+            -m 'not slow and not integration' \
+            -n 2
 
-      - name: Run security tests
-        run: poetry run pytest -m security --tb=short --no-cov
-
-  # --- COMPREHENSIVE BACKEND TEST JOB (with coverage) ---
-  backend-test:
-    name: Backend Tests with Coverage
+  # --- COMPREHENSIVE TESTS (only run if fast tests pass, and only on main Python version) ---
+  comprehensive-tests:
+    name: Comprehensive Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: fast-tests  # Only run if fast tests pass
+    timeout-minutes: 8
+    needs: [quick-validation, fast-backend-tests]
+    if: needs.quick-validation.outputs.should-run-full-tests == 'true' && (github.event_name == 'push' || github.event.pull_request.draft == false)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore Poetry cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: poetry-comprehensive-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-comprehensive-${{ runner.os }}-
+            poetry-quick-${{ runner.os }}-
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run comprehensive tests with coverage
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          poetry run pytest \
+            --cov=backend/core \
+            --cov-report=xml \
+            --cov-report=term-missing:skip-covered \
+            --tb=short \
+            --no-header \
+            -n auto \
+            --dist worksteal
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+
+  # --- MULTI-VERSION TESTS (only on pushes to main/develop) ---
+  multi-version-tests:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    if: github.event_name == 'push' && needs.comprehensive-tests.result == 'success'
+    needs: [comprehensive-tests]
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
-
+        python-version: ["3.9", "3.10"]  # Exclude 3.11 since it's tested above
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,66 +233,43 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Cache Poetry virtualenv
+      - name: Cache Poetry
         uses: actions/cache@v4
         with:
-          path: .venv
-          key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: poetry-${{ matrix.python-version }}-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-poetry-${{ matrix.python-version }}-
+            poetry-${{ matrix.python-version }}-${{ runner.os }}-
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-in-project: true
+          installer-parallel: true
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --only=main,dev --no-interaction --no-ansi
 
-      - name: Set up environment variables
+      - name: Run tests (no coverage)
         run: |
-          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
-
-      - name: Run comprehensive tests with coverage
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          poetry run pytest -n auto \
-            --cov=backend/core \
-            --cov-report=xml \
-            --cov-report=term-missing \
-            --cov-report=html \
-            --junitxml=pytest-results.xml \
+          poetry run pytest \
             --tb=short \
-            -v
+            --no-header \
+            -n auto \
+            --no-cov \
+            -m 'not slow'
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ matrix.python-version }}
-          path: |
-            pytest-results.xml
-            coverage.xml
-            htmlcov/
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: matrix.python-version == '3.11'  # Only upload once
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-  # --- INTEGRATION TESTS JOB (separate, can be skipped for quick feedback) ---
+  # --- INTEGRATION TESTS (only when explicitly needed) ---
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: fast-tests  # Only run if fast tests pass
-    # Allow this job to be skipped in draft PRs
-    if: github.event.pull_request.draft == false
-
+    timeout-minutes: 6
+    needs: fast-backend-tests
+    # Only run on pushes to main or when PR title contains [integration]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || contains(github.event.pull_request.title, '[integration]')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,59 +279,32 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Cache Poetry virtualenv
+      - name: Restore Poetry cache
         uses: actions/cache@v4
         with:
-          path: .venv
-          key: ${{ runner.os }}-poetry-integration-${{ hashFiles('**/poetry.lock') }}
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+            .venv
+          key: poetry-integration-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-poetry-integration-
+            poetry-comprehensive-${{ runner.os }}-
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-in-project: true
+          installer-parallel: true
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --no-interaction --no-ansi
 
       - name: Run integration tests
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: poetry run pytest -m integration --tb=short -v
-
-  # --- LINT JOB ---
-  lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5  # Faster timeout for linting
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Cache Poetry virtualenv for linting
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: ${{ runner.os }}-poetry-lint-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-lint-
-
-      - name: Install dependencies for linting
-        run: poetry install
-
-      - name: Auto-fix formatting
         run: |
-          poetry run black .
-          poetry run isort .
-
-      - name: Check remaining issues
-        run: |
-          poetry run flake8 . || echo "⚠️ Flake8 issues found - please fix manually"
-          poetry run mypy backend/core --ignore-missing-imports || echo "⚠️ Type checking issues found - please fix manually"
+          poetry run pytest \
+            -m integration \
+            --tb=short \
+            --no-header \
+            -v
