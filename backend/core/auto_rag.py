@@ -325,7 +325,7 @@ class AutoRAGSystem:
     # --- End of Changed Section ---
 
     def refresh(self):
-        """Force refresh of the index."""
+        """Force refresh of the index. """
         logger.info("🔄 Forcing index refresh...")
         self.index = self._build_index()
         self._save_registry()
