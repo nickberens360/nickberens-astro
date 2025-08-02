@@ -198,7 +198,7 @@ _followup_service = None
 
 
 def get_services() -> Dict[str, Any]:
-    """Get all service instances for dependency injection."""
+    """Get all service instances for dependency injection. """
     global _illustration_service, _query_router, _response_service, _followup_service
 
     if _illustration_service is None:
