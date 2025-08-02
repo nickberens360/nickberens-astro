@@ -10,20 +10,32 @@ python_files = "test_*.py"
 python_functions = "test_*"
 testpaths = ["tests"]
 pythonpath = ["."]
+
+# Optimized addopts for faster testing - coverage disabled by default for speed
 addopts = [
-    "-ra",
-    "-q",
-    "--strict-markers",
-    "--cov=backend/core",
-    "--cov-report=html",
-    "--cov-report=term-missing"
+    "-ra",                          # Show summary of all test results
+    "--strict-markers",             # Strict marker checking
+    "--tb=short",                   # Shorter traceback format (faster than default)
+    # Comment out coverage for faster development runs (uncomment for CI):
+    # "--cov=backend/core",
+    # "--cov-report=html",
+    # "--cov-report=term-missing"
 ]
+
 markers = [
     "unit: marks tests as unit tests (fast, isolated)",
     "integration: marks tests as integration tests (slower, may require external resources)",
-    "slow: marks tests as slow running tests"
+    "slow: marks tests as slow running tests",
+    "api: marks tests that test API endpoints",
+    "security: marks tests for security validation"
 ]
-filterwarnings = []
+
+# Suppress warnings for faster runs
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+]
 
 [tool.coverage.run]
 source = ["backend"]
@@ -109,6 +121,19 @@ mypy = "^1.17.1"
 autoflake = "^2.3.1"
 pre-commit = "^4.2.0"
 types-requests = "^2.31.0"
+
+# Poetry scripts for common test commands
+[tool.poetry.scripts]
+test = "pytest"
+test-fast = "pytest -x --tb=line -q --disable-warnings -m 'not slow and not integration' --no-cov"
+test-unit = "pytest -m unit --tb=short --no-cov"
+test-api = "pytest -m api --tb=short --no-cov"
+test-security = "pytest -m security --tb=short --no-cov"
+test-integration = "pytest -m integration --tb=short -v"
+test-parallel = "pytest -n auto --tb=short"
+test-failed = "pytest --lf -x --tb=short"
+test-cov = "pytest --cov=backend/core --cov-report=term-missing --cov-report=html"
+test-smoke = "pytest tests/test_api_endpoints.py::test_health_check_returns_ok tests/test_config.py::test_default_llm_configuration -x --tb=line --no-cov"
 
 [project]
 name = "nickberens"
