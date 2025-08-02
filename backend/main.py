@@ -107,6 +107,7 @@ class QueryResponse(BaseModel):
     sources: List[Dict[str, Any]] = []
     document_stats: Dict[str, Any] = {}
     model_used: str = "auto-rag"
+    images: List[str] = []
 
 
 class RefreshRequest(BaseModel):
@@ -196,8 +197,8 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
         else:
             full_question = request.question
 
-        # Query the system - now expecting a tuple (response, source_nodes)
-        response_text, source_nodes = rag_system.query(full_question, top_k=request.max_results)
+        # Query the system - now expecting a tuple (response, source_nodes, image_urls)
+        response_text, source_nodes, image_urls = rag_system.query(full_question, top_k=request.max_results)
 
         # Get document stats for transparency
         stats = rag_system.get_document_stats()
@@ -222,6 +223,7 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
             sources=sources,
             document_stats=stats if request.include_sources else {},
             model_used=rag_system.get_model_name(),
+            images=image_urls,
         )
 
     except (ValueError, TypeError) as e:

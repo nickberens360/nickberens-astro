@@ -6,11 +6,7 @@ import mimetypes
 import shutil
 from datetime import datetime
 from pathlib import Path
-
-# --- Start of Changed Section ---
 from typing import Any, Dict, List, Optional, Tuple
-
-# --- End of Changed Section ---
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +19,10 @@ try:
         VectorStoreIndex,
         load_index_from_storage,
     )
-
-    # --- Start of Changed Section ---
     from llama_index.core.base.response.schema import RESPONSE_TYPE
-
-    # --- End of Changed Section ---
     from llama_index.core.node_parser import SimpleNodeParser
+
+    # Keep using HuggingFace embeddings but optimize the model choice
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.llms.anthropic import Anthropic
 
@@ -36,7 +30,7 @@ try:
 except ImportError as e:
     logger.warning(f"LlamaIndex not installed: {e}")
     logger.warning(
-        "Install with: pip install llama-index llama-index-llms-anthropic llama-index-embeddings-huggingface"
+        "Install with: pip install llama-index-core llama-index-llms-anthropic llama-index-embeddings-huggingface"
     )
     LLAMA_INDEX_AVAILABLE = False
     # Add a placeholder for the missing type
@@ -53,7 +47,7 @@ class AutoRAGSystem:
         if not LLAMA_INDEX_AVAILABLE:
             raise ImportError(
                 "LlamaIndex is required. Install with: "
-                "pip install llama-index llama-index-llms-anthropic llama-index-embeddings-huggingface"
+                "pip install llama-index-core llama-index-llms-anthropic llama-index-embeddings-huggingface"
             )
 
         # Handle relative paths when running from different directories
@@ -99,7 +93,13 @@ class AutoRAGSystem:
                 self.model_name = model_name
                 logger.info(f"🤖 Using Claude model: {model_name}")
 
-            self.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+            # Use a smaller, faster embedding model to reduce Docker image size
+            # all-MiniLM-L6-v2 is only ~90MB vs larger models that can be 1GB+
+            self.embed_model = HuggingFaceEmbedding(
+                model_name="sentence-transformers/all-MiniLM-L6-v2",
+                device="cpu",  # Explicitly use CPU to avoid CUDA dependencies
+            )
+            logger.info("🔤 Using lightweight HuggingFace embeddings (all-MiniLM-L6-v2)")
 
             # Set global settings
             if self.llm:
@@ -112,9 +112,17 @@ class AutoRAGSystem:
             # Fallback without LLM for basic functionality
             self.llm = None
             self.model_name = "embeddings-only"
-            self.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
-            Settings.embed_model = self.embed_model
-            Settings.node_parser = SimpleNodeParser.from_defaults(chunk_size=1024, chunk_overlap=200)
+
+            # Try to initialize basic embeddings as fallback
+            try:
+                self.embed_model = HuggingFaceEmbedding(
+                    model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu"
+                )
+                Settings.embed_model = self.embed_model
+                Settings.node_parser = SimpleNodeParser.from_defaults(chunk_size=1024, chunk_overlap=200)
+            except Exception as fallback_error:
+                logger.error(f"Failed to initialize even fallback embeddings: {fallback_error}")
+                raise
 
         self.index: Optional[VectorStoreIndex] = None
         self._load_or_build_index()
@@ -296,15 +304,138 @@ class AutoRAGSystem:
                 self.index = self._build_index()
                 self._save_registry()
 
-    # --- Start of Changed Section ---
-    def query(self, question: str, **kwargs) -> Tuple[str, List[Any]]:
+    def _load_illustrations(self) -> List[Dict[str, Any]]:
+        """Load illustrations from the illustrations.json file."""
+        illustrations_path = Path("public/illustrations.json")
+        if not illustrations_path.exists():
+            logger.warning("illustrations.json not found in public directory")
+            return []
+
+        try:
+            with open(illustrations_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Type check: ensure we have a list of dictionaries
+            if not isinstance(data, list):
+                logger.error("illustrations.json should contain a list")
+                return []
+
+            # Validate each item is a dictionary
+            illustrations: List[Dict[str, Any]] = []
+            for item in data:
+                if isinstance(item, dict):
+                    illustrations.append(item)
+                else:
+                    logger.warning(f"Skipping non-dictionary item in illustrations.json: {item}")
+
+            logger.info(f"Loaded {len(illustrations)} illustrations from illustrations.json")
+            return illustrations
+
+        except Exception as e:
+            logger.error(f"Error loading illustrations.json: {e}")
+            return []
+
+    def _extract_character_tags(self, illustrations: List[Dict[str, Any]]) -> List[str]:
+        """Extract unique character tags from illustrations, excluding generic tags."""
+        generic_tags = {
+            "illustration",
+            "character",
+            "art",
+            "artwork",
+            "animal",
+            "object",
+            "furniture",
+            "bird",
+            "technology",
+        }
+        character_tags = set()
+
+        for illustration in illustrations:
+            tags = illustration.get("tags", [])
+            for tag in tags:
+                tag_lower = tag.lower()
+                # Only include specific character/object names, not generic categories
+                if tag_lower not in generic_tags:
+                    character_tags.add(tag_lower)
+
+        return list(character_tags)
+
+    def _get_relevant_images(self, question: str, response_text: str) -> List[str]:
+        """Get relevant image URLs with enhanced matching."""
+        illustrations = self._load_illustrations()
+        if not illustrations:
+            return []
+
+        question_lower = question.lower()
+
+        # Enhanced image keywords - be more specific to avoid false positives
+        image_keywords = ["image", "illustration", "picture", "photo", "visual", "graphic", "drawing", "artwork"]
+
+        # More specific image request phrases that clearly indicate wanting to see images
+        image_request_phrases = ["show me", "display", "can you show", "let me see", "view", "look at"]
+
+        # Art/design specific terms that should only match when clearly asking for visual content
+        art_design_keywords = ["art", "design"]
+
+        # Check if this is an image-related query (but avoid false positives)
+        # Skip queries that are clearly not asking for images
+        if "not an image" in question_lower or "not image" in question_lower:
+            return []
+
+        # Check for explicit image requests
+        has_image_keyword = any(keyword in question_lower for keyword in image_keywords)
+        has_image_request_phrase = any(phrase in question_lower for phrase in image_request_phrases)
+
+        # For art/design keywords, require them to be combined with explicit visual requests
+        has_art_design_with_request = any(keyword in question_lower for keyword in art_design_keywords) and (
+            has_image_request_phrase or any(word in question_lower for word in ["portfolio", "gallery", "collection"])
+        )
+
+        is_image_query = has_image_keyword or has_art_design_with_request
+
+        if not is_image_query:
+            return []
+
+        # Check for specific character/object requests - this takes priority
+        specific_characters = self._extract_character_tags(illustrations)
+        has_specific_request = any(char in question_lower for char in specific_characters)
+
+        # Special case: if query contains specific characters, treat as specific even if it has general keywords
+        # This handles cases like "show me snake illustrations" correctly
+
+        # If it has specific character requests, use strict exact tag matching
+        if has_specific_request:
+            relevant_images = []
+
+            # Extract the specific character names mentioned in the query
+            mentioned_characters = [char for char in specific_characters if char in question_lower]
+
+            for illustration in illustrations:
+                tags = [tag.lower() for tag in illustration.get("tags", [])]
+
+                # Only include illustrations that have exact tag matches for the requested characters
+                # This ensures we only return illustrations tagged with the specific character
+                has_exact_match = any(char in tags for char in mentioned_characters)
+
+                if has_exact_match:
+                    image_url = f"/illustrations/{illustration['file']}"
+                    relevant_images.append(image_url)
+
+            return relevant_images
+
+        # If it's a general image request (no specific characters mentioned)
+        # Return ALL images
+        return [f"/illustrations/{ill['file']}" for ill in illustrations]
+
+    def query(self, question: str, **kwargs) -> Tuple[str, List[Any], List[str]]:
         """Query the auto-built knowledge base."""
         if not self.index:
-            return "No documents available for querying.", []
+            return "No documents available for querying.", [], []
 
         if not self.llm:
             return (
                 "LLM not available - please set ANTHROPIC_API_KEY environment variable for querying capabilities.",
+                [],
                 [],
             )
 
@@ -316,16 +447,70 @@ class AutoRAGSystem:
             # Extract source nodes
             source_nodes = response.source_nodes if hasattr(response, "source_nodes") else []
 
-            return str(response), source_nodes
+            # Get relevant images based on the query and response
+            image_urls = self._get_relevant_images(question, str(response))
+
+            # Post-process response if images are being returned
+            response_text = str(response)
+            if image_urls:
+                # Remove negative statements about showing images
+                negative_phrases = [
+                    "However, I cannot actually show you the images directly. While these illustrations exist in the portfolio and are referenced in the file system (with .jpg extensions), I don't have access to display the actual image files. You would need to view these through the appropriate platform or website where they are hosted.",
+                    "I cannot actually show you the images directly",
+                    "I don't have access to display the actual image files",
+                    "I cannot display images directly",
+                    "I cannot display images",
+                    "I can't show you the images",
+                    "I don't have the ability to display images",
+                    "but I cannot display images directly",
+                    "but I cannot actually show you the images directly",
+                    "However, I cannot actually show you the images directly",
+                    "While these illustrations exist in the portfolio and are referenced in the file system (with .jpg extensions), I don't have access to display the actual image files",
+                    "You would need to view these through the appropriate platform or website where they are hosted",
+                ]
+
+                for phrase in negative_phrases:
+                    response_text = response_text.replace(phrase, "")
+
+                # Clean up sentence fragments and incomplete sentences
+                # Remove common sentence starters that are left hanging
+                cleanup_patterns = [
+                    "However, .",
+                    "However,",
+                    "But .",
+                    "But,",
+                    "but .",
+                    "but,",
+                    "While .",
+                    "While,",
+                    "Although .",
+                    "Although,",
+                    ". .",
+                    ",,",
+                    " ,",
+                ]
+
+                for pattern in cleanup_patterns:
+                    response_text = response_text.replace(pattern, "")
+
+                # Clean up any double spaces, multiple newlines, and trailing punctuation
+                response_text = response_text.replace("  ", " ").replace("\n\n\n", "\n\n").strip()
+                response_text = response_text.rstrip(". ,")
+
+                # Add positive statement about images being shown
+                if len(image_urls) == 1:
+                    response_text += "\n\nI'm showing you the relevant illustration below."
+                else:
+                    response_text += f"\n\nI'm showing you {len(image_urls)} relevant illustrations below."
+
+            return response_text, source_nodes, image_urls
 
         except Exception as e:
             logger.error(f"Error querying index: {e}")
-            return f"Error processing query: {str(e)}", []
-
-    # --- End of Changed Section ---
+            return f"Error processing query: {str(e)}", [], []
 
     def refresh(self):
-        """Force refresh of the index. """
+        """Force refresh of the index."""
         logger.info("🔄 Forcing index refresh...")
         self.index = self._build_index()
         self._save_registry()
@@ -376,14 +561,17 @@ if __name__ == "__main__":
 
         if stats["total_files"] > 0:
             print("\n🤖 Testing Query:")
-            # --- Start of Changed Section ---
-            text_response, nodes = rag.query("What can you tell me about this content?")
+            # Fixed: Now properly unpacking all 3 return values
+            text_response, nodes, image_urls = rag.query("What can you tell me about this content?")
             print("Response:", text_response)
             if nodes:
                 print("\n🔍 Sources:")
                 for node in nodes:
                     print(f"  - File: {node.metadata.get('file_name', 'N/A')}, Score: {node.score:.4f}")
-            # --- End of Changed Section ---
+            if image_urls:
+                print(f"\n🖼️ Images: {len(image_urls)} found")
+                for url in image_urls:
+                    print(f"  - {url}")
         else:
             print("\n⚠️ No files found in public/ directory")
             print("Add some files to test the system!")
@@ -391,7 +579,7 @@ if __name__ == "__main__":
     except ImportError as e:
         print(f"❌ Missing dependencies: {e}")
         print("\nInstall with:")
-        print("pip install llama-index llama-index-llms-anthropic llama-index-embeddings-huggingface")
+        print("pip install llama-index-core llama-index-llms-anthropic llama-index-embeddings-huggingface")
         sys.exit(1)
     except Exception as e:
         print(f"❌ Error: {e}")

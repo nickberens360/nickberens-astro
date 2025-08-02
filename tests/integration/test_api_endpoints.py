@@ -79,8 +79,8 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
 
     # Mock the global rag_system object in the main module
     with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
-        # Update mock to return tuple (response_text, source_nodes)
-        mock_rag_system.query.return_value = (expected_response, mock_source_nodes)
+        # Update mock to return tuple (response_text, source_nodes, image_urls)
+        mock_rag_system.query.return_value = (expected_response, mock_source_nodes, [])
         mock_rag_system.get_document_stats.return_value = mock_stats
         mock_rag_system.get_model_name.return_value = "claude-3-sonnet"
 
@@ -158,7 +158,7 @@ async def test_query_endpoint_with_chat_history(client: AsyncClient):
     ]
 
     with patch("backend.main.rag_system", autospec=True) as mock_rag_system:
-        mock_rag_system.query.return_value = (expected_response, mock_source_nodes)
+        mock_rag_system.query.return_value = (expected_response, mock_source_nodes, [])
         mock_rag_system.get_document_stats.return_value = {}
         mock_rag_system.get_model_name.return_value = "claude-3-sonnet"
 

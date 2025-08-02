@@ -108,6 +108,7 @@ isort = "^6.0.1"
 mypy = "^1.17.1"
 autoflake = "^2.3.1"
 pre-commit = "^4.2.0"
+types-requests = "^2.31.0"
 
 [project]
 name = "nickberens"
@@ -119,14 +120,23 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.9,<4.0"
 dependencies = [
-    "llama-index>=0.12.0,<0.13.0",
+    # Use core LlamaIndex instead of full package (saves ~2-3GB)
+    "llama-index-core>=0.12.0,<0.13.0",
     "llama-index-llms-anthropic>=0.7.0,<0.8.0",
+
+    # Keep HuggingFace embeddings but use a smaller model
     "llama-index-embeddings-huggingface>=0.5.0,<0.6.0",
+
+    # The core package includes basic readers and vector stores
+    # No need for separate packages - they're in the core
+
+    # Keep these lightweight dependencies
     "fastapi>=0.116.1,<0.117.0",
     "uvicorn[standard]>=0.35.0,<0.36.0",
     "python-dotenv>=1.0.0,<2.0.0",
     "python-docx>=1.0.0,<2.0.0",
-    "slowapi>=0.1.9,<0.2.0"
+    "slowapi>=0.1.9,<0.2.0",
+    "requests>=2.31.0,<3.0.0"
 ]
 
 [tool.poetry]

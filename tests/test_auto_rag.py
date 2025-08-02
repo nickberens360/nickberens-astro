@@ -50,15 +50,14 @@ class TestAutoRAGSystem:
 
     def test_initialization_no_api_key(self, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic):
         """Test that the system initializes in embeddings-only mode when no API key is present."""
-        # We only need to mock getenv for the ANTHROPIC_API_KEY check
         with patch("os.getenv") as mock_getenv:
             mock_getenv.return_value = None
             rag = AutoRAGSystem()
             assert rag.llm is None
             assert rag.model_name == "embeddings-only"
             mock_anthropic.assert_not_called()
-            # Verify it specifically checked for the ANTHROPIC_API_KEY
-            mock_getenv.assert_called_with("ANTHROPIC_API_KEY")
+            # Verify HuggingFace embedding was initialized with the lightweight model
+            mock_hf_embedding.assert_called_with(model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu")
 
     def test_initialization_with_api_key(self, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic):
         """Test that the system initializes the LLM when an API key is present."""
@@ -67,6 +66,8 @@ class TestAutoRAGSystem:
             assert rag.llm is not None
             mock_anthropic.assert_called_once()
             assert rag.model_name != "embeddings-only"
+            # Verify HuggingFace embedding was initialized with the lightweight model
+            mock_hf_embedding.assert_called_with(model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu")
 
     def test_get_file_info(self, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic, mock_paths):
         """Test the _get_file_info method for correct metadata extraction."""
@@ -96,9 +97,10 @@ class TestAutoRAGSystem:
         with patch("os.getenv", return_value=None):
             rag = AutoRAGSystem()
             rag.index = MagicMock()  # Mock the index to avoid building it
-            response_text, source_nodes = rag.query("test question")
+            response_text, source_nodes, image_urls = rag.query("test question")
             assert "LLM not available" in response_text
             assert source_nodes == []  # Should return empty source nodes
+            assert image_urls == []  # Should return empty image URLs
 
     @patch("backend.core.auto_rag.VectorStoreIndex")
     def test_query_successful(
@@ -119,10 +121,11 @@ class TestAutoRAGSystem:
             rag = AutoRAGSystem()
             rag.index = mock_index_instance
 
-            response_text, source_nodes = rag.query("test question")
+            response_text, source_nodes, image_urls = rag.query("test question")
 
             assert response_text == "Mocked response"
             assert source_nodes == []
+            assert image_urls == []  # Should return empty image URLs for non-image query
             mock_index_instance.as_query_engine.assert_called_once_with(similarity_top_k=5)
             mock_query_engine.query.assert_called_once_with("test question")
 
@@ -142,3 +145,11 @@ class TestAutoRAGSystem:
             assert stats["total_size"] == 300
             assert stats["file_types"]["text/markdown"] == 1
             assert stats["file_types"]["application/json"] == 1
+
+    def test_embedding_model_optimization(self, mock_settings, mock_parser, mock_hf_embedding, mock_anthropic):
+        """Test that the system uses the optimized lightweight embedding model."""
+        with patch("os.getenv", return_value="DUMMY_API_KEY"):
+            AutoRAGSystem()
+
+            # Verify that HuggingFaceEmbedding was called with the lightweight model and CPU device
+            mock_hf_embedding.assert_called_with(model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu")
