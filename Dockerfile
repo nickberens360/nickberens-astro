@@ -49,8 +49,8 @@ USER app
 EXPOSE 8000
 
 # Update healthcheck to use the correct endpoint
-#HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-#  [cite_start]CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1 [cite: 3]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Production-ready command (no reload)
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
