@@ -6,6 +6,8 @@ yarn-error.log*
 .npm
 .yarn
 
+.mypy_cache/
+
 # Python
 __pycache__/
 *.py[cod]
