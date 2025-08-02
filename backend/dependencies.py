@@ -102,8 +102,30 @@ class QueryRouter:
         ):
             return QueryType.ALL_IMAGES, ""
 
-        # Check for specific illustration searches
-        if any(word in question_lower for word in ["illustration", "artwork", "image", "drawing"]):
+        # Check for specific illustration searches - only when explicitly requesting visual content
+        visual_request_patterns = [
+            "show me",
+            "display",
+            "find",
+            "see",
+            "view",
+            "look at",
+            "get me",
+            "give me",
+            "i want",
+            "i need",
+            "can you show",
+            "can you find",
+            "can you get"
+        ]
+
+        visual_content_words = ["illustration", "artwork", "image", "drawing"]
+
+        # Only return images if the query contains both a visual request pattern AND visual content words
+        has_visual_request = any(pattern in question_lower for pattern in visual_request_patterns)
+        has_visual_content = any(word in question_lower for word in visual_content_words)
+
+        if has_visual_request and has_visual_content:
             # Extract search terms (simple implementation)
             search_terms = question_lower.replace("show me", "").replace("illustrations", "").strip()
             return QueryType.IMAGE_SEARCH, search_terms
