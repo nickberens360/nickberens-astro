@@ -11,6 +11,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
+
 jobs:
   # --- FRONTEND TEST JOB ---
   frontend-test:
@@ -33,11 +34,46 @@ jobs:
       - name: Run Vitest tests
         run: npm test
 
-  # --- BACKEND TEST JOB ---
-  test:
-    name: Backend Tests (Pytest)
+  # --- FAST BACKEND TESTS JOB ---
+  fast-tests:
+    name: Fast Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5  # Much faster timeout
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"  # Use latest for fast tests
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-poetry-fast-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-fast-
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run fast unit tests
+        run: poetry run test-fast
+
+      - name: Run security tests
+        run: poetry run test-security
+
+  # --- COMPREHENSIVE BACKEND TEST JOB (with coverage) ---
+  backend-test:
+    name: Backend Tests with Coverage
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: fast-tests  # Only run if fast tests pass
 
     strategy:
       matrix:
@@ -70,7 +106,7 @@ jobs:
         run: |
           echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
 
-      - name: Run tests with coverage
+      - name: Run comprehensive tests with coverage
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -81,6 +117,7 @@ jobs:
             --cov-report=term-missing \
             --cov-report=html \
             --junitxml=pytest-results.xml \
+            --tb=short \
             -v
 
       - name: Upload test results
@@ -102,9 +139,48 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
+  # --- INTEGRATION TESTS JOB (separate, can be skipped for quick feedback) ---
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: fast-tests  # Only run if fast tests pass
+    # Allow this job to be skipped in draft PRs
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-poetry-integration-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-integration-
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run integration tests
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: poetry run test-integration
+
   # --- LINT JOB ---
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5  # Faster timeout for linting
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
