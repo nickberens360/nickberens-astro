@@ -326,7 +326,7 @@ async def get_illustrations() -> Dict[str, str]:
 
     try:
         # Query for illustration-related content
-        response_text, _ = rag_system.query("Show me all illustrations and artwork")
+        response_text, _, _ = rag_system.query("Show me all illustrations and artwork")
         return {
             "message": "Illustrations are now auto-discovered! Use the /query endpoint.",
             "query_example": "Ask: 'Show me Nick's illustrations' or 'What artwork does Nick have?'",

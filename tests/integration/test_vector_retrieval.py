@@ -52,16 +52,16 @@ def test_vector_retrieval():
 
             # Query the AutoRAG system
             try:
-                response = rag_system.query(query)
+                response_text, _, _ = rag_system.query(query)
                 print("✅ SUCCESS: AutoRAG system responded to resume query")
 
                 # Show a snippet of the response
-                snippet = response[:100] + "..." if len(response) > 100 else response
+                snippet = response_text[:100] + "..." if len(response_text) > 100 else response_text
                 print(f"📋 Response snippet: {snippet}")
 
                 # Check if response contains resume-related content
                 resume_keywords = ["experience", "work", "professional", "skills", "education", "career"]
-                found_keywords = [kw for kw in resume_keywords if kw.lower() in response.lower()]
+                found_keywords = [kw for kw in resume_keywords if kw.lower() in response_text.lower()]
 
                 if found_keywords:
                     print(f"✅ Resume-related keywords found: {found_keywords}")
@@ -86,16 +86,16 @@ def test_vector_retrieval():
 
             # Query the AutoRAG system
             try:
-                response = rag_system.query(query)
+                response_text, _, _ = rag_system.query(query)
                 print("✅ SUCCESS: AutoRAG system responded to about query")
 
                 # Show a snippet of the response
-                snippet = response[:100] + "..." if len(response) > 100 else response
+                snippet = response_text[:100] + "..." if len(response_text) > 100 else response_text
                 print(f"📖 Response snippet: {snippet}")
 
                 # Check if response contains about-related content
                 about_keywords = ["Nick", "Berens", "background", "about", "developer", "engineer"]
-                found_keywords = [kw for kw in about_keywords if kw.lower() in response.lower()]
+                found_keywords = [kw for kw in about_keywords if kw.lower() in response_text.lower()]
 
                 if found_keywords:
                     print(f"✅ About-related keywords found: {found_keywords}")
