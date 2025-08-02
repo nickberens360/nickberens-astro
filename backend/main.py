@@ -227,10 +227,10 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
     except (ValueError, TypeError) as e:
         logger.error(f"❌ Query failed with a possible signature mismatch: {e}")
         logger.error("💡 Hint: Ensure 'AutoRAGSystem.query' returns a tuple of (response_text, source_nodes).")
-        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}") from e
     except Exception as e:
         logger.error(f"❌ Query failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}") from e
 
 
 @app.get("/documents/stats", response_model=DocumentStats)
@@ -244,7 +244,7 @@ async def get_document_stats() -> DocumentStats:
         return DocumentStats(**stats)
     except Exception as e:
         logger.error(f"❌ Failed to get document stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve document statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve document statistics: {str(e)}") from e
 
 
 @app.post("/documents/refresh")
@@ -333,7 +333,7 @@ async def get_illustrations() -> Dict[str, str]:
 
     except Exception as e:
         logger.error(f"❌ Illustrations query failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 if __name__ == "__main__":
