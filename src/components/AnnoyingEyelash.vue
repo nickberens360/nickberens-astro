@@ -28,14 +28,6 @@ export default {
       type: Number,
       default: 150
     },
-    opacity: {
-      type: Number,
-      default: 0.5
-    },
-    size: {
-      type: Number,
-      default: 20
-    }
   },
   setup(props) {
     const eyelashElement = ref(null);
@@ -46,9 +38,6 @@ export default {
     const initialMouseY = ref(0);
 
     const eyelashStyle = computed(() => ({
-      opacity: props.opacity,
-      zIndex: 50,
-      width: `${props.size}px`,
       top: `${currentY.value}px`,
       left: `${currentX.value}px`,
       cursor: 'move',
@@ -64,8 +53,15 @@ export default {
       initialMouseX.value = event.clientX - currentX.value;
       initialMouseY.value = event.clientY - currentY.value;
 
-      // Capture pointer for this element
-      eyelashElement.value.setPointerCapture(event.pointerId);
+      // Safe pointer capture with error handling
+      try {
+        if (eyelashElement.value && event.pointerId !== undefined) {
+          eyelashElement.value.setPointerCapture(event.pointerId);
+        }
+      } catch (e) {
+        // Ignore errors if pointer capture is not supported or fails
+        console.debug('Pointer capture failed:', e);
+      }
 
       // Add listeners to window for better performance and standard drag pattern
       window.addEventListener('pointermove', handlePointerMove);
@@ -82,42 +78,42 @@ export default {
       currentX.value = event.clientX - initialMouseX.value;
       currentY.value = event.clientY - initialMouseY.value;
 
-      // Keep the eyelash within viewport bounds
-      const maxX = window.innerWidth - props.size;
-      const maxY = window.innerHeight - props.size;
+      // Keep the eyelash within viewport bounds using actual component dimensions
+      const rect = eyelashElement.value?.getBoundingClientRect();
+      const maxX = window.innerWidth - (rect?.width ?? 0);
+      const maxY = window.innerHeight - (rect?.height ?? 0);
 
       currentX.value = Math.max(0, Math.min(currentX.value, maxX));
       currentY.value = Math.max(0, Math.min(currentY.value, maxY));
     };
 
-    const stopDrag = (event) => {
-      if (!event.isPrimary) return;
-
+    // Defensive cleanup function to ensure clean state
+    const cleanup = () => {
       isDragging.value = false;
-
-      // Remove listeners from window
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', stopDrag);
       window.removeEventListener('pointercancel', stopDrag);
+    };
 
-      // Release pointer capture
-      if (eyelashElement.value) {
-        eyelashElement.value.releasePointerCapture(event.pointerId);
+    const stopDrag = (event) => {
+      if (!event.isPrimary) return;
+
+      cleanup();
+
+      // Safe pointer capture release with error handling
+      try {
+        if (eyelashElement.value && event.pointerId !== undefined) {
+          eyelashElement.value.releasePointerCapture(event.pointerId);
+        }
+      } catch (e) {
+        // Ignore errors if pointer capture was already released or not supported
+        console.debug('Pointer capture release failed:', e);
       }
     };
 
-    onMounted(() => {
-      // Event listeners are now managed dynamically in startDrag/stopDrag
-      // No need to add them here permanently
-    });
-
     onUnmounted(() => {
-      // Clean up window listeners if component is destroyed while dragging
-      if (isDragging.value) {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', stopDrag);
-        window.removeEventListener('pointercancel', stopDrag);
-      }
+      // Use defensive cleanup to ensure all listeners are removed
+      cleanup();
     });
 
     return {
@@ -134,7 +130,13 @@ export default {
   position: fixed;
   z-index: 9999;
   transition: none;
-  /* Prevent text selection on all devices */
+  opacity: .45;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -144,7 +146,7 @@ export default {
 }
 
 .eyelash-image {
-  width: 100%;
+  width: 20px;
   height: auto;
   pointer-events: none;
   display: block;
