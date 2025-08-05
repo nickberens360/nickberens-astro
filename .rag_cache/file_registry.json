@@ -1,0 +1,122 @@
+{
+  "about-nick-berens.md": {
+    "size": 3039,
+    "modified": 1753607454.6331215,
+    "type": "text/markdown"
+  },
+  "Nick_Berens_Resume.pdf": {
+    "size": 71651,
+    "modified": 1753282463.628042,
+    "type": "application/pdf"
+  },
+  "about.json": {
+    "size": 2185,
+    "modified": 1753633565.422431,
+    "type": "application/json"
+  },
+  "resume.json": {
+    "size": 4369,
+    "modified": 1753785442.526626,
+    "type": "application/json"
+  },
+  "illustrations.json": {
+    "size": 2187,
+    "modified": 1753607454.6333075,
+    "type": "application/json"
+  },
+  "favicon.svg": {
+    "size": 339,
+    "modified": 1752073236.237892,
+    "type": "image/svg+xml"
+  },
+  "illustrations/pool-shark.jpg": {
+    "size": 61059,
+    "modified": 1752854890.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/smalltime.png": {
+    "size": 120768,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/eat-us-for-fun.jpg": {
+    "size": 60180,
+    "modified": 1752854890.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/wingface.png": {
+    "size": 17926,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/haz-hug.png": {
+    "size": 32884,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/snake-hug.jpg": {
+    "size": 43345,
+    "modified": 1752854890.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/dumb-doug.jpg": {
+    "size": 50434,
+    "modified": 1752854890.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/hide-out.png": {
+    "size": 52795,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/doug-fights-back.jpg": {
+    "size": 53793,
+    "modified": 1752854890.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/cat-flower.png": {
+    "size": 15150,
+    "modified": 1752854888.0,
+    "type": "image/png"
+  },
+  "illustrations/dope-goose.jpg": {
+    "size": 19708,
+    "modified": 1752854890.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/chair.jpg": {
+    "size": 19026,
+    "modified": 1752854888.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/winger.png": {
+    "size": 25323,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/dont.jpg": {
+    "size": 19630,
+    "modified": 1752854888.0,
+    "type": "image/jpeg"
+  },
+  "illustrations/flying-robot.png": {
+    "size": 24650,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/vue-atomic-docs.png": {
+    "size": 23213,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/snake-flying.png": {
+    "size": 57800,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  },
+  "illustrations/vulture.png": {
+    "size": 42799,
+    "modified": 1752854890.0,
+    "type": "image/png"
+  }
+}
