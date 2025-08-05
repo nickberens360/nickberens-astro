@@ -3,7 +3,7 @@
     ref="eyelashElement"
     class="annoying-eyelash"
     :style="eyelashStyle"
-    @mousedown="startDrag"
+    @pointerdown="startDrag"
   >
     <img
       src="/images/eyelash.png"
@@ -47,26 +47,32 @@ export default {
 
     const eyelashStyle = computed(() => ({
       opacity: props.opacity,
-      position: 'fixed',
       zIndex: 50,
       width: `${props.size}px`,
       top: `${currentY.value}px`,
       left: `${currentX.value}px`,
       cursor: 'move',
-      userSelect: 'none'
+      userSelect: 'none',
+      touchAction: 'none' // Prevent default touch behaviors
     }));
 
     const startDrag = (event) => {
+      // Only handle primary pointer (first finger/mouse)
+      if (!event.isPrimary) return;
+
       isDragging.value = true;
       initialMouseX.value = event.clientX - currentX.value;
       initialMouseY.value = event.clientY - currentY.value;
 
-      // Prevent text selection during drag
+      // Capture pointer for this element
+      eyelashElement.value.setPointerCapture(event.pointerId);
+
+      // Prevent text selection and default behaviors
       event.preventDefault();
     };
 
-    const handleMouseMove = (event) => {
-      if (!isDragging.value) return;
+    const handlePointerMove = (event) => {
+      if (!isDragging.value || !event.isPrimary) return;
 
       currentX.value = event.clientX - initialMouseX.value;
       currentY.value = event.clientY - initialMouseY.value;
@@ -79,18 +85,31 @@ export default {
       currentY.value = Math.max(0, Math.min(currentY.value, maxY));
     };
 
-    const stopDrag = () => {
+    const stopDrag = (event) => {
+      if (!event.isPrimary) return;
+
       isDragging.value = false;
+
+      // Release pointer capture
+      if (eyelashElement.value) {
+        eyelashElement.value.releasePointerCapture(event.pointerId);
+      }
     };
 
     onMounted(() => {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', stopDrag);
+      const element = eyelashElement.value;
+      element.addEventListener('pointermove', handlePointerMove);
+      element.addEventListener('pointerup', stopDrag);
+      element.addEventListener('pointercancel', stopDrag);
     });
 
     onUnmounted(() => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', stopDrag);
+      const element = eyelashElement.value;
+      if (element) {
+        element.removeEventListener('pointermove', handlePointerMove);
+        element.removeEventListener('pointerup', stopDrag);
+        element.removeEventListener('pointercancel', stopDrag);
+      }
     });
 
     return {
@@ -104,7 +123,15 @@ export default {
 
 <style scoped>
 .annoying-eyelash {
+  position: fixed;
   transition: none;
+  /* Prevent text selection on all devices */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .eyelash-image {

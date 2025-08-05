@@ -11,11 +11,7 @@
     "test:run": "vitest run",
     "backend:build": "podman build -t nickberens:latest -f Containerfile .",
     "backend:dev": "podman run --rm --name nickberens -p 8000:8000 -v $(pwd)/backend:/app/backend:Z -v $(pwd)/public:/app/public:Z -e WATCHFILES_FORCE_POLLING=true --env-file .env nickberens:latest uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/backend",
-    "backend:stop": "podman stop nickberens || true",
-    "backend:cache:preload": "curl -X POST http://localhost:8000/cache/preload",
-    "backend:cache:status": "curl http://localhost:8000/cache/status | jq",
-    "backend:cache:stats": "curl http://localhost:8000/cache/stats | jq",
-    "backend:cache:clear": "curl -X DELETE http://localhost:8000/cache/clear"
+    "backend:stop": "podman stop nickberens || true"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.0",
