@@ -6,16 +6,13 @@ This module handles the initialization of the application state, including:
 - Loading documents and illustrations
 - Creating multi-vector retrievers
 - Setting up the illustration service
-- Pre-loading common queries into cache
 """
 
-import asyncio
 import logging
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from ..scripts.build_unified_data import build_unified_data
-from .cache_preloader import CachePreloader
 from .config import AppConfig
 from .data_loader import load_all_documents
 from .illustration_service import IllustrationService
@@ -43,13 +40,4 @@ def initialize_app_state():
         logger.warning(message)
     else:
         logger.info(message)
-
-    # Pre-load common queries into cache
-    logger.info("Pre-loading common queries into cache...")
-    try:
-        asyncio.create_task(CachePreloader.preload_query_cache(all_retrievers))
-        logger.info("Cache pre-loading task started")
-    except Exception as e:
-        logger.warning(f"Failed to start cache pre-loading: {e}")
-
     return all_retrievers, illustration_service
