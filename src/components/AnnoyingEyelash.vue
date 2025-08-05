@@ -141,7 +141,6 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  /* Prevent text selection on all devices */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
