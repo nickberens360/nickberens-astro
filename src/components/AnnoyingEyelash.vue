@@ -79,9 +79,9 @@ export default {
       currentY.value = event.clientY - initialMouseY.value;
 
       // Keep the eyelash within viewport bounds using actual component dimensions
-      const rect = eyelashElement.value.getBoundingClientRect();
-      const maxX = window.innerWidth - rect.width;
-      const maxY = window.innerHeight - rect.height;
+      const rect = eyelashElement.value?.getBoundingClientRect();
+      const maxX = window.innerWidth - (rect?.width ?? 0);
+      const maxY = window.innerHeight - (rect?.height ?? 0);
 
       currentX.value = Math.max(0, Math.min(currentX.value, maxX));
       currentY.value = Math.max(0, Math.min(currentY.value, maxY));
@@ -129,7 +129,7 @@ export default {
   position: fixed;
   z-index: 9999;
   transition: none;
-  opacity: .35;
+  opacity: .45;
   width: 44px;
   height: 44px;
   display: flex;
