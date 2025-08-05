@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from langchain_core.retrievers import BaseRetriever
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class IllustrationService:
     """Service for managing and searching illustration data using a dedicated vector retriever."""
 
-    def __init__(self, retriever: BaseRetriever, illustrations_data: List[Dict[str, Any]]):
+    def __init__(self, retriever: Optional[BaseRetriever], illustrations_data: List[Dict[str, Any]]):
         """
         Args:
             retriever: A LangChain vector retriever pre-configured for illustration data.
@@ -46,6 +46,9 @@ class IllustrationService:
         logger.info(f"Vector searching illustrations for: '{search_term}'")
         try:
             # The retriever is already scoped to illustrations, so no extra filtering is needed.
+            if self.retriever is None:
+                logger.warning("No retriever available for illustration search")
+                return []
             results = self.retriever.get_relevant_documents(search_term)
 
             # Extract unique file paths from the retrieved documents' metadata

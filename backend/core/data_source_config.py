@@ -256,6 +256,13 @@ class DataSourceConfig:
         base_path = Path(cast(str, data_sources.get("base_path", "public")))
         return base_path / cast(str, source["file"])
 
+    @property
+    def cache_preload(self) -> Dict[str, Any]:
+        """Get cache preload configuration."""
+        if self._config is None:
+            return {}
+        return cast(Dict[str, Any], self._config.get("cache_preload", {}))
+
 
 # Singleton instance
 config = DataSourceConfig()

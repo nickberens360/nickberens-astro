@@ -165,6 +165,21 @@ templates:
     Title: {title}
     Tags: {tags}
 
+# Cache pre-loading for common queries
+cache_preload:
+  enabled: true
+  queries:
+    - "Tell me about yourself"
+    - "Show me your resume"
+    - "What is your experience?"
+    - "What are your skills?"
+    - "Show me your illustrations"
+    - "What kind of work do you do?"
+    - "What's your background?"
+    - "Tell me about your professional experience"
+    - "What companies have you worked for?"
+    - "Show me your art"
+
 # Special processing configurations
 special_processing:
   points:

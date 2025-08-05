@@ -99,7 +99,7 @@
               </div>
 
               <div
-                v-if="shouldShowFollowups(pair.botMessage) && false"
+                v-if="shouldShowFollowups(pair.botMessage)"
                 class="followup-container fade-in"
               >
                 <p class="followup-label">💡 You might also want to ask:</p>
@@ -426,11 +426,11 @@ export default {
 }
 
 .followup-button {
-  background-color: #333;
+  background-color: #222222;
   color: #f9fafb;
-  border: 1px solid #444;
+  border: none;
   border-radius: 8px;
-  padding: .5rem .75rem;
+  padding: 1rem;
   font-size: .875rem;
   cursor: pointer;
   transition: background-color .2s;
