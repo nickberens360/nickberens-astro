@@ -56,10 +56,6 @@ export default {
       touchAction: 'none' // Prevent default touch behaviors
     }));
 
-    const imageSource = computed(() => {
-      return dragAttempts.value >= 3 ? '😂' : '/images/eyelash.png';
-    });
-
     const isEmoji = computed(() => dragAttempts.value >= 3);
 
     const startDrag = (event) => {
@@ -147,7 +143,6 @@ export default {
       eyelashElement,
       eyelashStyle,
       startDrag,
-      imageSource,
       isEmoji,
       isAnimating
     };
