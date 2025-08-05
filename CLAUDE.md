@@ -112,6 +112,20 @@ public/            # Static data files
 - **Frontend:** Astro, Vue.js
 - **Python:** 3.11+ required
 - **Linting:** black, isort, flake8, mypy, autoflake
+- **Type Stubs:** types-PyYAML, types-requests, types-urllib3 (required for MyPy)
+
+### Important: Type Stub Packages
+MyPy requires type stub packages for third-party libraries. If you see errors like:
+```
+error: Library stubs not installed for "yaml" [import-untyped]
+```
+
+Install the missing type stubs:
+```bash
+pip install types-PyYAML types-requests types-urllib3
+# Or install all missing stubs automatically:
+mypy --install-types
+```
 
 ## Additional Notes
 - The system uses a RAG architecture with configurable data sources
