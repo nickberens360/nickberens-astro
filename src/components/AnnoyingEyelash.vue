@@ -79,9 +79,9 @@ export default {
       currentY.value = event.clientY - initialMouseY.value;
 
       // Keep the eyelash within viewport bounds using actual component dimensions
-      const componentSize = 44; // Use the fixed width/height from CSS
-      const maxX = window.innerWidth - componentSize;
-      const maxY = window.innerHeight - componentSize;
+      const rect = eyelashElement.value.getBoundingClientRect();
+      const maxX = window.innerWidth - rect.width;
+      const maxY = window.innerHeight - rect.height;
 
       currentX.value = Math.max(0, Math.min(currentX.value, maxX));
       currentY.value = Math.max(0, Math.min(currentY.value, maxY));
@@ -97,12 +97,7 @@ export default {
 
     const stopDrag = (event) => {
       // Remove primary pointer check to ensure cleanup always happens
-      isDragging.value = false;
-
-      // Always clean up listeners
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', stopDrag);
-      window.removeEventListener('pointercancel', stopDrag);
+      cleanup();
 
       // Safe pointer capture release with error handling
       try {
