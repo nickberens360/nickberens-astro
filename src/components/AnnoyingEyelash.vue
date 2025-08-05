@@ -129,7 +129,7 @@ export default {
   position: fixed;
   z-index: 9999;
   transition: none;
-  opacity: .65;
+  opacity: .35;
   width: 44px;
   height: 44px;
   display: flex;
