@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from threading import RLock
 from typing import Any, Dict, Optional, cast
 
 import yaml
@@ -12,15 +13,22 @@ class DataSourceConfig:
 
     _instance: Optional["DataSourceConfig"] = None
     _config: Optional[Dict[str, Any]] = None
+    _lock = RLock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(DataSourceConfig, cls).__new__(cls)
+            with cls._lock:
+                # Second check for thread-safety
+                if cls._instance is None:
+                    cls._instance = super(DataSourceConfig, cls).__new__(cls)
         return cls._instance
 
     def __init__(self):
         if self._config is None:
-            self._load_config()
+            with self._lock:
+                # Second check for thread-safety
+                if self._config is None:
+                    self._load_config()
 
     def _load_config(self):
         """Load configuration from YAML file."""
