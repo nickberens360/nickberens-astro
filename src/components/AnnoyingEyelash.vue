@@ -132,6 +132,7 @@ export default {
 <style scoped>
 .annoying-eyelash {
   position: fixed;
+  z-index: 9999;
   transition: none;
   /* Prevent text selection on all devices */
   -webkit-touch-callout: none;
