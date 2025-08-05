@@ -114,17 +114,24 @@ public/            # Static data files
 - **Linting:** black, isort, flake8, mypy, autoflake
 - **Type Stubs:** types-PyYAML, types-requests, types-urllib3 (required for MyPy)
 
-### Important: Type Stub Packages
-MyPy requires type stub packages for third-party libraries. If you see errors like:
-```
-error: Library stubs not installed for "yaml" [import-untyped]
-```
+### Important: Type Stub Packages & Pre-commit
+MyPy requires type stub packages for third-party libraries. 
 
-Install the missing type stubs:
+**For Pre-commit hooks:** Type stubs are configured in `.pre-commit-config.yaml` under the mypy hook's `additional_dependencies`. If you add new dependencies that need type stubs, add them there.
+
+**For local development:** Install type stubs locally:
 ```bash
 pip install types-PyYAML types-requests types-urllib3
 # Or install all missing stubs automatically:
 mypy --install-types
+```
+
+**If pre-commit mypy fails with missing stubs:**
+1. Add the type stub to `.pre-commit-config.yaml` under mypy's `additional_dependencies`
+2. Clean and reinstall pre-commit:
+```bash
+pre-commit clean
+pre-commit install
 ```
 
 ## Additional Notes
