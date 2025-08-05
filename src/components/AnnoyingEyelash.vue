@@ -96,7 +96,8 @@ export default {
     };
 
     const stopDrag = (event) => {
-      // Remove primary pointer check to ensure cleanup always happens
+      if (!event.isPrimary) return;
+
       cleanup();
 
       // Safe pointer capture release with error handling
