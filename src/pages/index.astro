@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
+import AnnoyingEyelash from '../components/AnnoyingEyelash.vue';
 import {terminalInputValue} from '../stores/ui';
 
 // Get the initial value for server-side rendering
@@ -12,6 +13,13 @@ const initialCurseWord = terminalInputValue.get();
     title="Nick Berens | Sh00t"
     description="Nick Berens - Frontend Developer"
 >
+  <AnnoyingEyelash
+    client:load
+    :initial-x="50"
+    :initial-y="150"
+    :opacity="0.5"
+    :size="20"
+  />
   <HeroBanner
       data-section-color="#d3a6fe"
       client:load
@@ -38,7 +46,8 @@ const initialCurseWord = terminalInputValue.get();
     <p class="text-xl">
       <span class="font-bold">Dummy</span>
       : I value a healthy team culture and working with passionate people that love building cool
-      <span class="highlight">bad&nbsp;word</span>!
+      <span class="highlight">bad&nbsp;word</span>
+      !
     </p>
     <p class="text-md text-center font-bold">*oops</p>
   </PageSection>
@@ -52,8 +61,11 @@ const initialCurseWord = terminalInputValue.get();
       full-height
   >
     <h2 class="text-hero">Note from my recruiter.</h2>
-    <p class="text-xl">"They thought you had a great skill set for the position, but because of the <span class="highlight">bad&nbsp;word</span> you
-      wouldn't be a good fit culturally."</p>
+    <p class="text-xl">"They thought you had a great skill set for the position, but because of the
+      <span class="highlight">bad&nbsp;word</span>
+      you
+      wouldn't be a good fit culturally."
+    </p>
     <p class="font-bold">Love, Jacob the Recruiter</p>
   </PageSection>
 
@@ -64,9 +76,14 @@ const initialCurseWord = terminalInputValue.get();
       full-height
   >
     <h2 class="text-hero">NOW LET ME BE CLEAR.</h2>
-    <p class="text-fluid-lg">I totally get that this was on me, and I understand where they’re coming from. I have no hard feelings towards the company nor their values.</p>
-    <p class="text-lg ">I was definitely bummed I didn’t get the position. It really felt like a good fit, and the person who interviewed me was super cool.</p>
-    <p class="text-lg">Honestly, I’m just disappointed in myself. I tend to drop a <span class="highlight">bad word</span> when I get really excited about something.</p>
+    <p class="text-fluid-lg">I totally get that this was on me, and I understand where they’re coming from. I have no
+      hard feelings towards the company nor their values.</p>
+    <p class="text-lg ">I was definitely bummed I didn’t get the position. It really felt like a good fit, and the
+      person who interviewed me was super cool.</p>
+    <p class="text-lg">Honestly, I’m just disappointed in myself. I tend to drop a
+      <span class="highlight">bad word</span>
+      when I get really excited about something.
+    </p>
   </PageSection>
 
   <PageSection

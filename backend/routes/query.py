@@ -11,10 +11,11 @@ This module contains the primary query endpoint that:
 
 import json
 import time
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from ..core.app_factory import limiter
 from ..core.config import AppConfig
@@ -78,7 +79,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         return JSONResponse(content=response_dict)
 
     # Handle AI text responses
-    formatted_chat_history = [
+    formatted_chat_history: List[BaseMessage] = [
         (HumanMessage(content=msg["text"]) if msg["sender"] == "user" else AIMessage(content=msg["text"]))
         for msg in sanitized_history
     ]
