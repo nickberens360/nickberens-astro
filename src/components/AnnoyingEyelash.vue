@@ -1,5 +1,6 @@
 <template>
   <div
+    v-if="isComponentVisible"
     ref="eyelashElement"
     class="annoying-eyelash"
     :class="{ 'animating': isAnimating }"
@@ -17,6 +18,7 @@
       v-else
       class="emoji-display"
       :class="{ 'animate-up-fade': isAnimating }"
+      @animationend="onAnimationEnd"
     >
       😂
     </div>
@@ -47,6 +49,7 @@ export default {
     const initialMouseY = ref(0);
     const dragAttempts = ref(0);
     const isAnimating = ref(false);
+    const isComponentVisible = ref(true);
 
     const eyelashStyle = computed(() => ({
       top: `${currentY.value}px`,
@@ -134,6 +137,11 @@ export default {
       }
     };
 
+    const onAnimationEnd = () => {
+      // Hide the entire component after animation completes
+      isComponentVisible.value = false;
+    };
+
     onUnmounted(() => {
       // Use defensive cleanup to ensure all listeners are removed
       cleanup();
@@ -144,7 +152,9 @@ export default {
       eyelashStyle,
       startDrag,
       isEmoji,
-      isAnimating
+      isAnimating,
+      isComponentVisible,
+      onAnimationEnd
     };
   }
 };
