@@ -1,5 +1,11 @@
 import json
+import sys
 from pathlib import Path
+
+# Add the backend directory to the Python path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from core.data_source_config import config
 
 
 def _load_json_or_default(path, default_value):
@@ -24,27 +30,31 @@ def build_unified_data():
     This file acts as the "source of truth" for the RAG system, enabling
     logical chunking and rich metadata embedding.
     """
-    base_path = Path("public")
-    output_path = base_path / "unified_data.json"
+    # Get configuration
+    data_sources_config = config.data_sources
+    base_path = Path(data_sources_config.get("base_path", "public"))
+    output_path = base_path / data_sources_config.get("output_file", "unified_data.json")
 
-    # --- Illustrations JSON (already structured) ---
-    illustrations_path = base_path / "illustrations.json"
-    illustrations_data = _load_json_or_default(illustrations_path, [])
+    # Build unified data structure
+    unified_data = {}
 
-    # --- Resume Data (loaded from JSON) ---
-    resume_path = base_path / "resume.json"
-    resume_data = _load_json_or_default(resume_path, {})
+    # Process each configured source
+    for source in data_sources_config.get("sources", []):
+        source_name = source["name"]
+        source_file = source["file"]
+        source_path = base_path / source_file
 
-    # --- About Data (loaded from JSON) ---
-    about_path = base_path / "about.json"
-    about_data = _load_json_or_default(about_path, {})
+        # Load the data
+        if source.get("is_list_source", False):
+            # Source is already a list (like illustrations)
+            source_data = _load_json_or_default(source_path, [])
+        else:
+            # Source is an object (like resume, about)
+            source_data = _load_json_or_default(source_path, {})
 
-    # --- Build unified structure ---
-    unified_data = {
-        "resume": resume_data,
-        "about": about_data,
-        "illustrations": illustrations_data,
-    }
+        # Add to unified data
+        unified_data[source_name] = source_data
+        print(f"📄 Loaded {source_name} data from {source_file}")
 
     # --- Write output ---
     try:

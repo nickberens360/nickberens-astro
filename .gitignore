@@ -6,6 +6,7 @@ dist/
 *.bak
 *.BAK
 
+claude-exports/
 podman-commands.sh
 
 # dependencies

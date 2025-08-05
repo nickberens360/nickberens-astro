@@ -1,0 +1,118 @@
+# Configuration for RAG data sources
+data_sources:
+  base_path: "public"
+  output_file: "unified_data.json"
+  sources:
+    - name: "resume"
+      file: "resume.json"
+      sections:
+        - name: "summary"
+          field: "summary"
+        - name: "experience"
+          field: "experience"
+          is_list: true
+          item_fields:
+            - company
+            - role
+            - dates
+            - points
+        - name: "education"
+          field: "education"
+          is_list: true
+          item_fields:
+            - institution
+            - degree
+            - dates
+        - name: "accomplishments"
+          field: "accomplishments"
+          is_list: true
+          item_fields:
+            - title
+            - description
+
+    - name: "about"
+      file: "about.json"
+      sections:
+        - name: "introduction"
+          field: "introduction"
+        - name: "sections"
+          field: "sections"
+          is_list: true
+          item_fields:
+            - heading
+            - content
+
+    - name: "illustrations"
+      file: "illustrations.json"
+      is_list_source: true
+      item_fields:
+        - title
+        - file
+        - tags
+
+# Retriever configurations
+retrievers:
+  resume:
+    description: "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills."
+    search_kwargs:
+      k: 8
+    keywords:
+      - experience
+      - job
+      - work
+      - skill
+      - resume
+      - cv
+      - company
+      - role
+      - hillman
+      - wisnet
+      - history
+
+  about:
+    description: "Good for answering questions about Nick's background, personal interests, and general professional philosophy."
+    search_kwargs:
+      k: 5
+    keywords:
+      - about
+      - background
+      - who is
+      - philosophy
+      - approach
+
+  illustration:
+    description: "Good for answering questions about Nick's art, illustrations, creative process, and artistic style."
+    search_kwargs:
+      k: 5
+    keywords:
+      - art
+      - illustration
+      - drawing
+      - picture
+      - character
+      - design
+
+# Collection configuration
+collection:
+  name_pattern: "nickberens_{source}"
+
+# System prompts
+prompts:
+  qa_system: |
+    You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone.
+    
+    **CRITICAL INSTRUCTIONS:**
+    
+    1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience is...').
+    
+    2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the provided resume context into a clear, professional summary. **NEVER** state that you are an AI or do not have a resume. The user is asking for Nick's resume, and the context provided is the source for it.
+    
+    3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers.
+    
+    4.  **Formatting:** Use markdown, such as bullet points, to structure information like work experience or skills for readability.
+    
+    **Provided Context:**
+    {context}
+
+  history_aware: |
+    Given a chat history and the latest user question which might reference the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is.

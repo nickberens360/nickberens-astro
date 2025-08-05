@@ -21,6 +21,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .config import AppConfig
+from .data_source_config import config as data_config
 
 logger = logging.getLogger(__name__)
 
@@ -113,43 +114,19 @@ _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 class VectorStoreManager:
     """Manages vector store creation and retrieval routing"""
 
-    RETRIEVER_DEFINITIONS = {
-        "resume": {
-            "description": "Good for answering questions about Nick's professional work experience, previous roles, job history, and technical skills.",
-            "search_kwargs": {"k": 8},
-            "keywords": [
-                "experience",
-                "job",
-                "work",
-                "skill",
-                "resume",
-                "cv",
-                "company",
-                "role",
-                "hillman",
-                "wisnet",
-                "history",
-            ],
-        },
-        "about": {
-            "description": "Good for answering questions about Nick's background, personal interests, and general professional philosophy.",
-            "search_kwargs": {"k": 5},
-            "keywords": ["about", "background", "who is", "philosophy", "approach"],
-        },
-        "illustration": {
-            "description": "Good for answering questions about Nick's art, illustrations, creative process, and artistic style.",
-            "search_kwargs": {"k": 5},
-            "keywords": ["art", "illustration", "drawing", "picture", "character", "design"],
-        },
-    }
+    @classmethod
+    def get_retriever_definitions(cls):
+        """Get retriever definitions from config."""
+        return data_config.retrievers
 
     @classmethod
     def create_multi_vector_retriever(cls, docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
         """Creates and returns a dictionary of Chroma vector store retrievers, one for each document source."""
         vectorstores = {}
+        retriever_definitions = cls.get_retriever_definitions()
         docs_by_source = {
             source: [doc for doc in docs if doc.metadata.get("source") == source]
-            for source in cls.RETRIEVER_DEFINITIONS.keys()
+            for source in retriever_definitions.keys()
         }
 
         for source, source_docs in docs_by_source.items():
@@ -160,11 +137,13 @@ class VectorStoreManager:
             try:
                 # Using EphemeralClient for in-memory storage
                 client = chromadb.EphemeralClient()
+                collection_name_pattern = data_config.collection_config.get("name_pattern", "nickberens_{source}")
+                collection_name = collection_name_pattern.replace("{source}", source)
                 vectorstore = Chroma.from_documents(
                     documents=source_docs,
                     embedding=embeddings,
                     client=client,
-                    collection_name=f"nickberens_{source}",
+                    collection_name=collection_name,
                 )
                 vectorstores[source] = vectorstore
                 logger.info(f"Created Chroma vector store for '{source}' with {len(source_docs)} documents.")
@@ -175,8 +154,8 @@ class VectorStoreManager:
         # Create retrievers only for successfully created vector stores
         final_retrievers = {}
         for name, store in vectorstores.items():
-            if name in cls.RETRIEVER_DEFINITIONS:
-                search_kwargs = cls.RETRIEVER_DEFINITIONS[name]["search_kwargs"]
+            if name in retriever_definitions:
+                search_kwargs = retriever_definitions[name].get("search_kwargs", {})
                 final_retrievers[name] = store.as_retriever(search_kwargs=search_kwargs)
 
         if not final_retrievers:
@@ -189,10 +168,11 @@ class VectorStoreManager:
         """Routes a user query to the most relevant retriever(s) based on keywords."""
         query_lower = query.lower()
         selected_names = set()
+        retriever_definitions = cls.get_retriever_definitions()
 
         # Check each retriever's keywords
-        for source, config in cls.RETRIEVER_DEFINITIONS.items():
-            if any(keyword in query_lower for keyword in config["keywords"]):
+        for source, ret_config in retriever_definitions.items():
+            if any(keyword in query_lower for keyword in ret_config.get("keywords", [])):
                 selected_names.add(source)
 
         # Default to broad search if no specific keywords are matched
@@ -262,20 +242,24 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
 
 def create_qa_chain(llm):
     """Creates the main question-answering chain."""
-    system_prompt = (
-        "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
-        "\n\n"
-        "**CRITICAL INSTRUCTIONS:**"
-        "\n"
-        "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience is...')."
-        "\n"
-        "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the provided resume context into a clear, professional summary. **NEVER** state that you are an AI or do not have a resume. The user is asking for Nick's resume, and the context provided is the source for it."
-        "\n"
-        "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers."
-        "\n"
-        "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work experience or skills for readability."
-        "\n\n"
-        "**Provided Context:**\n{context}"
+    system_prompt = data_config.prompts.get(
+        "qa_system",
+        # Fallback to default if not in config
+        (
+            "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
+            "\n\n"
+            "**CRITICAL INSTRUCTIONS:**"
+            "\n"
+            "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience is...')."
+            "\n"
+            "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the provided resume context into a clear, professional summary. **NEVER** state that you are an AI or do not have a resume. The user is asking for Nick's resume, and the context provided is the source for it."
+            "\n"
+            "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers."
+            "\n"
+            "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work experience or skills for readability."
+            "\n\n"
+            "**Provided Context:**\n{context}"
+        ),
     )
     prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
     return create_stuff_documents_chain(llm, prompt)
@@ -283,10 +267,14 @@ def create_qa_chain(llm):
 
 def create_history_aware_prompt() -> ChatPromptTemplate:
     """Creates a prompt template for reformulating questions based on chat history."""
-    contextualize_q_system_prompt = (
-        "Given a chat history and the latest user question which might reference the chat history, "
-        "formulate a standalone question which can be understood without the chat history. "
-        "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
+    contextualize_q_system_prompt = data_config.prompts.get(
+        "history_aware",
+        # Fallback to default if not in config
+        (
+            "Given a chat history and the latest user question which might reference the chat history, "
+            "formulate a standalone question which can be understood without the chat history. "
+            "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
+        ),
     )
     return ChatPromptTemplate.from_messages(
         [
