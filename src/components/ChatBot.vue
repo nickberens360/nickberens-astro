@@ -17,12 +17,12 @@
     </div>
 
     <!-- Rate limit notification -->
-    <div
+<!--    <div
       v-if="rateLimitNotification"
       class="status-notification rate-limit"
     >
       <p>{{ rateLimitNotification }}</p>
-    </div>
+    </div>-->
 
     <ChatMessageList
       :messages="messages"
