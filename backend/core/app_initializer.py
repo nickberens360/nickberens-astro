@@ -28,7 +28,7 @@ def initialize_app_state():
     Returns:
         tuple: (all_retrievers, illustration_service) - The initialized retrievers and illustration service
     """
-    logger.info("Building structured unified data file...")
+    logger.info("Checking for data source modifications...")
     build_unified_data()
     logger.info("Initializing application state with Multi-Vector RAG...")
     docs, illustrations_data = load_all_documents()
