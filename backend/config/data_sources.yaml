@@ -8,6 +8,7 @@ data_sources:
       sections:
         - name: "summary"
           field: "summary"
+          template: "summary_template"
         - name: "experience"
           field: "experience"
           is_list: true
@@ -16,6 +17,10 @@ data_sources:
             - role
             - dates
             - points
+          template: "experience_template"
+          metadata_fields:
+            - company
+            - role
         - name: "education"
           field: "education"
           is_list: true
@@ -23,24 +28,31 @@ data_sources:
             - institution
             - degree
             - dates
+          template: "education_template"
+          metadata_fields:
+            - institution
         - name: "accomplishments"
           field: "accomplishments"
           is_list: true
           item_fields:
             - title
             - description
+          template: "accomplishments_template"
 
     - name: "about"
       file: "about.json"
       sections:
         - name: "introduction"
           field: "introduction"
+          template: "about_introduction_template"
         - name: "sections"
           field: "sections"
           is_list: true
           item_fields:
             - heading
             - content
+          template: "about_sections_template"
+          metadata_section_field: "heading"
 
     - name: "illustrations"
       file: "illustrations.json"
@@ -49,6 +61,14 @@ data_sources:
         - title
         - file
         - tags
+      template: "illustrations_template"
+      metadata_fields:
+        - file
+        - title
+      special_processing:
+        tags:
+          type: "join_array"
+          separator: ", "
 
 # Retriever configurations
 retrievers:
@@ -116,3 +136,42 @@ prompts:
 
   history_aware: |
     Given a chat history and the latest user question which might reference the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is.
+
+# Content formatting templates
+templates:
+  # Resume templates
+  summary_template: "Summary: {summary}"
+  
+  experience_template: |
+    Company: {company}
+    Role: {role}
+    Dates: {dates}
+    Responsibilities:
+    {points_formatted}
+  
+  education_template: |
+    Institution: {institution}
+    Degree: {degree}
+    Dates: {dates}
+  
+  accomplishments_template: "{title}: {description}"
+  
+  # About templates
+  about_introduction_template: "{introduction}"
+  about_sections_template: "{heading}: {content}"
+  
+  # Illustrations template
+  illustrations_template: |
+    Title: {title}
+    Tags: {tags}
+
+# Special processing configurations
+special_processing:
+  points:
+    type: "format_list"
+    format: "bullet_points"
+    empty_message: "No points listed"
+  tags:
+    type: "join_array" 
+    separator: ", "
+    default: ""

@@ -166,6 +166,29 @@ class DataSourceConfig:
                     "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
                 ),
             },
+            "templates": {
+                "summary_template": "Summary: {summary}",
+                "experience_template": (
+                    "Company: {company}\n" "Role: {role}\n" "Dates: {dates}\n" "Responsibilities:\n{points_formatted}"
+                ),
+                "education_template": ("Institution: {institution}\n" "Degree: {degree}\n" "Dates: {dates}"),
+                "accomplishments_template": "{title}: {description}",
+                "about_introduction_template": "{introduction}",
+                "about_sections_template": "{heading}: {content}",
+                "illustrations_template": "Title: {title}\nTags: {tags}",
+            },
+            "special_processing": {
+                "points": {
+                    "type": "format_list",
+                    "format": "bullet_points",
+                    "empty_message": "No points listed",
+                },
+                "tags": {
+                    "type": "join_array",
+                    "separator": ", ",
+                    "default": "",
+                },
+            },
         }
 
     @property
@@ -195,6 +218,20 @@ class DataSourceConfig:
         if self._config is None:
             return {}
         return cast(Dict[str, str], self._config.get("prompts", {}))
+
+    @property
+    def templates(self) -> Dict[str, str]:
+        """Get content templates configuration."""
+        if self._config is None:
+            return {}
+        return cast(Dict[str, str], self._config.get("templates", {}))
+
+    @property
+    def special_processing(self) -> Dict[str, Any]:
+        """Get special processing configuration."""
+        if self._config is None:
+            return {}
+        return cast(Dict[str, Any], self._config.get("special_processing", {}))
 
     def get_source_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """Get a specific data source configuration by name."""
