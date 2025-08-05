@@ -20,3 +20,8 @@ pre-commit>=3.0.0
 
 # Security scanning
 safety>=2.0.0
+
+# Type stubs for mypy
+types-PyYAML>=1.0.0
+types-requests>=2.0.0
+types-urllib3>=1.0.0
