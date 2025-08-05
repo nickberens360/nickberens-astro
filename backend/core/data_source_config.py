@@ -1,7 +1,6 @@
 import logging
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, cast
 
 import yaml
 
@@ -164,34 +163,43 @@ class DataSourceConfig:
     @property
     def data_sources(self) -> Dict[str, Any]:
         """Get data sources configuration."""
-        return self._config.get("data_sources", {})
+        if self._config is None:
+            return {}
+        return cast(Dict[str, Any], self._config.get("data_sources", {}))
 
     @property
     def retrievers(self) -> Dict[str, Any]:
         """Get retrievers configuration."""
-        return self._config.get("retrievers", {})
+        if self._config is None:
+            return {}
+        return cast(Dict[str, Any], self._config.get("retrievers", {}))
 
     @property
     def collection_config(self) -> Dict[str, Any]:
         """Get collection configuration."""
-        return self._config.get("collection", {})
+        if self._config is None:
+            return {}
+        return cast(Dict[str, Any], self._config.get("collection", {}))
 
     @property
     def prompts(self) -> Dict[str, str]:
         """Get prompts configuration."""
-        return self._config.get("prompts", {})
+        if self._config is None:
+            return {}
+        return cast(Dict[str, str], self._config.get("prompts", {}))
 
     def get_source_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """Get a specific data source configuration by name."""
         for source in self.data_sources.get("sources", []):
             if source["name"] == name:
-                return source
+                return cast(Dict[str, Any], source)
         return None
 
     def get_unified_data_path(self) -> Path:
         """Get the full path to the unified data file."""
-        base_path = Path(self.data_sources.get("base_path", "public"))
-        output_file = self.data_sources.get("output_file", "unified_data.json")
+        data_sources = self.data_sources
+        base_path = Path(cast(str, data_sources.get("base_path", "public")))
+        output_file = cast(str, data_sources.get("output_file", "unified_data.json"))
         return base_path / output_file
 
     def get_source_file_path(self, source_name: str) -> Optional[Path]:
@@ -199,8 +207,9 @@ class DataSourceConfig:
         source = self.get_source_by_name(source_name)
         if not source:
             return None
-        base_path = Path(self.data_sources.get("base_path", "public"))
-        return base_path / source["file"]
+        data_sources = self.data_sources
+        base_path = Path(cast(str, data_sources.get("base_path", "public")))
+        return base_path / cast(str, source["file"])
 
 
 # Singleton instance

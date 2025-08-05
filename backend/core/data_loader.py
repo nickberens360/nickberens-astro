@@ -42,11 +42,11 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
     # Process each configured source
     illustrations_data = []
     data_sources_config = config.data_sources
-    
+
     for source_config in data_sources_config.get("sources", []):
         source_name = source_config["name"]
         source_data = unified_data.get(source_name, {} if not source_config.get("is_list_source") else [])
-        
+
         if source_config.get("is_list_source"):
             # Handle list sources like illustrations
             if source_name == "illustrations":
@@ -70,7 +70,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
             for section_config in source_config.get("sections", []):
                 section_name = section_config["name"]
                 field_name = section_config["field"]
-                
+
                 if section_config.get("is_list"):
                     # Handle list sections
                     items = source_data.get(field_name, [])
@@ -111,7 +111,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
                             # Generic handling for other list sections
                             content = str(item)
                             metadata = {"source": source_name, "section": section_name}
-                        
+
                         docs.append(Document(page_content=content, metadata=metadata))
                 else:
                     # Handle single value sections
@@ -123,7 +123,7 @@ def load_all_documents() -> Tuple[List[Document], List[Dict[str, Any]]]:
                             content = value
                         else:
                             content = f"{section_name}: {value}"
-                        
+
                         docs.append(
                             Document(
                                 page_content=content,

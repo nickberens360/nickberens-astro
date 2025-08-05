@@ -2,10 +2,12 @@ import json
 import sys
 from pathlib import Path
 
-# Add the backend directory to the Python path
-sys.path.append(str(Path(__file__).parent.parent))
+# Ensure the backend directory is in the Python path
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
-from core.data_source_config import config
+from core.data_source_config import config  # noqa: E402
 
 
 def _load_json_or_default(path, default_value):

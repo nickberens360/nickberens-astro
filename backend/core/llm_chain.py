@@ -7,7 +7,7 @@ import re
 import time
 from datetime import datetime, timedelta
 from threading import RLock
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, Union, cast
 
 import chromadb
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -152,7 +152,7 @@ class VectorStoreManager:
                 raise
 
         # Create retrievers only for successfully created vector stores
-        final_retrievers = {}
+        final_retrievers: Dict[str, BaseRetriever] = {}
         for name, store in vectorstores.items():
             if name in retriever_definitions:
                 search_kwargs = retriever_definitions[name].get("search_kwargs", {})
@@ -216,12 +216,14 @@ def is_rate_limit_error(error: Exception) -> bool:
 
 def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
     """Initializes and returns a dictionary of available LLM instances."""
-    llms = {}
+    llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]] = {}
 
     for provider_config in LLM_PROVIDERS:
-        provider_name = provider_config["name"]
-        provider_class = provider_config["class"]
-        init_kwargs = provider_config["init_kwargs"]
+        provider_name: str = cast(str, provider_config["name"])
+        provider_class: Type[Union[ChatGoogleGenerativeAI, ChatAnthropic]] = cast(
+            Type[Union[ChatGoogleGenerativeAI, ChatAnthropic]], provider_config["class"]
+        )
+        init_kwargs: Dict[str, Any] = cast(Dict[str, Any], provider_config["init_kwargs"])
 
         try:
             if not rate_limit_tracker.is_rate_limited(provider_name):
@@ -512,18 +514,21 @@ async def stream_with_fallback(
     return fallback_stream(), "error", metadata
 
 
-def _determine_llm_order(preferred_model: Optional[str], llms: Dict[str, Any]) -> List[Tuple[str, Any]]:
+def _determine_llm_order(
+    preferred_model: Optional[str], llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]
+) -> List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
     """Determine the order in which to try LLMs based on preference and availability."""
-    provider_names = [p["name"] for p in LLM_PROVIDERS]
+    provider_names = [str(p["name"]) for p in LLM_PROVIDERS]
 
     # If a valid preferred model is given, move it to the front
     if preferred_model and preferred_model in provider_names and llms.get(preferred_model):
         provider_names.insert(0, provider_names.pop(provider_names.index(preferred_model)))
 
     # Build the final list of available LLM instances in the determined order
-    llm_order = []
+    llm_order: List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]] = []
     for name in provider_names:
-        if instance := llms.get(name):
+        instance = llms.get(name)
+        if instance is not None:
             llm_order.append((name, instance))
 
     return llm_order
