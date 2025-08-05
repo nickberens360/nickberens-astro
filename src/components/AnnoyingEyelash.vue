@@ -67,6 +67,11 @@ export default {
       // Capture pointer for this element
       eyelashElement.value.setPointerCapture(event.pointerId);
 
+      // Add listeners to window for better performance and standard drag pattern
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', stopDrag);
+      window.addEventListener('pointercancel', stopDrag);
+
       // Prevent text selection and default behaviors
       event.preventDefault();
     };
@@ -90,6 +95,11 @@ export default {
 
       isDragging.value = false;
 
+      // Remove listeners from window
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopDrag);
+      window.removeEventListener('pointercancel', stopDrag);
+
       // Release pointer capture
       if (eyelashElement.value) {
         eyelashElement.value.releasePointerCapture(event.pointerId);
@@ -97,18 +107,16 @@ export default {
     };
 
     onMounted(() => {
-      const element = eyelashElement.value;
-      element.addEventListener('pointermove', handlePointerMove);
-      element.addEventListener('pointerup', stopDrag);
-      element.addEventListener('pointercancel', stopDrag);
+      // Event listeners are now managed dynamically in startDrag/stopDrag
+      // No need to add them here permanently
     });
 
     onUnmounted(() => {
-      const element = eyelashElement.value;
-      if (element) {
-        element.removeEventListener('pointermove', handlePointerMove);
-        element.removeEventListener('pointerup', stopDrag);
-        element.removeEventListener('pointercancel', stopDrag);
+      // Clean up window listeners if component is destroyed while dragging
+      if (isDragging.value) {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', stopDrag);
+        window.removeEventListener('pointercancel', stopDrag);
       }
     });
 
