@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
+import AnnoyingEyelash from '../components/AnnoyingEyelash.vue';
 import {terminalInputValue} from '../stores/ui';
 
 // Get the initial value for server-side rendering
@@ -12,16 +13,13 @@ const initialCurseWord = terminalInputValue.get();
     title="Nick Berens | Sh00t"
     description="Nick Berens - Frontend Developer"
 >
-  <div
-      style="opacity: .5; position: fixed; z-index: 50; width: 20px; top: 150px; left: 50px"
-      draggable="true"
-  >
-    <img
-        src="/images/eyelash.png"
-        alt="Eyelash"
-        style="width: 20px;"
-    />
-  </div>
+  <AnnoyingEyelash
+    client:load
+    :initial-x="50"
+    :initial-y="150"
+    :opacity="0.5"
+    :size="20"
+  />
   <HeroBanner
       data-section-color="#d3a6fe"
       client:load
