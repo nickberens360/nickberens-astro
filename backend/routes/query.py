@@ -20,6 +20,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from ..core.app_factory import limiter
 from ..core.config import AppConfig
 from ..core.llm_chain import get_rate_limit_status, stream_with_fallback
+from ..core.query_logger import get_query_logger
 from ..core.query_router import QueryType
 from ..dependencies import get_services
 from ..models.request_models import Query
@@ -34,8 +35,12 @@ router = APIRouter()
 async def query_endpoint(request: Request, query: Query, services: dict = Depends(get_services)):
     from slowapi.util import get_remote_address
 
-    # Restore validation and sanitization calls
+    # Get client IP and query logger
     client_ip = get_remote_address(request)
+    query_logger = get_query_logger()
+    start_time = time.time()
+
+    # Restore validation and sanitization calls
     is_valid, error_msg = SecurityValidator.validate_query(query, client_ip)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
@@ -51,7 +56,6 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
     # Handle image queries
     if query_type != QueryType.AI_TEXT_RESPONSE:
-        start_time = time.time()
         if query_type == QueryType.ALL_IMAGES:
             found_images = services["illustration_service"].get_all()
         else:
@@ -75,6 +79,22 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         rate_limits = get_rate_limit_status()
         response_dict = response_data.model_dump()
         response_dict["rate_limits"] = rate_limits
+
+        # Log the image query
+        response_time = time.time() - start_time
+        query_logger.log_query(
+            client_ip=client_ip,
+            question=sanitized_question,
+            response=ai_response,
+            model_used="image_search",
+            query_type="image",
+            response_time=response_time,
+            metadata={
+                "search_term": search_term,
+                "images_found": len(found_images),
+                "query_type_enum": query_type.value,
+            },
+        )
 
         return JSONResponse(content=response_dict)
 
@@ -113,6 +133,21 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
 
     followup_questions = services["followup_service"].generate_followups(sanitized_question, "", sanitized_history)
+
+    # Log the streaming text query (response will be marked as [STREAMING])
+    response_time = time.time() - start_time
+    query_logger.log_streaming_query(
+        client_ip=client_ip,
+        question=sanitized_question,
+        model_used=actual_model_used,
+        response_time=response_time,
+        metadata={
+            "preferred_model": query.preferred_model,
+            "chat_history_length": len(sanitized_history),
+            "followup_questions": followup_questions,
+            **metadata,
+        },
+    )
 
     # Include rate limit status in headers
     headers = {

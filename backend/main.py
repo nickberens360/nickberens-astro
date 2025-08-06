@@ -16,6 +16,7 @@ from .core.app_factory import create_app
 from .core.app_initializer import initialize_app_state
 from .core.config import AppConfig
 from .core.followup_service import FollowUpService
+from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
 
@@ -41,6 +42,7 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 followup_service = FollowUpService()
+query_logger = get_query_logger()
 
 # Create the FastAPI app
 app = create_app()
@@ -52,3 +54,4 @@ app.state.illustration_service = illustration_service
 app.state.query_router = query_router
 app.state.response_service = response_service
 app.state.followup_service = followup_service
+app.state.query_logger = query_logger

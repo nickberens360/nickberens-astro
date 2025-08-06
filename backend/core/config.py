@@ -161,6 +161,10 @@ class AppConfig:
     # Rate Limiting
     RATE_LIMIT = os.getenv("RATE_LIMIT", "5/minute")
 
+    # Query Logging Configuration
+    EXCLUDED_IPS = os.getenv("EXCLUDED_IPS", "")  # Comma-separated list of IPs to exclude from logging
+    QUERY_LOG_AUTH_TOKEN = os.getenv("QUERY_LOG_AUTH_TOKEN", "")  # Token for accessing query logs
+
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
     APP_DESCRIPTION = "API for AI-powered responses and illustration search with Claude as primary LLM"
