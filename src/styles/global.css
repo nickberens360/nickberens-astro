@@ -43,7 +43,7 @@ body {
     --chat-bot-form-height: 155px;
 
     /* Font Family */
-    --font-primary: 'JetBrains Mono', sans-serif;
+    --font-primary: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
 
     /* Font Sizes */
     --font-size-xs: clamp(0.7rem, 0.7rem + 0.1vw, 0.8rem);
