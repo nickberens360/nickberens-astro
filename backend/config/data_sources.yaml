@@ -99,6 +99,8 @@ retrievers:
       - who is
       - philosophy
       - approach
+      - inspiration
+      - artistic
 
   illustration:
     description: "Good for answering questions about Nick's art, illustrations, creative process, and artistic style."
@@ -111,6 +113,11 @@ retrievers:
       - picture
       - character
       - design
+      - inspiration
+      - artistic
+      - creative
+      - process
+      - style
 
 # Collection configuration
 collection:
@@ -141,25 +148,25 @@ prompts:
 templates:
   # Resume templates
   summary_template: "Summary: {summary}"
-  
+
   experience_template: |
     Company: {company}
     Role: {role}
     Dates: {dates}
     Responsibilities:
     {points_formatted}
-  
+
   education_template: |
     Institution: {institution}
     Degree: {degree}
     Dates: {dates}
-  
+
   accomplishments_template: "{title}: {description}"
-  
+
   # About templates
   about_introduction_template: "{introduction}"
   about_sections_template: "{heading}: {content}"
-  
+
   # Illustrations template
   illustrations_template: |
     Title: {title}
@@ -172,6 +179,6 @@ special_processing:
     format: "bullet_points"
     empty_message: "No points listed"
   tags:
-    type: "join_array" 
+    type: "join_array"
     separator: ", "
     default: ""
