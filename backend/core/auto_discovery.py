@@ -463,18 +463,20 @@ class AutoDataSourceDiscovery:
 
         # Extract keywords from data content
         if isinstance(data, list) and data:
-            sample_item = data[0]
-            if isinstance(sample_item, dict):
-                # Look for common fields that might contain keywords
-                for field in ["title", "name", "tags", "category"]:
-                    if field in sample_item:
-                        value = sample_item[field]
-                        if isinstance(value, str):
-                            keywords.extend(self._extract_words_from_text(value))
-                        elif isinstance(value, list):
-                            for item in value:
-                                if isinstance(item, str):
-                                    keywords.extend(self._extract_words_from_text(item))
+            sample_size = min(len(data), 5)  # Analyze up to 5 items
+            for i in range(sample_size):
+                sample_item = data[i]
+                if isinstance(sample_item, dict):
+                    # Look for common fields that might contain keywords
+                    for field in ["title", "name", "tags", "category"]:
+                        if field in sample_item:
+                            value = sample_item[field]
+                            if isinstance(value, str):
+                                keywords.extend(self._extract_words_from_text(value))
+                            elif isinstance(value, list):
+                                for item in value:
+                                    if isinstance(item, str):
+                                        keywords.extend(self._extract_words_from_text(item))
 
         return list(set(keywords))  # Remove duplicates
 
@@ -487,8 +489,8 @@ class AutoDataSourceDiscovery:
         Returns:
             List of extracted words
         """
-        # Simple word extraction - split on non-alphanumeric characters
-        words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
+        # Extract words including technical terms (e.g., Node.js, C++, C#)
+        words = re.findall(r"\b[a-zA-Z0-9_+#.-]{2,}\b", text.lower())
 
         # Filter out common stop words
         return [word for word in words if word not in _STOP_WORDS]

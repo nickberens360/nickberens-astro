@@ -5,6 +5,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, cast
 
+# Define project root relative to script location
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 # Ensure the backend directory is in the Python path
 backend_dir = Path(__file__).parent.parent
 if str(backend_dir) not in sys.path:
@@ -59,7 +62,7 @@ def _get_source_file_paths(auto_discover: bool = False) -> List[Path]:
     # Add auto-discoverable sources if requested
     if auto_discover and AutoDataSourceDiscovery is not None:
         try:
-            base_path = Path(data_sources_config.get("base_path", "public"))
+            base_path = PROJECT_ROOT / data_sources_config.get("base_path", "public")
             discovery = AutoDataSourceDiscovery(base_path)
             auto_sources = discovery.discover_sources()
 
@@ -219,7 +222,7 @@ def build_unified_data(force_rebuild: bool = False, auto_discover: bool = False)
 
     # Get configuration
     data_sources_config = config.data_sources
-    base_path = Path(data_sources_config.get("base_path", "public"))
+    base_path = PROJECT_ROOT / data_sources_config.get("base_path", "public")
     output_path = base_path / data_sources_config.get("output_file", "unified_data.json")
 
     # Get sources list (manual + auto-discovered if enabled)
@@ -360,7 +363,7 @@ Examples:
         # Auto-discovered sources
         if AutoDataSourceDiscovery is not None:
             try:
-                discovery = AutoDataSourceDiscovery(Path(config.data_sources.get("base_path", "public")))
+                discovery = AutoDataSourceDiscovery(PROJECT_ROOT / config.data_sources.get("base_path", "public"))
                 auto_sources = discovery.discover_sources()
                 manual_names = {s["name"] for s in manual_sources}
                 new_auto_sources = [s for s in auto_sources if s["name"] not in manual_names]

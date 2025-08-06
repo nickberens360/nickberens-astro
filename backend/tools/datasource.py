@@ -14,6 +14,9 @@ from typing import Optional
 
 import yaml
 
+# Define project root relative to script location
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 # Add backend to path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
@@ -49,7 +52,7 @@ def list_sources(show_details: bool = False):
 
     # Auto-discoverable sources
     try:
-        base_path = Path(config.data_sources.get("base_path", "public"))
+        base_path = PROJECT_ROOT / config.data_sources.get("base_path", "public")
         discovery = AutoDataSourceDiscovery(base_path)
         auto_sources = discovery.discover_sources()
         manual_names = {s["name"] for s in manual_sources}
@@ -79,7 +82,7 @@ def list_sources(show_details: bool = False):
 def generate_config(source_name: str, output_file: Optional[str] = None):
     """Generate YAML configuration for a specific source."""
     try:
-        base_path = Path(config.data_sources.get("base_path", "public"))
+        base_path = PROJECT_ROOT / config.data_sources.get("base_path", "public")
         discovery = AutoDataSourceDiscovery(base_path)
         auto_sources = discovery.discover_sources()
 
@@ -144,7 +147,7 @@ def add_source(file_path: str, auto_configure: bool = True):
         return
 
     # Copy file to public directory if not already there
-    base_path = Path(config.data_sources.get("base_path", "public"))
+    base_path = PROJECT_ROOT / config.data_sources.get("base_path", "public")
     public_dir = base_path
     if source_path.parent != public_dir:
         target_path = public_dir / source_path.name
