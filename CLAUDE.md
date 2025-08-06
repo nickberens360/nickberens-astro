@@ -107,6 +107,26 @@ public/            # Static data files
 - Provide meaningful error messages
 - Fall back to defaults when config is missing
 
+## Server Deployment Data Sources
+
+### Environment Variables
+- `FORCE_REBUILD_DATA=true` - Force rebuild of unified data file on server startup
+
+### Common Issues
+1. **Data sources not updating on server:**
+   - The build script checks file modification times before rebuilding
+   - If deploying to a server, file timestamps may change
+   - Solution: Set `FORCE_REBUILD_DATA=true` in your server environment
+   
+2. **Manual rebuild:**
+   - Run `python3 backend/scripts/build_unified_data.py --force`
+   - This bypasses the modification time check
+
+3. **File registry:**
+   - Located at `backend/.rag_cache/file_registry.json`
+   - Tracks file modification times
+   - Delete this file to force a full rebuild on next startup
+
 ## Dependencies
 - **Backend:** FastAPI, LangChain, ChromaDB, Anthropic/Google AI APIs
 - **Frontend:** Astro, Vue.js

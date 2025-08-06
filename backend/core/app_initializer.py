@@ -9,6 +9,7 @@ This module handles the initialization of the application state, including:
 """
 
 import logging
+import os
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
@@ -28,8 +29,14 @@ def initialize_app_state():
     Returns:
         tuple: (all_retrievers, illustration_service) - The initialized retrievers and illustration service
     """
+    # Check if we should force rebuild data sources
+    force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
+
+    if force_rebuild:
+        logger.info("Force rebuild enabled via FORCE_REBUILD_DATA environment variable")
+
     logger.info("Checking for data source modifications...")
-    build_unified_data()
+    build_unified_data(force_rebuild=force_rebuild)
     logger.info("Initializing application state with Multi-Vector RAG...")
     docs, illustrations_data = load_all_documents()
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
