@@ -68,4 +68,6 @@ public/unified_data.json
 
 # Log files
 backend/query_logs.json
+query_logs.json
+query_logs/
 *.log
