@@ -65,7 +65,9 @@ def _get_source_file_paths(auto_discover: bool = False) -> List[Path]:
 
             # Get manual source names to avoid duplicates
             manual_names = {
-                Path(config.get_source_file_path(s["name"]) or "").name for s in data_sources_config.get("sources", [])
+                p.name
+                for s in data_sources_config.get("sources", [])
+                if (p := config.get_source_file_path(s["name"])) is not None
             }
 
             # Add paths for auto-discovered sources that aren't manually configured

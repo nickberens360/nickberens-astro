@@ -275,9 +275,6 @@ For optimal auto-discovery results, use these field names when possible:
 # Check what sources are discoverable
 python3 -m backend.tools.datasource list --details
 
-# Test auto-discovery without building
-python3 test_auto_discovery.py
-
 # Generate configuration to see what would be created
 python3 -m backend.tools.datasource generate source_name
 ```
