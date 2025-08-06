@@ -13,6 +13,47 @@ from typing import Any, Dict, List, Optional, Set, Union
 
 logger = logging.getLogger(__name__)
 
+# Common stop words to filter from text extraction
+_STOP_WORDS = {
+    "the",
+    "and",
+    "for",
+    "are",
+    "but",
+    "not",
+    "you",
+    "all",
+    "can",
+    "had",
+    "her",
+    "was",
+    "one",
+    "our",
+    "out",
+    "day",
+    "get",
+    "has",
+    "him",
+    "his",
+    "how",
+    "its",
+    "may",
+    "new",
+    "now",
+    "old",
+    "see",
+    "two",
+    "who",
+    "boy",
+    "did",
+    "she",
+    "use",
+    "way",
+    "what",
+    "when",
+    "with",
+}
+
 
 class AutoDataSourceDiscovery:
     """Handles automatic discovery and configuration of JSON data sources."""
@@ -177,7 +218,11 @@ class AutoDataSourceDiscovery:
         Returns:
             Generated section configuration
         """
-        section_config: Dict[str, Any] = {"name": field_name, "field": field_name, "template": f"{source_name}_{field_name}_template"}
+        section_config: Dict[str, Any] = {
+            "name": field_name,
+            "field": field_name,
+            "template": f"{source_name}_{field_name}_template",
+        }
 
         if isinstance(field_value, list):
             section_config["is_list"] = True
@@ -432,44 +477,4 @@ class AutoDataSourceDiscovery:
         words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
 
         # Filter out common stop words
-        stop_words = {
-            "the",
-            "and",
-            "for",
-            "are",
-            "but",
-            "not",
-            "you",
-            "all",
-            "can",
-            "had",
-            "her",
-            "was",
-            "one",
-            "our",
-            "out",
-            "day",
-            "get",
-            "has",
-            "him",
-            "his",
-            "how",
-            "its",
-            "may",
-            "new",
-            "now",
-            "old",
-            "see",
-            "two",
-            "who",
-            "boy",
-            "did",
-            "she",
-            "use",
-            "way",
-            "what",
-            "when",
-            "with",
-        }
-
-        return [word for word in words if word not in stop_words]
+        return [word for word in words if word not in _STOP_WORDS]
