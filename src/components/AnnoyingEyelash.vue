@@ -1,16 +1,27 @@
 <template>
   <div
+    v-if="isComponentVisible"
     ref="eyelashElement"
     class="annoying-eyelash"
+    :class="{ 'animating': isAnimating }"
     :style="eyelashStyle"
     @pointerdown="startDrag"
   >
     <img
+      v-if="!isEmoji"
       src="/images/eyelash.png"
       alt="Eyelash"
       class="eyelash-image"
       draggable="false"
     />
+    <div
+      v-else
+      class="emoji-display"
+      :class="{ 'animate-up-fade': isAnimating }"
+      @animationend="onAnimationEnd"
+    >
+      😂
+    </div>
   </div>
 </template>
 
@@ -36,6 +47,9 @@ export default {
     const currentY = ref(props.initialY);
     const initialMouseX = ref(0);
     const initialMouseY = ref(0);
+    const dragAttempts = ref(0);
+    const isAnimating = ref(false);
+    const isComponentVisible = ref(true);
 
     const eyelashStyle = computed(() => ({
       top: `${currentY.value}px`,
@@ -45,9 +59,14 @@ export default {
       touchAction: 'none' // Prevent default touch behaviors
     }));
 
+    const isEmoji = computed(() => dragAttempts.value >= 3);
+
     const startDrag = (event) => {
       // Only handle primary pointer (first finger/mouse)
       if (!event.isPrimary) return;
+
+      // Increment drag attempts counter
+      dragAttempts.value++;
 
       isDragging.value = true;
       initialMouseX.value = event.clientX - currentX.value;
@@ -100,6 +119,13 @@ export default {
 
       cleanup();
 
+      // If this is the 3rd attempt, trigger animation when user stops interaction
+      if (dragAttempts.value === 3) {
+        setTimeout(() => {
+          isAnimating.value = true;
+        }, 100);
+      }
+
       // Safe pointer capture release with error handling
       try {
         if (eyelashElement.value && event.pointerId !== undefined) {
@@ -111,6 +137,11 @@ export default {
       }
     };
 
+    const onAnimationEnd = () => {
+      // Hide the entire component after animation completes
+      isComponentVisible.value = false;
+    };
+
     onUnmounted(() => {
       // Use defensive cleanup to ensure all listeners are removed
       cleanup();
@@ -119,7 +150,11 @@ export default {
     return {
       eyelashElement,
       eyelashStyle,
-      startDrag
+      startDrag,
+      isEmoji,
+      isAnimating,
+      isComponentVisible,
+      onAnimationEnd
     };
   }
 };
@@ -130,7 +165,6 @@ export default {
   position: fixed;
   z-index: 9999;
   transition: none;
-  opacity: .45;
   width: 44px;
   height: 44px;
   display: flex;
@@ -150,6 +184,7 @@ export default {
   height: auto;
   pointer-events: none;
   display: block;
+  opacity: .45;
 }
 
 /* Prevent image dragging */
@@ -159,5 +194,28 @@ export default {
   -moz-user-drag: none;
   -o-user-drag: none;
   user-drag: none;
+}
+
+.emoji-display {
+  font-size: 48px;
+  pointer-events: none;
+  display: block;
+  line-height: 1;
+}
+
+/* Animation for emoji moving up and fading out */
+@keyframes upAndFade {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+}
+
+.animate-up-fade {
+  animation: upAndFade 2s ease-out forwards;
 }
 </style>
