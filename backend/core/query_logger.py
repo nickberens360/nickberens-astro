@@ -105,17 +105,10 @@ class QueryLogger:
         }
 
         try:
-            # Read existing logs
-            logs = self._read_logs()
-
-            # Add new entry
-            logs.append(log_entry)
-
-            # Write back to file
-            with open(self.log_file_path, "w") as f:
-                json.dump(logs, f, indent=2, default=str)
-
-        except Exception as e:
+            # Append to file in JSONL format for efficiency and safety
+            with open(self.log_file_path, "a") as f:
+                f.write(json.dumps(log_entry, default=str) + "\n")
+        except (IOError, TypeError) as e:
             self.logger.error(f"Failed to log query: {e}")
 
     def log_streaming_query(
@@ -239,13 +232,23 @@ class QueryLogger:
             return {"error": str(e)}
 
     def _read_logs(self) -> List[Dict[str, Any]]:
-        """Read logs from file."""
+        """Read logs from JSONL file."""
+        logs = []
         try:
             with open(self.log_file_path, "r") as f:
-                data = json.load(f)
-                return data if isinstance(data, list) else []
-        except (json.JSONDecodeError, FileNotFoundError):
-            return []
+                for line in f:
+                    line = line.strip()
+                    if line:  # Skip empty lines
+                        try:
+                            log_entry = json.loads(line)
+                            logs.append(log_entry)
+                        except json.JSONDecodeError:
+                            # Skip malformed lines but continue processing
+                            continue
+        except FileNotFoundError:
+            # File doesn't exist yet, return empty list
+            pass
+        return logs
 
     def clear_logs(self) -> bool:
         """
@@ -255,8 +258,9 @@ class QueryLogger:
             True if successful, False otherwise
         """
         try:
-            with open(self.log_file_path, "w") as f:
-                json.dump([], f)
+            # Create empty file for JSONL format
+            with open(self.log_file_path, "w"):
+                pass  # Just create/truncate the file
             return True
         except Exception as e:
             self.logger.error(f"Failed to clear logs: {e}")

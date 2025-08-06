@@ -8,10 +8,12 @@ This module provides a protected endpoint to:
 """
 
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
+from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..core.config import AppConfig
@@ -156,3 +158,20 @@ async def query_logs_health():
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
+
+
+@router.get("/query-logs/admin", response_class=HTMLResponse)
+async def query_logs_admin_page():
+    """
+    Serve the query logs admin web interface.
+
+    This endpoint serves a web interface for managing query logs.
+    No authentication required for serving the page (auth happens via API calls).
+    """
+    template_path = Path(__file__).parent.parent / "templates" / "query_logs_admin.html"
+
+    try:
+        with open(template_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Admin page template not found")
