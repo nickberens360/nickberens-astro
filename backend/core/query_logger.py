@@ -45,16 +45,23 @@ class QueryLogger:
         self.excluded_ips = excluded_ips or set()
 
         # Load excluded IPs from environment if available
-        excluded_ips_env = getattr(AppConfig, "EXCLUDED_IPS", None)
-        if excluded_ips_env:
-            # Support comma-separated IPs in environment variable
-            env_ips = [ip.strip() for ip in excluded_ips_env.split(",")]
-            self.excluded_ips.update(env_ips)
+        config = AppConfig()
+        try:
+            excluded_ips_list = config.EXCLUDED_IPS
+            if excluded_ips_list:
+                self.excluded_ips.update(excluded_ips_list)
+        except Exception as e:
+            self.logger.warning(f"Failed to load excluded IPs: {e}")
 
         # IP anonymization settings
-        self.anonymize_ips = getattr(AppConfig, "ANONYMIZE_IPS", True)
+        self.anonymize_ips = AppConfig.ANONYMIZE_IPS
         # Salt for IP hashing - should be kept secret and consistent
-        self.ip_salt = getattr(AppConfig, "IP_HASH_SALT", "default-salt-change-in-production")
+        try:
+            self.ip_salt = config.IP_HASH_SALT
+        except ValueError as e:
+            # In production, this will raise if not set
+            self.logger.error(f"Failed to get IP hash salt: {e}")
+            raise
 
     def anonymize_ip(self, ip_address: str) -> str:
         """
@@ -292,25 +299,6 @@ class QueryLogger:
         except Exception as e:
             self.logger.error(f"Failed to get log stats: {e}")
             return {"error": str(e)}
-
-    def _read_logs(self) -> List[Dict[str, Any]]:
-        """Read logs from JSONL file."""
-        logs = []
-        try:
-            with open(self.log_file_path, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:  # Skip empty lines
-                        try:
-                            log_entry = json.loads(line)
-                            logs.append(log_entry)
-                        except json.JSONDecodeError:
-                            # Skip malformed lines but continue processing
-                            continue
-        except FileNotFoundError:
-            # File doesn't exist yet, return empty list
-            pass
-        return logs
 
     def clear_logs(self) -> bool:
         """

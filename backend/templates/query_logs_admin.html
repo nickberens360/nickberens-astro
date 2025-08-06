@@ -10,20 +10,20 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
             background: #f5f5f5;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         .header {
             background: white;
             padding: 20px;
@@ -31,7 +31,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        
+
         .auth-section {
             background: white;
             padding: 20px;
@@ -39,18 +39,18 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        
+
         .main-content {
             display: none;
         }
-        
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
-        
+
         .stat-card {
             background: white;
             padding: 20px;
@@ -58,14 +58,14 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             text-align: center;
         }
-        
+
         .stat-number {
             font-size: 2em;
             font-weight: bold;
             color: #007acc;
             display: block;
         }
-        
+
         .controls {
             background: white;
             padding: 20px;
@@ -73,21 +73,21 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        
+
         .filter-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin-bottom: 15px;
         }
-        
+
         .logs-section {
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
+
         .log-entry {
             border: 1px solid #e0e0e0;
             border-radius: 8px;
@@ -95,20 +95,20 @@
             margin-bottom: 15px;
             background: #fafafa;
         }
-        
+
         .log-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
             flex-wrap: wrap;
         }
-        
+
         .log-timestamp {
             color: #666;
             font-size: 0.9em;
         }
-        
+
         .log-meta {
             display: flex;
             gap: 15px;
@@ -116,13 +116,13 @@
             font-size: 0.9em;
             flex-wrap: wrap;
         }
-        
+
         .log-meta span {
             background: #e9ecef;
             padding: 4px 8px;
             border-radius: 4px;
         }
-        
+
         .log-question {
             background: #e3f2fd;
             padding: 10px;
@@ -130,21 +130,21 @@
             margin-bottom: 10px;
             font-weight: bold;
         }
-        
+
         .log-response {
             background: #f3e5f5;
             padding: 10px;
             border-radius: 4px;
             font-style: italic;
         }
-        
+
         input, select, button {
             padding: 8px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
         }
-        
+
         button {
             background: #007acc;
             color: white;
@@ -152,25 +152,25 @@
             cursor: pointer;
             transition: background 0.3s;
         }
-        
+
         button:hover {
             background: #005999;
         }
-        
+
         .danger-btn {
             background: #dc3545;
         }
-        
+
         .danger-btn:hover {
             background: #c82333;
         }
-        
+
         .loading {
             text-align: center;
             padding: 20px;
             color: #666;
         }
-        
+
         .error {
             background: #f8d7da;
             color: #721c24;
@@ -178,7 +178,7 @@
             border-radius: 4px;
             margin-bottom: 15px;
         }
-        
+
         .success {
             background: #d4edda;
             color: #155724;
@@ -186,21 +186,21 @@
             border-radius: 4px;
             margin-bottom: 15px;
         }
-        
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
             }
-            
+
             .filter-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .log-header {
                 flex-direction: column;
                 align-items: flex-start;
             }
-            
+
             .log-meta {
                 flex-direction: column;
                 gap: 5px;
@@ -286,9 +286,9 @@
                 showAuthStatus('Please enter an auth token', 'error');
                 return;
             }
-            
+
             authToken = token;
-            
+
             // Test the token by fetching stats
             fetch('/admin/query-logs/stats', {
                 headers: {
@@ -329,7 +329,7 @@
         // Stats loading
         function loadStats() {
             if (!authToken) return;
-            
+
             fetch('/admin/query-logs/stats', {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
@@ -348,7 +348,7 @@
 
         function displayStats(stats) {
             const statsGrid = document.getElementById('statsGrid');
-            
+
             let html = `
                 <div class="stat-card">
                     <span class="stat-number">${stats.total_queries || 0}</span>
@@ -359,7 +359,7 @@
                     <div>Unique IPs</div>
                 </div>
             `;
-            
+
             if (stats.query_types) {
                 Object.entries(stats.query_types).forEach(([type, count]) => {
                     html += `
@@ -370,7 +370,7 @@
                     `;
                 });
             }
-            
+
             if (stats.models_used) {
                 Object.entries(stats.models_used).forEach(([model, count]) => {
                     html += `
@@ -381,26 +381,26 @@
                     `;
                 });
             }
-            
+
             statsGrid.innerHTML = html;
         }
 
         // Logs loading
         function loadLogs() {
             if (!authToken) return;
-            
+
             const limit = document.getElementById('limitFilter').value;
             const startDate = document.getElementById('startDateFilter').value;
             const endDate = document.getElementById('endDateFilter').value;
             const queryType = document.getElementById('queryTypeFilter').value;
-            
+
             let url = `/admin/query-logs?limit=${limit}`;
             if (startDate) url += `&start_date=${startDate}`;
             if (endDate) url += `&end_date=${endDate}`;
             if (queryType) url += `&query_type=${queryType}`;
-            
+
             document.getElementById('logsContainer').innerHTML = '<div class="loading">Loading logs...</div>';
-            
+
             fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
@@ -418,17 +418,17 @@
 
         function displayLogs(logs) {
             const container = document.getElementById('logsContainer');
-            
+
             if (!logs || logs.length === 0) {
                 container.innerHTML = '<div class="loading">No logs found with current filters</div>';
                 return;
             }
-            
+
             let html = '';
             logs.forEach(log => {
                 const timestamp = new Date(log.timestamp).toLocaleString();
                 const responseTime = Math.round(log.response_time * 1000);
-                
+
                 html += `
                     <div class="log-entry">
                         <div class="log-header">
@@ -449,18 +449,18 @@
                     </div>
                 `;
             });
-            
+
             container.innerHTML = html;
         }
 
         // Clear logs
         function clearLogs() {
             if (!authToken) return;
-            
+
             if (!confirm('Are you sure you want to clear ALL logs? This action cannot be undone.')) {
                 return;
             }
-            
+
             fetch('/admin/query-logs', {
                 method: 'DELETE',
                 headers: {

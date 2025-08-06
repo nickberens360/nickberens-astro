@@ -38,13 +38,19 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
     Raises:
         HTTPException: If token is invalid or missing
     """
-    if not AppConfig.QUERY_LOG_AUTH_TOKEN:
+    config = AppConfig()
+    try:
+        auth_token = config.QUERY_LOG_AUTH_TOKEN
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    if not auth_token:
         raise HTTPException(
             status_code=503, detail="Query log access is not configured. Set QUERY_LOG_AUTH_TOKEN environment variable."
         )
 
     token = str(credentials.credentials)
-    if not hmac.compare_digest(token, AppConfig.QUERY_LOG_AUTH_TOKEN):
+    if not hmac.compare_digest(token, auth_token):
         raise HTTPException(status_code=403, detail="Invalid authorization token")
 
     return token
@@ -155,7 +161,7 @@ async def query_logs_health():
             "log_file_exists": logger.log_file_path.exists(),
             "total_logs": stats.get("total_queries", 0),
             "excluded_ips_count": len(logger.excluded_ips),
-            "auth_configured": bool(AppConfig.QUERY_LOG_AUTH_TOKEN),
+            "auth_configured": bool(getattr(AppConfig(), "QUERY_LOG_AUTH_TOKEN", None)),
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
