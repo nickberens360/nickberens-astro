@@ -365,7 +365,12 @@ class AutoDataSourceDiscovery:
             else:
                 template_parts.append(f"{field.title()}: {{{field}}}")
 
-        return "\n".join(template_parts) if template_parts else "{title}"
+        if template_parts:
+            return "\n".join(template_parts)
+        if sorted_fields:
+            return f"{{{sorted_fields[0]}}}"
+        logger.warning(f"Could not generate a template for source {source_config['name']}")
+        return ""
 
     def _generate_section_template(self, section_config: Dict[str, Any]) -> str:
         """Generate template for a section.

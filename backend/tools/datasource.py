@@ -97,7 +97,7 @@ def generate_config(source_name: str, output_file: Optional[str] = None):
 
         # Load sample data for retriever config
         data_path = Path("public") / target_source["file"]
-        with open(data_path, "r") as f:
+        with open(data_path, "r", encoding="utf-8") as f:
             sample_data = json.load(f)
 
         retriever_config = discovery.generate_retriever_config(source_name, sample_data)
