@@ -1,7 +1,9 @@
+import ipaddress
 import logging
 import os
 import re
-from typing import List
+import secrets
+from typing import List, Optional
 from urllib.parse import urlparse
 
 # Set up logging
@@ -160,6 +162,73 @@ class AppConfig:
 
     # Rate Limiting
     RATE_LIMIT = os.getenv("RATE_LIMIT", "5/minute")
+
+    # Query Logging Configuration
+    @classmethod
+    def get_excluded_ips(cls) -> List[str]:
+        """Get and validate excluded IPs from environment."""
+        excluded_ips_str = os.getenv("EXCLUDED_IPS", "")
+        if not excluded_ips_str:
+            return []
+
+        excluded_ips = []
+        for ip in excluded_ips_str.split(","):
+            ip = ip.strip()
+            if ip:
+                try:
+                    # Validate IP address format
+                    ipaddress.ip_address(ip)
+                    excluded_ips.append(ip)
+                except ValueError:
+                    logger.warning(f"Invalid IP address in EXCLUDED_IPS: {ip}")
+
+        return excluded_ips
+
+    EXCLUDED_IPS = property(lambda self: self.get_excluded_ips())
+
+    # Query Log Authentication
+    @classmethod
+    def get_query_log_auth_token(cls) -> Optional[str]:
+        """Get query log auth token with production enforcement."""
+        token = os.getenv("QUERY_LOG_AUTH_TOKEN", "")
+        environment = os.getenv("ENV", "development").lower()
+
+        if environment in ["production", "prod"] and not token:
+            raise ValueError(
+                "QUERY_LOG_AUTH_TOKEN must be set in production environments. "
+                "Generate a secure token and set it as an environment variable."
+            )
+
+        return token if token else None
+
+    QUERY_LOG_AUTH_TOKEN = property(lambda self: self.get_query_log_auth_token())
+
+    # IP Anonymization Settings (GDPR/CCPA compliance)
+    ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default
+
+    @classmethod
+    def get_ip_hash_salt(cls) -> str:
+        """Get IP hash salt with secure default generation."""
+        salt = os.getenv("IP_HASH_SALT", "")
+        environment = os.getenv("ENV", "development").lower()
+
+        if not salt:
+            if environment in ["production", "prod"]:
+                raise ValueError(
+                    "IP_HASH_SALT must be explicitly set in production environments. "
+                    "Generate a secure salt using: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
+            else:
+                # Generate a secure random salt for development
+                salt = secrets.token_urlsafe(32)
+                logger.warning(
+                    f"Using generated IP_HASH_SALT for development: {salt[:8]}... "
+                    "Set IP_HASH_SALT environment variable for consistent hashing."
+                )
+
+        return salt
+
+    IP_HASH_SALT = property(lambda self: self.get_ip_hash_salt())
 
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
