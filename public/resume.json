@@ -1,25 +1,82 @@
 {
   "summary": "Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends.",
   "skills": [
-    {"name": "Vue.js", "category": "Frontend Frameworks"},
-    {"name": "Nuxt.js", "category": "Frontend Frameworks"},
-    {"name": "Vuetify.js", "category": "UI Libraries"},
-    {"name": "Vuex/Pinia", "category": "State Management"},
-    {"name": "Vue Router", "category": "Routing"},
-    {"name": "JavaScript", "category": "Languages"},
-    {"name": "CSS/Scss", "category": "Styling"},
-    {"name": "Responsive CSS Design", "category": "Styling"},
-    {"name": "WordPress", "category": "CMS"},
-    {"name": "Prismic.io CMS", "category": "CMS"},
-    {"name": "GIT", "category": "Version Control"},
-    {"name": "Agile Development", "category": "Methodologies"},
-    {"name": "Netlify", "category": "Deployment"},
-    {"name": "Chart.js", "category": "Data Visualization"},
-    {"name": "IntelliJ IDEA", "category": "Software Tools"},
-    {"name": "Adobe Photoshop", "category": "Software Tools"},
-    {"name": "Adobe XD", "category": "Software Tools"},
-    {"name": "Sketch", "category": "Software Tools"},
-    {"name": "Atlassian Software", "category": "Software Tools"}
+    {
+      "name": "Vue.js",
+      "category": "Frontend Frameworks"
+    },
+    {
+      "name": "Nuxt.js",
+      "category": "Frontend Frameworks"
+    },
+    {
+      "name": "Vuetify.js",
+      "category": "UI Libraries"
+    },
+    {
+      "name": "Vuex/Pinia",
+      "category": "State Management"
+    },
+    {
+      "name": "Vue Router",
+      "category": "Routing"
+    },
+    {
+      "name": "JavaScript",
+      "category": "Languages"
+    },
+    {
+      "name": "CSS/Scss",
+      "category": "Styling"
+    },
+    {
+      "name": "Responsive CSS Design",
+      "category": "Styling"
+    },
+    {
+      "name": "WordPress",
+      "category": "CMS"
+    },
+    {
+      "name": "Prismic.io CMS",
+      "category": "CMS"
+    },
+    {
+      "name": "GIT",
+      "category": "Version Control"
+    },
+    {
+      "name": "Agile Development",
+      "category": "Methodologies"
+    },
+    {
+      "name": "Netlify",
+      "category": "Deployment"
+    },
+    {
+      "name": "Chart.js",
+      "category": "Data Visualization"
+    },
+    {
+      "name": "IntelliJ IDEA",
+      "category": "Software Tools"
+    },
+    {
+      "name": "Adobe Photoshop",
+      "category": "Software Tools"
+    },
+    {
+      "name": "Adobe XD",
+      "category": "Software Tools"
+    },
+    {
+      "name": "Sketch",
+      "category": "Software Tools"
+    },
+    {
+      "name": "Atlassian Software",
+      "category": "Software Tools"
+    }
   ],
   "experience": [
     {
@@ -36,6 +93,7 @@
         "Led an initiative to integrate Cypress into our workflow to ensure feature integrity through end-to-end testing.",
         "Led product feature design initiatives using Adobe XD, reducing workload for the design team when needed.",
         "Actively contributed to daily standups, sprint planning and retrospectives to ensure project alignment and continuous improvement."
+
       ]
     },
     {
@@ -57,7 +115,10 @@
       "role": "Frontend Developer Intern",
       "dates": "6/2012 – 8/2012",
       "location": "Appleton, WI",
-      "points": ["Wrote semantic HTML and scalable CSS per issue requests at Thrivent Financial."]
+      "points": [
+        "Wrote semantic HTML and scalable CSS per issue requests at Thrivent Financial."
+
+      ]
     }
   ],
   "education": [
