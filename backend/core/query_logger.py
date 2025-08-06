@@ -8,6 +8,7 @@ This module provides functionality to:
 - Provide methods to read and search logs
 """
 
+import hashlib
 import json
 import logging
 from datetime import datetime
@@ -50,12 +51,47 @@ class QueryLogger:
             env_ips = [ip.strip() for ip in excluded_ips_env.split(",")]
             self.excluded_ips.update(env_ips)
 
+        # IP anonymization settings
+        self.anonymize_ips = getattr(AppConfig, "ANONYMIZE_IPS", True)
+        # Salt for IP hashing - should be kept secret and consistent
+        self.ip_salt = getattr(AppConfig, "IP_HASH_SALT", "default-salt-change-in-production")
+
+    def anonymize_ip(self, ip_address: str) -> str:
+        """
+        Anonymize an IP address using SHA-256 hashing with salt.
+
+        The hash is truncated to 16 characters for readability while maintaining
+        sufficient entropy to prevent collisions in typical use cases.
+
+        Args:
+            ip_address: The raw IP address to anonymize
+
+        Returns:
+            Anonymized IP address (16-character hash) or original if anonymization is disabled
+        """
+        if not self.anonymize_ips:
+            return ip_address
+
+        # Combine IP with salt for better security
+        salted_ip = f"{ip_address}{self.ip_salt}".encode("utf-8")
+
+        # Create SHA-256 hash
+        hash_object = hashlib.sha256(salted_ip)
+        hash_hex = hash_object.hexdigest()
+
+        # Return first 16 characters of hash for readability
+        # This provides ~64 bits of entropy, sufficient for most use cases
+        return f"anon_{hash_hex[:16]}"
+
     def should_log_ip(self, client_ip: str) -> bool:
         """
         Check if queries from this IP should be logged.
 
+        Note: This check is performed on the raw IP address before anonymization,
+        allowing excluded IPs to be specified in their original form.
+
         Args:
-            client_ip: The client's IP address
+            client_ip: The client's IP address (raw, not anonymized)
 
         Returns:
             True if the IP should be logged, False otherwise
@@ -88,9 +124,12 @@ class QueryLogger:
         if not self.should_log_ip(client_ip):
             return
 
+        # Anonymize IP address before logging
+        anonymized_ip = self.anonymize_ip(client_ip)
+
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),
-            "client_ip": client_ip,
+            "client_ip": anonymized_ip,
             "question": question,
             "response": response,
             "model_used": model_used,
@@ -154,32 +193,36 @@ class QueryLogger:
             List of log entries matching the criteria
         """
         try:
-            logs = self._read_logs()
 
-            # Apply date filters
-            if start_date or end_date:
-                filtered_logs = []
-                for log in logs:
-                    log_date = log.get("timestamp", "")
-                    if start_date and log_date < start_date:
-                        continue
-                    if end_date and log_date > end_date:
-                        continue
-                    filtered_logs.append(log)
-                logs = filtered_logs
+            def _log_stream():
+                """Stream logs from file without loading all into memory."""
+                try:
+                    with open(self.log_file_path, "r") as f:
+                        for line in f:
+                            if line.strip():
+                                try:
+                                    yield json.loads(line)
+                                except json.JSONDecodeError:
+                                    continue
+                except FileNotFoundError:
+                    pass
 
-            # Apply query type filter
-            if query_type:
-                logs = [log for log in logs if log.get("query_type") == query_type]
+            # Apply filters using generator expression for memory efficiency
+            filtered_logs = (
+                log
+                for log in _log_stream()
+                if (not start_date or log.get("timestamp", "") >= start_date)
+                and (not end_date or log.get("timestamp", "") <= end_date)
+                and (not query_type or log.get("query_type") == query_type)
+            )
 
-            # Sort by timestamp (newest first)
-            logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+            # Sort logs (requires materializing the generator)
+            sorted_logs = sorted(filtered_logs, key=lambda x: x.get("timestamp", ""), reverse=True)
 
             # Apply limit
             if limit:
-                logs = logs[:limit]
-
-            return logs
+                return sorted_logs[:limit]
+            return sorted_logs
 
         except Exception as e:
             self.logger.error(f"Failed to retrieve logs: {e}")
@@ -193,34 +236,58 @@ class QueryLogger:
             Dictionary containing log statistics
         """
         try:
-            logs = self._read_logs()
-
-            if not logs:
-                return {"total_queries": 0}
-
+            total_queries = 0
+            unique_ips: Set[str] = set()
             query_types: Dict[str, int] = {}
             models_used: Dict[str, int] = {}
+            earliest_ts: Optional[str] = None
+            latest_ts: Optional[str] = None
 
-            # Count query types and models
-            for log in logs:
-                query_type = log.get("query_type", "unknown")
-                model = log.get("model_used", "unknown")
+            try:
+                with open(self.log_file_path, "r") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            log = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
 
-                query_types[query_type] = query_types.get(query_type, 0) + 1
-                models_used[model] = models_used.get(model, 0) + 1
+                        total_queries += 1
 
-            stats = {
-                "total_queries": len(logs),
-                "unique_ips": len(set(log.get("client_ip", "") for log in logs)),
+                        client_ip = log.get("client_ip")
+                        if client_ip:
+                            unique_ips.add(client_ip)
+
+                        query_type = log.get("query_type", "unknown")
+                        query_types[query_type] = query_types.get(query_type, 0) + 1
+
+                        model = log.get("model_used", "unknown")
+                        models_used[model] = models_used.get(model, 0) + 1
+
+                        timestamp = log.get("timestamp", "")
+                        if timestamp:
+                            if earliest_ts is None or timestamp < earliest_ts:
+                                earliest_ts = timestamp
+                            if latest_ts is None or timestamp > latest_ts:
+                                latest_ts = timestamp
+            except FileNotFoundError:
+                return {"total_queries": 0}
+
+            if total_queries == 0:
+                return {"total_queries": 0}
+
+            return {
+                "total_queries": total_queries,
+                "unique_ips": len(unique_ips),
                 "query_types": query_types,
                 "models_used": models_used,
                 "date_range": {
-                    "earliest": min(log.get("timestamp", "") for log in logs),
-                    "latest": max(log.get("timestamp", "") for log in logs),
+                    "earliest": earliest_ts or "",
+                    "latest": latest_ts or "",
                 },
             }
-
-            return stats
 
         except Exception as e:
             self.logger.error(f"Failed to get log stats: {e}")

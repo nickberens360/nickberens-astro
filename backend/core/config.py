@@ -165,6 +165,10 @@ class AppConfig:
     EXCLUDED_IPS = os.getenv("EXCLUDED_IPS", "")  # Comma-separated list of IPs to exclude from logging
     QUERY_LOG_AUTH_TOKEN = os.getenv("QUERY_LOG_AUTH_TOKEN", "")  # Token for accessing query logs
 
+    # IP Anonymization Settings (GDPR/CCPA compliance)
+    ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default
+    IP_HASH_SALT = os.getenv("IP_HASH_SALT", "default-salt-change-in-production")  # Salt for IP hashing
+
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
     APP_DESCRIPTION = "API for AI-powered responses and illustration search with Claude as primary LLM"
