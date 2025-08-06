@@ -40,11 +40,6 @@ class QueryLogger:
         # Ensure log file exists
         self.log_file_path.touch(exist_ok=True)
 
-        # Initialize with empty list if file is empty
-        if self.log_file_path.stat().st_size == 0:
-            with open(self.log_file_path, "w") as f:
-                json.dump([], f)
-
         # Set excluded IPs (can be loaded from config)
         self.excluded_ips = excluded_ips or set()
 
