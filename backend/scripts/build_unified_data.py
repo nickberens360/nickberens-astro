@@ -38,22 +38,54 @@ def _load_file_registry() -> Dict[str, Any]:
         return {}
 
 
-def _get_source_file_paths() -> List[Path]:
-    """Get all source file paths that should be checked for modifications."""
+def _get_source_file_paths(auto_discover: bool = False) -> List[Path]:
+    """Get all source file paths that should be checked for modifications.
+
+    Args:
+        auto_discover: If True, include auto-discoverable JSON files
+
+    Returns:
+        List of source file paths to check for modifications
+    """
     source_paths = []
     data_sources_config = config.data_sources
 
+    # Add manually configured sources
     for source in data_sources_config.get("sources", []):
         source_path = config.get_source_file_path(source["name"])
         if source_path:
             source_paths.append(source_path)
 
+    # Add auto-discoverable sources if requested
+    if auto_discover and AutoDataSourceDiscovery is not None:
+        try:
+            base_path = Path(data_sources_config.get("base_path", "public"))
+            discovery = AutoDataSourceDiscovery(base_path)
+            auto_sources = discovery.discover_sources()
+
+            # Get manual source names to avoid duplicates
+            manual_names = {
+                Path(config.get_source_file_path(s["name"]) or "").name for s in data_sources_config.get("sources", [])
+            }
+
+            # Add paths for auto-discovered sources that aren't manually configured
+            for auto_source in auto_sources:
+                auto_file_path = base_path / auto_source["file"]
+                if auto_file_path.name not in manual_names and auto_file_path.exists():
+                    source_paths.append(auto_file_path)
+
+        except Exception as e:
+            print(f"⚠️ Error during auto-discovery path lookup: {e}")
+
     return source_paths
 
 
-def _files_modified_since_last_build() -> bool:
+def _files_modified_since_last_build(auto_discover: bool = False) -> bool:
     """
     Check if any source files have been modified since the last build.
+
+    Args:
+        auto_discover: If True, also check for new auto-discoverable JSON files
 
     Returns:
         bool: True if files have been modified or registry is missing, False otherwise
@@ -63,7 +95,7 @@ def _files_modified_since_last_build() -> bool:
         print("📝 File registry not found, rebuild required")
         return True
 
-    source_paths = _get_source_file_paths()
+    source_paths = _get_source_file_paths(auto_discover=auto_discover)
 
     for source_path in source_paths:
         if not source_path.exists():
@@ -94,8 +126,12 @@ def _files_modified_since_last_build() -> bool:
     return False
 
 
-def _update_file_registry() -> None:
-    """Update the file registry with current file information."""
+def _update_file_registry(auto_discover: bool = False) -> None:
+    """Update the file registry with current file information.
+
+    Args:
+        auto_discover: If True, include auto-discoverable files in registry
+    """
     registry_path = _get_file_registry_path()
     registry_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -103,7 +139,7 @@ def _update_file_registry() -> None:
     registry = _load_file_registry()
 
     # Update entries for source files
-    source_paths = _get_source_file_paths()
+    source_paths = _get_source_file_paths(auto_discover=auto_discover)
 
     for source_path in source_paths:
         if source_path.exists():
@@ -233,7 +269,7 @@ def build_unified_data(force_rebuild: bool = False, auto_discover: bool = False)
         print(f"✅ Structured unified data file created at {output_path}")
 
         # Update file registry after successful build
-        _update_file_registry()
+        _update_file_registry(auto_discover=auto_discover)
 
     except (IOError, OSError) as e:
         print(f"❌ Failed to write unified data file: {e}")
@@ -254,7 +290,7 @@ def watch_mode(auto_discover: bool = False):
         while True:
             try:
                 # Check if files have been modified
-                if _files_modified_since_last_build():
+                if _files_modified_since_last_build(auto_discover=auto_discover):
                     current_time = time.time()
                     # Debounce rapid file changes (wait at least 2 seconds)
                     if current_time - last_build_time > 2:
