@@ -11,7 +11,7 @@
     "title": "RAG Chat System",
     "description": "AI-powered chat system using retrieval-augmented generation with LangChain",
     "technologies": ["Python", "LangChain", "FastAPI", "Vue.js"],
-    "year": "2024",
+    "year": "2025",
     "status": "In Development",
     "features": ["Auto-discovery", "Vector search", "Context-aware responses"]
   },

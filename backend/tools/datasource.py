@@ -136,7 +136,8 @@ def generate_config(source_name: str, output_file: Optional[str] = None):
 
 def add_source(file_path: str, auto_configure: bool = True):
     """Add a new data source."""
-    source_path = Path(file_path)
+
+    source_path = Path(file_path).resolve()
 
     if not source_path.exists():
         print(f"❌ File not found: {file_path}")
