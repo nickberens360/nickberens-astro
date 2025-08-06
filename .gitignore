@@ -65,3 +65,7 @@ env/
 
 # Generated data files
 public/unified_data.json
+
+# Log files
+backend/query_logs.json
+*.log
