@@ -467,12 +467,6 @@ export default {
   font-size: 12px;
 }
 
-/*.backend-status {
-  background-color: #222222;
-  padding: .25rem 1rem;
-  border-radius: 4px;
-}*/
-
 .backend-status__item {
   position: relative;
   display: flex;

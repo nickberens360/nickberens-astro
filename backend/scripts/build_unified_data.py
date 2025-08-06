@@ -209,7 +209,7 @@ def build_unified_data(force_rebuild: bool = False, auto_discover: bool = False)
         auto_discover: If True, automatically discover and include JSON files
     """
     # Check if rebuild is needed (unless forced)
-    if not force_rebuild and not _files_modified_since_last_build():
+    if not force_rebuild and not _files_modified_since_last_build(auto_discover=auto_discover):
         print("⏭️ Skipping build - no source files have been modified")
         return
 
