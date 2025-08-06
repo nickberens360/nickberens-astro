@@ -7,6 +7,7 @@ This module provides a protected endpoint to:
 - Clear logs (admin function)
 """
 
+import hmac
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -43,7 +44,7 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
         )
 
     token = str(credentials.credentials)
-    if token != AppConfig.QUERY_LOG_AUTH_TOKEN:
+    if not hmac.compare_digest(token, AppConfig.QUERY_LOG_AUTH_TOKEN):
         raise HTTPException(status_code=403, detail="Invalid authorization token")
 
     return token
