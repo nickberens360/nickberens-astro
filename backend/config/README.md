@@ -64,7 +64,7 @@ projects:
 
 3. Run the build script to regenerate the unified data:
 ```bash
-python backend/scripts/build_unified_data.py
+python3 backend/scripts/build_unified_data.py
 ```
 
 ### Modifying Prompts

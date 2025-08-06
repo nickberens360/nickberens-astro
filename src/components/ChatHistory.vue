@@ -48,33 +48,36 @@
         >New Chat</span>
       </button>
     </div>
-    <p v-if="isVisible" class="history-heading">Recent</p>
+    <p
+      v-if="isVisible"
+      class="history-heading"
+    >Recent</p>
     <div
       :class="{ 'disabled-history-items': hasTypingMessage || isProcessing }"
     >
-    <div
-      v-if="isVisible"
-      class="history-list"
-    >
       <div
-        v-for="chat in chatList"
-        :key="chat.id"
-        :class="['history-item', { 'active': chat.id === currentChatId }]"
-        @click="handleSelectChat(chat.id)"
+        v-if="isVisible"
+        class="history-list"
       >
-        {{ chat.title }}
+        <div
+          v-for="chat in chatList"
+          :key="chat.id"
+          :class="['history-item', { 'active': chat.id === currentChatId }]"
+          @click="handleSelectChat(chat.id)"
+        >
+          {{ chat.title }}
+        </div>
+      </div>
+      <div v-else>
+        <div
+          class="history-item-collapsed"
+          @click="toggleVisibility"
+        >
+          {{ chatList.length }}
+        </div>
       </div>
     </div>
-    <div v-else>
-      <div
-        class="history-item-collapsed"
-        @click="toggleVisibility"
-      >
-        {{ chatList.length }}
-      </div>
-    </div>
-    </div>
-    <div class="mt-auto">
+    <div v-if="false" class="mt-auto">
       <p
         v-if="isVisible"
         class="text-center text-italic text-hint"
@@ -93,11 +96,23 @@
         >Clear localStorage</span>
       </button>
     </div>
+    <div class="backend-status mt-auto">
+      <p
+        v-if="backendStatusValue === 'online'"
+        class="backend-status__item online"
+      ><span v-if="isVisible" class="ml-2">Backend is online</span></p>
+      <p
+        v-else
+        class="backend-status__item offline"
+      ><span v-if="isVisible" class="ml-2">Backend is offline</span></p>
+
+    </div>
   </div>
 </template>
 
 <script>
 import { useStore } from '@nanostores/vue';
+import { backendStatus } from '../stores/backendStatus.js';
 import {
   allChats,
   activeChatId,
@@ -123,6 +138,7 @@ export default {
     const currentChatId = useStore(activeChatId);
     const isVisible = useStore(isChatHistoryVisible);
     const isProcessing = useStore(isChatProcessing);
+    const backendStatusValue = useStore(backendStatus);
 
     // Check if any message across ALL chats is currently typing
     const hasTypingMessage = computed(() => {
@@ -258,7 +274,8 @@ export default {
       handleSelectChat,
       isVisible,
       toggleVisibility,
-      clearLocalStorage
+      clearLocalStorage,
+      backendStatusValue
     };
   },
 };
@@ -316,6 +333,7 @@ export default {
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
+
 .button-group {
   display: flex;
   justify-content: space-between;
@@ -336,11 +354,10 @@ export default {
 .collapsed .collapse-icon-button {
   margin-bottom: 1rem;
 }
+
 .collapsed .history-item-collapsed {
   margin-top: 0 !important;
 }
-
-
 
 
 .new-chat-button:disabled,
@@ -412,11 +429,13 @@ export default {
   top: 50%;
   transform: translateY(0) rotate(30deg);
 }
+
 .disabled-history-items .history-item {
   pointer-events: none;
   opacity: 0.5;
   cursor: not-allowed;
 }
+
 /* Add style for the clear localStorage button */
 .clear-storage-button {
   margin-top: auto;
@@ -447,4 +466,38 @@ export default {
   margin-top: 0.5rem;
   font-size: 12px;
 }
+
+.backend-status__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 0;
+  margin: 0;
+}
+.backend-status__item::before {
+  content: '';
+  position: relative;
+  height: 8px;
+  width: 8px;
+  display: inline-block;
+  border-radius: 50%;
+  background: #d1d5db;
+}
+.backend-status__item.online {
+  color: #22c55e;
+}
+
+.backend-status__item.online::before {
+  background: #22c55e;
+}
+.backend-status__item.offline {
+  color: #ef4444;
+}
+.backend-status__item.offline::before {
+  background: #ef4444;
+}
+
+
 </style>
