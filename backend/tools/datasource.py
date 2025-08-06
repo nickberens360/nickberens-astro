@@ -49,7 +49,8 @@ def list_sources(show_details: bool = False):
 
     # Auto-discoverable sources
     try:
-        discovery = AutoDataSourceDiscovery("public")
+        base_path = Path(config.data_sources.get("base_path", "public"))
+        discovery = AutoDataSourceDiscovery(base_path)
         auto_sources = discovery.discover_sources()
         manual_names = {s["name"] for s in manual_sources}
         new_auto_sources = [s for s in auto_sources if s["name"] not in manual_names]
@@ -78,7 +79,8 @@ def list_sources(show_details: bool = False):
 def generate_config(source_name: str, output_file: Optional[str] = None):
     """Generate YAML configuration for a specific source."""
     try:
-        discovery = AutoDataSourceDiscovery("public")
+        base_path = Path(config.data_sources.get("base_path", "public"))
+        discovery = AutoDataSourceDiscovery(base_path)
         auto_sources = discovery.discover_sources()
 
         # Find the requested source
@@ -96,7 +98,7 @@ def generate_config(source_name: str, output_file: Optional[str] = None):
         templates = discovery.generate_templates([target_source])
 
         # Load sample data for retriever config
-        data_path = Path("public") / target_source["file"]
+        data_path = base_path / target_source["file"]
         with open(data_path, "r", encoding="utf-8") as f:
             sample_data = json.load(f)
 
@@ -142,7 +144,8 @@ def add_source(file_path: str, auto_configure: bool = True):
         return
 
     # Copy file to public directory if not already there
-    public_dir = Path("public")
+    base_path = Path(config.data_sources.get("base_path", "public"))
+    public_dir = base_path
     if source_path.parent != public_dir:
         target_path = public_dir / source_path.name
         if target_path.exists():
@@ -157,7 +160,7 @@ def add_source(file_path: str, auto_configure: bool = True):
         print(f"🔍 Auto-configuring {source_path.name}...")
 
         try:
-            discovery = AutoDataSourceDiscovery("public")
+            discovery = AutoDataSourceDiscovery(base_path)
             sources = discovery.discover_sources()
 
             source_name = source_path.stem

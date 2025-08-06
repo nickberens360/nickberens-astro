@@ -180,7 +180,7 @@ class AutoDataSourceDiscovery:
                     config["metadata_fields"] = metadata_fields
 
                 # Check for special processing needs
-                special_processing = self._detect_special_processing(first_item)
+                special_processing = self._detect_special_processing(data)
                 if special_processing:
                     config["special_processing"] = special_processing
 
@@ -290,29 +290,38 @@ class AutoDataSourceDiscovery:
 
         return metadata_fields
 
-    def _detect_special_processing(self, sample_item: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-        """Detect fields that need special processing.
+    def _detect_special_processing(self, data: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        """Detect fields that need special processing by analyzing all items.
 
         Args:
-            sample_item: Sample item to analyze
+            data: List of items to analyze
 
         Returns:
             Dictionary of special processing configurations
         """
         special_processing = {}
 
-        for field_name, field_value in sample_item.items():
-            if isinstance(field_value, list):
-                if field_name in ["tags", "skills", "technologies"]:
-                    # Join arrays with commas
-                    special_processing[field_name] = {"type": "join_array", "separator": ", "}
-                elif field_name in ["points", "responsibilities"]:
-                    # Format as bullet points
-                    special_processing[field_name] = {
-                        "type": "format_list",
-                        "format": "bullet_points",
-                        "empty_message": "No points listed",
-                    }
+        # Collect all field names that are lists across all items
+        list_fields: Set[str] = set()
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            for field_name, field_value in item.items():
+                if isinstance(field_value, list):
+                    list_fields.add(field_name)
+
+        # Apply special processing rules to detected list fields
+        for field_name in list_fields:
+            if field_name in ["tags", "skills", "technologies"]:
+                # Join arrays with commas
+                special_processing[field_name] = {"type": "join_array", "separator": ", "}
+            elif field_name in ["points", "responsibilities"]:
+                # Format as bullet points
+                special_processing[field_name] = {
+                    "type": "format_list",
+                    "format": "bullet_points",
+                    "empty_message": "No points listed",
+                }
 
         return special_processing
 

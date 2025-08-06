@@ -360,7 +360,7 @@ Examples:
         # Auto-discovered sources
         if AutoDataSourceDiscovery is not None:
             try:
-                discovery = AutoDataSourceDiscovery("public")
+                discovery = AutoDataSourceDiscovery(Path(config.data_sources.get("base_path", "public")))
                 auto_sources = discovery.discover_sources()
                 manual_names = {s["name"] for s in manual_sources}
                 new_auto_sources = [s for s in auto_sources if s["name"] not in manual_names]
