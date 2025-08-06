@@ -180,7 +180,7 @@ export default {
 }
 
 .eyelash-image {
-  width: 20px;
+  width: 30px;
   height: auto;
   pointer-events: none;
   display: block;

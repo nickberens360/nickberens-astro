@@ -11,7 +11,7 @@ Nick Berens' personal website with a RAG-powered AI assistant. Backend built wit
 - `npm run backend:build` - Build backend container with Podman
 - `npm run backend:dev` - Run backend in development mode with hot reload
 - `npm run backend:stop` - Stop the backend container
-- `python backend/scripts/build_unified_data.py` - Build unified data file for RAG system
+- `python3 backend/scripts/build_unified_data.py` - Build unified data file for RAG system
 
 ### Test Commands
 - `pytest` - Run Python tests

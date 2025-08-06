@@ -5,6 +5,7 @@ import SiteFooter from '../components/SiteFooter.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
 import TerminalWindow from '../components/TerminalWindow.vue';
+import AnnoyingEyelash from '../components/AnnoyingEyelash.vue';
 import {getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl} from '../utils/gitInfo.js';
 
 export interface Props {
@@ -38,6 +39,11 @@ const repoUrl = getGitHubRepoUrl();
     variant={headerVariant}
     client:only="vue"
     hideHeader={hideHeader}
+/>
+<AnnoyingEyelash
+    client:load
+    :initial-x="50"
+    :initial-y="150"
 />
 <slot/>
 <SiteFooter
