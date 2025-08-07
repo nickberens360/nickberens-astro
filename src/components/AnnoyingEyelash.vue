@@ -184,7 +184,7 @@ export default {
   height: auto;
   pointer-events: none;
   display: block;
-  opacity: .45;
+  opacity: 0.45;
 }
 
 /* Prevent image dragging */
