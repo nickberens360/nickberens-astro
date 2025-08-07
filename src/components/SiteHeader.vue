@@ -22,8 +22,7 @@
               <span class="git-paren">)</span>
             </span>
           </p>
-          <p class="site-header__name site-header__name--mobile">nick
-            <span class="git"><span class="git-paren">{</span>
+          <p class="site-header__name site-header__name--mobile">nick<span class="git"><span class="git-paren">{</span>
               <span class="git-branch">berens</span>
               <span class="git-paren">}</span>
             </span>
@@ -104,7 +103,7 @@
       >
       <a
         href="/nick-ai"
-        style="margin-right: 0.5em; font-size: 2.1rem; text-decoration: none;"
+        style="font-size: 2rem; text-decoration: none;"
       >
         🤖
       </a>
@@ -115,7 +114,7 @@
         class="terminal-icon"
       />
       <button
-        class="site-header__hamburger ml-1"
+        class="site-header__hamburger "
         :class="[{ 'is-active': isMobileMenuOpen }]"
         @click="toggleMobileMenu"
         aria-label="Toggle menu"
@@ -475,13 +474,14 @@ export default {
   z-index: 1001;
   font-size: 2rem;
   line-height: 1;
-  padding: 10px;
+  padding: 0;
 }
 
 .pod {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 0.5rem;
   height: 85%;
   padding: 0 1.5rem;
   border-radius: 200px;
