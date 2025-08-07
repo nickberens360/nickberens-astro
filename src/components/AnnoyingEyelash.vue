@@ -17,7 +17,7 @@
     <div
       v-else
       class="emoji-display"
-      :class="{ 'animate-up-fade': isAnimating }"
+      :class="{ 'animate-up-flip': isAnimating }"
       @animationend="onAnimationEnd"
     >
       🤭
@@ -203,7 +203,7 @@ export default {
   line-height: 1;
 }
 
-@keyframes upAndFade {
+@keyframes upAndFlip {
   0% {
     transform: translateY(0) rotateY(0deg);
     opacity: 1;
@@ -214,7 +214,7 @@ export default {
   }
 }
 
-.animate-up-fade {
-  animation: upAndFade 1s ease-out forwards;
+.animate-up-flip {
+  animation: upAndFlip 1s ease-out forwards;
 }
 </style>
