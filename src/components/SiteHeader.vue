@@ -104,7 +104,7 @@
       <a
         href="/nick-ai"
         style="font-size: 2rem; text-decoration: none; position: relative;
-        top: -2px;"
+        top: -3px;"
       >
         🤖
       </a>
