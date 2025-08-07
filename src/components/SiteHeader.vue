@@ -234,9 +234,32 @@ export default {
       // Handle hex colors
       if (color.startsWith('#')) {
         const hex = color.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
+
+        // Validate hex color length (must be 3 or 6 characters)
+        if (hex.length !== 3 && hex.length !== 6) {
+          // Return original color for invalid hex lengths
+          return color;
+        }
+
+        // Validate that all characters are valid hex digits
+        if (!/^[0-9A-Fa-f]+$/.test(hex)) {
+          return color;
+        }
+
+        let r, g, b;
+
+        if (hex.length === 3) {
+          // Handle 3-character hex (e.g., #f00 -> #ff0000)
+          r = parseInt(hex.slice(0, 1) + hex.slice(0, 1), 16);
+          g = parseInt(hex.slice(1, 2) + hex.slice(1, 2), 16);
+          b = parseInt(hex.slice(2, 3) + hex.slice(2, 3), 16);
+        } else {
+          // Handle 6-character hex (e.g., #ff0000)
+          r = parseInt(hex.slice(0, 2), 16);
+          g = parseInt(hex.slice(2, 4), 16);
+          b = parseInt(hex.slice(4, 6), 16);
+        }
+
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
       }
 
