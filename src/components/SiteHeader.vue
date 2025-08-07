@@ -97,6 +97,17 @@
           </li>
         </ul>
       </div>
+      <div
+        class="site-header__icons d-flex align-center"
+        :class="variant === 'pod' ? 'pod' : ''"
+        :style="variant === 'pod' ? headerStyles : {}"
+      >
+      <a
+        href="/nick-ai"
+        style="margin-right: 0.5em; font-size: 2.1rem; text-decoration: none;"
+      >
+        🤖
+      </a>
       <font-awesome-icon
         :icon="['fas', 'terminal']"
         @click="toggleTerminal"
@@ -105,13 +116,13 @@
       />
       <button
         class="site-header__hamburger ml-1"
-        :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
+        :class="[{ 'is-active': isMobileMenuOpen }]"
         @click="toggleMobileMenu"
         aria-label="Toggle menu"
-        :style="variant === 'pod' ? headerStyles : {}"
       >
         🍔
       </button>
+      </div>
     </div>
   </header>
 </template>
@@ -159,8 +170,15 @@ export default {
       return this.navItemsStoreRaw;
     },
     headerStyles() {
+      let backgroundColor = this.headerBackgroundColor;
+
+      // Apply rgba with alpha 0.8 only for pod variant
+      if (this.variant === 'pod') {
+        backgroundColor = this.convertToRgba(backgroundColor, 0.5);
+      }
+
       return {
-        backgroundColor: this.headerBackgroundColor,
+        backgroundColor: backgroundColor,
       };
     },
     maybeTerminalInput() {
@@ -190,6 +208,53 @@ export default {
     window.removeEventListener('scroll', this.handleScroll);
   },
   methods: {
+    convertToRgba(color, alpha = 0.8) {
+      // Handle transparent case
+      if (color === 'transparent') {
+        return 'transparent';
+      }
+
+      // Handle named colors
+      const namedColors = {
+        'white': '255, 255, 255',
+        'black': '0, 0, 0',
+        'red': '255, 0, 0',
+        'blue': '0, 0, 255',
+        'green': '0, 128, 0',
+      };
+
+      if (namedColors[color.toLowerCase()]) {
+        return `rgba(${namedColors[color.toLowerCase()]}, ${alpha})`;
+      }
+
+      // Handle hex colors
+      if (color.startsWith('#')) {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      // Handle rgb colors - convert to rgba
+      if (color.startsWith('rgb(')) {
+        const rgbValues = color.match(/\d+/g);
+        if (rgbValues && rgbValues.length === 3) {
+          return `rgba(${rgbValues[0]}, ${rgbValues[1]}, ${rgbValues[2]}, ${alpha})`;
+        }
+      }
+
+      // Handle rgba colors - update alpha
+      if (color.startsWith('rgba(')) {
+        const rgbaMatch = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/);
+        if (rgbaMatch) {
+          return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${alpha})`;
+        }
+      }
+
+      // Fallback - return original color if can't convert
+      return color;
+    },
     toggleTerminal() {
       // Simplified terminal toggle logic using centralized state
       if (this.isTerminalHidden) {
@@ -237,6 +302,8 @@ export default {
         ? colorSection.dataset.sectionColor
         : (window.scrollY > 0 ? 'white' : 'transparent');
       this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
+
+      console.log(this.headerBackgroundColor);
     }
   }
 };
@@ -363,9 +430,9 @@ export default {
   padding: 10px;
 }
 
-.pod {
+/*.pod {
   display: flex;
-  flex-direction: column;
+  !*flex-direction: column;*!
   justify-content: center;
   align-items: center;
   height: 85%;
@@ -373,6 +440,47 @@ export default {
   border-radius: 200px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
+  backdrop-filter: blur(5px);
+}*/
+
+.pod {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 85%;
+  padding: 0 1.5rem;
+  border-radius: 200px;
+
+  /* Enhanced glass effect */
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px 0 rgba(31, 38, 135, 0.37),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
+    0 1px 0 0 rgba(255, 255, 255, 0.25);
+
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
+
+  transition: all 0.3s ease-in-out;
+}
+
+.theme-dark .pod {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.02)
+  );
 }
 
 .site-header__hamburger.pod {
