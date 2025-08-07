@@ -163,6 +163,7 @@ export default {
       headerBackgroundColor: 'transparent',
       isMobileMenuOpen: false,
       useTerminalInput: false,
+      scrollTimeout: null,
     };
   },
   computed: {
@@ -174,7 +175,7 @@ export default {
 
       // Apply rgba with alpha 0.8 only for pod variant
       if (this.variant === 'pod') {
-        backgroundColor = this.convertToRgba(backgroundColor, 0.5);
+        backgroundColor = this.convertToRgba(backgroundColor, 0.2);
       }
 
       return {
@@ -206,6 +207,9 @@ export default {
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
+    }
   },
   methods: {
     convertToRgba(color, alpha = 0.8) {
@@ -280,30 +284,51 @@ export default {
       document.body.style.overflow = '';
     },
     handleScroll() {
+      // Clear existing timeout
+      if (this.scrollTimeout) {
+        clearTimeout(this.scrollTimeout);
+      }
+
+      // Throttle the scroll handling
+      this.scrollTimeout = setTimeout(() => {
+        this.performScrollCheck();
+      }, 16); // ~60fps
+    },
+    performScrollCheck() {
       const headerEl = this.$refs.siteHeader;
       if (!headerEl) return;
+
       const headerRect = headerEl.getBoundingClientRect();
       const checkX = window.innerWidth / 2;
-      const checkY = headerRect.top + (headerRect.height / 2) + 34;
+      const checkY = headerRect.bottom + 10; // Check just below the header
+
+      // Temporarily disable pointer events
       headerEl.style.pointerEvents = 'none';
-      const elementUnder = document.elementFromPoint(checkX, checkY);
-      headerEl.style.pointerEvents = 'auto';
-      if (!elementUnder) {
-        this.headerBackgroundColor = window.scrollY > 0 ? 'white' : 'transparent';
-        this.overlayTheme = 'light';
-        return;
-      }
-      const colorSection = elementUnder.closest('[data-section-color]');
-      const themeSection = elementUnder.closest('[data-section-theme]');
-      const terminalInputElement = elementUnder.closest('[data-has-terminal-input]');
-      this.useTerminalInput = terminalInputElement && terminalInputElement.dataset.hasTerminalInput === 'true';
 
-      this.headerBackgroundColor = colorSection
-        ? colorSection.dataset.sectionColor
-        : (window.scrollY > 0 ? 'white' : 'transparent');
-      this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        const elementUnder = document.elementFromPoint(checkX, checkY);
+        headerEl.style.pointerEvents = 'auto';
 
-      console.log(this.headerBackgroundColor);
+        if (!elementUnder) {
+          this.headerBackgroundColor = window.scrollY > 0 ? 'white' : 'transparent';
+          this.overlayTheme = 'light';
+          return;
+        }
+
+        const colorSection = elementUnder.closest('[data-section-color]');
+        const themeSection = elementUnder.closest('[data-section-theme]');
+        const terminalInputElement = elementUnder.closest('[data-has-terminal-input]');
+
+        this.useTerminalInput = terminalInputElement && terminalInputElement.dataset.hasTerminalInput === 'true';
+
+        this.headerBackgroundColor = colorSection
+          ? colorSection.dataset.sectionColor
+          : (window.scrollY > 0 ? 'white' : 'transparent');
+        this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
+
+        console.log('Header background color:', this.headerBackgroundColor);
+      });
     }
   }
 };
@@ -452,20 +477,10 @@ export default {
   border-radius: 200px;
 
   /* Enhanced glass effect */
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow:
-    0 8px 32px 0 rgba(31, 38, 135, 0.37),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
-    0 1px 0 0 rgba(255, 255, 255, 0.25);
-
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1),
-    rgba(255, 255, 255, 0.05)
-  );
-
+  box-shadow: 0 10px 15px -3px #0000004d,0 -4px 6px -2px #0000000d;
   transition: all 0.3s ease-in-out;
 }
 
