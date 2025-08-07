@@ -478,19 +478,6 @@ export default {
   padding: 10px;
 }
 
-/*.pod {
-  display: flex;
-  !*flex-direction: column;*!
-  justify-content: center;
-  align-items: center;
-  height: 85%;
-  padding: 0 1.5rem;
-  border-radius: 200px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
-  transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
-  backdrop-filter: blur(5px);
-}*/
-
 .pod {
   display: flex;
   justify-content: center;
