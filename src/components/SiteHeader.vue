@@ -44,9 +44,12 @@
         ref="nav"
       >
         <ul class="site-header__nav-list">
-          <li
+          <template
             v-for="item in navItemsStore"
             :key="item.url"
+          >
+          <li
+            v-if="item.text !== 'GitHub'"
             class="site-header__nav-item"
           >
             <a
@@ -55,14 +58,10 @@
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
             >
-              <font-awesome-icon
-                v-if="item.icon"
-                size="2x"
-                :icon="item.icon"
-              />
-              <span v-else>{{ item.text }}</span>
+              <span>{{ item.text }}</span>
             </a>
           </li>
+          </template>
         </ul>
       </nav>
       <div
@@ -475,6 +474,10 @@ export default {
   font-size: 2rem;
   line-height: 1;
   padding: 0;
+}
+
+.site-header__icons {
+  gap: .5rem;
 }
 
 .pod {
