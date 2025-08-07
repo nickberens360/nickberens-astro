@@ -20,7 +20,7 @@
       :class="{ 'animate-up-fade': isAnimating }"
       @animationend="onAnimationEnd"
     >
-      😂
+      🤭
     </div>
   </div>
 </template>
@@ -203,19 +203,18 @@ export default {
   line-height: 1;
 }
 
-/* Animation for emoji moving up and fading out */
 @keyframes upAndFade {
   0% {
-    transform: translateY(0);
+    transform: translateY(0) rotateY(0deg);
     opacity: 1;
   }
   100% {
-    transform: translateY(-100px);
-    opacity: 0;
+    transform: translateY(-100px) rotateY(360deg);
+    opacity: 1;
   }
 }
 
 .animate-up-fade {
-  animation: upAndFade 2s ease-out forwards;
+  animation: upAndFade 1s ease-out forwards;
 }
 </style>

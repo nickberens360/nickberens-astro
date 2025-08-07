@@ -17,12 +17,19 @@
           ref="logo"
         >
           <p class="site-header__name">nickberens
-            <span class="git">git:
-              <span class="git-paren">(</span>
+            <span class="git">git:<span class="git-paren">(</span>
               <span class="git-branch">{{ gitBranch }}</span>
               <span class="git-paren">)</span>
             </span>
           </p>
+          <p class="site-header__name site-header__name--mobile">nick
+            <span class="git"><span class="git-paren">{</span>
+              <span class="git-branch">berens</span>
+              <span class="git-paren">}</span>
+            </span>
+          </p>
+
+
         </a>
         <TerminalInput
           v-if="maybeTerminalInput"
@@ -97,7 +104,7 @@
         class="terminal-icon"
       />
       <button
-        class="site-header__hamburger ml-2"
+        class="site-header__hamburger ml-1"
         :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
         @click="toggleMobileMenu"
         aria-label="Toggle menu"
@@ -273,6 +280,10 @@ export default {
   color: var(--text-color, #000);
   text-decoration: none;
   height: 100%;
+}
+
+.site-header__name--mobile {
+  display: none;
 }
 
 .theme-dark .site-header__logo {
@@ -472,7 +483,14 @@ export default {
   }
 }
 
-
+@media (max-width: 600px) {
+  .site-header__name {
+    display: none;
+  }
+  .site-header__name--mobile {
+    display: block;
+  }
+}
 /* Theme-based Styling for Text */
 .site-header.theme-light {
   color: #000000;
