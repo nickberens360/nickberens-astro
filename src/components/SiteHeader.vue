@@ -44,12 +44,9 @@
         ref="nav"
       >
         <ul class="site-header__nav-list">
-          <template
+          <li
             v-for="item in navItemsStore"
             :key="item.url"
-          >
-          <li
-            v-if="item.text !== 'GitHub'"
             class="site-header__nav-item"
           >
             <a
@@ -58,10 +55,14 @@
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
             >
-              <span>{{ item.text }}</span>
+              <font-awesome-icon
+                v-if="item.icon"
+                size="2x"
+                :icon="item.icon"
+              />
+              <span v-else>{{ item.text }}</span>
             </a>
           </li>
-          </template>
         </ul>
       </nav>
       <div
@@ -102,7 +103,8 @@
       >
       <a
         href="/nick-ai"
-        style="font-size: 2rem; text-decoration: none;"
+        style="font-size: 2rem; text-decoration: none; position: relative;
+        top: -2px;"
       >
         🤖
       </a>
