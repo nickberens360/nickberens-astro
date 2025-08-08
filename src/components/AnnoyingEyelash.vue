@@ -205,20 +205,33 @@ export default {
 
 @keyframes upAndFlip {
   0% {
-    transform: translateY(0) rotateY(0deg);
+    transform: translateY(0) rotateY(0deg) translateZ(0);
     opacity: 1;
   }
   100% {
-    transform: translateY(-100px) rotateY(359.9deg);
+    transform: translateY(-100px) rotateY(360deg) translateZ(0);
     opacity: 1;
   }
 }
 
 .animate-up-flip {
   animation: upAndFlip 1s ease-out forwards;
-  will-change: transform;
+  will-change: transform, opacity;
   transform: translateZ(0);
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .animate-up-flip {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 </style>
