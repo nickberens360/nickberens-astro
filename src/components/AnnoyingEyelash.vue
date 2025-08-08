@@ -205,54 +205,19 @@ export default {
   -webkit-transform-origin: center center;
 }
 
-/* ---------- Keyframes (prefixed + unprefixed) ---------- */
-@-webkit-keyframes upAndFlip {
-  0% {
-    -webkit-transform: translate3d(0, 0, 0) rotateY(0deg);
-    transform: translate3d(0, 0, 0) rotateY(0deg);
-    opacity: 1;
-  }
-  100% {
-    -webkit-transform: translate3d(0, -100px, 0) rotateY(359deg);
-    transform: translate3d(0, -100px, 0) rotateY(359deg);
-    opacity: 1;
-  }
-}
 @keyframes upAndFlip {
   0% {
-    -webkit-transform: translate3d(0, 0, 0) rotateY(0deg);
-    transform: translate3d(0, 0, 0) rotateY(0deg);
+    transform: translateY(0) rotateY(0deg);
     opacity: 1;
   }
   100% {
-    -webkit-transform: translate3d(0, -100px, 0) rotateY(359deg);
-    transform: translate3d(0, -100px, 0) rotateY(359deg);
+    transform: translateY(-100px) rotateY(359.9deg);
     opacity: 1;
   }
 }
 
 .animate-up-flip {
-  /* kick off animation with prefixes */
-  -webkit-animation: upAndFlip 1s ease-out forwards;
   animation: upAndFlip 1s ease-out forwards;
-
-  /* render hints */
-  will-change: transform;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  -webkit-transform-style: preserve-3d;
-  transform-style: preserve-3d;
-
-  /* ensure the element is on its own layer from the start */
-  -webkit-transform: translate3d(0, 0, 0);
-  transform: translate3d(0, 0, 0);
 }
 
-/* Optional: tiny type smoothing on iOS */
-@supports (-webkit-touch-callout: none) {
-  .animate-up-flip {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-}
 </style>
