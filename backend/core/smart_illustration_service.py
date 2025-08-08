@@ -95,11 +95,8 @@ class SmartIllustrationService:
             logger.info(f"Final result: {len(illustrations)} illustrations for 'get all'")
             return illustrations
 
-        except Exception as e:
-            logger.error(f"Failed to get all illustrations: {e}")
-            import traceback
-
-            logger.error(f"Stack trace: {traceback.format_exc()}")
+        except Exception:
+            logger.error("Failed to get all illustrations", exc_info=False)
             return []
 
     def search(self, search_term: str, top_k: int = 10) -> List[Dict[str, str]]:
@@ -174,9 +171,6 @@ class SmartIllustrationService:
             logger.info(f"Smart illustration search returned {len(illustrations)} results for '{search_term}'")
             return illustrations
 
-        except Exception as e:
-            logger.error(f"Smart illustration search failed: {e}")
-            import traceback
-
-            logger.error(f"Stack trace: {traceback.format_exc()}")
+        except Exception:
+            logger.error("Smart illustration search failed", exc_info=False)
             return []

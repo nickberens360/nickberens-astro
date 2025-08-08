@@ -25,7 +25,8 @@ RUN pip install --upgrade pip && \
 
 # ---- Runtime (same image; we already built wheels in venv) ----
 
-RUN groupadd --system app && useradd --system --no-create-home --gid app app
+RUN groupadd --system app && useradd --system --no-create-home --gid app app && \
+    mkdir -p /home/app && chown app:app /home/app
 USER app
 
 WORKDIR /app
