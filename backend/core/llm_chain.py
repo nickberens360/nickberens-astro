@@ -51,9 +51,8 @@ LLM_PROVIDERS = [
     },
 ]
 
+
 # --- Rate Limit Tracking ---
-
-
 class RateLimitTracker:
     """Track rate limit status for different LLM providers"""
 
@@ -67,13 +66,9 @@ class RateLimitTracker:
         with self._lock:
             if provider not in self._rate_limit_status:
                 return False
-
-            # Check if rate limit has expired - simplified condition
             if provider in self._rate_limit_reset_time and datetime.now() > self._rate_limit_reset_time[provider]:
                 self.clear_rate_limit(provider)
                 return False
-
-            # Return status while still holding the lock - CRITICAL FIX
             return self._rate_limit_status.get(provider, False)
 
     def set_rate_limited(self, provider: str, reset_minutes: int = 60):
@@ -133,9 +128,7 @@ class VectorStoreManager:
             if not source_docs:
                 logger.warning(f"No documents found for source '{source}'. Skipping vector store creation.")
                 continue
-
             try:
-                # Using EphemeralClient for in-memory storage
                 client = chromadb.EphemeralClient()
                 collection_name_pattern = data_config.collection_config.get("name_pattern", "nickberens_{source}")
                 collection_name = collection_name_pattern.replace("{source}", source)
@@ -151,7 +144,6 @@ class VectorStoreManager:
                 logger.error(f"Failed to create vector store for source '{source}': {e}")
                 raise
 
-        # Create retrievers only for successfully created vector stores
         final_retrievers: Dict[str, BaseRetriever] = {}
         for name, store in vectorstores.items():
             if name in retriever_definitions:
@@ -170,20 +162,39 @@ class VectorStoreManager:
         selected_names = set()
         retriever_definitions = cls.get_retriever_definitions()
 
-        # Check each retriever's keywords
         for source, ret_config in retriever_definitions.items():
             if any(keyword in query_lower for keyword in ret_config.get("keywords", [])):
                 selected_names.add(source)
 
-        # Default to broad search if no specific keywords are matched
         if not selected_names:
-            selected_names.update(["resume", "about"])
+            selected_names.update(["resume", "about", "knowledge"])
 
         selected_retrievers = [retrievers[name] for name in selected_names if name in retrievers]
         logger.info(f"Query routed to retrievers: {[name for name in selected_names if name in retrievers]}")
         return selected_retrievers
 
 
+def create_knowledge_retriever(
+    embeddings,
+    chroma_dir: str = "backend/.chroma",
+    collection: str = "knowledge",
+):
+    """Create a retriever that reads from the persistent Chroma collection built by ingest/indexer.py."""
+    try:
+        from langchain_community.vectorstores import Chroma as CommunityChroma
+
+        vs = CommunityChroma(
+            collection_name=collection,
+            persist_directory=chroma_dir,
+            embedding_function=embeddings,
+        )
+        return vs.as_retriever(search_kwargs={"k": 8})
+    except Exception as e:
+        logger.warning(f"Knowledge retriever unavailable: {e}")
+        return None
+
+
+# Wrapper helpers for backward compatibility
 def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
     """Wrapper function for backward compatibility"""
     return VectorStoreManager.create_multi_vector_retriever(docs, embeddings)
@@ -196,11 +207,8 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
 
 def is_rate_limit_error(error: Exception) -> bool:
     """Check if an error is a rate limit error"""
-    # Check for status code 429 in exception attributes
     if hasattr(error, "status_code") and error.status_code == 429:
         return True
-
-    # Check error message for rate limit indicators
     error_str = str(error).lower()
     rate_limit_indicators = [
         "rate limit",
@@ -217,11 +225,11 @@ def is_rate_limit_error(error: Exception) -> bool:
 def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
     """Initializes and returns a dictionary of available LLM instances."""
     llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]] = {}
-
     for provider_config in LLM_PROVIDERS:
         provider_name: str = cast(str, provider_config["name"])
         provider_class: Type[Union[ChatGoogleGenerativeAI, ChatAnthropic]] = cast(
-            Type[Union[ChatGoogleGenerativeAI, ChatAnthropic]], provider_config["class"]
+            Type[Union[ChatGoogleGenerativeAI, ChatAnthropic]],
+            provider_config["class"],
         )
         init_kwargs: Dict[str, Any] = cast(Dict[str, Any], provider_config["init_kwargs"])
 
@@ -238,7 +246,6 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
 
     if not any(llms.values()):
         raise RuntimeError("No LLM models could be initialized. Check API keys and model names.")
-
     return llms
 
 
@@ -246,7 +253,6 @@ def create_qa_chain(llm):
     """Creates the main question-answering chain."""
     system_prompt = data_config.prompts.get(
         "qa_system",
-        # Fallback to default if not in config
         (
             "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
             "\n\n"
@@ -271,7 +277,6 @@ def create_history_aware_prompt() -> ChatPromptTemplate:
     """Creates a prompt template for reformulating questions based on chat history."""
     contextualize_q_system_prompt = data_config.prompts.get(
         "history_aware",
-        # Fallback to default if not in config
         (
             "Given a chat history and the latest user question which might reference the chat history, "
             "formulate a standalone question which can be understood without the chat history. "
@@ -292,7 +297,6 @@ class CacheManager:
 
     @staticmethod
     def get_cache_key(user_input: Optional[str]) -> Optional[str]:
-        """Generates a SHA256 hash for a given user input string to use as a cache key."""
         if not ENABLE_CACHING or not isinstance(user_input, str):
             return None
         normalized_input = re.sub(r"[^\w\s]", "", user_input.lower()).strip()
@@ -300,10 +304,8 @@ class CacheManager:
 
     @staticmethod
     def get_cached_response(cache_key: str) -> Optional[str]:
-        """Retrieves a final response from the cache if available and not expired."""
         if not cache_key or not ENABLE_CACHING:
             return None
-
         if cache_key in _response_cache:
             cached_data = _response_cache[cache_key]
             if time.time() - cached_data["timestamp"] < CACHE_TTL:
@@ -316,25 +318,20 @@ class CacheManager:
 
     @staticmethod
     def cache_response(cache_key: str, response_chunks: List[str]):
-        """Caches the final, full response string."""
         if not cache_key or not ENABLE_CACHING:
             return
-
         if len(_response_cache) >= MAX_CACHE_SIZE:
             oldest_key = min(_response_cache, key=lambda k: _response_cache[k]["timestamp"])
             del _response_cache[oldest_key]
             logger.info(f"Evicted oldest response cache entry: {oldest_key}")
-
         full_response = "".join(response_chunks)
         _response_cache[cache_key] = {"response": full_response, "timestamp": time.time()}
         logger.info(f"Cached full response for key: {cache_key}")
 
     @staticmethod
     def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
-        """Checks the retrieval cache for a list of documents."""
         if not cache_key or not ENABLE_CACHING:
             return None
-
         if cache_key in _retrieval_cache:
             cached_data = _retrieval_cache[cache_key]
             if time.time() - cached_data["timestamp"] < CACHE_TTL:
@@ -347,20 +344,17 @@ class CacheManager:
 
     @staticmethod
     def cache_retrieval(cache_key: str, documents: List[Document]):
-        """Stores a list of documents in the retrieval cache."""
         if not cache_key or not ENABLE_CACHING:
             return
-
         if len(_retrieval_cache) >= MAX_CACHE_SIZE:
             oldest_key = min(_retrieval_cache, key=lambda k: _retrieval_cache[k]["timestamp"])
             del _retrieval_cache[oldest_key]
             logger.info(f"Evicted oldest retrieval cache entry: {oldest_key}")
-
         _retrieval_cache[cache_key] = {"documents": documents, "timestamp": time.time()}
         logger.info(f"Stored {len(documents)} documents in retrieval cache for key: {cache_key}")
 
 
-# Wrapper functions for backward compatibility
+# Wrapper functions for backward compatibility (aliases to CacheManager)
 def get_cache_key(user_input: Optional[str]) -> Optional[str]:
     return CacheManager.get_cache_key(user_input)
 
@@ -388,17 +382,13 @@ async def stream_with_fallback(
     preferred_model: Optional[str] = None,
 ) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
-    Main async function to handle user input, perform retrieval (with caching),
+    Handle user input, perform retrieval (with caching),
     and stream a response from an LLM with fallback capabilities.
-
-    Returns:
-        Tuple containing the async stream iterator, the name of the model that was used,
-        and additional metadata including rate limit status.
     """
     cache_key = CacheManager.get_cache_key(user_input)
     metadata = {"rate_limit_status": rate_limit_tracker.get_status()}
 
-    # 1. Check for a cached FINAL response
+    # 1) Cached FINAL response?
     if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
 
         async def cached_stream():
@@ -406,6 +396,7 @@ async def stream_with_fallback(
 
         return cached_stream(), "cached", metadata
 
+    # 2) Initialize LLMs
     try:
         llms = get_llm_instances()
     except RuntimeError as e:
@@ -416,20 +407,18 @@ async def stream_with_fallback(
 
         return error_stream(), "error", {"rate_limit_status": {}}
 
-    # 2. Check for cached RETRIEVAL results
+    # 3) Cached RETRIEVAL?
     unique_docs = CacheManager.get_cached_retrieval(cache_key) if cache_key else None
-
     if unique_docs is None:
         logger.info(f"Retrieval cache miss for key: {cache_key}. Performing vector search...")
         selected_retrievers = VectorStoreManager.route_query_to_retrievers(user_input, retrievers)
 
-        # Determine if history-aware retrieval is needed
+        # History-aware?
         if chat_history and (reformulation_llm := llms.get("claude") or llms.get("gemini")):
             try:
                 history_prompt = create_history_aware_prompt()
                 history_aware_retrievers = [
-                    create_history_aware_retriever(reformulation_llm, retriever, history_prompt)
-                    for retriever in selected_retrievers
+                    create_history_aware_retriever(reformulation_llm, r, history_prompt) for r in selected_retrievers
                 ]
                 tasks = [
                     r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers
@@ -450,7 +439,7 @@ async def stream_with_fallback(
                 elif result:
                     all_docs.extend(cast(List[Document], result))
 
-            # Deduplicate documents based on page_content
+            # Deduplicate by content + metadata
             unique_docs = list(
                 {
                     hashlib.sha256(
@@ -466,14 +455,11 @@ async def stream_with_fallback(
         if cache_key:
             CacheManager.cache_retrieval(cache_key, unique_docs)
 
-    # 3. Proceed to LLM generation with smart model selection
+    # 4) Generation with fallback order
     llm_order = _determine_llm_order(preferred_model, llms)
-
-    # Try each LLM in order and return the first successful one
     for llm_name, llm_instance in llm_order:
         if not llm_instance:
             continue
-
         try:
             logger.info(f"Attempting to stream response using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
@@ -483,29 +469,22 @@ async def stream_with_fallback(
                 async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
                     yield chunk
                     full_response_chunks.append(chunk)
-
-                # Cache the response if successful
                 if cache_key:
                     CacheManager.cache_response(cache_key, full_response_chunks)
 
             logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
-
-            # Update metadata with final rate limit status
             metadata["rate_limit_status"] = rate_limit_tracker.get_status()
             return llm_stream(), llm_name, metadata
 
         except Exception as e:
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}")
-
-            # Check if this is a rate limit error
             if is_rate_limit_error(e):
                 rate_limit_tracker.set_rate_limited(llm_name)
                 logger.warning(f"Rate limit detected for {llm_name}, marking as rate limited")
                 metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-
             logger.info("Trying next available model.")
 
-    # If all LLMs failed
+    # 5) If all fail
     logger.error("All LLM streaming attempts failed.")
 
     async def fallback_stream():
@@ -515,22 +494,18 @@ async def stream_with_fallback(
 
 
 def _determine_llm_order(
-    preferred_model: Optional[str], llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]
+    preferred_model: Optional[str],
+    llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]],
 ) -> List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
     """Determine the order in which to try LLMs based on preference and availability."""
     provider_names = [str(p["name"]) for p in LLM_PROVIDERS]
-
-    # If a valid preferred model is given, move it to the front
     if preferred_model and preferred_model in provider_names and llms.get(preferred_model):
         provider_names.insert(0, provider_names.pop(provider_names.index(preferred_model)))
-
-    # Build the final list of available LLM instances in the determined order
     llm_order: List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]] = []
     for name in provider_names:
         instance = llms.get(name)
         if instance is not None:
             llm_order.append((name, instance))
-
     return llm_order
 
 

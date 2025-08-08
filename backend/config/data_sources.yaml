@@ -118,6 +118,22 @@ retrievers:
       - creative
       - process
       - style
+  knowledge:
+    description: "Good for answering detailed questions about Nick's expertise, technical background, and specific skills from ingested documents."
+    search_kwargs:
+      k: 8
+    keywords:
+      - expertise
+      - technical
+      - background
+      - css
+      - frontend
+      - backend
+      - ai
+      - development
+      - framework
+      - architecture
+      - design system
 
 # Collection configuration
 collection:

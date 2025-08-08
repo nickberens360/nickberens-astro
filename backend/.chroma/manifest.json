@@ -1,0 +1,14 @@
+{
+  "backend/knowledge/about-nick-berens.md": {
+    "sha256": "166f3bba91f2c0fe2d55defe0617c3d07de334066143375090089f5bb4ed53aa",
+    "mtime": 1753607454.6331215,
+    "doc_ids": [
+      "ced9c655-46b9-451b-9c92-6a416afbd685",
+      "a030974a-0b10-4ad3-ba47-472bf2e8efe9",
+      "8a1a1c22-842d-4a67-a78d-adaf7e29e64b",
+      "b50ee906-5c11-484e-aa73-58c90d7e339b",
+      "b302b566-aef3-4bf1-8710-d260f306fcf1"
+    ],
+    "indexed_at": 1754656901.920868
+  }
+}
