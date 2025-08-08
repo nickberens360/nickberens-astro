@@ -8,6 +8,7 @@ This endpoint uses only the smart retriever to demonstrate:
 """
 
 import logging
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -51,7 +52,7 @@ async def smart_query(query: Query, services=Depends(get_services)):
         )
 
         # Prepare response
-        response_data = {
+        response_data: Dict[str, Any] = {
             "query": query.question,
             "intent_analysis": intent_analysis,
             "documents_found": len(relevant_docs),

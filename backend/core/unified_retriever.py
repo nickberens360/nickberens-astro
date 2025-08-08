@@ -12,7 +12,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.docstore.document import Document
 from langchain_core.retrievers import BaseRetriever
@@ -33,10 +33,10 @@ logger = logging.getLogger(__name__)
 class UnifiedRetriever:
     """A single retriever that intelligently handles all content types."""
 
-    def __init__(self, embeddings, persist_dir: str = "backend/.unified_chroma"):
+    def __init__(self, embeddings: Any, persist_dir: str = "backend/.unified_chroma"):
         self.embeddings = embeddings
         self.persist_dir = persist_dir
-        self.vector_store = None
+        self.vector_store: Optional[Chroma] = None
         self._initialize_store()
 
     def _initialize_store(self):
@@ -177,7 +177,7 @@ class UnifiedRetriever:
                         chunk.metadata.update(base_metadata)
 
                     # Add to vector store
-                    if chunks:
+                    if chunks and self.vector_store is not None:
                         self.vector_store.add_documents(chunks)
                         files_indexed += 1
                         total_chunks += len(chunks)
@@ -209,7 +209,9 @@ class UnifiedRetriever:
         # Note: We'll do filtering at retrieval time instead of at the vector store level
         # This is more compatible across different Chroma versions
 
-        return self.vector_store.as_retriever(search_kwargs=search_kwargs)
+        if self.vector_store is None:
+            raise ValueError("Vector store not initialized")
+        return self.vector_store.as_retriever(search_kwargs=search_kwargs)  # type: ignore[no-any-return]
 
     def semantic_search(
         self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None, score_threshold: float = 0.5
@@ -221,6 +223,8 @@ class UnifiedRetriever:
         search_k = k * 3
 
         # Get documents with scores
+        if self.vector_store is None:
+            raise ValueError("Vector store not initialized")
         docs_and_scores = self.vector_store.similarity_search_with_score(query, k=search_k)
 
         # Filter by score threshold

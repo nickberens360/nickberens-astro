@@ -10,9 +10,7 @@ This module provides a cleaner initialization process that:
 
 import logging
 import os
-from typing import Dict, Tuple
-
-from langchain_core.retrievers import BaseRetriever
+from typing import Any, Dict, Optional, Tuple
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
@@ -22,7 +20,7 @@ from .unified_retriever import UnifiedRetriever
 logger = logging.getLogger(__name__)
 
 
-def initialize_app_state() -> Tuple[Dict[str, BaseRetriever], SmartIllustrationService]:
+def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService]:
     """
     Initialize application with unified retriever system.
 
@@ -70,11 +68,11 @@ def initialize_app_state() -> Tuple[Dict[str, BaseRetriever], SmartIllustrationS
         logger.info(message)
 
     # Store unified retriever for direct access if needed
-    all_retrievers["_unified_retriever"] = unified_retriever
+    all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
 
     return all_retrievers, smart_illustration_service
 
 
-def get_unified_retriever(all_retrievers: Dict[str, BaseRetriever]) -> UnifiedRetriever:
+def get_unified_retriever(all_retrievers: Dict[str, Any]) -> Optional[UnifiedRetriever]:
     """Helper to get the unified retriever instance."""
     return all_retrievers.get("_unified_retriever")

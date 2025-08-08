@@ -9,7 +9,7 @@ This module provides intelligent query handling without manual configuration:
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain.schema import Document
 
@@ -23,7 +23,7 @@ class SmartQueryHandler:
 
     def __init__(self, unified_retriever: UnifiedRetriever):
         self.unified_retriever = unified_retriever
-        self._query_cache = {}  # Simple cache for repeated queries
+        self._query_cache: Dict[str, List[Document]] = {}  # Simple cache for repeated queries
 
     def get_relevant_context(
         self, query: str, chat_history: Optional[List[Dict]] = None, max_context_length: int = 4000
@@ -117,7 +117,7 @@ class SmartQueryHandler:
 
         return selected_docs
 
-    def analyze_query_intent(self, query: str) -> Dict[str, any]:
+    def analyze_query_intent(self, query: str) -> Dict[str, Any]:
         """
         Analyze query to understand user intent.
 

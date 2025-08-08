@@ -39,10 +39,13 @@ class SmartIllustrationService:
             logger.info("Attempting to get all illustrations...")
 
             # First, try to get all documents with illustration metadata
+            if self.unified_retriever.vector_store is None:
+                logger.error("Vector store not initialized")
+                return []
             all_docs = self.unified_retriever.vector_store.similarity_search("", k=100)
             logger.info(f"Total documents in vector store: {len(all_docs)}")
 
-            illustrations = []
+            illustrations: List[Dict[str, str]] = []
             seen_files = set()
 
             # Check all documents for illustration data
@@ -117,11 +120,14 @@ class SmartIllustrationService:
 
         try:
             # Use the same logic as get_all but filter by search term
+            if self.unified_retriever.vector_store is None:
+                logger.error("Vector store not initialized")
+                return []
             all_docs = self.unified_retriever.vector_store.similarity_search(
                 f"{search_term} illustration art creative character", k=50
             )
 
-            illustrations = []
+            illustrations: List[Dict[str, str]] = []
             seen_files = set()
 
             for doc in all_docs:
