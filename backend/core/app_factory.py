@@ -54,10 +54,11 @@ def create_app() -> FastAPI:
     )
 
     # Register routers - import here to avoid circular imports
-    from ..routes import health, query, query_logs
+    from ..routes import health, query, query_logs, smart_query
 
     app.include_router(health.router)
     app.include_router(query.router)
     app.include_router(query_logs.router, prefix="/admin")
+    app.include_router(smart_query.router, prefix="/api")
 
     return app

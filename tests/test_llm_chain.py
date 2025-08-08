@@ -1,7 +1,7 @@
 """Tests for core.llm_chain module."""
 
 import time
-from typing import List
+from typing import Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,7 +11,6 @@ from langchain_core.retrievers import BaseRetriever
 
 from backend.core.llm_chain import (
     RateLimitTracker,
-    VectorStoreManager,
     cache_response,
     cache_retrieval,
     get_cache_key,
@@ -20,6 +19,7 @@ from backend.core.llm_chain import (
     get_llm_instances,
     get_rate_limit_status,
     is_rate_limit_error,
+    route_query_to_retrievers,
     stream_with_fallback,
 )
 
@@ -186,12 +186,11 @@ class TestLLMChain:
         assert cached_docs[1].page_content == "Test doc 2"
 
     @pytest.mark.unit
-    def test_route_query_to_retrievers_resume_keywords(self):
-        """Test query routing for resume-related queries."""
-        mock_retrievers = {
-            "resume": MagicMock(spec=BaseRetriever),
-            "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever),
+    def test_route_query_to_retrievers_with_unified_retriever(self):
+        """Test query routing with unified retriever system."""
+        mock_unified_retriever = MagicMock(spec=BaseRetriever)
+        mock_retrievers: Dict[str, BaseRetriever] = {
+            "unified": mock_unified_retriever,
         }
 
         queries = [
@@ -202,78 +201,21 @@ class TestLLMChain:
         ]
 
         for query in queries:
-            retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
-            assert mock_retrievers["resume"] in retrievers
+            retrievers_list = route_query_to_retrievers(query, mock_retrievers)
+            assert mock_unified_retriever in retrievers_list
+            assert len(retrievers_list) == 1
 
     @pytest.mark.unit
-    def test_route_query_to_retrievers_about_keywords(self):
-        """Test query routing for about-related queries."""
-        mock_retrievers = {
-            "resume": MagicMock(spec=BaseRetriever),
-            "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever),
-        }
+    def test_route_query_to_retrievers_missing_unified_retriever(self):
+        """Test query routing when unified retriever is missing."""
+        # No unified retriever provided
+        mock_retrievers: Dict[str, BaseRetriever] = {"resume": MagicMock(spec=BaseRetriever)}
 
-        queries = [
-            "Tell me about Nick",
-            "What is his background?",
-            "Who is Nick?",
-            "What's his philosophy?",
-        ]
+        query = "Tell me about Nick's background"
+        retrievers_list = route_query_to_retrievers(query, mock_retrievers)
 
-        for query in queries:
-            retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
-            assert mock_retrievers["about"] in retrievers
-
-    @pytest.mark.unit
-    def test_route_query_to_retrievers_illustration_keywords(self):
-        """Test query routing for illustration-related queries."""
-        mock_retrievers = {
-            "resume": MagicMock(spec=BaseRetriever),
-            "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever),
-        }
-
-        queries = [
-            "Show me his art",
-            "What illustrations has he done?",
-            "Tell me about his drawings",
-            "What's his design style?",
-        ]
-
-        for query in queries:
-            retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
-            assert mock_retrievers["illustration"] in retrievers
-
-    @pytest.mark.unit
-    def test_route_query_to_retrievers_default_fallback(self):
-        """Test query routing falls back to resume and about for generic queries."""
-        mock_retrievers = {
-            "resume": MagicMock(spec=BaseRetriever),
-            "about": MagicMock(spec=BaseRetriever),
-            "illustration": MagicMock(spec=BaseRetriever),
-        }
-
-        # Generic query with no specific keywords
-        query = "Tell me something interesting"
-        retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
-
-        # Should default to resume and about
-        assert mock_retrievers["resume"] in retrievers
-        assert mock_retrievers["about"] in retrievers
-        assert len(retrievers) == 2
-
-    @pytest.mark.unit
-    def test_route_query_to_retrievers_missing_retriever(self):
-        """Test query routing when some retrievers are missing."""
-        # Only provide resume retriever
-        mock_retrievers = {"resume": MagicMock(spec=BaseRetriever)}
-
-        query = "Tell me about Nick's background"  # Should route to 'about' but it's missing
-        retrievers = VectorStoreManager.route_query_to_retrievers(query, mock_retrievers)
-
-        # Should only return available retrievers
-        assert len(retrievers) == 0  # 'about' is not available
+        # Should return empty list when unified retriever is not available
+        assert len(retrievers_list) == 0
 
     @patch("backend.core.llm_chain.LLM_PROVIDERS")
     @pytest.mark.unit
@@ -385,84 +327,6 @@ class TestLLMChain:
         with pytest.raises(RuntimeError, match="No LLM models could be initialized"):
             get_llm_instances()
 
-    @patch("backend.core.llm_chain.chromadb.EphemeralClient")
-    @patch("backend.core.llm_chain.Chroma")
-    @pytest.mark.unit
-    def test_create_multi_vector_retriever_success(self, mock_chroma, mock_client):
-        """Test successful creation of multi-vector retrievers."""
-        # Mock documents
-        docs = [
-            Document(page_content="Resume content", metadata={"source": "resume"}),
-            Document(page_content="About content", metadata={"source": "about"}),
-            Document(page_content="Art content", metadata={"source": "illustration"}),
-        ]
-
-        # Mock embeddings
-        mock_embeddings = MagicMock()
-
-        # Mock Chroma vectorstore
-        mock_vectorstore = MagicMock()
-        mock_retriever = MagicMock(spec=BaseRetriever)
-        mock_vectorstore.as_retriever.return_value = mock_retriever
-        mock_chroma.from_documents.return_value = mock_vectorstore
-
-        # Mock client
-        mock_client_instance = MagicMock()
-        mock_client.return_value = mock_client_instance
-
-        retrievers = VectorStoreManager.create_multi_vector_retriever(docs, mock_embeddings)
-
-        # Should create retrievers for all three sources
-        assert len(retrievers) == 3
-        assert "resume" in retrievers
-        assert "about" in retrievers
-        assert "illustration" in retrievers
-
-        # Verify Chroma was called for each source
-        assert mock_chroma.from_documents.call_count == 3
-
-    @patch("backend.core.llm_chain.chromadb.EphemeralClient")
-    @patch("backend.core.llm_chain.Chroma")
-    @pytest.mark.unit
-    def test_create_multi_vector_retriever_missing_sources(self, mock_chroma, mock_client):
-        """Test retriever creation with missing document sources."""
-        # Only resume documents
-        docs = [
-            Document(page_content="Resume content", metadata={"source": "resume"}),
-        ]
-
-        mock_embeddings = MagicMock()
-        mock_vectorstore = MagicMock()
-        mock_retriever = MagicMock(spec=BaseRetriever)
-        mock_vectorstore.as_retriever.return_value = mock_retriever
-        mock_chroma.from_documents.return_value = mock_vectorstore
-
-        mock_client_instance = MagicMock()
-        mock_client.return_value = mock_client_instance
-
-        retrievers = VectorStoreManager.create_multi_vector_retriever(docs, mock_embeddings)
-
-        # Should only create retriever for resume
-        assert len(retrievers) == 1
-        assert "resume" in retrievers
-        assert "about" not in retrievers
-        assert "illustration" not in retrievers
-
-    @patch("backend.core.llm_chain.chromadb.EphemeralClient")
-    @patch("backend.core.llm_chain.Chroma")
-    @pytest.mark.unit
-    def test_create_multi_vector_retriever_chroma_error(self, mock_chroma, mock_client):
-        """Test retriever creation when Chroma fails."""
-        docs = [
-            Document(page_content="Resume content", metadata={"source": "resume"}),
-        ]
-
-        mock_embeddings = MagicMock()
-        mock_chroma.from_documents.side_effect = Exception("Chroma error")
-
-        with pytest.raises(Exception, match="Chroma error"):
-            VectorStoreManager.create_multi_vector_retriever(docs, mock_embeddings)
-
     @pytest.mark.unit
     def test_get_cached_retrieval_expired(self):
         """Test that expired retrieval cache entries are removed."""
@@ -516,7 +380,7 @@ class TestLLMChain:
         mock_get_cache_key.return_value = "test_cache_key"
         mock_cached_response.return_value = "Cached response"
 
-        retrievers = {"resume": MagicMock(spec=BaseRetriever)}
+        retrievers: Dict[str, BaseRetriever] = {"resume": MagicMock(spec=BaseRetriever)}
         chat_history: List[BaseMessage] = []
         user_input = "Test question"
 
@@ -541,7 +405,7 @@ class TestLLMChain:
         mock_cached_response.return_value = None  # No cached response
         mock_get_llms.side_effect = RuntimeError("LLM init failed")
 
-        retrievers = {"resume": MagicMock(spec=BaseRetriever)}
+        retrievers: Dict[str, BaseRetriever] = {"resume": MagicMock(spec=BaseRetriever)}
         chat_history: List[BaseMessage] = []
         user_input = "Test question"
 
@@ -555,7 +419,7 @@ class TestLLMChain:
         assert "AI service is temporarily unavailable" in result[0]
         assert model_used == "error"
 
-    @patch("backend.core.llm_chain.VectorStoreManager.route_query_to_retrievers")
+    @patch("backend.core.llm_chain.route_query_to_retrievers")
     @patch("backend.core.llm_chain.CacheManager.get_cached_retrieval")
     @patch("backend.core.llm_chain.CacheManager.get_cached_response")
     @patch("backend.core.llm_chain.CacheManager.get_cache_key")
@@ -596,7 +460,7 @@ class TestLLMChain:
         mock_retriever.ainvoke.return_value = [Document(page_content="Test content", metadata={"source": "test"})]
         mock_route.return_value = [mock_retriever]
 
-        retrievers = {"resume": mock_retriever}
+        retrievers: Dict[str, BaseRetriever] = {"resume": mock_retriever}
         chat_history: List[BaseMessage] = []
         user_input = "Test question"
 

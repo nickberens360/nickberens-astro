@@ -9,16 +9,18 @@ This is the main entry point for the FastAPI application that:
 
 import logging
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 
 from .core.app_factory import create_app
-from .core.app_initializer import initialize_app_state
+from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
 from .core.followup_service import FollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
+from .core.smart_illustration_service import SmartIllustrationService
 
 project_root = Path(__file__).resolve().parent.parent
 
@@ -30,12 +32,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 # Initialize application state
+retrievers: Optional[Dict[str, Any]] = None
+illustration_service: Optional[SmartIllustrationService] = None
 try:
     retrievers, illustration_service = initialize_app_state()
     app_initialized = True
 except Exception as e:
     logger.critical(f"Application startup failed: {e}", exc_info=True)
-    retrievers, illustration_service = None, None
+    retrievers = None
+    illustration_service = None
     app_initialized = False
 
 # Initialize singleton services

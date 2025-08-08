@@ -254,7 +254,7 @@ async def test_query_handles_primary_llm_failure_and_uses_fallback(client: Async
         mock_gemini_chain.astream.assert_called_once()
 
 
-@patch("backend.core.illustration_service.IllustrationService.get_all")
+@patch("backend.core.smart_illustration_service.SmartIllustrationService.get_all")
 async def test_chat_handles_illustration_query_correctly(mock_get_all, client: AsyncClient):
     """
     SPEC: Verifies that a query for an illustration is routed to the
@@ -294,7 +294,7 @@ async def test_chat_handles_illustration_query_correctly(mock_get_all, client: A
     mock_get_all.assert_called_once()
 
 
-@patch("backend.core.illustration_service.IllustrationService.search")
+@patch("backend.core.smart_illustration_service.SmartIllustrationService.search")
 async def test_chat_handles_specific_illustration_search_correctly(mock_search, client: AsyncClient):
     """
     SPEC: Verifies that a specific query for an illustration is routed to the
@@ -472,7 +472,7 @@ async def test_image_query_includes_rate_limit_status(client: AsyncClient):
     """
     Test that image queries also include rate limit status in response.
     """
-    with patch("backend.core.illustration_service.IllustrationService.get_all") as mock_get_all:
+    with patch("backend.core.smart_illustration_service.SmartIllustrationService.get_all") as mock_get_all:
         mock_get_all.return_value = [{"file": "test_image.webp"}]
 
         response = await client.post(

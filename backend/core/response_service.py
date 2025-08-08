@@ -37,7 +37,16 @@ class ResponseService:
     ) -> QueryResponse:
         """Build a response for successful image searches."""
         if found_images:
-            image_urls = [f"{self.base_image_url}{img['file']}" for img in found_images]
+            # Handle cases where img['file'] might already contain the base path
+            image_urls = []
+            for img in found_images:
+                file_path = img["file"]
+                # Remove any existing "/illustrations/" prefix to avoid double slashes
+                if file_path.startswith("/illustrations/"):
+                    file_path = file_path[len("/illustrations/") :]
+                elif file_path.startswith("illustrations/"):
+                    file_path = file_path[len("illustrations/") :]
+                image_urls.append(f"{self.base_image_url}{file_path}")
             processing_time = time.time() - start_time
 
             # Customize message based on search term
