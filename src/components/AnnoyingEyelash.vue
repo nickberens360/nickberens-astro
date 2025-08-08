@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="isComponentVisible"
+    v-if="isComponentVisible && !hideAnnoyingEyelash"
     ref="eyelashElement"
     class="annoying-eyelash"
     :class="{ 'animating': isAnimating }"
@@ -40,6 +40,10 @@ export default {
       type: Number,
       default: 150
     },
+    hideAnnoyingEyelash: {
+      type: Boolean,
+      default: false
+    }
   },
   setup(props) {
     const eyelashElement = ref(null);

@@ -21,13 +21,28 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .config import AppConfig
-from .data_source_config import config as data_config
 
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 PRIMARY_LLM = AppConfig.PRIMARY_LLM
 GEMINI_MODEL = AppConfig.GEMINI_MODEL
+
+# Default configuration values (replacing legacy data_source_config)
+DEFAULT_PROMPTS = {
+    "system_template": """You are Nick Berens' AI assistant. You help visitors learn about Nick's professional background, skills, experience, and interests. Use the following pieces of context to answer the question. If you don't know the answer based on the context provided, just say you don't have that information.
+
+Context: {context}
+
+Answer as Nick would, in a friendly and professional tone. Keep responses concise but informative.""",
+    "history_aware": """Given a chat history and the latest user question which might reference the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is."""
+}
+
+# Default collection configuration
+DEFAULT_COLLECTION_CONFIG = {
+    "name_pattern": "nickberens_{source}"
+}
+
 CLAUDE_MODEL = AppConfig.CLAUDE_MODEL
 EMBEDDING_MODEL = AppConfig.EMBEDDING_MODEL
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
@@ -112,7 +127,7 @@ class VectorStoreManager:
     @classmethod
     def get_retriever_definitions(cls):
         """Get retriever definitions from config."""
-        return data_config.retrievers
+        return {}
 
     @classmethod
     def create_multi_vector_retriever(cls, docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
@@ -130,7 +145,7 @@ class VectorStoreManager:
                 continue
             try:
                 client = chromadb.EphemeralClient()
-                collection_name_pattern = data_config.collection_config.get("name_pattern", "nickberens_{source}")
+                collection_name_pattern = DEFAULT_COLLECTION_CONFIG.get("name_pattern", "nickberens_{source}")
                 collection_name = collection_name_pattern.replace("{source}", source)
                 vectorstore = Chroma.from_documents(
                     documents=source_docs,
@@ -259,8 +274,8 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
 
 def create_qa_chain(llm):
     """Creates the main question-answering chain."""
-    system_prompt = data_config.prompts.get(
-        "qa_system",
+    system_prompt = DEFAULT_PROMPTS.get(
+        "system_template",
         (
             "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
             "\n\n"
@@ -283,7 +298,7 @@ def create_qa_chain(llm):
 
 def create_history_aware_prompt() -> ChatPromptTemplate:
     """Creates a prompt template for reformulating questions based on chat history."""
-    contextualize_q_system_prompt = data_config.prompts.get(
+    contextualize_q_system_prompt = DEFAULT_PROMPTS.get(
         "history_aware",
         (
             "Given a chat history and the latest user question which might reference the chat history, "

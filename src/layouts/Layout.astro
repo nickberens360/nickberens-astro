@@ -16,10 +16,11 @@ export interface Props {
     hideFooter?: boolean;
     hideTerminal?: boolean;
     hideHeader?: boolean;
+    hideAnnoyingEyelash?: boolean;
 }
 
 const {
-    hideHeader = false,title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false} = Astro.props;
+    hideHeader = false,title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false, hideAnnoyingEyelash = false} = Astro.props;
 const gitBranch = await getGitBranch();
 const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
@@ -44,6 +45,7 @@ const repoUrl = getGitHubRepoUrl();
     client:load
     initial-x={50}
     initial-y={75}
+    hideAnnoyingEyelash={hideAnnoyingEyelash}
 />
 <slot/>
 <SiteFooter
