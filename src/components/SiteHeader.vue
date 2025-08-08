@@ -381,7 +381,7 @@ export default {
   left: 0;
   top: 0;
   width: 100%;
-  z-index: 100;
+  z-index: 99999;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
   height: var(--site-header-height);
 }
@@ -535,11 +535,21 @@ export default {
   left: 0;
   width: 100%;
   height: 100vh;
-  background-color: #fff;
+  /* Semi-transparent background for backdrop-filter to work */
+  background-color: rgba(255, 255, 255, 0.8);
+  /* Add backdrop-filter for blur effect */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding-top: 80px;
   transform: translateY(-100%);
   transition: transform 0.3s ease;
   z-index: 1000;
+}
+
+.theme-dark .site-header__mobile-nav {
+  /* Semi-transparent dark background */
+  background-color: rgba(26, 26, 26, 0.8);
+  color: #fff;
 }
 
 @supports not (height: 100dvh) {

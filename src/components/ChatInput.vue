@@ -26,10 +26,10 @@
             'warning': isNearLimit,
             'error': isOverLimit
           }">
-            {{ characterCount }}/{{ maxLength }}
+<!--            {{ characterCount }}/{{ maxLength }}
             <span v-if="isNearLimit && !isOverLimit" class="warning-text">
               (approaching limit)
-            </span>
+            </span>-->
             <span v-if="isOverLimit" class="error-text">
               (over limit - will be truncated)
             </span>
