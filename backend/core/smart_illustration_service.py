@@ -5,7 +5,6 @@ This service replaces the old illustration service and unified_data.json depende
 with intelligent illustration search using the unified retriever system.
 """
 
-import json
 import logging
 from typing import Dict, List
 
@@ -46,7 +45,7 @@ class SmartIllustrationService:
                 score_threshold=0.0,
             )
 
-            illustrations = []
+            illustrations: List[Dict[str, str]] = []
             seen_files = set()
 
             for doc in docs:
@@ -83,60 +82,38 @@ class SmartIllustrationService:
         logger.info(f"Smart illustration search for: '{search_term}'")
 
         try:
-            # Use the same logic as get_all but filter by search term
-            if self.unified_retriever.vector_store is None:
-                logger.error("Vector store not initialized")
-                return []
-            all_docs = self.unified_retriever.vector_store.similarity_search(
-                f"{search_term} illustration art creative character", k=50
+            # Use semantic search with creative content type filter and search term
+            docs = self.unified_retriever.semantic_search(
+                query=f"{search_term} illustration art creative character",
+                k=top_k * 2,  # Get more docs to allow filtering
+                filter_content_types=["creative"],
+                score_threshold=0.0,
             )
 
             illustrations: List[Dict[str, str]] = []
             seen_files = set()
 
-            for doc in all_docs:
-                if len(illustrations) >= top_k:
-                    break
-
-                # Check content for file references and search term matches
-                content_lower = doc.page_content.lower()
-                search_lower = search_term.lower()
-
-                # Look for illustration files in content
-                if '"file"' in doc.page_content and (search_lower in content_lower or search_term == "all"):
-                    # Parse JSON content instead of using regex
-                    try:
-                        item_data = json.loads(doc.page_content)
-                        if isinstance(item_data, dict) and "file" in item_data:
-                            filename = item_data.get("file")
-                            if filename and filename not in seen_files:
-                                # For specific searches, check if the search term appears in the content
-                                if search_term == "all" or search_lower in content_lower:
-                                    file_path = f"/illustrations/{filename}"
-                                    illustrations.append({"file": file_path})
-                                    seen_files.add(filename)
-                                    logger.info(f"Found illustration: {filename} (matched: {search_term})")
-                    except json.JSONDecodeError:
-                        logger.warning(f"Could not parse JSON content for doc from {doc.metadata.get('file_name')}")
-
-            # Also check metadata-based approach
-            for doc in all_docs:
+            for doc in docs:
                 if len(illustrations) >= top_k:
                     break
 
                 if doc.metadata.get("is_illustration_data"):
-                    display_path = doc.metadata.get("display_path")
-                    illustration_file = doc.metadata.get("illustration_file")
-                    if display_path and illustration_file not in seen_files:
-                        content_lower = doc.page_content.lower()
-                        if search_term == "all" or search_term.lower() in content_lower:
+                    # Check if search term matches content for specific searches
+                    content_lower = doc.page_content.lower()
+                    search_lower = search_term.lower()
+
+                    if search_term == "all" or search_lower in content_lower:
+                        display_path = doc.metadata.get("display_path")
+                        file_key = doc.metadata.get("illustration_file")
+
+                        if display_path and file_key not in seen_files:
                             illustrations.append({"file": display_path})
-                            seen_files.add(illustration_file)
-                            logger.info(f"Found illustration via metadata: {illustration_file} -> {display_path}")
+                            seen_files.add(file_key)
+                            logger.info(f"Found illustration via search: {file_key} -> {display_path}")
 
             logger.info(f"Smart illustration search returned {len(illustrations)} results for '{search_term}'")
             return illustrations
 
         except Exception:
-            logger.error("Smart illustration search failed", exc_info=False)
+            logger.error("Smart illustration search failed", exc_info=True)
             return []
