@@ -11,6 +11,7 @@ This module provides a cleaner initialization process that:
 import logging
 import os
 from typing import Any, Dict, Optional, Tuple
+
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig

@@ -7,7 +7,7 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 
 ### Build Commands
 - `npm run build` - Build the Astro frontend
-- `npm run dev` - Start Astro development server  
+- `npm run dev` - Start Astro development server
 - `npm run backend:build` - Build backend container with Podman
 - `npm run backend:dev` - Run backend in development mode with hot reload
 - `npm run backend:stop` - Stop the backend container
@@ -22,7 +22,7 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 **CRITICAL: Always run these commands before committing changes:**
 
 - `black backend/` - Format Python code (line length: 120)
-- `isort backend/` - Sort Python imports  
+- `isort backend/` - Sort Python imports
 - `flake8 backend/` - Check Python style and errors
 - `mypy backend/` - Type checking for Python
 - `autoflake --remove-all-unused-imports --recursive --in-place backend/` - Remove unused imports

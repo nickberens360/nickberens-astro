@@ -133,7 +133,6 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
             )
 
-        # The VectorStoreManager.route_query_to_retrievers now automatically uses smart routing
         text_stream, actual_model_used, metadata = await stream_with_fallback(
             services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
         )
