@@ -19,6 +19,7 @@
       class="emoji-display"
       :class="{ 'animate-up-flip': isAnimating }"
       @animationend="onAnimationEnd"
+      @webkitAnimationEnd="onAnimationEnd"
     >
       🤭
     </div>
@@ -26,7 +27,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 
 export default {
   name: 'AnnoyingEyelash',
@@ -62,32 +63,26 @@ export default {
     const isEmoji = computed(() => dragAttempts.value >= 3);
 
     const startDrag = (event) => {
-      // Only handle primary pointer (first finger/mouse)
       if (!event.isPrimary) return;
 
-      // Increment drag attempts counter
       dragAttempts.value++;
 
       isDragging.value = true;
       initialMouseX.value = event.clientX - currentX.value;
       initialMouseY.value = event.clientY - currentY.value;
 
-      // Safe pointer capture with error handling
       try {
         if (eyelashElement.value && event.pointerId !== undefined) {
           eyelashElement.value.setPointerCapture(event.pointerId);
         }
       } catch (e) {
-        // Ignore errors if pointer capture is not supported or fails
         console.debug('Pointer capture failed:', e);
       }
 
-      // Add listeners to window for better performance and standard drag pattern
       window.addEventListener('pointermove', handlePointerMove);
       window.addEventListener('pointerup', stopDrag);
       window.addEventListener('pointercancel', stopDrag);
 
-      // Prevent text selection and default behaviors
       event.preventDefault();
     };
 
@@ -97,7 +92,6 @@ export default {
       currentX.value = event.clientX - initialMouseX.value;
       currentY.value = event.clientY - initialMouseY.value;
 
-      // Keep the eyelash within viewport bounds using actual component dimensions
       const rect = eyelashElement.value?.getBoundingClientRect();
       const maxX = window.innerWidth - (rect?.width ?? 0);
       const maxY = window.innerHeight - (rect?.height ?? 0);
@@ -106,7 +100,6 @@ export default {
       currentY.value = Math.max(0, Math.min(currentY.value, maxY));
     };
 
-    // Defensive cleanup function to ensure clean state
     const cleanup = () => {
       isDragging.value = false;
       window.removeEventListener('pointermove', handlePointerMove);
@@ -119,31 +112,28 @@ export default {
 
       cleanup();
 
-      // If this is the 3rd attempt, trigger animation when user stops interaction
+      // Trigger on the 3rd attempt
       if (dragAttempts.value === 3) {
+        // Tiny delay to avoid event queue conflicts
         setTimeout(() => {
           isAnimating.value = true;
         }, 100);
       }
 
-      // Safe pointer capture release with error handling
       try {
         if (eyelashElement.value && event.pointerId !== undefined) {
           eyelashElement.value.releasePointerCapture(event.pointerId);
         }
       } catch (e) {
-        // Ignore errors if pointer capture was already released or not supported
         console.debug('Pointer capture release failed:', e);
       }
     };
 
     const onAnimationEnd = () => {
-      // Hide the entire component after animation completes
       isComponentVisible.value = false;
     };
 
     onUnmounted(() => {
-      // Use defensive cleanup to ensure all listeners are removed
       cleanup();
     });
 
@@ -171,12 +161,18 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+
+  /* interaction + selection */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+
+  /* ✅ put perspective on the parent (iOS likes this) */
+  perspective: 800px;
+  -webkit-perspective: 800px;
 }
 
 .eyelash-image {
@@ -199,39 +195,60 @@ export default {
 .emoji-display {
   font-size: 48px;
   pointer-events: none;
-  display: block;
+  display: inline-block; /* ensure transforms behave consistently */
   line-height: 1;
+  transform-origin: center center;
+  -webkit-transform-origin: center center;
 }
 
-@keyframes upAndFlip {
+/* ---------- Keyframes (prefixed + unprefixed) ---------- */
+@-webkit-keyframes upAndFlip {
   0% {
-    transform: translateY(0) rotateY(0deg) translateZ(0);
+    -webkit-transform: translate3d(0, 0, 0) rotateY(0deg);
+    transform: translate3d(0, 0, 0) rotateY(0deg);
     opacity: 1;
   }
   100% {
-    transform: translateY(-100px) rotateY(360deg) translateZ(0);
+    -webkit-transform: translate3d(0, -100px, 0) rotateY(359deg);
+    transform: translate3d(0, -100px, 0) rotateY(359deg);
+    opacity: 1;
+  }
+}
+@keyframes upAndFlip {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0) rotateY(0deg);
+    transform: translate3d(0, 0, 0) rotateY(0deg);
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: translate3d(0, -100px, 0) rotateY(359deg);
+    transform: translate3d(0, -100px, 0) rotateY(359deg);
     opacity: 1;
   }
 }
 
 .animate-up-flip {
+  /* kick off animation with prefixes */
+  -webkit-animation: upAndFlip 1s ease-out forwards;
   animation: upAndFlip 1s ease-out forwards;
-  will-change: transform, opacity;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+
+  /* render hints */
+  will-change: transform;
   -webkit-backface-visibility: hidden;
-  -webkit-transform: translateZ(0);
-  -webkit-perspective: 1000px;
-  perspective: 1000px;
+  backface-visibility: hidden;
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
+
+  /* ensure the element is on its own layer from the start */
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 
+/* Optional: tiny type smoothing on iOS */
 @supports (-webkit-touch-callout: none) {
   .animate-up-flip {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
-
 </style>
