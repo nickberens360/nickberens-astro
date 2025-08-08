@@ -5,7 +5,7 @@ dist/
 .BAK/
 *.bak
 *.BAK
-
+*.zip
 claude-exports/
 podman-commands.sh
 
