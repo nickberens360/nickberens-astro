@@ -70,6 +70,13 @@
         :class="{ 'is-active': isMobileMenuOpen }"
         :style="headerStyles"
       >
+        <button
+          class="site-header__mobile-nav-close"
+          @click="closeMobileMenu"
+          aria-label="Close menu"
+        >
+          <font-awesome-icon :icon="['fas', 'times']" />
+        </button>
         <ul class="site-header__mobile-nav-list">
           <li
             v-for="item in navItemsStore"
@@ -381,7 +388,7 @@ export default {
   left: 0;
   top: 0;
   width: 100%;
-  z-index: 99999;
+  z-index: 100;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
   height: var(--site-header-height);
 }
@@ -535,6 +542,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100vh;
+  z-index: 9999;
   /* Semi-transparent background for backdrop-filter to work */
   background-color: rgba(255, 255, 255, 0.8);
   /* Add backdrop-filter for blur effect */
@@ -543,7 +551,6 @@ export default {
   padding-top: 80px;
   transform: translateY(-100%);
   transition: transform 0.3s ease;
-  z-index: 1000;
 }
 
 .theme-dark .site-header__mobile-nav {
@@ -588,6 +595,29 @@ export default {
 
 .site-header__mobile-nav-item a:hover {
   color: #666;
+}
+
+.site-header__mobile-nav-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: inherit;
+  z-index: 1001;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.site-header__mobile-nav-close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.theme-dark .site-header__mobile-nav-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .site-header__hamburger.pod {
