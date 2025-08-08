@@ -101,12 +101,15 @@
         :class="variant === 'pod' ? 'pod' : ''"
         :style="variant === 'pod' ? headerStyles : {}"
       >
-      <a
+        <a
         href="/nick-ai"
-        style="font-size: 2rem; text-decoration: none; position: relative;
-        top: -3px;"
+        style="text-decoration: none; position: relative; display: flex;
+        flex-direction: column; justify-content: center; "
       >
-        🤖
+          <img
+            :src="aiIconSvg" alt="AI Icon"
+            style="width: 34px;"
+          />
       </a>
       <font-awesome-icon
         :icon="['fas', 'terminal']"
@@ -131,6 +134,8 @@
 
 import TerminalInput from './TerminalInput.vue';
 import { useStore } from '@nanostores/vue';
+import aiIconSvg from '../assets/images/ai-icon.svg?url';
+
 import { navItems, isTerminalHiddenStore, isTerminalMinimizedStore } from '../stores/ui';
 
 export default {
@@ -164,6 +169,7 @@ export default {
       isMobileMenuOpen: false,
       useTerminalInput: false,
       scrollTimeout: null,
+      aiIconSvg,
     };
   },
   computed: {
