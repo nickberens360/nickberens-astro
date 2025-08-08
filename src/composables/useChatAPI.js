@@ -7,7 +7,7 @@ const getApiUrl = () => {
   const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
   return isDev
     ? 'http://localhost:8000'
-    : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-api.onrender.com';
+    : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-production.up.railway.app';
 };
 
 export function useChatAPI() {
