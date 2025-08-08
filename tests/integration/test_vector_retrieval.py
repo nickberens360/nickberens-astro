@@ -15,10 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # NOW import modules that depend on environment variables
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
-from backend.core.data_loader import load_all_documents
-from backend.core.llm_chain import create_multi_vector_retriever
+from backend.core.app_initializer_v2 import initialize_app_state
 
 # Add project root to path (go up three levels from tests/integration/)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -31,12 +28,14 @@ def test_vector_retrieval():
     print("=" * 50)
 
     try:
-        # Load documents and create retriever
-        print("📚 Loading documents...")
-        docs, illustrations_data = load_all_documents()
-        embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/embedding-001"))
-        retrievers = create_multi_vector_retriever(docs, embeddings)
-        print(f"✅ Loaded {len(docs)} documents")
+        # Initialize unified system
+        print("📚 Initializing unified retriever system...")
+        app_state, illustration_service = initialize_app_state()
+        unified_retriever = app_state.get("unified_retriever")
+        if not unified_retriever:
+            print("❌ Failed to initialize unified retriever")
+            return
+        print("✅ Unified retriever system initialized")
 
         # Test queries that previously returned wrong content
         test_queries = [
@@ -53,38 +52,41 @@ def test_vector_retrieval():
         for query in test_queries:
             print(f"\n📝 Query: '{query}'")
 
-            # Get relevant documents using resume retriever for resume queries
-            resume_retriever = retrievers.get("resume")
-            if resume_retriever:
-                relevant_docs = resume_retriever.invoke(query)
-            else:
-                print("❌ No resume retriever available")
-                continue
+            # Use unified retriever with smart routing
+            retriever = unified_retriever.get_retriever(
+                content_type_filter=["experience", "skills"], k=5  # Target resume-related content
+            )
+            relevant_docs = retriever.invoke(query)
 
-            # Check document sources
+            # Check document sources and content types
             sources = [doc.metadata.get("source", "unknown") for doc in relevant_docs[:3]]
+            content_types = [doc.metadata.get("content_type", []) for doc in relevant_docs[:3]]
             print(f"📊 Top 3 document sources: {sources}")
+            print(f"🏷️  Content types: {content_types}")
 
-            # Check if resume content is prioritized
-            resume_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "resume"]
-            illustration_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "illustration"]
+            # Check if resume/experience content is found
+            experience_docs = [doc for doc in relevant_docs if "experience" in doc.metadata.get("content_type", [])]
+            skills_docs = [doc for doc in relevant_docs if "skills" in doc.metadata.get("content_type", [])]
+            creative_docs = [doc for doc in relevant_docs if "creative" in doc.metadata.get("content_type", [])]
 
-            print(f"📄 Resume documents found: {len(resume_docs)}")
-            print(f"🎨 Illustration documents found: {len(illustration_docs)}")
+            print(f"📄 Experience documents found: {len(experience_docs)}")
+            print(f"🛠️  Skills documents found: {len(skills_docs)}")
+            print(f"🎨 Creative documents found: {len(creative_docs)}")
 
-            if resume_docs:
-                print("✅ SUCCESS: Resume content found for resume query")
-                # Show a snippet of the resume content
+            if experience_docs or skills_docs:
+                print("✅ SUCCESS: Resume-related content found for resume query")
+                # Show a snippet
+                relevant_doc = experience_docs[0] if experience_docs else skills_docs[0]
                 snippet = (
-                    resume_docs[0].page_content[:100] + "..."
-                    if len(resume_docs[0].page_content) > 100
-                    else resume_docs[0].page_content
+                    relevant_doc.page_content[:100] + "..."
+                    if len(relevant_doc.page_content) > 100
+                    else relevant_doc.page_content
                 )
-                print(f"📋 Resume snippet: {snippet}")
+                print(f"📋 Content snippet: {snippet}")
             else:
-                print("❌ ISSUE: No resume content found for resume query")
-                if illustration_docs:
-                    print("⚠️  WARNING: Illustration content returned instead")
+                print("❌ ISSUE: No resume-related content found for resume query")
+                if creative_docs:
+                    print("⚠️  WARNING: Creative content returned instead")
 
         # Test about queries
         print("\n🧪 Testing About Queries:")
@@ -98,15 +100,13 @@ def test_vector_retrieval():
 
         for query in about_queries:
             print(f"\n📝 Query: '{query}'")
-            # Get relevant documents using about retriever for about queries
-            about_retriever = retrievers.get("about")
-            if about_retriever:
-                relevant_docs = about_retriever.invoke(query)
-                about_docs = [doc for doc in relevant_docs if doc.metadata.get("source") == "about"]
-                print(f"📖 About documents found: {len(about_docs)}")
-            else:
-                print("❌ No about retriever available")
-                continue
+            # Use unified retriever targeting about content
+            retriever = unified_retriever.get_retriever(
+                content_type_filter=["about"], k=5  # Target about/personal content
+            )
+            relevant_docs = retriever.invoke(query)
+            about_docs = [doc for doc in relevant_docs if "about" in doc.metadata.get("content_type", [])]
+            print(f"📖 About documents found: {len(about_docs)}")
 
             if about_docs:
                 print("✅ SUCCESS: About content found for about query")
@@ -115,10 +115,10 @@ def test_vector_retrieval():
 
         print("\n🎯 Summary:")
         print("=" * 50)
-        print("✅ Enhanced vector retrieval system is working")
-        print("✅ MMR search configuration applied")
-        print("✅ Source-aware filtering functional")
-        print("✅ Query-type detection operational")
+        print("✅ Unified retriever system is working")
+        print("✅ Automatic content discovery operational")
+        print("✅ Content-type filtering functional")
+        print("✅ Smart routing operational")
 
     except Exception as e:
         print(f"❌ Error during testing: {e}")

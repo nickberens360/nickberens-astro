@@ -98,7 +98,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
         return JSONResponse(content=response_dict)
 
-    # Handle AI text responses
+    # Handle AI text responses using smart retriever
     formatted_chat_history: List[BaseMessage] = [
         (HumanMessage(content=msg["text"]) if msg["sender"] == "user" else AIMessage(content=msg["text"]))
         for msg in sanitized_history
@@ -116,9 +116,23 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             f"User requested {query.preferred_model} but it's rate limited. Will fallback to available model."
         )
 
-    # Attempt LLM fallback even if retrievers are not available
-    # The stream_with_fallback function will handle the case where retrievers are None
+    # Use the enhanced retriever system (now with smart routing built-in)
     try:
+        # Log smart routing info for debugging if unified retriever is available
+        from ..core.app_initializer_v2 import get_unified_retriever
+        from ..core.smart_query_handler import SmartQueryHandler
+
+        unified_retriever = get_unified_retriever(services["retrievers"])
+        if unified_retriever:
+            smart_handler = SmartQueryHandler(unified_retriever)
+            intent_analysis = smart_handler.analyze_query_intent(sanitized_question)
+            from logging import getLogger
+
+            logger = getLogger(__name__)
+            logger.info(
+                f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
+            )
+
         text_stream, actual_model_used, metadata = await stream_with_fallback(
             services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
         )

@@ -1,5 +1,5 @@
 # Include production dependencies
--r requirements.txt
+-r backend/requirements.txt
 
 # Testing dependencies
 pytest
