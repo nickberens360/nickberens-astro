@@ -11,6 +11,7 @@ html {
     background-color: var(--background-color, #f6f6f6);
     color: var(--text-color, #111);
     scroll-behavior: smooth;
+    overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -20,6 +21,7 @@ h1, h2, h3, h4, h5, h6 {
 body {
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
 }
 
 /* Font and Spacing Variables */
@@ -43,7 +45,7 @@ body {
     --chat-bot-form-height: 155px;
 
     /* Font Family */
-    --font-primary: 'JetBrains Mono', sans-serif;
+    --font-primary: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
 
     /* Font Sizes */
     --font-size-xs: clamp(0.7rem, 0.7rem + 0.1vw, 0.8rem);

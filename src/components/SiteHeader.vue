@@ -17,12 +17,18 @@
           ref="logo"
         >
           <p class="site-header__name">nickberens
-            <span class="git">git:
-              <span class="git-paren">(</span>
+            <span class="git">git:<span class="git-paren">(</span>
               <span class="git-branch">{{ gitBranch }}</span>
               <span class="git-paren">)</span>
             </span>
           </p>
+          <p class="site-header__name site-header__name--mobile">nick<span class="git"><span class="git-paren">{</span>
+              <span class="git-branch">berens</span>
+              <span class="git-paren">}</span>
+            </span>
+          </p>
+
+
         </a>
         <TerminalInput
           v-if="maybeTerminalInput"
@@ -90,6 +96,18 @@
           </li>
         </ul>
       </div>
+      <div
+        class="site-header__icons d-flex align-center"
+        :class="variant === 'pod' ? 'pod' : ''"
+        :style="variant === 'pod' ? headerStyles : {}"
+      >
+      <a
+        href="/nick-ai"
+        style="font-size: 2rem; text-decoration: none; position: relative;
+        top: -3px;"
+      >
+        🤖
+      </a>
       <font-awesome-icon
         :icon="['fas', 'terminal']"
         @click="toggleTerminal"
@@ -97,14 +115,14 @@
         class="terminal-icon"
       />
       <button
-        class="site-header__hamburger ml-2"
-        :class="[{ 'is-active': isMobileMenuOpen }, variant === 'pod' ? 'pod' : '']"
+        class="site-header__hamburger "
+        :class="[{ 'is-active': isMobileMenuOpen }]"
         @click="toggleMobileMenu"
         aria-label="Toggle menu"
-        :style="variant === 'pod' ? headerStyles : {}"
       >
         🍔
       </button>
+      </div>
     </div>
   </header>
 </template>
@@ -145,6 +163,7 @@ export default {
       headerBackgroundColor: 'transparent',
       isMobileMenuOpen: false,
       useTerminalInput: false,
+      scrollTimeout: null,
     };
   },
   computed: {
@@ -152,8 +171,15 @@ export default {
       return this.navItemsStoreRaw;
     },
     headerStyles() {
+      let backgroundColor = this.headerBackgroundColor;
+
+      // Apply rgba with alpha 0.8 only for pod variant
+      if (this.variant === 'pod') {
+        backgroundColor = this.convertToRgba(backgroundColor, 0.2);
+      }
+
       return {
-        backgroundColor: this.headerBackgroundColor,
+        backgroundColor: backgroundColor,
       };
     },
     maybeTerminalInput() {
@@ -181,8 +207,81 @@ export default {
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
+    }
   },
   methods: {
+    convertToRgba(color, alpha = 0.8) {
+      // Handle transparent case
+      if (color === 'transparent') {
+        return 'transparent';
+      }
+
+      // Handle named colors
+      const namedColors = {
+        'white': '255, 255, 255',
+        'black': '0, 0, 0',
+        'red': '255, 0, 0',
+        'blue': '0, 0, 255',
+        'green': '0, 128, 0',
+      };
+
+      if (namedColors[color.toLowerCase()]) {
+        return `rgba(${namedColors[color.toLowerCase()]}, ${alpha})`;
+      }
+
+      // Handle hex colors
+      if (color.startsWith('#')) {
+        const hex = color.replace('#', '');
+
+        // Validate hex color length (must be 3 or 6 characters)
+        if (hex.length !== 3 && hex.length !== 6) {
+          // Return original color for invalid hex lengths
+          return color;
+        }
+
+        // Validate that all characters are valid hex digits
+        if (!/^[0-9A-Fa-f]+$/.test(hex)) {
+          return color;
+        }
+
+        let r, g, b;
+
+        if (hex.length === 3) {
+          // Handle 3-character hex (e.g., #f00 -> #ff0000)
+          r = parseInt(hex.slice(0, 1) + hex.slice(0, 1), 16);
+          g = parseInt(hex.slice(1, 2) + hex.slice(1, 2), 16);
+          b = parseInt(hex.slice(2, 3) + hex.slice(2, 3), 16);
+        } else {
+          // Handle 6-character hex (e.g., #ff0000)
+          r = parseInt(hex.slice(0, 2), 16);
+          g = parseInt(hex.slice(2, 4), 16);
+          b = parseInt(hex.slice(4, 6), 16);
+        }
+
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      // Handle rgb colors - convert to rgba
+      if (color.startsWith('rgb(')) {
+        const rgbValues = color.match(/\d+/g);
+        if (rgbValues && rgbValues.length === 3) {
+          return `rgba(${rgbValues[0]}, ${rgbValues[1]}, ${rgbValues[2]}, ${alpha})`;
+        }
+      }
+
+      // Handle rgba colors - update alpha
+      if (color.startsWith('rgba(')) {
+        const rgbaMatch = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/);
+        if (rgbaMatch) {
+          return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${alpha})`;
+        }
+      }
+
+      // Fallback - return original color if can't convert
+      return color;
+    },
     toggleTerminal() {
       // Simplified terminal toggle logic using centralized state
       if (this.isTerminalHidden) {
@@ -208,28 +307,51 @@ export default {
       document.body.style.overflow = '';
     },
     handleScroll() {
+      // Clear existing timeout
+      if (this.scrollTimeout) {
+        clearTimeout(this.scrollTimeout);
+      }
+
+      // Throttle the scroll handling
+      this.scrollTimeout = setTimeout(() => {
+        this.performScrollCheck();
+      }, 16); // ~60fps
+    },
+    performScrollCheck() {
       const headerEl = this.$refs.siteHeader;
       if (!headerEl) return;
+
       const headerRect = headerEl.getBoundingClientRect();
       const checkX = window.innerWidth / 2;
-      const checkY = headerRect.top + (headerRect.height / 2) + 34;
-      headerEl.style.pointerEvents = 'none';
-      const elementUnder = document.elementFromPoint(checkX, checkY);
-      headerEl.style.pointerEvents = 'auto';
-      if (!elementUnder) {
-        this.headerBackgroundColor = window.scrollY > 0 ? 'white' : 'transparent';
-        this.overlayTheme = 'light';
-        return;
-      }
-      const colorSection = elementUnder.closest('[data-section-color]');
-      const themeSection = elementUnder.closest('[data-section-theme]');
-      const terminalInputElement = elementUnder.closest('[data-has-terminal-input]');
-      this.useTerminalInput = terminalInputElement && terminalInputElement.dataset.hasTerminalInput === 'true';
+      const checkY = headerRect.bottom + 10; // Check just below the header
 
-      this.headerBackgroundColor = colorSection
-        ? colorSection.dataset.sectionColor
-        : (window.scrollY > 0 ? 'white' : 'transparent');
-      this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
+      // Temporarily disable pointer events
+      headerEl.style.pointerEvents = 'none';
+
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        const elementUnder = document.elementFromPoint(checkX, checkY);
+        headerEl.style.pointerEvents = 'auto';
+
+        if (!elementUnder) {
+          this.headerBackgroundColor = window.scrollY > 0 ? 'white' : 'transparent';
+          this.overlayTheme = 'light';
+          return;
+        }
+
+        const colorSection = elementUnder.closest('[data-section-color]');
+        const themeSection = elementUnder.closest('[data-section-theme]');
+        const terminalInputElement = elementUnder.closest('[data-has-terminal-input]');
+
+        this.useTerminalInput = terminalInputElement && terminalInputElement.dataset.hasTerminalInput === 'true';
+
+        this.headerBackgroundColor = colorSection
+          ? colorSection.dataset.sectionColor
+          : (window.scrollY > 0 ? 'white' : 'transparent');
+        this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
+
+        console.log('Header background color:', this.headerBackgroundColor);
+      });
     }
   }
 };
@@ -273,6 +395,10 @@ export default {
   color: var(--text-color, #000);
   text-decoration: none;
   height: 100%;
+}
+
+.site-header__name--mobile {
+  display: none;
 }
 
 .theme-dark .site-header__logo {
@@ -349,19 +475,42 @@ export default {
   z-index: 1001;
   font-size: 2rem;
   line-height: 1;
-  padding: 10px;
+  padding: 0;
+}
+
+.site-header__icons {
+  gap: .5rem;
 }
 
 .pod {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 0.5rem;
   height: 85%;
   padding: 0 1.5rem;
   border-radius: 200px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
-  transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
+
+  /* Enhanced glass effect */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 15px -3px #0000004d,0 -4px 6px -2px #0000000d;
+  transition: all 0.3s ease-in-out;
+}
+
+.theme-dark .pod {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.02)
+  );
 }
 
 .site-header__hamburger.pod {
@@ -472,7 +621,14 @@ export default {
   }
 }
 
-
+@media (max-width: 600px) {
+  .site-header__name {
+    display: none;
+  }
+  .site-header__name--mobile {
+    display: block;
+  }
+}
 /* Theme-based Styling for Text */
 .site-header.theme-light {
   color: #000000;

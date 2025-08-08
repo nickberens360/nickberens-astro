@@ -17,10 +17,10 @@
     <div
       v-else
       class="emoji-display"
-      :class="{ 'animate-up-fade': isAnimating }"
+      :class="{ 'animate-up-flip': isAnimating }"
       @animationend="onAnimationEnd"
     >
-      😂
+      🤭
     </div>
   </div>
 </template>
@@ -184,7 +184,7 @@ export default {
   height: auto;
   pointer-events: none;
   display: block;
-  opacity: .45;
+  opacity: 0.45;
 }
 
 /* Prevent image dragging */
@@ -203,19 +203,22 @@ export default {
   line-height: 1;
 }
 
-/* Animation for emoji moving up and fading out */
-@keyframes upAndFade {
-  0% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100px);
-    opacity: 0;
-  }
+@keyframes upAndFlip {
+  0% {
+    transform: translateY(0) rotateY(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotateY(359.9deg);
+    opacity: 1;
+  }
 }
 
-.animate-up-fade {
-  animation: upAndFade 2s ease-out forwards;
+.animate-up-flip {
+  animation: upAndFlip 1s ease-out forwards;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
+
 </style>
