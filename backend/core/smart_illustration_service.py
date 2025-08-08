@@ -34,69 +34,35 @@ class SmartIllustrationService:
             return False, f"❌ Illustration validation failed: {e}"
 
     def get_all(self) -> List[Dict[str, str]]:
-        """Return all illustrations by searching for creative content."""
+        """Return all illustrations using metadata filtering."""
         try:
-            # Debug: Try multiple approaches to find illustration data
-            logger.info("Attempting to get all illustrations...")
+            logger.info("Attempting to get all illustrations using metadata filtering...")
 
-            # First, try to get all documents with illustration metadata
-            if self.unified_retriever.vector_store is None:
-                logger.error("Vector store not initialized")
-                return []
-            all_docs = self.unified_retriever.vector_store.similarity_search("", k=100)
-            logger.info(f"Total documents in vector store: {len(all_docs)}")
+            # Use semantic search with creative content type filter
+            docs = self.unified_retriever.semantic_search(
+                query="illustration art design creative",
+                k=200,  # High enough to get all illustrations
+                filter_content_types=["creative"],
+                score_threshold=0.0,
+            )
 
-            illustrations: List[Dict[str, str]] = []
+            illustrations = []
             seen_files = set()
 
-            # Check all documents for illustration data
-            illustration_docs_found = 0
-            for doc in all_docs:
-                if doc.metadata.get("is_illustration_data", False):
-                    illustration_docs_found += 1
-                    # Use display_path which already has the correct format
+            for doc in docs:
+                if doc.metadata.get("is_illustration_data"):
                     display_path = doc.metadata.get("display_path")
-                    illustration_file = doc.metadata.get("illustration_file")  # Just for tracking duplicates
-                    logger.info(
-                        f"Found illustration doc: {illustration_file} -> {display_path} in {doc.metadata.get('file_name')}"
-                    )
+                    file_key = doc.metadata.get("illustration_file")
 
-                    if display_path and illustration_file not in seen_files:
+                    if display_path and file_key not in seen_files:
                         illustrations.append({"file": display_path})
-                        seen_files.add(illustration_file)
+                        seen_files.add(file_key)
 
-            logger.info(f"Found {illustration_docs_found} illustration documents, {len(illustrations)} unique files")
-
-            # If no results, try alternative approach - search more broadly
-            if not illustrations:
-                logger.info("No illustrations found with metadata, trying broader search...")
-                broader_docs = self.unified_retriever.semantic_search(
-                    "illustration file art image creative design character",
-                    k=100,
-                    score_threshold=0.0,  # Very low threshold
-                )
-
-                for doc in broader_docs:
-                    # Check if content contains illustration file references
-                    if '"file"' in doc.page_content and (".jpg" in doc.page_content or ".png" in doc.page_content):
-                        # Parse JSON content instead of using regex
-                        try:
-                            item_data = json.loads(doc.page_content)
-                            if isinstance(item_data, dict) and "file" in item_data:
-                                filename = item_data.get("file")
-                                if filename and filename not in seen_files:
-                                    file_path = f"/illustrations/{filename}"
-                                    illustrations.append({"file": file_path})
-                                    seen_files.add(filename)
-                                    logger.info(f"Found illustration via content parsing: {filename}")
-                        except json.JSONDecodeError:
-                            logger.warning(f"Could not parse JSON content for doc from {doc.metadata.get('file_name')}")
-
-            logger.info(f"Final result: {len(illustrations)} illustrations for 'get all'")
+            logger.info(f"Found {len(illustrations)} illustrations via metadata filtering")
             return illustrations
 
         except Exception:
-            logger.error("Failed to get all illustrations", exc_info=False)
+            logger.error("Failed to get all illustrations", exc_info=True)
             return []
 
     def search(self, search_term: str, top_k: int = 10) -> List[Dict[str, str]]:
