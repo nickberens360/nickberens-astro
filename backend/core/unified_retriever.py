@@ -79,22 +79,55 @@ class UnifiedRetriever:
         if any(term in content for term in ["about", "passion", "interest", "philosophy"]):
             content_types.append("about")
 
-        # Illustration/creative detection
-        if any(term in content for term in ["illustration", "design", "art", "creative", "drawing"]):
+        # Illustration/creative detection - enhanced for illustration files
+        if any(
+            term in content for term in ["illustration", "design", "art", "creative", "drawing", "character", "tags"]
+        ):
             content_types.append("creative")
 
         # Project detection
         if any(term in content for term in ["project", "built", "developed", "created"]):
             content_types.append("project")
 
-        return {
+        # Special handling for illustration JSON files
+        is_illustration_data = file_path.name == "illustrations.json"
+        illustration_file = None
+
+        if is_illustration_data:
+            # Extract file name from JSON content for frontend display
+            try:
+                import json
+
+                if "file" in content:
+                    # This is an individual illustration entry
+                    for line in doc.page_content.split("\n"):
+                        if '"file"' in line:
+                            # Extract filename from JSON
+                            import re
+
+                            match = re.search(r'"file":\s*"([^"]+)"', line)
+                            if match:
+                                illustration_file = match.group(1)
+                                break
+            except:
+                pass
+
+        metadata = {
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(content_types),  # Convert list to comma-separated string
+            "content_types": ",".join(content_types),
             "content_length": len(content),
             "has_code": "```" in doc.page_content or "function" in content,
+            "is_illustration_data": is_illustration_data,
         }
+
+        # Add illustration file path for frontend display
+        if illustration_file:
+            metadata["illustration_file"] = illustration_file
+            metadata["display_path"] = f"/illustrations/{illustration_file}"
+
+        return metadata
 
     def index_directory(self, directory: str, force_reindex: bool = False) -> Tuple[int, int]:
         """

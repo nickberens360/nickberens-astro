@@ -16,14 +16,13 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
-from .data_loader import load_all_documents
-from .illustration_service import IllustrationService
+from .smart_illustration_service import SmartIllustrationService
 from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
 
 
-def initialize_app_state() -> Tuple[Dict[str, BaseRetriever], IllustrationService]:
+def initialize_app_state() -> Tuple[Dict[str, BaseRetriever], SmartIllustrationService]:
     """
     Initialize application with unified retriever system.
 
@@ -68,13 +67,10 @@ def initialize_app_state() -> Tuple[Dict[str, BaseRetriever], IllustrationServic
         "knowledge": unified_retriever.get_retriever(),  # General knowledge
     }
 
-    # Load illustration data for the service (still needed for image handling)
-    _, illustrations_data = load_all_documents()
+    # Initialize smart illustration service (no unified_data.json needed!)
+    smart_illustration_service = SmartIllustrationService(unified_retriever)
 
-    # Initialize illustration service
-    illustration_service = IllustrationService(all_retrievers.get("illustration"), illustrations_data)
-
-    is_valid, message = illustration_service.validate_data()
+    is_valid, message = smart_illustration_service.validate_data()
     if not is_valid:
         logger.warning(message)
     else:
@@ -83,7 +79,7 @@ def initialize_app_state() -> Tuple[Dict[str, BaseRetriever], IllustrationServic
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever
 
-    return all_retrievers, illustration_service
+    return all_retrievers, smart_illustration_service
 
 
 def get_unified_retriever(all_retrievers: Dict[str, BaseRetriever]) -> UnifiedRetriever:
