@@ -157,7 +157,15 @@ class VectorStoreManager:
 
     @classmethod
     def route_query_to_retrievers(cls, query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
-        """Routes a user query to the most relevant retriever(s) based on keywords."""
+        """Routes a user query to the most relevant retriever(s) using smart routing or keywords."""
+
+        # Check if we have the unified smart retriever available
+        if "unified" in retrievers and "_unified_retriever" in retrievers:
+            # Use smart routing - just return the unified retriever
+            logger.info(f"Using smart routing for query: '{query}'")
+            return [retrievers["unified"]]
+
+        # Original keyword-based routing as fallback
         query_lower = query.lower()
         selected_names = set()
         retriever_definitions = cls.get_retriever_definitions()
