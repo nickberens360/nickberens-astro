@@ -25,8 +25,7 @@ RUN pip install --upgrade pip && \
 
 # ---- Runtime (same image; we already built wheels in venv) ----
 
-# Create a non-root user
-RUN useradd -ms /bin/bash app
+RUN groupadd --system app && useradd --system --no-create-home --gid app app
 USER app
 
 WORKDIR /app

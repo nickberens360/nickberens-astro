@@ -5,6 +5,7 @@ This service replaces the old illustration service and unified_data.json depende
 with intelligent illustration search using the unified retriever system.
 """
 
+import json
 import logging
 from typing import Dict, List
 
@@ -77,19 +78,19 @@ class SmartIllustrationService:
 
                 for doc in broader_docs:
                     # Check if content contains illustration file references
-                    if '"file"' in doc.page_content and ".jpg" in doc.page_content or ".png" in doc.page_content:
-                        # Extract file name from content
-                        import re
-
-                        matches = re.findall(r'"file":\s*"([^"]+\.(jpg|png|jpeg))"', doc.page_content)
-                        for match in matches:
-                            filename = match[0]
-                            if filename not in seen_files:
-                                # Build correct path from filename
-                                file_path = f"/illustrations/{filename}"
-                                illustrations.append({"file": file_path})
-                                seen_files.add(filename)
-                                logger.info(f"Found illustration via content parsing: {filename}")
+                    if '"file"' in doc.page_content and (".jpg" in doc.page_content or ".png" in doc.page_content):
+                        # Parse JSON content instead of using regex
+                        try:
+                            item_data = json.loads(doc.page_content)
+                            if isinstance(item_data, dict) and "file" in item_data:
+                                filename = item_data.get("file")
+                                if filename and filename not in seen_files:
+                                    file_path = f"/illustrations/{filename}"
+                                    illustrations.append({"file": file_path})
+                                    seen_files.add(filename)
+                                    logger.info(f"Found illustration via content parsing: {filename}")
+                        except json.JSONDecodeError:
+                            logger.warning(f"Could not parse JSON content for doc from {doc.metadata.get('file_name')}")
 
             logger.info(f"Final result: {len(illustrations)} illustrations for 'get all'")
             return illustrations
@@ -140,18 +141,20 @@ class SmartIllustrationService:
 
                 # Look for illustration files in content
                 if '"file"' in doc.page_content and (search_lower in content_lower or search_term == "all"):
-                    import re
-
-                    matches = re.findall(r'"file":\s*"([^"]+\.(jpg|png|jpeg))"', doc.page_content)
-                    for match in matches:
-                        filename = match[0]
-                        if filename not in seen_files:
-                            # For specific searches, check if the search term appears in the content
-                            if search_term == "all" or search_lower in content_lower:
-                                file_path = f"/illustrations/{filename}"
-                                illustrations.append({"file": file_path})
-                                seen_files.add(filename)
-                                logger.info(f"Found illustration: {filename} (matched: {search_term})")
+                    # Parse JSON content instead of using regex
+                    try:
+                        item_data = json.loads(doc.page_content)
+                        if isinstance(item_data, dict) and "file" in item_data:
+                            filename = item_data.get("file")
+                            if filename and filename not in seen_files:
+                                # For specific searches, check if the search term appears in the content
+                                if search_term == "all" or search_lower in content_lower:
+                                    file_path = f"/illustrations/{filename}"
+                                    illustrations.append({"file": file_path})
+                                    seen_files.add(filename)
+                                    logger.info(f"Found illustration: {filename} (matched: {search_term})")
+                    except json.JSONDecodeError:
+                        logger.warning(f"Could not parse JSON content for doc from {doc.metadata.get('file_name')}")
 
             # Also check metadata-based approach
             for doc in all_docs:

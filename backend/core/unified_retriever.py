@@ -96,21 +96,13 @@ class UnifiedRetriever:
         if is_illustration_data:
             # Extract file name from JSON content for frontend display
             try:
-                pass
-
                 if "file" in content:
-                    # This is an individual illustration entry
-                    for line in doc.page_content.split("\n"):
-                        if '"file"' in line:
-                            # Extract filename from JSON
-                            import re
-
-                            match = re.search(r'"file":\s*"([^"]+)"', line)
-                            if match:
-                                illustration_file = match.group(1)
-                                break
-            except Exception:
-                pass
+                    # This is an individual illustration entry - parse JSON directly
+                    data = json.loads(doc.page_content)
+                    if isinstance(data, dict):
+                        illustration_file = data.get("file")
+            except json.JSONDecodeError:
+                logger.warning(f"Could not parse JSON to find illustration file in doc from {file_path.name}")
 
         metadata = {
             "file_path": str(file_path),
