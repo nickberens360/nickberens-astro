@@ -9,11 +9,9 @@ from datetime import datetime, timedelta
 from threading import RLock
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, Union, cast
 
-import chromadb
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.history_aware_retriever import create_history_aware_retriever
 from langchain_anthropic import ChatAnthropic
-from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -35,13 +33,9 @@ DEFAULT_PROMPTS = {
 Context: {context}
 
 Answer as Nick would, in a friendly and professional tone. Keep responses concise but informative.""",
-    "history_aware": """Given a chat history and the latest user question which might reference the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is."""
+    "history_aware": """Given a chat history and the latest user question which might reference the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is.""",
 }
 
-# Default collection configuration
-DEFAULT_COLLECTION_CONFIG = {
-    "name_pattern": "nickberens_{source}"
-}
 
 CLAUDE_MODEL = AppConfig.CLAUDE_MODEL
 EMBEDDING_MODEL = AppConfig.EMBEDDING_MODEL
@@ -121,111 +115,14 @@ _response_cache: Dict[str, Dict[str, Any]] = {}
 _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 
 
-class VectorStoreManager:
-    """Manages vector store creation and retrieval routing"""
-
-    @classmethod
-    def get_retriever_definitions(cls):
-        """Get retriever definitions from config."""
-        return {}
-
-    @classmethod
-    def create_multi_vector_retriever(cls, docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
-        """Creates and returns a dictionary of Chroma vector store retrievers, one for each document source."""
-        vectorstores = {}
-        retriever_definitions = cls.get_retriever_definitions()
-        docs_by_source = {
-            source: [doc for doc in docs if doc.metadata.get("source") == source]
-            for source in retriever_definitions.keys()
-        }
-
-        for source, source_docs in docs_by_source.items():
-            if not source_docs:
-                logger.warning(f"No documents found for source '{source}'. Skipping vector store creation.")
-                continue
-            try:
-                client = chromadb.EphemeralClient()
-                collection_name_pattern = DEFAULT_COLLECTION_CONFIG.get("name_pattern", "nickberens_{source}")
-                collection_name = collection_name_pattern.replace("{source}", source)
-                vectorstore = Chroma.from_documents(
-                    documents=source_docs,
-                    embedding=embeddings,
-                    client=client,
-                    collection_name=collection_name,
-                )
-                vectorstores[source] = vectorstore
-                logger.info(f"Created Chroma vector store for '{source}' with {len(source_docs)} documents.")
-            except Exception as e:
-                logger.error(f"Failed to create vector store for source '{source}': {e}")
-                raise
-
-        final_retrievers: Dict[str, BaseRetriever] = {}
-        for name, store in vectorstores.items():
-            if name in retriever_definitions:
-                search_kwargs = retriever_definitions[name].get("search_kwargs", {})
-                final_retrievers[name] = store.as_retriever(search_kwargs=search_kwargs)
-
-        if not final_retrievers:
-            logger.warning("No retrievers were created. The application may not be able to answer questions.")
-
-        return final_retrievers
-
-    @classmethod
-    def route_query_to_retrievers(cls, query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
-        """Routes a user query to the most relevant retriever(s) using smart routing or keywords."""
-
-        # Check if we have the unified smart retriever available
-        if "unified" in retrievers and "_unified_retriever" in retrievers:
-            # Use smart routing - just return the unified retriever
-            logger.info(f"Using smart routing for query: '{query}'")
-            return [retrievers["unified"]]
-
-        # Original keyword-based routing as fallback
-        query_lower = query.lower()
-        selected_names = set()
-        retriever_definitions = cls.get_retriever_definitions()
-
-        for source, ret_config in retriever_definitions.items():
-            if any(keyword in query_lower for keyword in ret_config.get("keywords", [])):
-                selected_names.add(source)
-
-        if not selected_names:
-            selected_names.update(["resume", "about", "knowledge"])
-
-        selected_retrievers = [retrievers[name] for name in selected_names if name in retrievers]
-        logger.info(f"Query routed to retrievers: {[name for name in selected_names if name in retrievers]}")
-        return selected_retrievers
-
-
-def create_knowledge_retriever(
-    embeddings,
-    chroma_dir: str = "backend/.chroma",
-    collection: str = "knowledge",
-):
-    """Create a retriever that reads from the persistent Chroma collection built by ingest/indexer.py."""
-    try:
-        from langchain_community.vectorstores import Chroma as CommunityChroma
-
-        vs = CommunityChroma(
-            collection_name=collection,
-            persist_directory=chroma_dir,
-            embedding_function=embeddings,
-        )
-        return vs.as_retriever(search_kwargs={"k": 8})
-    except Exception as e:
-        logger.warning(f"Knowledge retriever unavailable: {e}")
-        return None
-
-
-# Wrapper helpers for backward compatibility
-def create_multi_vector_retriever(docs: List[Document], embeddings) -> Dict[str, BaseRetriever]:
-    """Wrapper function for backward compatibility"""
-    return VectorStoreManager.create_multi_vector_retriever(docs, embeddings)
-
-
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
-    """Wrapper function for backward compatibility"""
-    return VectorStoreManager.route_query_to_retrievers(query, retrievers)
+    """Routes a user query to the unified retriever."""
+    if "unified" in retrievers:
+        logger.info(f"Using unified retriever for query: '{query}'")
+        return [retrievers["unified"]]
+    else:
+        logger.error("Unified retriever not found in retrievers dictionary")
+        return []
 
 
 def is_rate_limit_error(error: Exception) -> bool:
@@ -434,7 +331,7 @@ async def stream_with_fallback(
     unique_docs = CacheManager.get_cached_retrieval(cache_key) if cache_key else None
     if unique_docs is None:
         logger.info(f"Retrieval cache miss for key: {cache_key}. Performing vector search...")
-        selected_retrievers = VectorStoreManager.route_query_to_retrievers(user_input, retrievers)
+        selected_retrievers = route_query_to_retrievers(user_input, retrievers)
 
         # History-aware?
         if chat_history and (reformulation_llm := llms.get("claude") or llms.get("gemini")):

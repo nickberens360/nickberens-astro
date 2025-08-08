@@ -12,7 +12,6 @@ import logging
 from typing import Dict, List, Optional
 
 from langchain.schema import Document
-from langchain_core.retrievers import BaseRetriever
 
 from .unified_retriever import UnifiedRetriever
 

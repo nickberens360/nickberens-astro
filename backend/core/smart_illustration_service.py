@@ -25,7 +25,7 @@ class SmartIllustrationService:
             # Test search for illustrations to see if data exists
             test_results = self.search("illustration", top_k=1)
             if test_results:
-                return True, f"✅ Smart illustration system ready with unified retriever."
+                return True, "✅ Smart illustration system ready with unified retriever."
             else:
                 return False, "❌ No illustration data found in unified retriever."
         except Exception as e:

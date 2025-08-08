@@ -96,7 +96,7 @@ class UnifiedRetriever:
         if is_illustration_data:
             # Extract file name from JSON content for frontend display
             try:
-                import json
+                pass
 
                 if "file" in content:
                     # This is an individual illustration entry
@@ -109,7 +109,7 @@ class UnifiedRetriever:
                             if match:
                                 illustration_file = match.group(1)
                                 break
-            except:
+            except Exception:
                 pass
 
         metadata = {

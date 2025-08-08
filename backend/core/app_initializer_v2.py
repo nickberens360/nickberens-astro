@@ -55,16 +55,9 @@ def initialize_app_state() -> Tuple[Dict[str, BaseRetriever], SmartIllustrationS
 
     logger.info(f"Total indexed: {total_files} files, {total_chunks} chunks")
 
-    # Create backward-compatible retriever dictionary
-    # This maintains compatibility with existing code
+    # Create retriever dictionary with only the unified retriever
     all_retrievers = {
         "unified": unified_retriever.get_retriever(),
-        # Create virtual retrievers for backward compatibility
-        "resume": unified_retriever.get_retriever(filter_content_types=["experience", "skills"]),
-        "about": unified_retriever.get_retriever(filter_content_types=["about"]),
-        "project": unified_retriever.get_retriever(filter_content_types=["project"]),
-        "illustration": unified_retriever.get_retriever(filter_content_types=["creative"]),
-        "knowledge": unified_retriever.get_retriever(),  # General knowledge
     }
 
     # Initialize smart illustration service (no unified_data.json needed!)

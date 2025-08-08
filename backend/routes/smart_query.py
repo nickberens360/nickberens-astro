@@ -8,7 +8,6 @@ This endpoint uses only the smart retriever to demonstrate:
 """
 
 import logging
-from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
