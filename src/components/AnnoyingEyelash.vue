@@ -204,21 +204,21 @@ export default {
 }
 
 @keyframes upAndFlip {
-  0% {
-    transform: translateY(0) rotateY(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100px) rotateY(359.9deg);
-    opacity: 1;
-  }
+  0% {
+    transform: translateY(0) rotateY(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotateY(359.9deg);
+    opacity: 1;
+  }
 }
 
 .animate-up-flip {
-  animation: upAndFlip 1s ease-out forwards;
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  animation: upAndFlip 1s ease-out forwards;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 </style>
