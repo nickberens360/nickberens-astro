@@ -23,17 +23,32 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r /app/backend/requirements.txt
 
-# ---- Runtime (same image; we already built wheels in venv) ----
-
-RUN groupadd --system app && useradd --system --no-create-home --gid app app && \
-    mkdir -p /home/app && chown app:app /home/app
-USER app
+# ---- Runtime Stage ----
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy application code (after deps for better cache hit rate)
+# Install only runtime dependencies (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create user
+RUN groupadd --system app && useradd --system --no-create-home --gid app app && \
+    mkdir -p /home/app && chown app:app /home/app
+
+# Copy the virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Set environment variables
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Copy application code
 COPY --chown=app:app backend/ ./backend/
 COPY --chown=app:app public/ ./public/
+
+USER app
 
 # Expose port
 EXPOSE 8000
