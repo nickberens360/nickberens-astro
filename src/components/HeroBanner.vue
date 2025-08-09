@@ -19,7 +19,7 @@
 
 <script>
 import { useStore } from '@nanostores/vue';
-import { terminalInputValue } from '../stores/ui';
+import { terminalInputValue } from '../stores/terminal-window';
 
 export default {
   name: 'HeroBanner',

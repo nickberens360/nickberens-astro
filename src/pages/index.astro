@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import HeroBanner from '../components/HeroBanner.vue';
 import PageSection from '../components/PageSection.vue';
-import {terminalInputValue} from '../stores/ui';
+import {terminalInputValue} from '../stores/terminal-window';
 
 // Get the initial value for server-side rendering
 const initialCurseWord = terminalInputValue.get();

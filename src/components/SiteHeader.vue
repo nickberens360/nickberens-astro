@@ -143,7 +143,8 @@ import TerminalInput from './TerminalInput.vue';
 import { useStore } from '@nanostores/vue';
 import aiIconSvg from '../assets/images/ai-icon.svg?url';
 
-import { navItems, isTerminalHiddenStore, isTerminalMinimizedStore } from '../stores/ui';
+import { navItems } from '../stores/ui';
+import { isTerminalHiddenStore, isTerminalMinimizedStore } from '../stores/terminal-window';
 
 export default {
   name: 'SiteHeader',
