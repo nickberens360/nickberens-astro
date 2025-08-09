@@ -55,7 +55,7 @@ export const terminalInputValue = atom(DEFAULT_TERMINAL_INPUT_VALUE);
 // Command history store with persisted data
 export const commandHistoryStore = createPersistedAtom(
   'commandHistory',
-  [{
+  () => ([{
     id: 1,
     timestamp: Date.now(),
     command: '',
@@ -64,7 +64,7 @@ export const commandHistoryStore = createPersistedAtom(
     loadingProgress: 0,
     graphData: null,
     commitData: null
-  }]
+  }])
 );
 
 // Next command ID tracker with persisted value
