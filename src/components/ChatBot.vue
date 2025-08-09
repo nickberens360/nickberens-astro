@@ -1,7 +1,7 @@
 <template>
   <div
     class="chatbot-container"
-    :class="`theme-${theme}`"
+    :class="{ 'is-drawer-open': chatHistoryVisible }"
   >
     <div
       v-if="backendStatus === 'checking'"
@@ -16,13 +16,12 @@
       <p>❌ Backend service is currently offline. Please try again later.</p>
     </div>
 
-    <!-- Rate limit notification -->
-<!--    <div
-      v-if="rateLimitNotification"
+    <div
+      v-if="rateLimitNotification && false"
       class="status-notification rate-limit"
     >
       <p>{{ rateLimitNotification }}</p>
-    </div>-->
+    </div>
 
     <ChatMessageList
       :messages="messages"
@@ -63,7 +62,8 @@ import {
   createNewChat,
   updateChatTitle,
   isPendingNewChat,
-  updateMessageInActiveChat
+  updateMessageInActiveChat,
+  isChatHistoryVisible,
 } from '../stores/ai.js';
 import { openImageOverlay, isChatProcessing } from '../stores/ui.js';
 import { backendStatus } from '../stores/backendStatus.js';
@@ -84,6 +84,7 @@ export default {
     const messages = useStore(activeChatMessages);
     const chatId = useStore(activeChatId);
     const pendingNewChat = useStore(isPendingNewChat);
+    const chatHistoryVisible = useStore(isChatHistoryVisible);
     const lastStoppedPrompt = ref('');
     const currentPrompt = ref(''); // Track the current prompt being processed
     const selectedModel = ref('claude');
@@ -336,7 +337,8 @@ export default {
       handlePromptSelect,
       handleFollowupClick,
       handleImageClick,
-      handleResearchMessage
+      handleResearchMessage,
+      chatHistoryVisible,
     };
   },
 };
