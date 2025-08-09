@@ -64,8 +64,9 @@ import {
   isPendingNewChat,
   updateMessageInActiveChat,
   isChatHistoryVisible,
+  isChatProcessing,
 } from '../stores/ai.js';
-import { openImageOverlay, isChatProcessing } from '../stores/ui.js';
+import { openImageOverlay } from '../stores/ui.js';
 import { backendStatus } from '../stores/backendStatus.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
 import ChatMessageList from './ChatMessageList.vue';

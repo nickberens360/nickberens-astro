@@ -11,6 +11,8 @@
       v-if="!isEmoji"
       src="/images/eyelash.png"
       alt="Eyelash"
+      width="30"
+      height="24"
       class="eyelash-image"
       draggable="false"
     />

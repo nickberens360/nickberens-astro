@@ -119,9 +119,9 @@ import {
   createNewChat,
   selectChat,
   isChatHistoryVisible,
-  isPendingNewChat
+  isPendingNewChat,
+  isChatProcessing
 } from '../stores/ai.js';
-import { isChatProcessing } from '../stores/ui.js';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 export default {

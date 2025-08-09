@@ -456,6 +456,10 @@ export default {
   font-size: 1.25rem;
   margin: 0 0 1rem;
 }
+:deep(.markdown-content a) {
+  color: #60a5fa;
+}
+
 
 
 @media (max-width: 640px) {
