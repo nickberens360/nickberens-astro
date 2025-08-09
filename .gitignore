@@ -69,11 +69,8 @@ public/unified_data.json
 # Log files
 backend/query_logs.json
 *.log
-server.log
+
 
 # ChromaDB database files
 backend/.unified_chroma/
 
-# Temporary development files
-temp_file
-test_scroll_fix.html
