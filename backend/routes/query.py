@@ -10,6 +10,7 @@ This module contains the primary query endpoint that:
 """
 
 import json
+import logging
 import time
 from typing import List
 
@@ -26,8 +27,9 @@ from ..dependencies import get_services
 from ..models.request_models import Query
 from ..security.validator import SecurityValidator
 
-# Initialize router
+# Initialize router and logger
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/query")
@@ -56,10 +58,15 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
     # Handle image queries
     if query_type != QueryType.AI_TEXT_RESPONSE:
-        if query_type == QueryType.ALL_IMAGES:
-            found_images = services["illustration_service"].get_all()
+        illustration_service = services.get("illustration_service")
+        if illustration_service is None:
+            found_images = []
+            logger.warning("Illustration service not available - returning empty results")
         else:
-            found_images = services["illustration_service"].search(search_term)
+            if query_type == QueryType.ALL_IMAGES:
+                found_images = illustration_service.get_all()
+            else:
+                found_images = illustration_service.search(search_term)
 
         ai_response = (
             f"Here are illustrations for '{search_term}'."
@@ -67,13 +74,19 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             else f"Sorry, no illustrations found for '{search_term}'."
         )
 
-        followup_questions = services["followup_service"].generate_followups(
-            sanitized_question, ai_response, sanitized_history
+        followup_service = services.get("followup_service")
+        followup_questions = (
+            followup_service.generate_followups(sanitized_question, ai_response, sanitized_history)
+            if followup_service
+            else []
         )
 
-        response_data = services["response_service"].build_image_response(
-            search_term, found_images, start_time, followup_questions
-        )
+        response_service = services.get("response_service")
+        if response_service is None:
+            logger.error("Response service not available - cannot build image response")
+            raise HTTPException(status_code=503, detail="Image service temporarily unavailable")
+
+        response_data = response_service.build_image_response(search_term, found_images, start_time, followup_questions)
 
         # Add rate limit status to image responses too
         rate_limits = get_rate_limit_status()
@@ -109,9 +122,6 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
     # If user's preferred model is rate limited, log a warning and let the system fallback
     if query.preferred_model and current_rate_limits.get(query.preferred_model, False):
-        from logging import getLogger
-
-        logger = getLogger(__name__)
         logger.warning(
             f"User requested {query.preferred_model} but it's rate limited. Will fallback to available model."
         )
@@ -126,9 +136,6 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         if unified_retriever:
             smart_handler = SmartQueryHandler(unified_retriever)
             intent_analysis = smart_handler.analyze_query_intent(sanitized_question)
-            from logging import getLogger
-
-            logger = getLogger(__name__)
             logger.info(
                 f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
             )
@@ -140,13 +147,13 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         # If we get here, the LLM fallback succeeded, so return 200
     except Exception as e:
         # Only return 503 if both retrievers and LLM fallback fail
-        from logging import getLogger
-
-        logger = getLogger(__name__)
         logger.error(f"Both retrievers and LLM fallback failed: {e}")
         raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
 
-    followup_questions = services["followup_service"].generate_followups(sanitized_question, "", sanitized_history)
+    followup_service = services.get("followup_service")
+    followup_questions = (
+        followup_service.generate_followups(sanitized_question, "", sanitized_history) if followup_service else []
+    )
 
     # Log the streaming text query (response will be marked as [STREAMING])
     response_time = time.time() - start_time
