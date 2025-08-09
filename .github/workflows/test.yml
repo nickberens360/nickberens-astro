@@ -3,8 +3,24 @@ name: Test Suite
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'tests/**'
+      - 'requirements*.txt'
+      - 'pyproject.toml'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - '.github/workflows/test.yml'
   pull_request:
     branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'tests/**'
+      - 'requirements*.txt'
+      - 'pyproject.toml'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - '.github/workflows/test.yml'
 
 # Security: Limit job permissions
 permissions:
