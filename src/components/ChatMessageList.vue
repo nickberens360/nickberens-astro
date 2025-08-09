@@ -460,8 +460,6 @@ export default {
   color: #60a5fa;
 }
 
-
-
 @media (max-width: 640px) {
   .message-bubble {
     padding: 0.5rem 0;
