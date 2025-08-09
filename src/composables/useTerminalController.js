@@ -9,7 +9,7 @@ import {
   isTerminalHiddenStore,
   isTerminalMaximizedStore,
   previousTerminalStateStore
-} from '../stores/ui.js';
+} from '../stores/terminal-window.js';
 
 export function useTerminalController(props) {
   // === REFS ===

@@ -1,10 +1,10 @@
 import { nextTick } from 'vue';
 import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../utils/gitInfo.js';
+import { navItems } from '../stores/ui.js';
 import {
-  navItems,
   commandHistoryStore,
   nextCommandIdStore
-} from '../stores/ui.js';
+} from '../stores/terminal-window.js';
 import { DEFAULT_TERMINAL } from '../config/terminalConfig.js';
 import { processCodeFrequencyData, processCommitHistory } from '../utils/dataProcessing.js';
 
