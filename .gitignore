@@ -69,3 +69,8 @@ public/unified_data.json
 # Log files
 backend/query_logs.json
 *.log
+
+
+# ChromaDB database files
+backend/.unified_chroma/
+
