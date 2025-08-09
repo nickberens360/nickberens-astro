@@ -16,9 +16,6 @@ export const navItems = atom([
   }
 ]);
 
-// State to track when the chat is processing a prompt
-export const isChatProcessing = atom(false);
-
 // Image overlay state
 export const imageOverlayStore = atom({
   isOpen: false,
