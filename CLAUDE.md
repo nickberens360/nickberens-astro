@@ -13,9 +13,11 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `npm run backend:stop` - Stop the backend container
 
 ### Test Commands
-- `pytest` - Run Python tests
-- `pytest --cov=backend/core` - Run tests with coverage
-- `npm test` - Run frontend tests
+- `pytest` - Run Python tests with coverage (configured in pyproject.toml)
+- `pytest --cov=backend/core` - Run tests with explicit coverage
+- `pytest -m unit` - Run only unit tests (fast)
+- `pytest -m integration` - Run integration tests (slower)
+- `npm test` - Run frontend tests with Vitest
 - `npm run test:run` - Run frontend tests once
 
 ### Linting & Type Checking
@@ -26,6 +28,14 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `flake8 backend/` - Check Python style and errors
 - `mypy backend/` - Type checking for Python
 - `autoflake --remove-all-unused-imports --recursive --in-place backend/` - Remove unused imports
+
+### Pre-commit Hooks (Automated Quality Checks)
+**Recommended: Set up pre-commit hooks to automatically run linting:**
+
+- `pip install pre-commit` - Install pre-commit (if not already installed)
+- `pre-commit install` - Install git pre-commit hooks
+- `pre-commit run --all-files` - Run all hooks on all files manually
+- `pre-commit clean` - Clean pre-commit cache if needed
 
 ### Linting Configuration Rules
 **Follow these rules when writing/editing Python code:**
@@ -70,6 +80,10 @@ backend/
 │   ├── unified_retriever.py       # NEW: Smart auto-discovery system
 │   ├── smart_illustration_service.py  # NEW: Smart image search
 │   ├── smart_query_handler.py     # NEW: Intelligent query processing
+│   ├── query_logger.py            # NEW: Query logging service
+│   ├── query_router.py            # NEW: Query routing logic
+│   ├── response_service.py        # NEW: Response processing service
+│   ├── followup_service.py        # NEW: Follow-up question service
 │   ├── config.py
 │   ├── llm_chain.py               # UPDATED: Now uses smart routing
 │   └── ...
@@ -97,10 +111,15 @@ public/            # Static data files (also auto-indexed)
 - `backend/core/smart_query_handler.py` - Query intent analysis and smart routing
 - `backend/core/smart_illustration_service.py` - Image search without unified_data.json
 - `backend/core/app_initializer_v2.py` - Unified system initialization
+- `backend/core/query_logger.py` - Query logging and analytics
+- `backend/core/query_router.py` - Advanced query routing logic
+- `backend/core/response_service.py` - Response processing and enhancement
+- `backend/core/followup_service.py` - Intelligent follow-up question generation
 
-### Configuration (Legacy - mostly unused now)
+### Configuration
 - `backend/config/data_sources.yaml` - Legacy manual configuration (fallback only)
 - `pyproject.toml` - Python project configuration and linting rules
+- `.pre-commit-config.yaml` - Pre-commit hooks for code quality automation
 
 ## Development Guidelines
 
@@ -186,6 +205,28 @@ INFO - Using smart routing for query: 'What's your development philosophy?'
 INFO - Stored 8 documents in retrieval cache for key: 73ffbd0e3e3a5e87
 ```
 
+## Current Development Status
+
+### Active Branch: `easter-egg`
+The project is currently on the `easter-egg` branch with ongoing frontend enhancements.
+
+### Recent API Additions
+- **Query Logging**: `/api/query-logs` - Admin interface for query analytics
+- **Health Check**: `/health` - Service health monitoring
+- **Smart Query Testing**: `/api/smart-query/*` - Advanced query analysis endpoints
+
+### New Services & Modules
+- `query_logger.py` - Comprehensive query logging and analytics
+- `response_service.py` - Enhanced response processing pipeline  
+- `followup_service.py` - Intelligent follow-up question generation
+- `query_router.py` - Advanced query routing with intent analysis
+
+### Testing & Coverage
+- **Coverage Reports**: HTML coverage reports generated in `htmlcov/` directory
+- **Test Markers**: `unit`, `integration`, `slow` for test organization
+- **Coverage Target**: Focuses on `backend/core` modules
+- **Async Testing**: Configured for async/await patterns with pytest-asyncio
+
 ## Environment Variables
 - `FORCE_REBUILD_DATA=true` - Force rebuild of vector indices on server startup (optional)
 
@@ -199,7 +240,22 @@ INFO - Stored 8 documents in retrieval cache for key: 73ffbd0e3e3a5e87
 ### Important: Type Stub Packages & Pre-commit
 MyPy requires type stub packages for third-party libraries.
 
-**For Pre-commit hooks:** Type stubs are configured in `.pre-commit-config.yaml` under the mypy hook's `additional_dependencies`. If you add new dependencies that need type stubs, add them there.
+**For Pre-commit hooks:** Type stubs are configured in `.pre-commit-config.yaml` under the mypy hook's `additional_dependencies`. Current stubs include:
+```yaml
+additional_dependencies: [
+  types-PyYAML>=1.0.0,
+  types-requests>=2.0.0,
+  types-urllib3>=1.0.0,
+  pyyaml>=6.0,
+  langchain,
+  langchain-community,
+  langchain-core,
+  langchain-google-genai,
+  fastapi,
+  uvicorn
+]
+```
+If you add new dependencies that need type stubs, add them there.
 
 **For local development:** Install type stubs locally:
 ```bash

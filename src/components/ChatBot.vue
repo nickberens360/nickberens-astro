@@ -175,18 +175,26 @@ export default {
       }
       if (!userInput.value.trim() || hasTypingMessage.value || backendStatusValue.value !== 'online') return;
 
+      const question = userInput.value;
+      
+      // Check for easter egg keywords BEFORE submission
+      const lowerQuestion = question.toLowerCase();
+      if (lowerQuestion.includes('egg') || lowerQuestion.includes('easter')) {
+        // Handle easter egg: add user message and easter egg response, but skip backend
+        const currentChatId = activeChatId.get() || createNewChat();
+        if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, userInput.value);
+        
+        addMessageToActiveChat({ text: question, sender: 'user' });
+        userInput.value = '';
+        handleEasterEggFound('egg2');
+        return; // Exit early - don't submit to backend
+      }
+
       const currentChatId = activeChatId.get() || createNewChat();
       const chatHistoryForAPI = activeChatMessages.get().slice(-10); // Send last 10 messages
       if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, userInput.value);
 
-      const question = userInput.value;
       currentPrompt.value = question; // Store the current prompt
-
-      // Check for easter egg keywords after submission
-      const lowerQuestion = question.toLowerCase();
-      if (lowerQuestion.includes('egg') || lowerQuestion.includes('easter')) {
-        handleEasterEggFound('egg2');
-      }
 
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';

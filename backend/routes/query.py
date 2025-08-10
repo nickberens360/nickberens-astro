@@ -32,6 +32,32 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def normalize_personal_references(question: str) -> str:
+    """
+    Normalize references to 'Nick' to personal pronouns for consistent query handling.
+    
+    Examples:
+    - "show me nick's illustrations" -> "show me your illustrations"
+    - "what are nick's skills" -> "what are your skills" 
+    - "tell me about nick" -> "tell me about yourself"
+    """
+    import re
+    
+    # Normalize different variations of nick references
+    question_normalized = question
+    
+    # Handle possessive forms: "nick's" -> "your"
+    question_normalized = re.sub(r'\bnick\'?s\b', 'your', question_normalized, flags=re.IGNORECASE)
+    
+    # Handle object forms: "about nick" -> "about yourself", "to nick" -> "to you"
+    question_normalized = re.sub(r'\b(about|to|for)\s+nick\b', r'\1 yourself', question_normalized, flags=re.IGNORECASE)
+    
+    # Handle general references: "nick" -> "you" (when not already handled above)
+    question_normalized = re.sub(r'\bnick\b', 'you', question_normalized, flags=re.IGNORECASE)
+    
+    return question_normalized
+
+
 @router.post("/query")
 @limiter.limit(AppConfig.RATE_LIMIT)
 async def query_endpoint(request: Request, query: Query, services: dict = Depends(get_services)):
@@ -48,13 +74,16 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         raise HTTPException(status_code=400, detail=error_msg)
 
     sanitized_question = SecurityValidator.sanitize_input(query.question)
+    
+    # Normalize personal references (nick -> you/your/yourself) 
+    normalized_question = normalize_personal_references(sanitized_question)
 
     # Sanitize chat history as well
     sanitized_history = [
         {"sender": msg.sender, "text": SecurityValidator.sanitize_input(msg.text)} for msg in query.chat_history
     ]
 
-    query_type, search_term = services["query_router"].route_query(sanitized_question.lower().strip())
+    query_type, search_term = services["query_router"].route_query(normalized_question.lower().strip())
 
     # Handle image queries
     if query_type != QueryType.AI_TEXT_RESPONSE:
@@ -76,7 +105,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
         followup_service = services.get("followup_service")
         followup_questions = (
-            followup_service.generate_followups(sanitized_question, ai_response, sanitized_history)
+            followup_service.generate_followups(normalized_question, ai_response, sanitized_history)
             if followup_service
             else []
         )
@@ -97,7 +126,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         response_time = time.time() - start_time
         query_logger.log_query(
             client_ip=client_ip,
-            question=sanitized_question,
+            question=normalized_question,
             response=ai_response,
             model_used="image_search",
             query_type="image",
@@ -135,13 +164,13 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         unified_retriever = get_unified_retriever(services["retrievers"])
         if unified_retriever:
             smart_handler = SmartQueryHandler(unified_retriever)
-            intent_analysis = smart_handler.analyze_query_intent(sanitized_question)
+            intent_analysis = smart_handler.analyze_query_intent(normalized_question)
             logger.info(
-                f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
+                f"Smart routing: Query '{normalized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
             )
 
         text_stream, actual_model_used, metadata = await stream_with_fallback(
-            services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
+            services["retrievers"], formatted_chat_history, normalized_question, query.preferred_model
         )
 
         # If we get here, the LLM fallback succeeded, so return 200
@@ -152,14 +181,14 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
     followup_service = services.get("followup_service")
     followup_questions = (
-        followup_service.generate_followups(sanitized_question, "", sanitized_history) if followup_service else []
+        followup_service.generate_followups(normalized_question, "", sanitized_history) if followup_service else []
     )
 
     # Log the streaming text query (response will be marked as [STREAMING])
     response_time = time.time() - start_time
     query_logger.log_streaming_query(
         client_ip=client_ip,
-        question=sanitized_question,
+        question=normalized_question,
         model_used=actual_model_used,
         response_time=response_time,
         metadata={

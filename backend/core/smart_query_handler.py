@@ -145,7 +145,7 @@ class SmartQueryHandler:
             "technical": ["code", "api", "function", "technical", "implementation"],
             "experience": ["experience", "work", "job", "company", "role"],
             "skills": ["skill", "expertise", "technology", "language", "framework"],
-            "personal": ["about", "interest", "passion", "philosophy"],
+            "personal": ["about", "interest", "passion", "philosophy", "yourself", "you are"],
             "creative": ["illustration", "art", "design", "creative"],
             "project": ["project", "built", "created", "developed"],
         }

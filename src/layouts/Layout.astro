@@ -8,6 +8,7 @@ import TerminalWindow from '../components/TerminalWindow.vue';
 import AnnoyingEyelash from '../components/AnnoyingEyelash.vue';
 import {getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl} from '../utils/gitInfo.js';
 import EasterEgg from '../components/EasterEgg.vue';
+import EasterEggsFound from '../components/EasterEggsFound.vue';
 
 export interface Props {
     title?: string;
@@ -63,6 +64,7 @@ const repoUrl = getGitHubRepoUrl();
     client:only="vue"
     hideEggs={hideEggs}
 />
+<EasterEggsFound client:only="vue" />
 <SiteFooter
     commitHash={commitHash}
     commitMessage={commitMessage}
