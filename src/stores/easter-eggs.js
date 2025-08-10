@@ -132,7 +132,10 @@ export const updateEasterEgg = (eggName) => {
 // Function to reset all Easter eggs (useful for testing)
 export const resetEasterEggs = () => {
   easterEggsStore.set(defaultState);
-  // This will automatically save to localStorage due to the subscription
+  // Also reset the celebration shown state
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    localStorage.removeItem('nickgoldsworthy_celebration_shown');
+  }
 };
 
 // Function to update AnnoyingEyelash state

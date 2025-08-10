@@ -16,6 +16,11 @@
           {{ egg.isComplete ? '✅' : '❌' }} {{ egg.hint }}
         </li>
       </ol>
+      <div v-if="allFound" class="start-over-container">
+        <a href="#" @click.prevent="handleStartOver" class="start-over-link">
+          Start over
+        </a>
+      </div>
     </div>
     <span class="easter-egg__count">{{ easterEggs.activeEggsCompleteCount }}</span>
     <span class="easter-egg__icon">🪺</span>
@@ -25,7 +30,7 @@
 <script>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useStore } from '@nanostores/vue';
-import { easterEggsStore, allEggsFound } from '../stores/easter-eggs.js';
+import { easterEggsStore, allEggsFound, resetEasterEggs } from '../stores/easter-eggs.js';
 
 export default {
   name: 'EasterEgg',
@@ -51,6 +56,14 @@ export default {
       }
     };
 
+    const handleStartOver = () => {
+      // Confirm with user before resetting
+      if (confirm('Are you sure you want to reset all Easter eggs and start over?')) {
+        resetEasterEggs();
+        isMenuVisible.value = false;
+      }
+    };
+
     // Watch for changes in completed eggs count
     watch(() => easterEggs.value.activeEggsCompleteCount, (newCount, oldCount) => {
       // Open menu when count increases (new egg found)
@@ -72,7 +85,8 @@ export default {
       allFound,
       isMenuVisible,
       toggleMenu,
-      containerRef
+      containerRef,
+      handleStartOver
     };
   }
 };
@@ -154,5 +168,25 @@ export default {
 
 .easter-egg__menu li:last-child {
   margin-bottom: 0;
+}
+
+.start-over-container {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e5e5;
+  text-align: center;
+}
+
+.start-over-link {
+  color: #4a5568;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.start-over-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
 }
 </style>
