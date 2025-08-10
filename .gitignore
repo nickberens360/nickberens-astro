@@ -71,6 +71,8 @@ backend/query_logs.json
 *.log
 
 
-# ChromaDB database files
+# ChromaDB database files and cache
+backend/.chroma/
+backend/.rag_cache/
 backend/.unified_chroma/
 
