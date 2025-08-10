@@ -27,6 +27,9 @@
           </div>
         </div>
 
+        <h3 class="gimme-a-job">If you give me a job I'll be able to afford a
+          prize for you.</h3>
+
         <button class="close-button" @click.stop="handleClose">
           Continue Exploring
         </button>
@@ -163,6 +166,13 @@ export default {
   justify-content: center;
   overflow: hidden;
   cursor: pointer;
+}
+
+.gimme-a-job {
+  font-size: 1.2rem;
+  margin-top: 1rem;
+  color: #ffeb3b;
+  text-shadow: 0 0 5px rgba(255, 235, 59, 0.7);
 }
 
 /* Transition animations */

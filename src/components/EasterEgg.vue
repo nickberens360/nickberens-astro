@@ -18,7 +18,7 @@
       </ol>
     </div>
     <span class="easter-egg__count">{{ easterEggs.activeEggsCompleteCount }}</span>
-    <span class="easter-egg__icon">{{ allFound ? '🥚' : '🪺' }}</span>
+    <span class="easter-egg__icon">🪺</span>
   </div>
 </template>
 
@@ -87,12 +87,12 @@ export default {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background-color: white;
+  /*background-color: white;*/
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  /*box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);*/
   cursor: pointer;
   transition: transform 0.2s ease;
 }
@@ -102,7 +102,7 @@ export default {
 }
 
 .easter-egg__icon {
-  font-size: 52px;
+  font-size: 82px;
 }
 
 .easter-egg__count {
