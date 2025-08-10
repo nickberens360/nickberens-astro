@@ -18,6 +18,7 @@
           />
         </button>
         <a
+          v-if="false"
           href="/"
           class="base-icon-button"
         >

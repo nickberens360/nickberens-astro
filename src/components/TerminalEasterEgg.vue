@@ -50,7 +50,7 @@ export default {
       const messages = {
         egg1: 'Screen cleaning protocol activated! 🧹',
         egg2: 'Egg discussion initiated successfully! 🥚',
-        egg3: 'Terminal velocity calculated: 53 m/s! 🚀'
+        egg3: 'Terminal velocity: 53 m/s! 🚀'
       };
       return messages[props.eggName] || 'Secret discovered!';
     });
