@@ -78,7 +78,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .easter-egg-container {
   position: fixed;
   bottom: 20px;
