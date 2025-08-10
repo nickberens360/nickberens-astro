@@ -272,54 +272,6 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
       }
     },
 
-    // Add specific terminal velocity command
-    'terminal': (args, commandId) => {
-      const fullCommand = ['terminal', ...args].join(' ');
-      const eggFound = checkForEasterEgg(fullCommand);
-
-      if (eggFound === 'egg3') {
-        // Update the easter egg store
-        updateEasterEgg('egg3');
-
-        // Add the easter egg output
-        updateHistoryItem(commandId, {
-          textOutput: ['Calculating terminal velocity of an egg...'],
-          easterEgg: {
-            isVisible: true,
-            eggName: 'egg3'
-          }
-        });
-      } else {
-        updateHistoryItem(commandId, {
-          textOutput: [`Command not found: terminal ${args.join(' ')}`]
-        });
-      }
-    },
-
-    // Add velocity command
-    'velocity': (args, commandId) => {
-      const fullCommand = ['velocity', ...args].join(' ');
-      const eggFound = checkForEasterEgg(fullCommand);
-
-      if (eggFound === 'egg3') {
-        // Update the easter egg store
-        updateEasterEgg('egg3');
-
-        // Add the easter egg output
-        updateHistoryItem(commandId, {
-          textOutput: ['Calculating terminal velocity of an egg...'],
-          easterEgg: {
-            isVisible: true,
-            eggName: 'egg3'
-          }
-        });
-      } else {
-        updateHistoryItem(commandId, {
-          textOutput: [`Command not found: velocity ${args.join(' ')}`]
-        });
-      }
-    },
-
     default: (baseCommand, commandId) => {
       updateHistoryItem(commandId, {
         textOutput: [`Command not found: ${baseCommand}`]

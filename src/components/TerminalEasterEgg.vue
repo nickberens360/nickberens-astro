@@ -31,6 +31,8 @@
 <script>
 import { computed, ref, onMounted } from 'vue';
 
+const MATRIX_CHARS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ01';
+
 export default {
   name: 'TerminalEasterEgg',
   props: {
@@ -54,8 +56,7 @@ export default {
     });
 
     const getRandomChar = () => {
-      const chars = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ01';
-      return chars[Math.floor(Math.random() * chars.length)];
+      return MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
     };
 
     return {

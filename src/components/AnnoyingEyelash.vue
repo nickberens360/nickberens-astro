@@ -37,6 +37,8 @@ import { ref, computed, onUnmounted, onMounted, watch } from 'vue';
 import { updateEasterEgg, updateAnnoyingEyelash, easterEggsStore } from '../stores/easter-eggs.js';
 import { useStore } from '@nanostores/vue';
 
+const DRAG_ATTEMPTS_THRESHOLD = 2;
+
 export default {
   name: 'AnnoyingEyelash',
   props: {
@@ -90,7 +92,7 @@ export default {
       touchAction: 'none' // Prevent default touch behaviors
     }));
 
-    const isEmoji = computed(() => dragAttempts.value >= 2);
+    const isEmoji = computed(() => dragAttempts.value >= DRAG_ATTEMPTS_THRESHOLD);
 
     const startDrag = (event) => {
       if (!event.isPrimary) return;
@@ -182,10 +184,8 @@ export default {
       const storedX = eyelashState.value.currentX;
       const storedY = eyelashState.value.currentY;
       
-      // Check if we have a stored position that's different from the default
-      const hasStoredPosition = storedX !== undefined && 
-                              storedY !== undefined &&
-                              (storedX !== defaultX || storedY !== defaultY);
+      // Check if we have a stored position
+      const hasStoredPosition = storedX !== undefined && storedY !== undefined;
       
       if (hasStoredPosition) {
         // Use stored position
@@ -200,7 +200,7 @@ export default {
         updateAnnoyingEyelash({ 
           currentX: currentX.value, 
           currentY: currentY.value,
-          isVisible: true
+          isComponentVisible: true
         });
       }
     });

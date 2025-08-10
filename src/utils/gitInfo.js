@@ -177,7 +177,7 @@ export async function getLatestCommit() {
     
     return {
       hash: 'unknown',
-      message: 'Loading...',
+      message: 'Unable to fetch commit data',
       url: null
     };
   }
