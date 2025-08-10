@@ -28,7 +28,7 @@
         </div>
 
         <h3 class="gimme-a-job">If you give me a job I'll be able to afford a
-          prize for you.</h3>
+          prize for you 🙏.</h3>
 
         <button class="close-button" @click.stop="handleClose">
           Continue Exploring

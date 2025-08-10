@@ -22,8 +22,21 @@
         </a>
       </div>
     </div>
-    <span class="easter-egg__count">{{ easterEggs.activeEggsCompleteCount }}</span>
-    <span class="easter-egg__icon">🪺</span>
+    <span
+      class="easter-egg__count"
+      :class="{'all-found': allFound }"
+    >
+      {{ easterEggs.activeEggsCompleteCount }}
+    </span>
+    <div class="easter-egg__emojis">
+      <span
+        v-if="allFound"
+        class="easter-egg__trophy"
+      >
+        🏆
+      </span>
+      <span class="easter-egg__icon">🪺</span>
+    </div>
   </div>
 </template>
 
@@ -115,8 +128,19 @@ export default {
   transform: scale(1.05);
 }
 
+.easter-egg__emojis {
+  position: relative;
+}
+
 .easter-egg__icon {
   font-size: 82px;
+}
+
+.easter-egg__trophy {
+  position: absolute;
+  left: 10px;
+  transform: rotate(-20deg);
+  font-size: 50px;
 }
 
 .easter-egg__count {
@@ -134,6 +158,10 @@ export default {
   font-size: 14px;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.easter-egg__count.all-found {
+  background-color: #0cac0c;
 }
 
 .easter-egg__menu {

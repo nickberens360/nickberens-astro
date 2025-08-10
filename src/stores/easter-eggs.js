@@ -28,7 +28,7 @@ const defaultState = {
   annoyingEyelash: {
     isVisible: true,
     currentX: 50,
-    currentY: 150,
+    currentY: 75,
     dragAttempts: 0,
     isAnimating: false,
     isComponentVisible: true
