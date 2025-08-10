@@ -108,9 +108,9 @@ export default {
 <style scoped>
 .easter-egg-container {
   position: fixed;
+  z-index: 1000;
   bottom: 20px;
   right: 20px;
-  z-index: 1000;
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -145,6 +145,7 @@ export default {
 
 .easter-egg__count {
   position: absolute;
+  z-index: 10;
   top: -10px;
   right: -10px;
   background-color: red;
