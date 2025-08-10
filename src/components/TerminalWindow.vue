@@ -116,8 +116,8 @@ export default {
 <style scoped>
 .terminal-minimized {
   position: fixed;
-  left: 20px;
-  bottom: 20px;
+  left: 0;
+  bottom: 0;
   border-radius: 5px;
   width: 200px;
   cursor: pointer;

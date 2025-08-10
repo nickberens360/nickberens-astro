@@ -33,6 +33,12 @@
             />
           </div>
 
+          <terminal-easter-egg
+            v-if="item.easterEgg && item.easterEgg.isVisible"
+            :egg-name="item.easterEgg.eggName"
+            :theme="theme"
+          />
+
           <terminal-graph-output
             v-if="item.graphData && item.graphData.isVisible"
             :graph-data="item.graphData"
@@ -73,6 +79,7 @@ import TerminalGraphOutput from './TerminalGraphOutput.vue';
 import TerminalLogOutput from './TerminalLogOutput.vue';
 import TerminalInputLine from './TerminalInputLine.vue';
 import TerminalProgressBar from './TerminalProgressBar.vue';
+import TerminalEasterEgg from './TerminalEasterEgg.vue';
 
 export default {
   name: 'TerminalContent',
@@ -81,6 +88,7 @@ export default {
     TerminalLogOutput,
     TerminalInputLine,
     TerminalProgressBar,
+    TerminalEasterEgg,
   },
   mounted() {
     // Scroll to bottom on initial mount

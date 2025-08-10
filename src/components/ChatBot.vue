@@ -46,6 +46,7 @@
       @send-message="sendMessage"
       @stop-action="stopCurrentAction"
       @research-message="handleResearchMessage"
+      @easter-egg-found="handleEasterEggFound"
     />
 
     <ImageOverlay/>
@@ -68,6 +69,7 @@ import {
 } from '../stores/ai.js';
 import { openImageOverlay } from '../stores/ui.js';
 import { backendStatus } from '../stores/backendStatus.js';
+import { updateEasterEgg } from '../stores/easter-eggs.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
 import ChatMessageList from './ChatMessageList.vue';
 import ChatInput from './ChatInput.vue';
@@ -173,12 +175,27 @@ export default {
       }
       if (!userInput.value.trim() || hasTypingMessage.value || backendStatusValue.value !== 'online') return;
 
+      const question = userInput.value;
+      
+      // Check for easter egg keywords BEFORE submission
+      const lowerQuestion = question.toLowerCase();
+      if (lowerQuestion.includes('egg') || lowerQuestion.includes('easter')) {
+        // Handle easter egg: add user message and easter egg response, but skip backend
+        const currentChatId = activeChatId.get() || createNewChat();
+        if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, userInput.value);
+        
+        addMessageToActiveChat({ text: question, sender: 'user' });
+        userInput.value = '';
+        handleEasterEggFound('egg2');
+        return; // Exit early - don't submit to backend
+      }
+
       const currentChatId = activeChatId.get() || createNewChat();
       const chatHistoryForAPI = activeChatMessages.get().slice(-10); // Send last 10 messages
       if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, userInput.value);
 
-      const question = userInput.value;
       currentPrompt.value = question; // Store the current prompt
+
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';
 
@@ -322,6 +339,20 @@ export default {
       });
     };
 
+    const handleEasterEggFound = (eggName) => {
+      // Update the easter egg store
+      updateEasterEgg(eggName);
+
+      // Add a special message to the chat
+      addMessageToActiveChat({
+        text: '',
+        sender: 'bot',
+        model: 'easter-egg',
+        easterEggName: eggName,
+        isEasterEgg: true
+      });
+    };
+
     return {
       userInput,
       messages,
@@ -339,6 +370,7 @@ export default {
       handleFollowupClick,
       handleImageClick,
       handleResearchMessage,
+      handleEasterEggFound,
       chatHistoryVisible,
     };
   },

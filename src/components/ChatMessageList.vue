@@ -70,6 +70,16 @@
                 />
               </div>
 
+              <!-- Easter Egg Component -->
+              <div
+                v-if="pair.botMessage.isEasterEgg && !pair.botMessage.isTyping"
+                class="easter-egg-wrapper fade-in"
+              >
+                <ChatEasterEgg
+                  :egg-name="pair.botMessage.easterEggName"
+                />
+              </div>
+
               <div
                 v-if="pair.botMessage.images && pair.botMessage.images.length && !pair.botMessage.isTyping"
                 class="image-gallery fade-in"
@@ -85,7 +95,7 @@
               </div>
 
               <div
-                v-if="pair.botMessage.model && !pair.botMessage.isTyping"
+                v-if="pair.botMessage.model && !pair.botMessage.isTyping && !pair.botMessage.isEasterEgg"
                 class="model-indicator"
               >
                 <span
@@ -128,6 +138,7 @@ import { ref, nextTick, watch, onMounted, computed } from 'vue';
 import { useScrollToBottom } from '../composables/useScrollToBottom.js';
 import ChatBotWelcome from './ChatBotWelcome.vue';
 import CustomLMGTFY from './CustomLMGTFY.vue';
+import ChatEasterEgg from './ChatEasterEgg.vue';
 import { marked } from 'marked';
 
 // Debounce utility function
@@ -144,7 +155,7 @@ function debounce(func, wait) {
 }
 
 export default {
-  components: { ChatBotWelcome, CustomLMGTFY },
+  components: { ChatBotWelcome, CustomLMGTFY, ChatEasterEgg },
   props: {
     messages: { type: Array, required: true },
     isLoading: { type: Boolean, default: false },
@@ -364,6 +375,32 @@ export default {
   font-size: .75rem;
   color: #9ca3af;
   font-style: italic
+}
+
+/* Fade-in animation for dynamic content */
+.fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Easter egg wrapper */
+.easter-egg-wrapper {
+  margin-top: 0.75rem;
+}
+
+/* LMGTFY wrapper */
+.lmgtfy-wrapper {
+  margin-top: 0.75rem;
 }
 
 .image-gallery {

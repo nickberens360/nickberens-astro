@@ -246,7 +246,7 @@ class UnifiedRetriever:
         # Intelligent content type detection based on query
         content_type_hints = []
 
-        if any(term in query_lower for term in ["experience", "work", "job", "role", "company"]):
+        if any(term in query_lower for term in ["experience", "work", "job", "role", "company", "resume", "cv"]):
             content_type_hints.append("experience")
 
         if any(term in query_lower for term in ["skill", "technology", "expertise", "know"]):

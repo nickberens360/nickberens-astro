@@ -34,7 +34,7 @@ async def smart_query(query: Query, services=Depends(get_services)):
     """
     try:
         # Get the unified retriever from services
-        all_retrievers, _ = services
+        all_retrievers = services.get("retrievers")
         unified_retriever = get_unified_retriever(all_retrievers)
 
         if not unified_retriever:
@@ -90,7 +90,7 @@ async def smart_query(query: Query, services=Depends(get_services)):
 async def smart_query_status(services=Depends(get_services)):
     """Check the status of the smart retriever system."""
     try:
-        all_retrievers, _ = services
+        all_retrievers = services.get("retrievers")
         unified_retriever = get_unified_retriever(all_retrievers)
 
         if not unified_retriever:
@@ -118,7 +118,7 @@ async def smart_query_status(services=Depends(get_services)):
 async def analyze_query(query: Query, services=Depends(get_services)):
     """Analyze a query without retrieving documents (for testing intent detection)."""
     try:
-        all_retrievers, _ = services
+        all_retrievers = services.get("retrievers")
         unified_retriever = get_unified_retriever(all_retrievers)
 
         if not unified_retriever:

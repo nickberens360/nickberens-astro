@@ -143,7 +143,7 @@ class SmartQueryHandler:
         topics = []
         topic_keywords = {
             "technical": ["code", "api", "function", "technical", "implementation"],
-            "experience": ["experience", "work", "job", "company", "role"],
+            "experience": ["experience", "work", "job", "company", "role", "resume", "cv"],
             "skills": ["skill", "expertise", "technology", "language", "framework"],
             "personal": ["about", "interest", "passion", "philosophy"],
             "creative": ["illustration", "art", "design", "creative"],
