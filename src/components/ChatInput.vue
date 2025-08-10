@@ -138,7 +138,8 @@ export default {
     'update:selectedModel',
     'send-message',
     'stop-action',
-    'research-message'
+    'research-message',
+    'easter-egg-found'
   ],
   setup(props, { emit }) {
     const textareaRef = ref(null);

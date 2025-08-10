@@ -7,6 +7,7 @@ import {
 } from '../stores/terminal-window.js';
 import { DEFAULT_TERMINAL } from '../config/terminalConfig.js';
 import { processCodeFrequencyData, processCommitHistory } from '../utils/dataProcessing.js';
+import { updateEasterEgg } from '../stores/easter-eggs.js';
 
 export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallback) {
   // Helper function to update a specific history item
@@ -85,6 +86,23 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
           updateHistoryItem(commandId, { textOutput: [`Error retrieving data: ${error.message}`] });
         }
       });
+  };
+
+  // Check for easter egg commands
+  const checkForEasterEgg = (command) => {
+    const lowerCommand = command.toLowerCase();
+
+    // Check for terminal velocity Easter egg
+    if (lowerCommand.includes('terminal velocity') ||
+        lowerCommand.includes('egg velocity') ||
+        lowerCommand.includes('egg') ||
+        lowerCommand.includes('easter') ||
+        lowerCommand.includes('velocity of egg') ||
+        lowerCommand.includes('velocity of an egg')) {
+      return 'egg3';
+    }
+
+    return null;
   };
 
   // Command definitions
@@ -254,6 +272,54 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
       }
     },
 
+    // Add specific terminal velocity command
+    'terminal': (args, commandId) => {
+      const fullCommand = ['terminal', ...args].join(' ');
+      const eggFound = checkForEasterEgg(fullCommand);
+
+      if (eggFound === 'egg3') {
+        // Update the easter egg store
+        updateEasterEgg('egg3');
+
+        // Add the easter egg output
+        updateHistoryItem(commandId, {
+          textOutput: ['Calculating terminal velocity of an egg...'],
+          easterEgg: {
+            isVisible: true,
+            eggName: 'egg3'
+          }
+        });
+      } else {
+        updateHistoryItem(commandId, {
+          textOutput: [`Command not found: terminal ${args.join(' ')}`]
+        });
+      }
+    },
+
+    // Add velocity command
+    'velocity': (args, commandId) => {
+      const fullCommand = ['velocity', ...args].join(' ');
+      const eggFound = checkForEasterEgg(fullCommand);
+
+      if (eggFound === 'egg3') {
+        // Update the easter egg store
+        updateEasterEgg('egg3');
+
+        // Add the easter egg output
+        updateHistoryItem(commandId, {
+          textOutput: ['Calculating terminal velocity of an egg...'],
+          easterEgg: {
+            isVisible: true,
+            eggName: 'egg3'
+          }
+        });
+      } else {
+        updateHistoryItem(commandId, {
+          textOutput: [`Command not found: velocity ${args.join(' ')}`]
+        });
+      }
+    },
+
     default: (baseCommand, commandId) => {
       updateHistoryItem(commandId, {
         textOutput: [`Command not found: ${baseCommand}`]
@@ -263,6 +329,25 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
 
   // Main command handler
   const handleCommand = (command, commandId, theme) => {
+    // First check if the entire command matches an easter egg
+    const eggFound = checkForEasterEgg(command);
+
+    if (eggFound) {
+      // Update the easter egg store
+      updateEasterEgg(eggFound);
+
+      // Add the easter egg output
+      updateHistoryItem(commandId, {
+        textOutput: ['Calculating terminal velocity of an egg...'],
+        easterEgg: {
+          isVisible: true,
+          eggName: eggFound
+        }
+      });
+      return;
+    }
+
+    // Otherwise, process as normal command
     const parts = command.split(' ');
     const baseCommand = parts[0].toLowerCase();
     const args = parts.slice(1);

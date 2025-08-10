@@ -141,7 +141,7 @@
 
 import TerminalInput from './TerminalInput.vue';
 import { useStore } from '@nanostores/vue';
-import aiIconSvg from '../assets/images/ai-icon.svg?url';
+import aiIconSvg from '../assets/svg/ai-icon.svg?url';
 
 import { navItems } from '../stores/ui';
 import { isTerminalHiddenStore, isTerminalMinimizedStore } from '../stores/terminal-window';
@@ -363,8 +363,6 @@ export default {
           ? colorSection.dataset.sectionColor
           : (window.scrollY > 0 ? 'white' : 'transparent');
         this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
-
-        console.log('Header background color:', this.headerBackgroundColor);
       });
     }
   }

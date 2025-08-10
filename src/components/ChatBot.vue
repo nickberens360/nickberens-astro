@@ -46,6 +46,7 @@
       @send-message="sendMessage"
       @stop-action="stopCurrentAction"
       @research-message="handleResearchMessage"
+      @easter-egg-found="handleEasterEggFound"
     />
 
     <ImageOverlay/>
@@ -68,6 +69,7 @@ import {
 } from '../stores/ai.js';
 import { openImageOverlay } from '../stores/ui.js';
 import { backendStatus } from '../stores/backendStatus.js';
+import { updateEasterEgg } from '../stores/easter-eggs.js';
 import { useChatAPI } from '../composables/useChatAPI.js';
 import ChatMessageList from './ChatMessageList.vue';
 import ChatInput from './ChatInput.vue';
@@ -179,6 +181,13 @@ export default {
 
       const question = userInput.value;
       currentPrompt.value = question; // Store the current prompt
+
+      // Check for easter egg keywords after submission
+      const lowerQuestion = question.toLowerCase();
+      if (lowerQuestion.includes('egg') || lowerQuestion.includes('easter')) {
+        handleEasterEggFound('egg2');
+      }
+
       addMessageToActiveChat({ text: question, sender: 'user' });
       userInput.value = '';
 
@@ -322,6 +331,20 @@ export default {
       });
     };
 
+    const handleEasterEggFound = (eggName) => {
+      // Update the easter egg store
+      updateEasterEgg(eggName);
+
+      // Add a special message to the chat
+      addMessageToActiveChat({
+        text: '',
+        sender: 'bot',
+        model: 'easter-egg',
+        easterEggName: eggName,
+        isEasterEgg: true
+      });
+    };
+
     return {
       userInput,
       messages,
@@ -339,6 +362,7 @@ export default {
       handleFollowupClick,
       handleImageClick,
       handleResearchMessage,
+      handleEasterEggFound,
       chatHistoryVisible,
     };
   },

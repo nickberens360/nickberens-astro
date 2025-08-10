@@ -1,6 +1,29 @@
 // GitHub API integration for fetching git data
 // Environment variables are accessed using import.meta.env in Astro
 
+// Helper to safely access localStorage
+const safeLocalStorage = {
+  getItem: (key) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch (e) {
+      console.error('localStorage access error:', e);
+    }
+    return null;
+  },
+  setItem: (key, value) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch (e) {
+      console.error('localStorage write error:', e);
+    }
+  }
+};
+
 // Helper function to get GitHub credentials
 const getGitHubCredentials = () => {
   return {
@@ -11,19 +34,47 @@ const getGitHubCredentials = () => {
 };
 
 export async function getGitBranch() {
+  const cacheKey = 'git_branch_cache';
+  
+  // Try localStorage first
+  const cached = safeLocalStorage.getItem(cacheKey);
+  if (cached) {
+    const { branch, timestamp } = JSON.parse(cached);
+    const now = Date.now();
+    if (now - timestamp < 24 * 60 * 60 * 1000) { // 24 hours cache
+      return branch;
+    }
+  }
+  
   try {
     const { username, repo, token } = getGitHubCredentials();
 
     // First try to get the default branch
     const headers = token ? { Authorization: `token ${token}` } : {};
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}`, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}`, { 
+      headers,
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeout);
 
     if (!response.ok) {
       throw new Error(`GitHub API error: ${response.status}`);
     }
 
     const repoData = await response.json();
-    return repoData.default_branch;
+    const branch = repoData.default_branch;
+    
+    // Cache in localStorage
+    safeLocalStorage.setItem(cacheKey, JSON.stringify({
+      branch,
+      timestamp: Date.now()
+    }));
+    
+    return branch;
   } catch (error) {
     console.error('Error fetching branch:', error);
     return 'main'; // Fallback to a common default branch name
@@ -60,18 +111,37 @@ export function getGitHubRepoUrl() {
 
 // Shared function to fetch latest commit data
 export async function getLatestCommit() {
+  const cacheKey = 'git_latest_commit_cache';
+  
   try {
     const { username, repo, token } = getGitHubCredentials();
 
-    // Check if we have valid cached data
+    // Check if we have valid cached data in memory
     const now = Date.now();
     if (latestCommitCache.data && (now - latestCommitCache.timestamp) < latestCommitCache.expiryTime) {
       console.log('Using cached latest commit data');
       return latestCommitCache.data;
     }
+    
+    // Try localStorage cache
+    const cached = safeLocalStorage.getItem(cacheKey);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (now - timestamp < 5 * 60 * 1000) { // 5 minutes cache
+        return data;
+      }
+    }
 
     const headers = token ? { Authorization: `token ${token}` } : {};
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { 
+      headers,
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeout);
 
     if (!response.ok) {
       throw new Error(`GitHub API error: ${response.status}`);
@@ -87,13 +157,27 @@ export async function getLatestCommit() {
     // Cache the successful result
     latestCommitCache.data = commitData;
     latestCommitCache.timestamp = now;
+    
+    // Cache in localStorage
+    safeLocalStorage.setItem(cacheKey, JSON.stringify({
+      data: commitData,
+      timestamp: now
+    }));
 
     return commitData;
   } catch (error) {
     console.error('Error fetching latest commit:', error);
+    
+    // Try to return cached data even if expired
+    const cached = safeLocalStorage.getItem(cacheKey);
+    if (cached) {
+      const { data } = JSON.parse(cached);
+      return data;
+    }
+    
     return {
       hash: 'unknown',
-      message: 'Error fetching commit message',
+      message: 'Loading...',
       url: null
     };
   }
@@ -132,7 +216,15 @@ export async function getCommitHistory(limit = 10) {
     }
 
     const headers = token ? { Authorization: `token ${token}` } : {};
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=${limit}`, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=${limit}`, { 
+      headers,
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeout);
 
     if (!response.ok) {
       let errorMessage = `GitHub API error: ${response.status}`;
@@ -185,7 +277,15 @@ export async function getCodeFrequency(retryCount = 0, maxRetries = 3) {
     }
 
     const headers = token ? { Authorization: `token ${token}` } : {};
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/stats/code_frequency`, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/stats/code_frequency`, { 
+      headers,
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeout);
 
     // Handle 202 Accepted response with retry logic
     if (response.status === 202) {

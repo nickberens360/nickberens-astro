@@ -7,6 +7,7 @@ import "@fontsource-variable/jetbrains-mono";
 import TerminalWindow from '../components/TerminalWindow.vue';
 import AnnoyingEyelash from '../components/AnnoyingEyelash.vue';
 import {getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl} from '../utils/gitInfo.js';
+import EasterEgg from '../components/EasterEgg.vue';
 
 export interface Props {
     title?: string;
@@ -17,10 +18,20 @@ export interface Props {
     hideTerminal?: boolean;
     hideHeader?: boolean;
     hideAnnoyingEyelash?: boolean;
+    hideEggs?: boolean;
 }
 
 const {
-    hideHeader = false,title, description, favicon, headerVariant = 'default', hideFooter = false, hideTerminal = false, hideAnnoyingEyelash = false} = Astro.props;
+    hideHeader = false,
+    title,
+    description,
+    favicon,
+    headerVariant = 'default',
+    hideFooter = false,
+    hideTerminal = false,
+    hideAnnoyingEyelash = false,
+    hideEggs,
+} = Astro.props;
 const gitBranch = await getGitBranch();
 const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
@@ -36,9 +47,9 @@ const repoUrl = getGitHubRepoUrl();
 </Head>
 <body>
 <SiteHeader
+    client:only="vue"
     gitBranch={gitBranch}
     variant={headerVariant}
-    client:only="vue"
     hideHeader={hideHeader}
 />
 <AnnoyingEyelash
@@ -48,6 +59,10 @@ const repoUrl = getGitHubRepoUrl();
     hideAnnoyingEyelash={hideAnnoyingEyelash}
 />
 <slot/>
+<EasterEgg
+    client:only="vue"
+    hideEggs={hideEggs}
+/>
 <SiteFooter
     commitHash={commitHash}
     commitMessage={commitMessage}
