@@ -67,12 +67,12 @@ class UnifiedRetriever:
         if any(term in content for term in ["function", "class", "api", "code", "implementation"]):
             content_types.append("technical")
 
-        # Resume/experience detection - enhanced
-        if any(term in content for term in ["experience", "role", "company", "position", "worked", "resume", "career", "employment", "developer", "frontend"]):
+        # Resume/experience detection
+        if any(term in content for term in ["experience", "role", "company", "position", "worked"]):
             content_types.append("experience")
 
-        # Skills detection - enhanced  
-        if any(term in content for term in ["skill", "expertise", "proficient", "technology", "resume", "vue", "javascript", "css", "abilities"]):
+        # Skills detection
+        if any(term in content for term in ["skill", "expertise", "proficient", "technology"]):
             content_types.append("skills")
 
         # About/personal detection
@@ -246,13 +246,13 @@ class UnifiedRetriever:
         # Intelligent content type detection based on query
         content_type_hints = []
 
-        if any(term in query_lower for term in ["experience", "work", "job", "role", "company", "resume", "cv", "career"]):
+        if any(term in query_lower for term in ["experience", "work", "job", "role", "company"]):
             content_type_hints.append("experience")
 
-        if any(term in query_lower for term in ["skill", "technology", "expertise", "know", "resume", "cv", "abilities"]):
+        if any(term in query_lower for term in ["skill", "technology", "expertise", "know"]):
             content_type_hints.append("skills")
 
-        if any(term in query_lower for term in ["about", "who", "background", "interest", "yourself", "you are", "tell me about you"]):
+        if any(term in query_lower for term in ["about", "who", "background", "interest"]):
             content_type_hints.append("about")
 
         if any(term in query_lower for term in ["illustration", "art", "design", "creative"]):
@@ -264,14 +264,14 @@ class UnifiedRetriever:
         # Perform search with intelligent filtering
         if content_type_hints:
             # First try filtered search
-            results = self.semantic_search(query, filter_content_types=content_type_hints, score_threshold=0.0)
+            results = self.semantic_search(query, filter_content_types=content_type_hints, score_threshold=0.4)
 
             # If not enough results, broaden the search
             if len(results) < 4:
-                additional_results = self.semantic_search(query, k=8 - len(results), score_threshold=0.0)
+                additional_results = self.semantic_search(query, k=8 - len(results), score_threshold=0.5)
                 results.extend(additional_results)
         else:
             # No specific type detected, do general search
-            results = self.semantic_search(query, score_threshold=0.0)
+            results = self.semantic_search(query, score_threshold=0.5)
 
         return results

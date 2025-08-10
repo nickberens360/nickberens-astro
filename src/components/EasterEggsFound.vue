@@ -41,7 +41,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { allEggsFound, easterEggsStore } from '../stores/easter-eggs.js';
 
@@ -49,19 +49,49 @@ export default {
   name: 'EasterEggsFound',
   setup() {
     const showOverlay = ref(false);
-    const hasShownCelebration = ref(false);
     const allEggsFoundValue = useStore(allEggsFound);
     const easterEggsData = useStore(easterEggsStore);
 
+    // Check localStorage to see if celebration has been shown
+    const CELEBRATION_SHOWN_KEY = 'nickgoldsworthy_celebration_shown';
+
+    const hasShownCelebration = () => {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return false;
+      }
+      return localStorage.getItem(CELEBRATION_SHOWN_KEY) === 'true';
+    };
+
+    const markCelebrationAsShown = () => {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem(CELEBRATION_SHOWN_KEY, 'true');
+      }
+    };
+
+    // Reset celebration shown state when eggs are reset
+    // This should be called from easter-eggs.js resetEasterEggs function
+    // export const resetCelebrationShown = () => {
+    //   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    //     localStorage.removeItem(CELEBRATION_SHOWN_KEY);
+    //   }
+    // };
+
     // Check if we should show the overlay
     const checkAndShowOverlay = () => {
-      if (allEggsFoundValue.value && !hasShownCelebration.value) {
+      if (allEggsFoundValue.value && !hasShownCelebration()) {
         showOverlay.value = true;
-        hasShownCelebration.value = true;
+        markCelebrationAsShown();
         // Prevent scrolling while overlay is shown
         document.body.style.overflow = 'hidden';
       }
     };
+
+    // Watch for changes to allEggsFound
+    watch(allEggsFoundValue, (newValue) => {
+      if (newValue && !hasShownCelebration()) {
+        checkAndShowOverlay();
+      }
+    });
 
     onMounted(() => {
       checkAndShowOverlay();
