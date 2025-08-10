@@ -157,7 +157,6 @@ export default {
   left: 0;
   width: 100vw;
   height: 100vh;
-  //background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #16213e 75%, #1a1a2e 100%);
   z-index: 9999;
   display: flex;
   align-items: center;
