@@ -47,15 +47,6 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<TerminalWindow
-    client:only="vue"
-    title="Nick's Terminal"
-    initialOutput={[
-        "Welcome to Nick Berens' Terminal",
-        "Type 'help' for available commands"
-    ]}
-    hideTerminal={hideTerminal}
-></TerminalWindow>
 <SiteHeader
     client:only="vue"
     gitBranch={gitBranch}
@@ -74,6 +65,15 @@ const repoUrl = getGitHubRepoUrl();
     hideEggs={hideEggs}
 />
 <EasterEggsFound client:only="vue" />
+<TerminalWindow
+    client:only="vue"
+    title="Nick's Terminal"
+    initialOutput={[
+        "Welcome to Nick Berens' Terminal",
+        "Type 'help' for available commands"
+    ]}
+    hideTerminal={hideTerminal}
+></TerminalWindow>
 <SiteFooter
     commitHash={commitHash}
     commitMessage={commitMessage}

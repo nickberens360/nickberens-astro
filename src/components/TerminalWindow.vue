@@ -18,7 +18,6 @@
       @mouseleave="mouseHandlers.leave"
       @touchstart="touchHandlers.start"
       @touchend="touchHandlers.end"
-      @wheel="wheelHandler"
     >
       <TerminalControlBar
         :title="title"

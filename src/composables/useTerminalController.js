@@ -77,7 +77,7 @@ export function useTerminalController(props) {
   
   const preventScroll = (e) => {
     // Check if the scroll event is coming from within the terminal
-    const terminalOutput = terminalContent.value?.$refs?.terminalOutput;
+    const terminalOutput = terminalContent.value?.getTerminalOutput?.();
     if (terminalOutput && terminalOutput.contains(e.target)) {
       // Allow scrolling within terminal
       return;
@@ -227,7 +227,7 @@ export function useTerminalController(props) {
   const scrollToBottom = () => {
     nextTick(() => {
       if (terminalContent.value && isMounted.value) {
-        const outputEl = terminalContent.value.$refs?.terminalOutput;
+        const outputEl = terminalContent.value.getTerminalOutput?.();
         if (outputEl) {
           outputEl.scrollTop = outputEl.scrollHeight;
         }
@@ -282,11 +282,6 @@ export function useTerminalController(props) {
     }
   };
 
-  // === WHEEL HANDLER ===
-  const wheelHandler = (event) => {
-    // This is now handled by the document-level wheel listener
-    // We keep this handler empty to avoid conflicts
-  };
 
   // === DRAG HANDLERS ===
   const dragHandlers = {
@@ -491,7 +486,6 @@ export function useTerminalController(props) {
     resizeHandlers,
     mouseHandlers,
     touchHandlers,
-    wheelHandler,
 
     // Store references
     stores: {
