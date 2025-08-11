@@ -16,6 +16,8 @@
       @click="focusInput"
       @mouseenter="mouseHandlers.enter"
       @mouseleave="mouseHandlers.leave"
+      @touchstart="touchHandlers.start"
+      @touchend="touchHandlers.end"
     >
       <TerminalControlBar
         :title="title"
@@ -121,7 +123,7 @@ export default {
   border-radius: 5px;
   width: 200px;
   cursor: pointer;
-  z-index: 1000;
+  z-index: var(--z-index-terminal);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
 }
@@ -137,6 +139,7 @@ export default {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(5px);
 }
 
 .terminal-maximized {

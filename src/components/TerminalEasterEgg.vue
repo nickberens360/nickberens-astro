@@ -12,7 +12,7 @@
     |__/    |________/ \______/ |__/
       </pre>
 
-      <div class="message-container">
+      <div class="message-container text-center">
         <div class="typewriter">
           <span class="prompt">~$</span> <span class="success-text">{{ eggMessage }}</span>
         </div>
@@ -110,16 +110,6 @@ export default {
   margin-bottom: 10px;
   overflow: hidden;
   white-space: nowrap;
-  animation: typewriter 2s steps(40, end);
-}
-
-@keyframes typewriter {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
 }
 
 .prompt {

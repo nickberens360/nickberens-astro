@@ -65,13 +65,6 @@ const repoUrl = getGitHubRepoUrl();
     hideEggs={hideEggs}
 />
 <EasterEggsFound client:only="vue" />
-<SiteFooter
-    commitHash={commitHash}
-    commitMessage={commitMessage}
-    repoUrl={repoUrl}
-    hideFooter={hideFooter}
-    client:load
-/>
 <TerminalWindow
     client:only="vue"
     title="Nick's Terminal"
@@ -81,6 +74,13 @@ const repoUrl = getGitHubRepoUrl();
     ]}
     hideTerminal={hideTerminal}
 ></TerminalWindow>
+<SiteFooter
+    commitHash={commitHash}
+    commitMessage={commitMessage}
+    repoUrl={repoUrl}
+    hideFooter={hideFooter}
+    client:load
+/>
 
 <script>
     console.log(`
