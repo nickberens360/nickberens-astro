@@ -55,7 +55,7 @@ export function useTerminalController(props) {
         bottom: '0',
         width: '100%',
         height: '100%',
-        zIndex: '1001',
+        zIndex: 'var(--z-index-terminal)',
         borderRadius: '0'
       };
     }
@@ -66,7 +66,7 @@ export function useTerminalController(props) {
       left: `${position.value?.x || 100}px`,
       width: `${size.value?.width || 600}px`,
       height: `${size.value?.height || 400}px`,
-      zIndex: '1000'
+      zIndex: 'var(--z-index-terminal)'
     };
   });
 

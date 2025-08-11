@@ -56,6 +56,7 @@ body {
     --z-index-modal: 1002;
     --z-index-header: 1010;
     --z-index-highest: 9999;
+    --z-index-terminal: 10000;
 
     /* Font Family */
     --font-primary: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
