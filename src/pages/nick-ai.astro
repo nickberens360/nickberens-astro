@@ -10,6 +10,7 @@ import PageSection from '../components/PageSection.vue';
     hideFooter={true}
     hideTerminal={true}
     hideAnnoyingEyelash={true}
+    headerVariant="mobile-condensed"
     hideEggs={true}
 >
   <PageSection
@@ -18,6 +19,7 @@ import PageSection from '../components/PageSection.vue';
       data-section-theme="dark"
       full-height
       full-width
+      class:list={'nick-ai-page'}
   >
     <div class="chat-layout">
       <ChatHistory client:only="vue"/>
