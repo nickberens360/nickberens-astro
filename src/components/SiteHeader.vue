@@ -19,13 +19,21 @@
         >
           <p class="site-header__name">nickberens
             <span class="git">git:<span class="git-paren">(</span>
-              <span class="git-branch">{{ gitBranch }}</span>
+              <span class="git-branch">
+                <font-awesome-icon
+                  icon="house-chimney"
+                  class="base-icon"
+                />
+              </span>
               <span class="git-paren">)</span>
             </span>
           </p>
-          <p class="site-header__name site-header__name--mobile">nick<span class="git"><span class="git-paren">{</span>
-              <span class="git-branch">berens</span>
-              <span class="git-paren">}</span>
+          <p class="site-header__name site-header__name--mobile">nick:<span class="git"><span class="git-paren">(</span>
+              <span class="git-branch"><font-awesome-icon
+                icon="house-chimney"
+                class="base-icon"
+              /></span>
+              <span class="git-paren">)</span>
             </span>
           </p>
 
@@ -76,7 +84,7 @@
           @click="closeMobileMenu"
           aria-label="Close menu"
         >
-          <font-awesome-icon :icon="['fas', 'times']" />
+          <font-awesome-icon :icon="['fas', 'times']"/>
         </button>
         <ul class="site-header__mobile-nav-list">
           <li
@@ -110,28 +118,29 @@
         :style="variant === 'pod' ? headerStyles : {}"
       >
         <a
-        href="/nick-ai"
-        class="ai-icon"
-      >
+          href="/nick-ai"
+          class="ai-icon"
+        >
           <img
-            :src="aiIconSvg" alt="AI Icon"
+            :src="aiIconSvg"
+            alt="AI Icon"
             style="width: 34px;"
           />
-      </a>
-      <font-awesome-icon
-        :icon="['fas', 'terminal']"
-        @click="toggleTerminal"
-        aria-label="Toggle terminal input"
-        class="terminal-icon"
-      />
-      <button
-        class="site-header__hamburger "
-        :class="[{ 'is-active': isMobileMenuOpen }]"
-        @click="toggleMobileMenu"
-        aria-label="Toggle menu"
-      >
-        🍔
-      </button>
+        </a>
+        <font-awesome-icon
+          :icon="['fas', 'terminal']"
+          @click="toggleTerminal"
+          aria-label="Toggle terminal input"
+          class="terminal-icon"
+        />
+        <button
+          class="site-header__hamburger "
+          :class="[{ 'is-active': isMobileMenuOpen }]"
+          @click="toggleMobileMenu"
+          aria-label="Toggle menu"
+        >
+          🍔
+        </button>
       </div>
     </div>
   </header>
@@ -144,7 +153,10 @@ import { useStore } from '@nanostores/vue';
 import aiIconSvg from '../assets/svg/ai-icon.svg?url';
 
 import { navItems } from '../stores/ui';
-import { isTerminalHiddenStore, isTerminalMinimizedStore } from '../stores/terminal-window';
+import {
+  isTerminalHiddenStore,
+  isTerminalMinimizedStore
+} from '../stores/terminal-window';
 
 export default {
   name: 'SiteHeader',
@@ -515,16 +527,15 @@ export default {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 15px -3px #0000004d,0 -4px 6px -2px #0000000d;
+  box-shadow: 0 10px 15px -3px #0000004d, 0 -4px 6px -2px #0000000d;
   transition: all 0.3s ease-in-out;
 }
 
 .theme-dark .pod {
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 8px 32px 0 rgba(0, 0, 0, 0.37),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-    0 1px 0 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37),
+  inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+  0 1px 0 0 rgba(255, 255, 255, 0.05);
 
   background: linear-gradient(
     135deg,
@@ -664,14 +675,17 @@ export default {
   .site-header__container {
     padding: 0 .75rem;
   }
+
   .site-header--mobile-condensed .terminal-icon,
   .site-header--mobile-condensed .ai-icon {
     display: none !important;
   }
+
   .pod {
     height: 65%;
     padding: 0 .75rem;
   }
+
   .site-header__hamburger.pod {
     height: 45px;
     width: 45px;
@@ -682,10 +696,12 @@ export default {
   .site-header__name {
     display: none;
   }
+
   .site-header__name--mobile {
     display: block;
   }
 }
+
 /* Theme-based Styling for Text */
 .site-header.theme-light {
   color: #000000;
