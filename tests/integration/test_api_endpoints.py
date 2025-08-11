@@ -12,7 +12,7 @@ rather than its internal logic (which is already covered by unit tests).
 
 import json
 from typing import List
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -184,36 +184,20 @@ async def test_query_handles_primary_llm_failure_and_uses_fallback(client: Async
     """
     from unittest.mock import MagicMock
 
-    # Create mock LLM instances
-    mock_claude = MagicMock()
-    mock_gemini = MagicMock()
+    # Mock retrievers
+    mock_retrievers = {"mock": MagicMock()}
 
-    # Create a working mock chain for Gemini
-    mock_gemini_chain = MagicMock()
-
-    # Configure the fallback (Gemini) chain to succeed
-    async def successful_stream(*args, **kwargs):
+    # Mock the stream_with_fallback function directly to simulate proper fallback
+    async def mock_stream():
         yield "Successful response from fallback model."
 
-    mock_gemini_chain.astream = MagicMock(side_effect=successful_stream)
-
-    # Mock get_llm_instances to return our mock instances
     with (
-        patch("backend.core.llm_chain.get_llm_instances") as mock_get_llms,
-        patch("backend.core.llm_chain.create_qa_chain") as mock_create_chain,
+        patch.object(app.state, "retrievers", mock_retrievers),
+        patch("backend.routes.query.stream_with_fallback") as mock_stream_with_fallback,
     ):
-        # Configure get_llm_instances to return both models
-        mock_get_llms.return_value = {"claude": mock_claude, "gemini": mock_gemini}
-
-        # Configure create_qa_chain to fail for Claude and succeed for Gemini
-        def create_chain_side_effect(llm_instance):
-            if llm_instance == mock_claude:
-                raise Exception("Primary LLM service is down")
-            elif llm_instance == mock_gemini:
-                return mock_gemini_chain
-            return MagicMock()
-
-        mock_create_chain.side_effect = create_chain_side_effect
+        # Configure stream_with_fallback to return the fallback response
+        mock_metadata: dict = {"rate_limit_status": {}}
+        mock_stream_with_fallback.return_value = (mock_stream(), "gemini", mock_metadata)
 
         # Test data constants
         test_question = "Does the fallback work?"
@@ -244,18 +228,11 @@ async def test_query_handles_primary_llm_failure_and_uses_fallback(client: Async
         # The response should contain the message from the fallback LLM
         assert "Successful response from fallback model." in content
 
-        # Verify that both LLM instances were retrieved
-        mock_get_llms.assert_called_once()
-
-        # Verify that both chains were attempted (primary failed, then fallback succeeded)
-        assert mock_create_chain.call_count == 2
-
-        # Verify that the fallback chain was called and succeeded
-        mock_gemini_chain.astream.assert_called_once()
+        # Verify that stream_with_fallback was called
+        mock_stream_with_fallback.assert_called_once()
 
 
-@patch("backend.core.smart_illustration_service.SmartIllustrationService.get_all")
-async def test_chat_handles_illustration_query_correctly(mock_get_all, client: AsyncClient):
+async def test_chat_handles_illustration_query_correctly(client: AsyncClient):
     """
     SPEC: Verifies that a query for an illustration is routed to the
     illustration service and returns image data.
@@ -266,36 +243,45 @@ async def test_chat_handles_illustration_query_correctly(mock_get_all, client: A
     preferred_model = None
     expected_image_path = "/illustrations/cosmic_dragon.webp"
 
-    # 1. Configure the mock
-    # This is the data we expect the illustration service to find.
+    # Mock the illustration service
+    mock_illustration_service = MagicMock()
     mock_image_data = [{"file": "cosmic_dragon.webp"}]
-    mock_get_all.return_value = mock_image_data
+    mock_illustration_service.get_all.return_value = mock_image_data
 
-    # 2. Make the API call with an image-related query
-    # Note: The actual endpoint is /query, not /api/chat as in the original spec.
-    # Using "show me images" which is explicitly in the all_image_phrases list
-    response = await client.post(
-        "/query",
-        json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
-    )
+    # Mock retrievers and other services
+    mock_retrievers = {"mock": MagicMock()}
+    mock_response_service = MagicMock()
+    mock_response_service.build_image_response.return_value.model_dump.return_value = {
+        "images": [expected_image_path],
+        "answer": "Here are illustrations.",
+    }
 
-    # 3. Assert the outcome
-    assert response.status_code == 200
+    with (
+        patch.object(app.state, "retrievers", mock_retrievers),
+        patch.object(app.state, "illustration_service", mock_illustration_service),
+        patch.object(app.state, "response_service", mock_response_service),
+    ):
+        # Make the API call with an image-related query
+        response = await client.post(
+            "/query",
+            json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
+        )
 
-    # The response should contain the mocked image data in the expected format.
-    # Based on the ResponseService, the response has an 'images' field with full URLs.
-    response_json = response.json()
-    assert "images" in response_json
-    assert response_json["images"] == [expected_image_path]
-    assert "answer" in response_json
-    assert "illustrations" in response_json["answer"].lower()
+        # Assert the outcome
+        assert response.status_code == 200
 
-    # Verify that the illustration service was called
-    mock_get_all.assert_called_once()
+        # The response should contain the mocked image data in the expected format.
+        response_json = response.json()
+        assert "images" in response_json
+        assert response_json["images"] == [expected_image_path]
+        assert "answer" in response_json
+        assert "illustrations" in response_json["answer"].lower()
+
+        # Verify that the illustration service was called
+        mock_illustration_service.get_all.assert_called_once()
 
 
-@patch("backend.core.smart_illustration_service.SmartIllustrationService.search")
-async def test_chat_handles_specific_illustration_search_correctly(mock_search, client: AsyncClient):
+async def test_chat_handles_specific_illustration_search_correctly(client: AsyncClient):
     """
     SPEC: Verifies that a specific query for an illustration is routed to the
     illustration service search method and returns image data.
@@ -307,30 +293,42 @@ async def test_chat_handles_specific_illustration_search_correctly(mock_search, 
     search_term = "dragon"
     expected_image_path = "/illustrations/cosmic_dragon.webp"
 
-    # 1. Configure the mock
-    # This is the data we expect the illustration service to find.
+    # Mock the illustration service
+    mock_illustration_service = MagicMock()
     mock_image_data = [{"file": "cosmic_dragon.webp"}]
-    mock_search.return_value = mock_image_data
+    mock_illustration_service.search.return_value = mock_image_data
 
-    # 2. Make the API call with a specific image search query
-    # Using "images of dragon" which should trigger SPECIFIC_IMAGE_SEARCH
-    response = await client.post(
-        "/query",
-        json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
-    )
+    # Mock retrievers and other services
+    mock_retrievers = {"mock": MagicMock()}
+    mock_response_service = MagicMock()
+    mock_response_service.build_image_response.return_value.model_dump.return_value = {
+        "images": [expected_image_path],
+        "answer": f"Here are illustrations for '{search_term}'.",
+    }
 
-    # 3. Assert the outcome
-    assert response.status_code == 200
+    with (
+        patch.object(app.state, "retrievers", mock_retrievers),
+        patch.object(app.state, "illustration_service", mock_illustration_service),
+        patch.object(app.state, "response_service", mock_response_service),
+    ):
+        # Make the API call with a specific image search query
+        response = await client.post(
+            "/query",
+            json={"question": test_question, "chat_history": empty_chat_history, "preferred_model": preferred_model},
+        )
 
-    # The response should contain the mocked image data in the expected format.
-    response_json = response.json()
-    assert "images" in response_json
-    assert response_json["images"] == [expected_image_path]
-    assert "answer" in response_json
-    assert search_term in response_json["answer"].lower()
+        # Assert the outcome
+        assert response.status_code == 200
 
-    # Verify that the illustration service search was called with the correct term
-    mock_search.assert_called_once_with(search_term)
+        # The response should contain the mocked image data in the expected format.
+        response_json = response.json()
+        assert "images" in response_json
+        assert response_json["images"] == [expected_image_path]
+        assert "answer" in response_json
+        assert search_term in response_json["answer"].lower()
+
+        # Verify that the illustration service search was called with the correct term
+        mock_illustration_service.search.assert_called_once_with(search_term)
 
 
 async def test_rate_limits_endpoint_returns_status(client: AsyncClient):

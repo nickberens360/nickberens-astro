@@ -121,7 +121,7 @@ export default {
   border-radius: 5px;
   width: 200px;
   cursor: pointer;
-  z-index: 1000;
+  z-index: var(--z-index-highest);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
 }
