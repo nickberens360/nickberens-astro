@@ -513,7 +513,7 @@ export default {
   color: #ef4444;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .input-form {
     padding: 0 0.5rem 0.5rem;
   }

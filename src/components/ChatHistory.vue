@@ -127,7 +127,7 @@
         <ChatStatus :showText="isVisible || isMobile" />
       </div>
     </div>
-  </div>
+    </div>
   </div>
 </template>
 
@@ -229,6 +229,8 @@ export default {
         if (isVisible.value && wasVisibleBeforeCollapse.value === null) {
           wasVisibleBeforeCollapse.value = true;
         }
+        // This is needed to ensure the main content layout adjusts correctly on mobile.
+        isChatHistoryVisible.set(false);
         // Close mobile menu when transitioning to mobile
         isMobileMenuOpen.set(false);
       } else if (!newIsMobile && oldIsMobile) {

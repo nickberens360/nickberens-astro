@@ -111,8 +111,6 @@
       >
         <a
         href="/nick-ai"
-        style="text-decoration: none; position: relative; display: flex;
-        flex-direction: column; justify-content: center; "
         class="ai-icon"
       >
           <img
@@ -494,6 +492,14 @@ export default {
 
 .site-header__icons {
   gap: .5rem;
+}
+
+.ai-icon {
+  text-decoration: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .pod {
