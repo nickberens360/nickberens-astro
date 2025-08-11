@@ -25,6 +25,7 @@ export function useTerminalController(props) {
 
   // === MOUSE HOVER STATE ===
   const isHovered = ref(false);
+  const isTouching = ref(false);
 
   // === STORE SUBSCRIPTIONS ===
   const isMinimized = useStore(isTerminalMinimizedStore);
@@ -40,9 +41,9 @@ export function useTerminalController(props) {
   const isVisible = computed(() => !isHidden.value);
   const isExpanded = computed(() => isVisible.value && !isMinimized.value);
   const shouldBlockScroll = computed(() => {
-    // Block scroll if maximized OR if hovering over a non-maximized terminal
+    // Block scroll if maximized OR if hovering/touching over a non-maximized terminal
     return (isExpanded.value && isMaximized.value) ||
-      (isExpanded.value && !isMaximized.value && isHovered.value);
+      (isExpanded.value && !isMaximized.value && (isHovered.value || isTouching.value));
   });
 
   const terminalStyle = computed(() => {
@@ -71,11 +72,54 @@ export function useTerminalController(props) {
   });
 
   // === BODY SCROLL MANAGEMENT ===
+  let wheelEventListener = null;
+  let touchMoveListener = null;
+  
+  const preventScroll = (e) => {
+    // Check if the scroll event is coming from within the terminal
+    const terminalOutput = terminalContent.value?.$refs?.terminalOutput;
+    if (terminalOutput && terminalOutput.contains(e.target)) {
+      // Allow scrolling within terminal
+      return;
+    }
+    e.preventDefault();
+  };
+  
+  const blockBodyScroll = () => {
+    // Prevent wheel events
+    wheelEventListener = (e) => preventScroll(e);
+    document.addEventListener('wheel', wheelEventListener, { passive: false });
+    
+    // Prevent touch move events for mobile
+    touchMoveListener = (e) => preventScroll(e);
+    document.addEventListener('touchmove', touchMoveListener, { passive: false });
+    
+    // Add overflow hidden as backup
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  };
+  
+  const unblockBodyScroll = () => {
+    // Remove event listeners
+    if (wheelEventListener) {
+      document.removeEventListener('wheel', wheelEventListener);
+      wheelEventListener = null;
+    }
+    if (touchMoveListener) {
+      document.removeEventListener('touchmove', touchMoveListener);
+      touchMoveListener = null;
+    }
+    
+    // Remove overflow hidden
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  };
+  
   const manageBodyScroll = () => {
     if (shouldBlockScroll.value) {
-      document.body.style.overflow = 'hidden';
+      blockBodyScroll();
     } else {
-      document.body.style.overflow = '';
+      unblockBodyScroll();
     }
   };
 
@@ -223,6 +267,25 @@ export function useTerminalController(props) {
     leave() {
       isHovered.value = false;
     }
+  };
+
+  // === TOUCH HANDLERS ===
+  const touchHandlers = {
+    start(event) {
+      if (isExpanded.value && !isMaximized.value) {
+        isTouching.value = true;
+      }
+    },
+
+    end() {
+      isTouching.value = false;
+    }
+  };
+
+  // === WHEEL HANDLER ===
+  const wheelHandler = (event) => {
+    // This is now handled by the document-level wheel listener
+    // We keep this handler empty to avoid conflicts
   };
 
   // === DRAG HANDLERS ===
@@ -389,7 +452,7 @@ export function useTerminalController(props) {
     document.removeEventListener('pointerup', resizeHandlers.stop);
 
     // Restore body scroll
-    document.body.style.overflow = '';
+    unblockBodyScroll();
 
     isMounted.value = false;
   });
@@ -409,6 +472,7 @@ export function useTerminalController(props) {
     isVisible,
     isExpanded,
     isHovered,
+    isTouching,
     position,
     size,
     commandHistory,
@@ -426,6 +490,8 @@ export function useTerminalController(props) {
     dragHandlers,
     resizeHandlers,
     mouseHandlers,
+    touchHandlers,
+    wheelHandler,
 
     // Store references
     stores: {
