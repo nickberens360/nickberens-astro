@@ -45,7 +45,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: var(--z-index-overlay);
   cursor: pointer;
 }
 
@@ -78,6 +78,6 @@ export default {
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s;
-  z-index: 10;
+  z-index: var(--z-index-content);
 }
 </style>

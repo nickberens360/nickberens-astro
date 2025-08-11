@@ -3,6 +3,7 @@
     class="chatbot-container"
     :class="{ 'is-drawer-open': chatHistoryVisible }"
   >
+    <MobileChatBar />
     <div
       v-if="backendStatus === 'checking'"
       class="status-notification checking"
@@ -66,6 +67,7 @@ import {
   updateMessageInActiveChat,
   isChatHistoryVisible,
   isChatProcessing,
+  // isMobileMenuOpen,
 } from '../stores/ai.js';
 import { openImageOverlay } from '../stores/ui.js';
 import { backendStatus } from '../stores/backendStatus.js';
@@ -74,10 +76,11 @@ import { useChatAPI } from '../composables/useChatAPI.js';
 import ChatMessageList from './ChatMessageList.vue';
 import ChatInput from './ChatInput.vue';
 import ImageOverlay from './ImageOverlay.vue';
+import MobileChatBar from './MobileChatBar.vue';
 
 export default {
   name: 'ChatBot',
-  components: { ChatMessageList, ChatInput, ImageOverlay },
+  components: { MobileChatBar, ChatMessageList, ChatInput, ImageOverlay },
   props: {
     theme: { type: String, default: 'dark' }
   },
@@ -176,14 +179,14 @@ export default {
       if (!userInput.value.trim() || hasTypingMessage.value || backendStatusValue.value !== 'online') return;
 
       const question = userInput.value;
-      
+
       // Check for easter egg keywords BEFORE submission
       const lowerQuestion = question.toLowerCase();
       if (lowerQuestion.includes('egg') || lowerQuestion.includes('easter')) {
         // Handle easter egg: add user message and easter egg response, but skip backend
         const currentChatId = activeChatId.get() || createNewChat();
         if (activeChatMessages.get().length === 0) updateChatTitle(currentChatId, userInput.value);
-        
+
         addMessageToActiveChat({ text: question, sender: 'user' });
         userInput.value = '';
         handleEasterEggFound('egg2');
