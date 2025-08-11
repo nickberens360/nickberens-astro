@@ -337,7 +337,7 @@ export default {
     bottom: 0;
     left: 0;
     height: 100vh;
-    z-index: 1001;
+    z-index: var(--z-index-drawer);
     transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
@@ -360,7 +360,7 @@ export default {
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: var(--z-index-overlay);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -377,7 +377,7 @@ export default {
   flex-direction: column;
   height: 100%;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-index-base);
 }
 
 .button-group--stacked {

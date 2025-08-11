@@ -225,7 +225,7 @@ export default {
 <style scoped>
 .annoying-eyelash {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-index-highest);
   transition: none;
   width: 44px;
   height: 44px;

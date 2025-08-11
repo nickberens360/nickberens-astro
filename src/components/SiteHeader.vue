@@ -387,7 +387,7 @@ export default {
   left: 0;
   top: 0;
   width: 100%;
-  z-index: 1010;
+  z-index: var(--z-index-header);
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
   height: var(--site-header-height);
 }
@@ -403,7 +403,7 @@ export default {
 
 .site-header__logo {
   position: relative;
-  z-index: 1002;
+  z-index: var(--z-index-modal);
   color: var(--text-color, #000);
   text-decoration: none;
   height: 100%;
@@ -429,7 +429,7 @@ export default {
   border-radius: 8px;
   padding: 0.5rem;
   transition: color 0.3s ease;
-  z-index: 1001;
+  z-index: var(--z-index-drawer);
 }
 
 .theme-dark .terminal-icon {
@@ -484,7 +484,7 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  z-index: 1001;
+  z-index: var(--z-index-drawer);
   font-size: 2rem;
   line-height: 1;
   padding: 0;
@@ -549,7 +549,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100vh;
-  z-index: 9999;
+  z-index: var(--z-index-highest);
   /* Semi-transparent background for backdrop-filter to work */
   background-color: rgba(255, 255, 255, 0.8);
   /* Add backdrop-filter for blur effect */
@@ -613,7 +613,7 @@ export default {
   cursor: pointer;
   font-size: 1.5rem;
   color: inherit;
-  z-index: 1001;
+  z-index: var(--z-index-drawer);
   padding: 0.5rem;
   border-radius: 50%;
   transition: background-color 0.3s ease, color 0.3s ease;

@@ -63,7 +63,7 @@ export default {
 .mobile-menu-button {
   position: relative;
   pointer-events: auto;
-  z-index: 900;
+  z-index: var(--z-index-mobile-nav);
   background-color: transparent;
   color: #d1d5db;
   outline: none;
