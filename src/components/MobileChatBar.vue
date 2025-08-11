@@ -27,31 +27,19 @@
 <script>
 import { useStore } from '@nanostores/vue';
 import { isMobileMenuOpen } from '../stores/ai.js';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { useMobile } from '../composables/useMobile.js';
 import ChatStatus from './ChatStatus.vue';
 
 export default {
-  name: 'MobileMenuButton',
+  name: 'MobileChatBar',
   components: { ChatStatus },
   setup() {
     const mobileMenuOpen = useStore(isMobileMenuOpen);
-    const isMobile = ref(window.innerWidth < 768);
+    const { isMobile } = useMobile();
 
     const openMobileMenu = () => {
       isMobileMenuOpen.set(true);
     };
-
-    const updateMobileState = () => {
-      isMobile.value = window.innerWidth < 768;
-    };
-
-    onMounted(() => {
-      window.addEventListener('resize', updateMobileState);
-    });
-
-    onUnmounted(() => {
-      window.removeEventListener('resize', updateMobileState);
-    });
 
     return {
       isMobile,

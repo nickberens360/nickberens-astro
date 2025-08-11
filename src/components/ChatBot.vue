@@ -158,9 +158,6 @@ export default {
           console.error('Status check failed:', error);
         }
       }, 15000);
-
-      // Add resize event listener
-      window.addEventListener('resize', handleResize);
     });
 
     onUnmounted(() => {
@@ -168,8 +165,6 @@ export default {
       if (rateLimitNotificationTimeout.value) {
         clearTimeout(rateLimitNotificationTimeout.value);
       }
-      // Remove resize event listener
-      window.removeEventListener('resize', handleResize);
     });
 
     watch(userInput, (newValue) => {

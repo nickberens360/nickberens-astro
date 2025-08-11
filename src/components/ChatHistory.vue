@@ -144,7 +144,8 @@ import {
   isChatProcessing,
   isMobileMenuOpen
 } from '../stores/ai.js';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useMobile } from '../composables/useMobile.js';
 
 export default {
   name: 'ChatHistory',
@@ -165,8 +166,8 @@ export default {
     const isProcessing = useStore(isChatProcessing);
     const mobileMenuOpen = useStore(isMobileMenuOpen);
 
-    // Track if we're on mobile
-    const isMobile = ref(window.innerWidth < 768);
+    // Use mobile detection composable
+    const { isMobile } = useMobile();
 
     // Check if any message across ALL chats is currently typing
     const hasTypingMessage = computed(() => {
@@ -218,27 +219,19 @@ export default {
       isMobileMenuOpen.set(false);
     };
 
-    // Function to check if screen is mobile size
-    const isMobileSize = () => {
-      return window.innerWidth < 768; // Using md breakpoint (768px)
-    };
-
     // Track the drawer state before it was collapsed due to screen size
     const wasVisibleBeforeCollapse = ref(null);
 
-    // Function to update visibility based on screen size
-    const updateVisibilityForScreenSize = () => {
-      const wasMobile = isMobile.value;
-      isMobile.value = isMobileSize();
-
-      if (isMobile.value && !wasMobile) {
+    // Watch for mobile state changes to handle transitions
+    watch(isMobile, (newIsMobile, oldIsMobile) => {
+      if (newIsMobile && !oldIsMobile) {
         // Transitioning to mobile
         if (isVisible.value && wasVisibleBeforeCollapse.value === null) {
           wasVisibleBeforeCollapse.value = true;
         }
         // Close mobile menu when transitioning to mobile
         isMobileMenuOpen.set(false);
-      } else if (!isMobile.value && wasMobile) {
+      } else if (!newIsMobile && oldIsMobile) {
         // Transitioning from mobile to desktop
         if (wasVisibleBeforeCollapse.value !== null) {
           isChatHistoryVisible.set(wasVisibleBeforeCollapse.value);
@@ -247,7 +240,7 @@ export default {
         // Ensure mobile menu is closed when going to desktop
         isMobileMenuOpen.set(false);
       }
-    };
+    });
 
     // Modified createNewChat function that checks for empty messages and closes the drawer on mobile
     const handleCreateNewChat = () => {
@@ -288,18 +281,8 @@ export default {
       }
     };
 
-    // Add resize event listener on component mount
     onMounted(() => {
-      // Initial check
-      updateVisibilityForScreenSize();
-
-      // Add event listener for window resize
-      window.addEventListener('resize', updateVisibilityForScreenSize);
-    });
-
-    // Clean up event listener on component unmount
-    onUnmounted(() => {
-      window.removeEventListener('resize', updateVisibilityForScreenSize);
+      // Note: Resize listener is now handled by useMobile composable
     });
 
     // Add the clearLocalStorage function
@@ -345,7 +328,7 @@ export default {
 }
 
 /* Mobile states */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .chat-history-drawer {
     position: fixed;
     top: var(--site-header-height, 0);
