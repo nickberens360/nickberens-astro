@@ -559,19 +559,4 @@ export default {
 }
 
 
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
-.mt-auto {
-  margin-top: auto;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.text-italic {
-  font-style: italic;
-}
 </style>
