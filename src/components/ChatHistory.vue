@@ -1,119 +1,139 @@
 <template>
-  <div
-    class="chat-history-drawer"
-    :class="[`theme-${theme}`, { 'collapsed': !isVisible }]"
-  >
-    <div class="drawer-header">
-      <div
-        class="button-group"
-        :class="{ 'button-group--stacked': !isVisible }"
-      >
+  <div>
+    <div
+      class="mobile-backdrop"
+      :class="{ 'is-visible': isMobile && isMobileMenuOpen }"
+      @click="closeMobileMenu"
+    ></div>
+
+    <div
+      class="chat-history-drawer"
+      :class="[
+        `theme-${theme}`,
+        {
+          'collapsed': !isVisible && !isMobile,
+          'mobile-overlay': isMobile && isMobileMenuOpen,
+          'mobile-hidden': isMobile && !isMobileMenuOpen
+        }
+      ]"
+    >
+      <div class="drawer-content">
+      <div class="drawer-header">
+        <div
+          v-if="!isMobile"
+          class="button-group"
+          :class="{ 'button-group--stacked': !isVisible && !isMobile }"
+        >
+          <button
+            v-if="!isMobile"
+            @click="handleToggleVisibility"
+            class="base-icon-button collapse-icon-button"
+          >
+            <font-awesome-icon
+              class="base-icon"
+              icon="bars"
+            />
+          </button>
+          <a
+            v-if="!isMobile && false"
+            href="/"
+            class="base-icon-button"
+          >
+            <font-awesome-icon
+              icon="house-chimney"
+              class="base-icon"
+            />
+          </a>
+        </div>
         <button
-          @click="toggleVisibility"
-          class="base-icon-button collapse-icon-button"
+          @click="handleCreateNewChat"
+          class="new-chat-button"
+          :disabled="hasTypingMessage || currentChatHasNoMessages || isProcessing"
+          :class="{ 'disabled': hasTypingMessage || currentChatHasNoMessages || isProcessing }"
+          :title="hasTypingMessage ? 'Cannot create new chat while message is typing' :
+                  currentChatHasNoMessages ? 'Cannot create new chat when welcome screen is displayed' :
+                  isProcessing ? 'Cannot create new chat while processing your prompt' :
+                  'Create new chat'"
+        >
+          <font-awesome-icon
+            icon="pen-to-square"
+            class="base-icon"
+          />
+          <span
+            v-if="isVisible || isMobile"
+            class="ml-2"
+          >New Chat</span>
+        </button>
+        <button
+          v-if="isMobile"
+          @click="closeMobileMenu"
+          class="base-icon-button mobile-close-button"
         >
           <font-awesome-icon
             class="base-icon"
-            icon="bars"
+            icon="times"
           />
         </button>
-        <a
-          v-if="false"
-          href="/"
-          class="base-icon-button"
+      </div>
+      <p
+        v-if="isVisible || isMobile"
+        class="history-heading"
+      >Recent</p>
+      <div
+        :class="{ 'disabled-history-items': hasTypingMessage || isProcessing }"
+      >
+        <div
+          v-if="isVisible || isMobile"
+          class="history-list"
+        >
+          <div
+            v-for="chat in chatList"
+            :key="chat.id"
+            :class="['history-item', { 'active': chat.id === currentChatId }]"
+            @click="handleSelectChat(chat.id)"
+          >
+            {{ chat.title }}
+          </div>
+        </div>
+        <div v-else>
+          <div
+            class="history-item-collapsed"
+            @click="toggleVisibility"
+          >
+            {{ chatList.length }}
+          </div>
+        </div>
+      </div>
+      <div v-if="false" class="mt-auto">
+        <p
+          v-if="isVisible || isMobile"
+          class="text-center text-italic text-hint"
+        >Having issues? Try clearing localStorage.</p>
+        <button
+          @click="clearLocalStorage"
+          class="clear-storage-button"
         >
           <font-awesome-icon
-            icon="house-chimney"
+            icon="trash"
             class="base-icon"
           />
-        </a>
-
+          <span
+            v-if="isVisible || isMobile"
+            class="ml-2"
+          >Clear localStorage</span>
+        </button>
       </div>
-      <button
-        @click="handleCreateNewChat"
-        class="new-chat-button"
-        :disabled="hasTypingMessage || currentChatHasNoMessages || isProcessing"
-        :class="{ 'disabled': hasTypingMessage || currentChatHasNoMessages || isProcessing }"
-        :title="hasTypingMessage ? 'Cannot create new chat while message is typing' :
-                currentChatHasNoMessages ? 'Cannot create new chat when welcome screen is displayed' :
-                isProcessing ? 'Cannot create new chat while processing your prompt' :
-                'Create new chat'"
-      >
-        <font-awesome-icon
-          icon="pen-to-square"
-          class="base-icon"
-        />
-        <span
-          v-if="isVisible"
-          class="ml-2"
-        >New Chat</span>
-      </button>
-    </div>
-    <p
-      v-if="isVisible"
-      class="history-heading"
-    >Recent</p>
-    <div
-      :class="{ 'disabled-history-items': hasTypingMessage || isProcessing }"
-    >
-      <div
-        v-if="isVisible"
-        class="history-list"
-      >
-        <div
-          v-for="chat in chatList"
-          :key="chat.id"
-          :class="['history-item', { 'active': chat.id === currentChatId }]"
-          @click="handleSelectChat(chat.id)"
-        >
-          {{ chat.title }}
-        </div>
-      </div>
-      <div v-else>
-        <div
-          class="history-item-collapsed"
-          @click="toggleVisibility"
-        >
-          {{ chatList.length }}
-        </div>
+      <div class="mt-auto">
+        <ChatStatus :showText="isVisible || isMobile" />
       </div>
     </div>
-    <div v-if="false" class="mt-auto">
-      <p
-        v-if="isVisible"
-        class="text-center text-italic text-hint"
-      >Having issues? Try clearing localStorage.</p>
-      <button
-        @click="clearLocalStorage"
-        class="clear-storage-button"
-      >
-        <font-awesome-icon
-          icon="trash"
-          class="base-icon"
-        />
-        <span
-          v-if="isVisible"
-          class="ml-2"
-        >Clear localStorage</span>
-      </button>
-    </div>
-    <div class="backend-status mt-auto">
-      <p
-        v-if="backendStatusValue === 'online'"
-        class="backend-status__item online"
-      ><span v-if="isVisible" class="ml-2">Backend is online</span></p>
-      <p
-        v-else
-        class="backend-status__item offline"
-      ><span v-if="isVisible" class="ml-2">Backend is offline</span></p>
-
-    </div>
+  </div>
   </div>
 </template>
 
 <script>
 import { useStore } from '@nanostores/vue';
-import { backendStatus } from '../stores/backendStatus.js';
+import ChatStatus from './ChatStatus.vue';
 import {
   allChats,
   activeChatId,
@@ -121,12 +141,16 @@ import {
   selectChat,
   isChatHistoryVisible,
   isPendingNewChat,
-  isChatProcessing
+  isChatProcessing,
+  isMobileMenuOpen
 } from '../stores/ai.js';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 export default {
   name: 'ChatHistory',
+  components: {
+    ChatStatus
+  },
   props: {
     theme: {
       type: String,
@@ -139,7 +163,10 @@ export default {
     const currentChatId = useStore(activeChatId);
     const isVisible = useStore(isChatHistoryVisible);
     const isProcessing = useStore(isChatProcessing);
-    const backendStatusValue = useStore(backendStatus);
+    const mobileMenuOpen = useStore(isMobileMenuOpen);
+
+    // Track if we're on mobile
+    const isMobile = ref(window.innerWidth < 768);
 
     // Check if any message across ALL chats is currently typing
     const hasTypingMessage = computed(() => {
@@ -177,6 +204,20 @@ export default {
       isChatHistoryVisible.set(!isVisible.value);
     };
 
+    const handleToggleVisibility = () => {
+      if (isMobile.value) {
+        // On mobile, toggle the mobile menu
+        isMobileMenuOpen.set(!mobileMenuOpen.value);
+      } else {
+        // On desktop, toggle the rail state
+        toggleVisibility();
+      }
+    };
+
+    const closeMobileMenu = () => {
+      isMobileMenuOpen.set(false);
+    };
+
     // Function to check if screen is mobile size
     const isMobileSize = () => {
       return window.innerWidth < 768; // Using md breakpoint (768px)
@@ -187,20 +228,24 @@ export default {
 
     // Function to update visibility based on screen size
     const updateVisibilityForScreenSize = () => {
-      if (isMobileSize()) {
-        // If we're going to mobile and drawer is currently visible,
-        // remember this state before collapsing
+      const wasMobile = isMobile.value;
+      isMobile.value = isMobileSize();
+
+      if (isMobile.value && !wasMobile) {
+        // Transitioning to mobile
         if (isVisible.value && wasVisibleBeforeCollapse.value === null) {
           wasVisibleBeforeCollapse.value = true;
         }
-        isChatHistoryVisible.set(false);
-      } else {
-        // If we're going back to desktop and we had stored a previous state,
-        // restore it
+        // Close mobile menu when transitioning to mobile
+        isMobileMenuOpen.set(false);
+      } else if (!isMobile.value && wasMobile) {
+        // Transitioning from mobile to desktop
         if (wasVisibleBeforeCollapse.value !== null) {
           isChatHistoryVisible.set(wasVisibleBeforeCollapse.value);
-          wasVisibleBeforeCollapse.value = null; // Reset the stored state
+          wasVisibleBeforeCollapse.value = null;
         }
+        // Ensure mobile menu is closed when going to desktop
+        isMobileMenuOpen.set(false);
       }
     };
 
@@ -226,9 +271,9 @@ export default {
         }
       }
 
-      // If on mobile, close the chat history drawer
-      if (isMobileSize()) {
-        isChatHistoryVisible.set(false);
+      // If on mobile, close the mobile menu
+      if (isMobile.value) {
+        isMobileMenuOpen.set(false);
       }
     };
 
@@ -237,9 +282,9 @@ export default {
       // Call the original selectChat function
       selectChat(chatId);
 
-      // If on mobile, close the chat history drawer
-      if (isMobileSize()) {
-        isChatHistoryVisible.set(false);
+      // If on mobile, close the mobile menu
+      if (isMobile.value) {
+        isMobileMenuOpen.set(false);
       }
     };
 
@@ -274,9 +319,11 @@ export default {
       handleCreateNewChat,
       handleSelectChat,
       isVisible,
-      toggleVisibility,
-      clearLocalStorage,
-      backendStatusValue
+      isMobile,
+      isMobileMenuOpen: mobileMenuOpen,
+      handleToggleVisibility,
+      closeMobileMenu,
+      clearLocalStorage
     };
   },
 };
@@ -293,6 +340,59 @@ export default {
   border-right: 1px solid #333333;
   flex-shrink: 0;
   transition: width 0.3s ease;
+  position: relative;
+  height: 100%;
+}
+
+/* Mobile states */
+@media (max-width: 767px) {
+  .chat-history-drawer {
+    position: fixed;
+    top: var(--site-header-height, 0);
+    bottom: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1001;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .chat-history-drawer.mobile-overlay {
+    transform: translateX(0);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+  }
+
+  .chat-history-drawer.mobile-hidden {
+    transform: translateX(-100%);
+  }
+}
+
+/* Mobile backdrop */
+.mobile-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.mobile-backdrop.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Drawer content wrapper */
+.drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .button-group--stacked {
@@ -318,6 +418,12 @@ export default {
   transition: transform 0.2s ease;
 }
 
+.mobile-close-button {
+  position: absolute;
+  right: 0;
+  top: -2px;
+}
+
 .collapsed {
   width: 50px;
   padding: 1rem 0.5rem;
@@ -327,7 +433,7 @@ export default {
   position: relative;
   left: 4px;
   border: none;
-  background: none !important; /* Keeping !important from original rule */
+  background: none !important;
   margin-bottom: 1rem;
   outline: none;
   color: white;
@@ -344,6 +450,7 @@ export default {
 
 .drawer-header {
   margin-bottom: 1rem;
+  position: relative;
 }
 
 .history-heading {
@@ -359,7 +466,6 @@ export default {
 .collapsed .history-item-collapsed {
   margin-top: 0 !important;
 }
-
 
 .new-chat-button:disabled,
 .new-chat-button.disabled {
@@ -437,7 +543,6 @@ export default {
   cursor: not-allowed;
 }
 
-/* Add style for the clear localStorage button */
 .clear-storage-button {
   margin-top: auto;
   padding: 0.75rem;
@@ -468,37 +573,20 @@ export default {
   font-size: 12px;
 }
 
-.backend-status__item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  padding: 0;
-  margin: 0;
-}
-.backend-status__item::before {
-  content: '';
-  position: relative;
-  height: 8px;
-  width: 8px;
-  display: inline-block;
-  border-radius: 50%;
-  background: #d1d5db;
-}
-.backend-status__item.online {
-  color: #22c55e;
+
+.ml-2 {
+  margin-left: 0.5rem;
 }
 
-.backend-status__item.online::before {
-  background: #22c55e;
-}
-.backend-status__item.offline {
-  color: #ef4444;
-}
-.backend-status__item.offline::before {
-  background: #ef4444;
+.mt-auto {
+  margin-top: auto;
 }
 
+.text-center {
+  text-align: center;
+}
 
+.text-italic {
+  font-style: italic;
+}
 </style>

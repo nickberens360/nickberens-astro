@@ -4,6 +4,7 @@
     class="site-header"
     :class="[
       `theme-${overlayTheme}`,
+      variant === 'mobile-condensed' ? 'site-header--mobile-condensed' : '',
       ]"
     :style="variant !== 'pod' ? headerStyles : {}"
     ref="siteHeader"
@@ -112,6 +113,7 @@
         href="/nick-ai"
         style="text-decoration: none; position: relative; display: flex;
         flex-direction: column; justify-content: center; "
+        class="ai-icon"
       >
           <img
             :src="aiIconSvg" alt="AI Icon"
@@ -167,7 +169,7 @@ export default {
     variant: {
       type: String,
       default: 'default',
-      validator: value => ['default', 'pod'].includes(value)
+      validator: value => ['default', 'pod', 'mobile-condensed'].includes(value)
     }
   },
   data() {
@@ -387,7 +389,7 @@ export default {
   left: 0;
   top: 0;
   width: 100%;
-  z-index: 100;
+  z-index: 1010;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, color 0.3s ease-in-out;
   height: var(--site-header-height);
 }
@@ -655,6 +657,10 @@ export default {
 @media (max-width: 768px) {
   .site-header__container {
     padding: 0 .75rem;
+  }
+  .site-header--mobile-condensed .terminal-icon,
+  .site-header--mobile-condensed .ai-icon {
+    display: none !important;
   }
   .pod {
     height: 65%;
