@@ -8,14 +8,14 @@ export const navItems = atom([
   { text: 'nick.AI', url: '/nick-ai' },
   { text: 'Illustrations', url: '/illustrations' },
   { text: 'Atomic Docs', url: '/atomic-docs' },
-  { 
-    text: 'Fonts', 
-    url: '#', 
+  {
+    text: 'Fonts',
+    url: '#',
     hasDropdown: true,
     dropdownItems: [] // Will be populated from fontItems
   },
   { text: 'Resume', url: '/resume' },
-  { text: 'Contact', url: '/#contact' },
+ // { text: 'Contact', url: '/#contact' },
   {
     text: 'GitHub',
     url: 'https://github.com/nickberens360',
@@ -34,12 +34,12 @@ export const updateFontItems = (fonts) => {
     };
     return menuItem;
   });
-  
+
   fontItems.set(fontMenuItems);
-  
+
   // Update the navItems with the new font dropdown items
   const currentNavItems = navItems.get();
-  
+
   const updatedNavItems = currentNavItems.map(item => {
     if (item.text === 'Fonts') {
       const updated = { ...item, dropdownItems: fontMenuItems };
@@ -47,7 +47,7 @@ export const updateFontItems = (fonts) => {
     }
     return item;
   });
-  
+
   navItems.set(updatedNavItems);
 };
 
