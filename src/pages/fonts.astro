@@ -1,8 +1,7 @@
 ---
-import { getCollection } from 'astro:content';
+import {getCollection} from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import PageSection from '../components/PageSection.vue';
-import FontDisplay from '../components/FontDisplay.vue';
 import FontCard from '../components/FontCard.vue';
 
 // Import font libraries
@@ -14,41 +13,67 @@ const fonts = await getCollection('fonts');
 console.log('Fonts collection:', fonts);
 ---
 
-<Layout title="Font Collection" description="Font specimen showcase">
+<Layout
+    title="Font Collection"
+    description="Font specimen showcase"
+>
   <PageSection
-    data-section-color="white"
-    data-section-theme="light"
-    background-color="white"
-    width="1200"
-    style="padding: 6rem 0; min-height: 100vh;"
+      data-section-color="black"
+      data-section-theme="dark"
+      background-color="black"
+      full-height
+      width="1200"
   >
-    <h1 style="font-size: 3rem; margin-bottom: 3rem; text-align: center; color: #333;">Font Collection</h1>
-    {fonts.length === 0 ? (
-      <p style="text-align: center; color: #666;">No fonts found in the collection.</p>
-    ) : (
-      <div class="fonts-grid">
-        {fonts.map((font) => (
-          <FontCard font={font} client:only="vue" />
-        ))}
-      </div>
-    )}
+    <div style="margin-bottom: 3rem; text-align: center;">
+      <h1 style="font-size: 3rem;">Font Collection</h1>
+      <p>Some addimittedly awful fonts I made for fun.</p>
+    </div>
+      {fonts.length === 0 ? (
+          <p style="text-align: center;">No fonts found in the
+            collection.</p>
+      ) : (
+          <div class="fonts-grid">
+              {fonts.map((font) => (
+                  <FontCard
+                      font={font}
+                      client:only="vue"
+                  />
+              ))}
+          </div>
+      )}
   </PageSection>
 </Layout>
 
 <style>
-  /* Import any custom fonts if needed */
-  @font-face {
-    font-family: 'Drip';
-    src: url('/fonts/drip.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-  }
+    /* Import any custom fonts if needed */
+    @font-face {
+        font-family: 'Drip';
+        src: url('/fonts/Drip.woff') format('woff');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
 
-  .fonts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem;
-    margin-top: 2rem;
-  }
+    @font-face {
+        font-family: 'Cowboy';
+        src: url('/fonts/Cowboy.woff') format('woff');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    @font-face {
+        font-family: 'Kinda Sans Serif';
+        src: url('/fonts/Kinda sans serif.woff') format('woff');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    .fonts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
 </style>

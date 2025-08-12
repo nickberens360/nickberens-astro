@@ -57,8 +57,10 @@
             v-for="item in navItemsStore"
             :key="item.url"
             class="site-header__nav-item"
+            :class="{ 'has-dropdown': item.hasDropdown }"
           >
             <a
+              v-if="!item.hasDropdown"
               :href="item.url"
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
@@ -71,6 +73,43 @@
               />
               <span v-else>{{ item.text }}</span>
             </a>
+
+            <!-- Dropdown Menu -->
+            <div v-if="item.hasDropdown" class="dropdown">
+              <button
+                class="dropdown-toggle"
+                @click="toggleDropdown(item.text)"
+                :aria-expanded="isDropdownOpen(item.text)"
+              >
+                <span>{{ item.text }}</span>
+                <font-awesome-icon
+                  :icon="['fas', 'chevron-down']"
+                  :class="{ 'rotated': isDropdownOpen(item.text) }"
+                  class="dropdown-arrow"
+                />
+              </button>
+              <ul
+                v-if="isDropdownOpen(item.text)"
+                class="dropdown-menu"
+                :style="dropdownStyles"
+              >
+                <li v-if="!item.dropdownItems || item.dropdownItems.length === 0" class="dropdown-item">
+                  <span style="padding: 0.5rem 1rem; color: #666;">No fonts available</span>
+                </li>
+                <li
+                  v-for="subItem in item.dropdownItems"
+                  :key="subItem.url"
+                  class="dropdown-item"
+                >
+                  <a
+                    :href="subItem.url"
+                    @click="closeAllDropdowns"
+                  >
+                    {{ subItem.text }}
+                  </a>
+                </li>
+              </ul>
+            </div>
           </li>
         </ul>
       </nav>
@@ -92,7 +131,9 @@
             :key="item.url"
             class="site-header__mobile-nav-item"
           >
+            <!-- Regular nav items -->
             <a
+              v-if="!item.hasDropdown"
               :href="item.url"
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
@@ -109,6 +150,41 @@
               >{{ item.text }}</span>
               <span v-else>{{ item.text }}</span>
             </a>
+
+            <!-- Mobile dropdown items -->
+            <div v-if="item.hasDropdown" class="mobile-dropdown">
+              <button
+                class="mobile-dropdown-toggle"
+                @click="toggleMobileDropdown(item.text)"
+              >
+                <span>{{ item.text }}</span>
+                <font-awesome-icon
+                  :icon="['fas', 'chevron-down']"
+                  :class="{ 'rotated': isMobileDropdownOpen(item.text) }"
+                  class="dropdown-arrow"
+                />
+              </button>
+              <ul
+                v-if="isMobileDropdownOpen(item.text)"
+                class="mobile-dropdown-menu"
+              >
+                <li v-if="!item.dropdownItems || item.dropdownItems.length === 0" class="mobile-dropdown-item">
+                  <span style="color: #666;">No fonts available</span>
+                </li>
+                <li
+                  v-for="subItem in item.dropdownItems"
+                  :key="subItem.url"
+                  class="mobile-dropdown-item"
+                >
+                  <a
+                    :href="subItem.url"
+                    @click="closeMobileMenu"
+                  >
+                    {{ subItem.text }}
+                  </a>
+                </li>
+              </ul>
+            </div>
           </li>
         </ul>
       </div>
@@ -190,6 +266,8 @@ export default {
       useTerminalInput: false,
       scrollTimeout: null,
       aiIconSvg,
+      openDropdowns: new Set(),
+      openMobileDropdowns: new Set(),
     };
   },
   computed: {
@@ -203,6 +281,16 @@ export default {
       if (this.variant === 'pod') {
         backgroundColor = this.convertToRgba(backgroundColor, 0.2);
       }
+
+      return {
+        backgroundColor: backgroundColor,
+      };
+    },
+    dropdownStyles() {
+      let backgroundColor = this.headerBackgroundColor;
+
+      // Apply transparency for glass effect
+      backgroundColor = this.convertToRgba(backgroundColor, 0.9);
 
       return {
         backgroundColor: backgroundColor,
@@ -233,10 +321,14 @@ export default {
 
     // Re-run theme detection on page navigation (for view transitions)
     document.addEventListener('astro:page-load', this.performScrollCheck);
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', this.handleClickOutside);
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
     document.removeEventListener('astro:page-load', this.performScrollCheck);
+    document.removeEventListener('click', this.handleClickOutside);
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
     }
@@ -334,7 +426,39 @@ export default {
     },
     closeMobileMenu() {
       this.isMobileMenuOpen = false;
+      this.openMobileDropdowns.clear();
       document.body.style.overflow = '';
+    },
+    toggleDropdown(itemText) {
+      if (this.openDropdowns.has(itemText)) {
+        this.openDropdowns.delete(itemText);
+      } else {
+        this.openDropdowns.clear();
+        this.openDropdowns.add(itemText);
+      }
+    },
+    toggleMobileDropdown(itemText) {
+      if (this.openMobileDropdowns.has(itemText)) {
+        this.openMobileDropdowns.delete(itemText);
+      } else {
+        this.openMobileDropdowns.add(itemText);
+      }
+    },
+    isDropdownOpen(itemText) {
+      return this.openDropdowns.has(itemText);
+    },
+    isMobileDropdownOpen(itemText) {
+      return this.openMobileDropdowns.has(itemText);
+    },
+    closeAllDropdowns() {
+      this.openDropdowns.clear();
+    },
+    handleClickOutside(event) {
+      // Check if the click is outside all dropdown elements
+      if (!event.target.closest('.dropdown') && !event.target.closest('.mobile-dropdown')) {
+        this.openDropdowns.clear();
+        this.openMobileDropdowns.clear();
+      }
     },
     handleScroll() {
       // Clear existing timeout
@@ -357,8 +481,8 @@ export default {
         const allPageSections = document.querySelectorAll('.page-section');
         const darkSections = document.querySelectorAll('[data-section-theme="dark"]');
         const blackSections = document.querySelectorAll('[data-section-color="black"]');
-        
-        
+
+
         // Apply dark theme if there's exactly one PageSection AND it has dark theme
         if (allPageSections.length === 1 && darkSections.length === 1 && blackSections.length === 1) {
           this.headerBackgroundColor = blackSections[0].dataset.sectionColor;
@@ -376,10 +500,10 @@ export default {
 
         // Temporarily disable pointer events
         headerEl.style.pointerEvents = 'none';
-        
+
         let colorSection = null;
         let themeSection = null;
-        
+
         for (const point of checkPoints) {
           const elementUnder = document.elementFromPoint(point.x, point.y);
           if (elementUnder && elementUnder.tagName !== 'HTML' && elementUnder.tagName !== 'BODY') {
@@ -511,7 +635,7 @@ export default {
 }
 
 .site-header.theme-light .site-header__nav-item a:hover {
-  color: #434343;
+  color: #2a2a2a;
 }
 
 /* Hamburger Menu Button - Hidden on desktop */
@@ -757,6 +881,126 @@ export default {
 
 .site-header.theme-dark .git-emoji {
   color: yellow;
+}
+
+/* Dropdown Styles */
+.site-header__nav-item.has-dropdown {
+  position: relative;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-toggle {
+  background: none;
+  border: none;
+  color: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: inherit;
+  padding: 0;
+}
+
+.dropdown-arrow {
+  font-size: 0.8em;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  list-style: none;
+  padding: 0.5rem 0;
+  min-width: 180px;
+  z-index: var(--z-index-modal);
+  margin: 0.5rem 0 0;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pod .dropdown-menu {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.theme-dark .dropdown-menu {
+  border: 1px solid #404040;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: #fff;
+}
+
+.theme-light .dropdown-menu {
+  color: #000;
+}
+
+.dropdown-item {
+  margin: 0;
+}
+
+.dropdown-item a {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item a:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-dark .dropdown-item a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile dropdown styles */
+.mobile-dropdown-toggle {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: clamp(1.3rem, 1.3rem + 0.5vw, 1.8rem);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  width: 100%;
+  justify-content: center;
+}
+
+.mobile-dropdown-menu {
+  list-style: none;
+  margin: 0.5rem 0 0 0;
+  padding: 0;
+}
+
+.mobile-dropdown-item {
+  margin: 0.5rem 0;
+}
+
+.mobile-dropdown-item a {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  font-size: 1.1rem;
+  padding: 0.25rem 0;
+  transition: color 0.3s ease;
+}
+
+.mobile-dropdown-item a:hover {
+  color: #666;
 }
 
 /* Hamburger animation when menu is open */

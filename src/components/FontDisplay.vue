@@ -2,10 +2,6 @@
   <div>
     <div class="font-display">
       <h1 class="font-display__title">{{ fontData.name || 'Font Display' }}</h1>
-<!--      <p class="font-display__description">
-        This is a demonstration of how to display custom fonts in a Vue
-        component.
-      </p>-->
       <div class="font-display__controls">
         <input
           v-model="fontOutput"
@@ -76,6 +72,14 @@ const props = defineProps({
       specimen: 'The quick brown fox jumps over the lazy dog.',
       sizes: [12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72]
     })
+  },
+  isTitleFontBold: {
+    type: Boolean,
+    default: true
+  },
+  titleFontSize: {
+    type: String,
+    default: '12vw'
   }
 });
 
@@ -83,6 +87,8 @@ const fontFamily = computed(() => props.fontData.family || 'Drip');
 const fontOutput = ref(props.fontData.specimen || 'Example.');
 const fontSize = ref('24px');
 const availableSizes = computed(() => props.fontData.sizes || [12, 14, 16, 18, 20, 24, 28, 32, 36]);
+const titleFontWeight = computed(() => props.isTitleFontBold ? 'bold' : 'normal');
+const titleFontSizeValue = computed(() => props.fontData.titleFontSize || props.titleFontSize);
 </script>
 
 <style scoped>
@@ -93,8 +99,9 @@ const availableSizes = computed(() => props.fontData.sizes || [12, 14, 16, 18, 2
 }
 
 .font-display__title {
-  font-size: 160px;
-  font-weight: 400;
+  font-size: v-bind(titleFontSizeValue);
+  font-weight: v-bind(titleFontWeight);
+  margin-bottom: 24px;
 }
 
 .font-display__controls {
@@ -130,23 +137,18 @@ hr {
 }
 h2.font-display__example {
   font-size: 48px;
-  font-weight: 400;
 }
 h3.font-display__example {
   font-size: 36px;
-  font-weight: 400;
 }
 h4.font-display__example {
   font-size: 24px;
-  font-weight: 400;
 }
 h5.font-display__example {
   font-size: 18px;
-  font-weight: 400;
 }
 h6.font-display__example {
   font-size: 16px;
-  font-weight: 400;
 }
 .font-display__paragraph {
   font-family: v-bind(fontFamily), sans-serif;

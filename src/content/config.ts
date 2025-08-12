@@ -26,6 +26,9 @@ const fontsCollection = defineCollection({
     cssImport: z.string().optional(),
     description: z.string().optional(),
     specimen: z.string().default('The quick brown fox jumps over the lazy dog.'),
+    backgroundColor: z.string().optional(),
+    isTitleFontBold: z.boolean().default(true),
+    titleFontSize: z.string().optional(),
     sizes: z.array(z.number()).default([12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72]),
   }),
 });

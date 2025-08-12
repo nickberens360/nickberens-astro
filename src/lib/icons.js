@@ -19,6 +19,7 @@ import {
   faArrowPointer,
   faGlobe,
   faTimes,
+  faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 
@@ -37,6 +38,7 @@ library.add(
   faArrowPointer,
   faGlobe,
   faTimes,
+  faChevronDown,
 );
 
 export { library };

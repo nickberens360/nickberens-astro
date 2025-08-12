@@ -1,5 +1,5 @@
 <template>
-  <a :href="`/fonts/${font.id}`" class="font-card">
+  <a :href="`/fonts/${font.id}`" class="font-card" :style="cardStyle">
     <h2 class="font-card__title" :style="`font-family: '${font.data.family}', sans-serif;`">
       {{ font.data.name }}
     </h2>
@@ -18,6 +18,13 @@ export default {
       type: Object,
       required: true
     }
+  },
+  computed: {
+    cardStyle() {
+      return {
+        backgroundColor: this.font.data.backgroundColor || 'white'
+      }
+    }
   }
 }
 </script>
@@ -26,12 +33,11 @@ export default {
 .font-card {
   display: block;
   padding: 2rem;
-  border: 1px solid #e0e0e0;
+  //border: 1px solid #e0e0e0;
   border-radius: 8px;
   text-decoration: none;
   color: #333;
   transition: all 0.2s ease;
-  background: white;
 }
 
 .font-card:hover {

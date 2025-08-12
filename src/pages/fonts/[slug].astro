@@ -27,16 +27,16 @@ const nextFont = currentIndex < fonts.length - 1 ? fonts[currentIndex + 1] : nul
 
 <Layout title={`${font.data.name} - Font Specimen`} description={font.data.description || `${font.data.name} font specimen showcase`}>
   <PageSection
-    data-section-color="white"
+    data-section-color={font.data.backgroundColor || "white"}
     data-section-theme="light"
-    background-color="white"
+    background-color={font.data.backgroundColor || "white"}
     full-height
     width="1200"
     style="padding-top: 6rem; position: relative;"
   >
     <FontNavigation prevFont={prevFont} nextFont={nextFont} client:only="vue" />
 
-    <FontDisplay fontData={font.data} client:load />
+    <FontDisplay fontData={font.data} isTitleFontBold={font.data.isTitleFontBold} titleFontSize={font.data.titleFontSize} client:load />
 
     {font.data.description && (
       <div class="font-description">
@@ -58,7 +58,23 @@ const nextFont = currentIndex < fonts.length - 1 ? fonts[currentIndex + 1] : nul
   /* Import custom fonts if needed */
   @font-face {
     font-family: 'Drip';
-    src: url('/fonts/drip.woff2') format('woff2');
+    src: url('/fonts/Drip.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Cowboy';
+    src: url('/fonts/Cowboy.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Kinda Sans Serif';
+    src: url('/fonts/Kinda sans serif.woff') format('woff');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
