@@ -29,9 +29,7 @@ export default {
 <style scoped>
 .font-nav {
   position: relative;
-  top: 1rem;
-  left: 0;
-  right: 0;
+  margin-bottom: 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -44,15 +42,11 @@ export default {
   text-decoration: none;
   border-radius: 4px;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
 }
 
 .nav-link:hover {
   background-color: transparent;
-}
-
-.nav-link.home {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
 }
 </style>
