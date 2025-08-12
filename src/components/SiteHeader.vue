@@ -94,7 +94,7 @@
                 :style="dropdownStyles"
               >
                 <li v-if="!item.dropdownItems || item.dropdownItems.length === 0" class="dropdown-item">
-                  <span style="padding: 0.5rem 1rem; color: #666;">No fonts available</span>
+                  <span>No fonts available</span>
                 </li>
                 <li
                   v-for="subItem in item.dropdownItems"
