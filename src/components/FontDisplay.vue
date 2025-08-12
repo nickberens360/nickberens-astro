@@ -23,15 +23,15 @@
       </select>
     </div>
 
-    <p
-      class="font-display__output"
-      :style="{ fontSize }"
-      contenteditable="true"
-      @input="handleContentEdit"
-    >
-      <span v-if="needsFakeBold" class="fake-bold">{{ fontOutput }}</span>
-      {{ fontOutput }}
-    </p>
+    <div class="font-display__output" :style="{ fontSize }">
+      <span 
+        class="font-display__output-text"
+        contenteditable="true"
+        @input="handleContentEdit"
+        @blur="handleContentEdit"
+      >{{ fontOutput }}</span>
+      <span v-if="needsFakeBold" class="font-display__output-fake-bold">{{ fontOutput }}</span>
+    </div>
 
     <div class="font-container">
       <div class="font-container__content">
@@ -85,6 +85,7 @@ const charsets = [
 const handleContentEdit = (event) => {
   fontOutput.value = event.target.textContent;
 };
+
 </script>
 
 <style scoped>
@@ -143,6 +144,22 @@ const handleContentEdit = (event) => {
   font-size: 48px;
   margin-bottom: 48px;
   border-bottom: 1px solid currentColor;
+  min-height: 1.2em;
+}
+
+.font-display__output-text {
+  position: relative;
+  z-index: 2;
+  outline: none;
+  display: inline-block;
+  min-width: 50px;
+}
+
+.font-display__output-fake-bold {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  z-index: 1;
 }
 
 .font-container {
