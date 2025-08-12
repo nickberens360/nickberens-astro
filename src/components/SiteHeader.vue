@@ -292,6 +292,11 @@ export default {
     },
     dropdownStyles() {
       let backgroundColor = this.headerBackgroundColor;
+      
+      // Fallback to white if transparent (view transition issue)
+      if (backgroundColor === 'transparent') {
+        backgroundColor = 'white';
+      }
 
       // Apply transparency for glass effect
       backgroundColor = this.convertToRgba(backgroundColor, 0.9);
@@ -325,6 +330,7 @@ export default {
 
     // Re-run theme detection on page navigation (for view transitions)
     document.addEventListener('astro:page-load', this.performScrollCheck);
+    document.addEventListener('astro:after-swap', this.performScrollCheck);
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', this.handleClickOutside);
@@ -332,6 +338,7 @@ export default {
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
     document.removeEventListener('astro:page-load', this.performScrollCheck);
+    document.removeEventListener('astro:after-swap', this.performScrollCheck);
     document.removeEventListener('click', this.handleClickOutside);
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);

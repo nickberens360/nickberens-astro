@@ -30,8 +30,6 @@ export default {
             };
           });
           updateFontItems(processedFonts);
-        } else {
-          console.log('No fonts to process');
         }
       },
       deep: true,

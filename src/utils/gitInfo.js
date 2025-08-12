@@ -119,7 +119,6 @@ export async function getLatestCommit() {
     // Check if we have valid cached data in memory
     const now = Date.now();
     if (latestCommitCache.data && (now - latestCommitCache.timestamp) < latestCommitCache.expiryTime) {
-      console.log('Using cached latest commit data');
       return latestCommitCache.data;
     }
     
@@ -211,7 +210,6 @@ export async function getCommitHistory(limit = 10) {
     // Check if we have valid cached data
     const now = Date.now();
     if (commitHistoryCache.data && (now - commitHistoryCache.timestamp) < commitHistoryCache.expiryTime) {
-      console.log('Using cached commit history data');
       return commitHistoryCache.data;
     }
 
@@ -272,7 +270,6 @@ export async function getCodeFrequency(retryCount = 0, maxRetries = 3) {
     // Check if we have valid cached data
     const now = Date.now();
     if (codeFrequencyCache.data && (now - codeFrequencyCache.timestamp) < codeFrequencyCache.expiryTime) {
-      console.log('Using cached code frequency data');
       return codeFrequencyCache.data;
     }
 
@@ -290,7 +287,6 @@ export async function getCodeFrequency(retryCount = 0, maxRetries = 3) {
     // Handle 202 Accepted response with retry logic
     if (response.status === 202) {
       if (retryCount < maxRetries) {
-        console.log(`GitHub is computing statistics. Retry ${retryCount + 1}/${maxRetries} in 2 seconds...`);
 
         // Wait for 2 seconds before retrying
         return new Promise(resolve => {

@@ -1,7 +1,17 @@
 <template>
   <div>
     <div class="font-display">
-      <h1 class="font-display__title">{{ fontData.name || 'Font Display' }}</h1>
+      <h1 class="font-display__title">
+        <span
+          class="fake-bold"
+          v-if="fontData.name === 'Dripity' || fontData.name ===
+              'Kinda Sans Serif'"
+        >{{
+            fontData.name ||
+            'FontDisplay'
+          }}</span>
+        {{ fontData.name || 'Font Display' }}
+      </h1>
       <div class="font-display__controls">
         <input
           v-model="fontOutput"
@@ -12,8 +22,12 @@
         <select
           v-model="fontSize"
           class="font-display__select"
+        >
+          <option
+            v-for="size in availableSizes"
+            :key="size"
+            :value="`${size}px`"
           >
-          <option v-for="size in availableSizes" :key="size" :value="`${size}px`">
             {{ size }}px
           </option>
         </select>
@@ -21,37 +35,39 @@
       <p
         class="font-display__output"
         :style="{ fontSize: fontSize }"
+        contenteditable="true"
+        @input="handleContentEdit"
       >
+        <span
+          v-if="fontData.name === 'Dripity' || fontData.name ===
+          'Kinda Sans Serif'"
+          class="fake-bold"
+        >
+          {{ fontOutput }}
+        </span>
         {{ fontOutput }}
       </p>
-      <hr />
-      <h2 class="font-display__example">
-        {{ fontData.specimen || 'The quick brown fox jumps over the lazy dog.' }}
-      </h2>
-      <h3 class="font-display__example">
-        THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.
-      </h3>
-      <h4 class="font-display__example">
-        {{ fontData.specimen || 'The quick brown fox jumps over the lazy dog.' }}
-      </h4>
-      <h5 class="font-display__example">
-        THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.
-      </h5>
-      <h6 class="font-display__example">
-        {{ fontData.specimen || 'The quick brown fox jumps over the lazy dog.' }}
-      </h6>
-      <p class="font-display__paragraph">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-        eiusmod. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-        do eiusmod. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        Sed do eiusmod.
-      </p>
-      <p class="font-display__paragraph">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-        eiusmod. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-        do eiusmod. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        Sed do eiusmod.
-      </p>
+      <div class="font-container">
+        ABCDEFGHIJKLMNOPQRSTUVWXYZ
+        <br>
+        abcdefghijklmnopqrstuvwxyz
+        <br>
+        1234567890
+        <br>&amp;​.​,​?​!​@​(​)​#​$​%​+​-​=​:​;
+        <span
+          v-if="fontData.name === 'Dripity' || fontData.name ===
+          'Kinda Sans Serif'"
+        >
+          <span class="fake-bold">
+            ABCDEFGHIJKLMNOPQRSTUVWXYZ
+          </span>
+        <br>
+        abcdefghijklmnopqrstuvwxyz
+        <br>
+        1234567890
+        <br>&amp;​.​,​?​!​@​(​)​#​$​%​+​-​=​:​;
+        </span>
+      </div>
 
     </div>
   </div>
@@ -66,10 +82,6 @@ const props = defineProps({
     default: () => ({
       name: 'Drip',
       family: 'Drip',
-      category: 'display',
-      weight: 400,
-      description: '',
-      specimen: 'The quick brown fox jumps over the lazy dog.',
       sizes: [12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72]
     })
   },
@@ -84,24 +96,37 @@ const props = defineProps({
 });
 
 const fontFamily = computed(() => props.fontData.family || 'Drip');
-const fontOutput = ref(props.fontData.specimen || 'Example.');
-const fontSize = ref('24px');
+const fontOutput = ref('Try Me.');
+const fontSize = ref('48px');
 const availableSizes = computed(() => props.fontData.sizes || [12, 14, 16, 18, 20, 24, 28, 32, 36]);
 const titleFontWeight = computed(() => props.isTitleFontBold ? 'bold' : 'normal');
 const titleFontSizeValue = computed(() => props.fontData.titleFontSize || props.titleFontSize);
+
+const handleContentEdit = (event) => {
+  fontOutput.value = event.target.textContent;
+};
 </script>
 
 <style scoped>
 .font-display {
+  position: relative;
   font-family: v-bind(fontFamily), sans-serif;
   padding: 16px;
   border-radius: 8px;
 }
 
 .font-display__title {
+  position: relative;
   font-size: v-bind(titleFontSizeValue);
-  font-weight: v-bind(titleFontWeight);
+  /*font-weight: v-bind(titleFontWeight);*/
+  font-weight: normal;
   margin-bottom: 24px;
+}
+
+.fake-bold {
+  position: absolute;
+  top: 0;
+  left: 1px;
 }
 
 .font-display__controls {
@@ -113,11 +138,13 @@ const titleFontSizeValue = computed(() => props.fontData.titleFontSize || props.
   .font-display__controls {
     display: block;
   }
+
   input, select {
     margin-bottom: 16px;
     display: block;
   }
-  input {
+
+  input, select {
     width: 100%;
   }
 }
@@ -127,46 +154,24 @@ input, select {
   font-size: 16px;
   box-shadow: none;
   outline: none;
-  border: 1px solid currentColor;
+  border: none;
   color: inherit;
   border-radius: 4px;
-  background-color: transparent;
+  background: rgba(0, 0, 0, 0.20);
 }
 
-hr {
-  margin: 32px 0;
-  border: none;
-  border-top: 1px solid black;
-}
 
 .font-display__output {
-  font-size: 24px;
-  margin-bottom: 16px;
-  font-weight: bold;
-}
-.font-display__example {
-  margin: 16px 0;
-  font-weight: bold;
-}
-h2.font-display__example {
+  position: relative;
   font-size: 48px;
+  margin-bottom: 48px;
+  border-bottom: 1px solid currentColor;
 }
-h3.font-display__example {
-  font-size: 36px;
-}
-h4.font-display__example {
-  font-size: 24px;
-}
-h5.font-display__example {
-  font-size: 18px;
-}
-h6.font-display__example {
-  font-size: 16px;
-}
-.font-display__paragraph {
-  font-size: 16px;
-  line-height: 1.5;
-  margin: 8px 0;
-  font-weight: bold;
+
+.font-container {
+  position: relative;
+  font-size: 10.5vw;
+  word-wrap: break-word;
+
 }
 </style>
