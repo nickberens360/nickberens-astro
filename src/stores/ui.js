@@ -27,35 +27,27 @@ export const navItems = atom([
 
 // Helper function to update font items
 export const updateFontItems = (fonts) => {
-  console.log('updateFontItems: Called with fonts:', fonts);
-  
   const fontMenuItems = fonts.map(font => {
-    console.log('updateFontItems: Processing font:', font);
     const menuItem = {
       text: font.data?.name || font.name || 'Unknown Font',
       url: `/fonts/${font.id || font.slug || 'unknown'}`
     };
-    console.log('updateFontItems: Created menu item:', menuItem);
     return menuItem;
   });
   
-  console.log('updateFontItems: Final font menu items:', fontMenuItems);
   fontItems.set(fontMenuItems);
   
   // Update the navItems with the new font dropdown items
   const currentNavItems = navItems.get();
-  console.log('updateFontItems: Current nav items:', currentNavItems);
   
   const updatedNavItems = currentNavItems.map(item => {
     if (item.text === 'Fonts') {
       const updated = { ...item, dropdownItems: fontMenuItems };
-      console.log('updateFontItems: Updated Fonts item:', updated);
       return updated;
     }
     return item;
   });
   
-  console.log('updateFontItems: Final nav items:', updatedNavItems);
   navItems.set(updatedNavItems);
 };
 

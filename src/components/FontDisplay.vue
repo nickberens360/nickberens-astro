@@ -127,12 +127,10 @@ hr {
 }
 
 .font-display__output {
-  font-family: v-bind(fontFamily), sans-serif;
   font-size: 24px;
   margin-bottom: 16px;
 }
 .font-display__example {
-  font-family: v-bind(fontFamily), sans-serif;
   margin: 16px 0;
 }
 h2.font-display__example {
@@ -151,7 +149,6 @@ h6.font-display__example {
   font-size: 16px;
 }
 .font-display__paragraph {
-  font-family: v-bind(fontFamily), sans-serif;
   font-size: 16px;
   line-height: 1.5;
   margin: 8px 0;

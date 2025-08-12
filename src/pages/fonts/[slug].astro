@@ -10,6 +10,9 @@ import '@fontsource-variable/roboto-flex';
 import '@fontsource-variable/jetbrains-mono';
 import '@fontsource-variable/doto';
 
+// Import custom fonts
+import '../../styles/fonts.css';
+
 export async function getStaticPaths() {
   const fonts = await getCollection('fonts');
   return fonts.map((font) => ({
@@ -53,30 +56,5 @@ const nextFont = currentIndex < fonts.length - 1 ? fonts[currentIndex + 1] : nul
     text-align: center;
     font-size: 1.125rem;
     line-height: 1.6;
-  }
-
-  /* Import custom fonts if needed */
-  @font-face {
-    font-family: 'Drip';
-    src: url('/fonts/Drip.woff') format('woff');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-  }
-
-  @font-face {
-    font-family: 'Cowboy';
-    src: url('/fonts/Cowboy.woff') format('woff');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-  }
-
-  @font-face {
-    font-family: 'Kinda Sans Serif';
-    src: url('/fonts/Kinda sans serif.woff') format('woff');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
   }
 </style>

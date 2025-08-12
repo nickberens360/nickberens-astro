@@ -33,7 +33,6 @@ export default {
 .font-card {
   display: block;
   padding: 2rem;
-  //border: 1px solid #e0e0e0;
   border-radius: 8px;
   text-decoration: none;
   color: #333;

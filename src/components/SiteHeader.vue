@@ -441,6 +441,7 @@ export default {
       if (this.openMobileDropdowns.has(itemText)) {
         this.openMobileDropdowns.delete(itemText);
       } else {
+        this.openMobileDropdowns.clear();
         this.openMobileDropdowns.add(itemText);
       }
     },

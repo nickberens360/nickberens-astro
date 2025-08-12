@@ -9,8 +9,10 @@ import '@fontsource-variable/roboto-flex';
 import '@fontsource-variable/jetbrains-mono';
 import '@fontsource-variable/doto';
 
+// Import custom fonts
+import '../styles/fonts.css';
+
 const fonts = await getCollection('fonts');
-console.log('Fonts collection:', fonts);
 ---
 
 <Layout
@@ -24,12 +26,12 @@ console.log('Fonts collection:', fonts);
       full-height
       width="1200"
   >
-    <div style="margin-bottom: 3rem; text-align: center;">
-      <h1 style="font-size: 3rem;">Font Collection</h1>
+    <div class="font-header">
+      <h1 class="font-header__title">Font Collection</h1>
       <p>Some addimittedly awful fonts I made for fun.</p>
     </div>
       {fonts.length === 0 ? (
-          <p style="text-align: center;">No fonts found in the
+          <p class="no-fonts-message">No fonts found in the
             collection.</p>
       ) : (
           <div class="fonts-grid">
@@ -45,29 +47,13 @@ console.log('Fonts collection:', fonts);
 </Layout>
 
 <style>
-    /* Import any custom fonts if needed */
-    @font-face {
-        font-family: 'Drip';
-        src: url('/fonts/Drip.woff') format('woff');
-        font-weight: 400;
-        font-style: normal;
-        font-display: swap;
+    .font-header {
+        margin-bottom: 3rem;
+        text-align: center;
     }
 
-    @font-face {
-        font-family: 'Cowboy';
-        src: url('/fonts/Cowboy.woff') format('woff');
-        font-weight: 400;
-        font-style: normal;
-        font-display: swap;
-    }
-
-    @font-face {
-        font-family: 'Kinda Sans Serif';
-        src: url('/fonts/Kinda sans serif.woff') format('woff');
-        font-weight: 400;
-        font-style: normal;
-        font-display: swap;
+    .font-header__title {
+        font-size: 3rem;
     }
 
     .fonts-grid {
@@ -75,5 +61,9 @@ console.log('Fonts collection:', fonts);
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 2rem;
         margin-top: 2rem;
+    }
+
+    .no-fonts-message {
+        text-align: center;
     }
 </style>
