@@ -1,9 +1,9 @@
 <template>
   <div class="font-nav">
-    <div class="mr-auto" />
     <a v-if="prevFont" :href="`/fonts/${prevFont.id}`" class="nav-link prev">
       ← {{ prevFont.data.name }}
     </a>
+    <div class="ml-auto mr-auto" />
     <a v-if="nextFont" :href="`/fonts/${nextFont.id}`" class="nav-link next">
       {{ nextFont.data.name }} →
     </a>
@@ -36,20 +36,18 @@ export default {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 0 2rem;
   z-index: 10;
 }
 
 .nav-link {
   color: inherit;
   text-decoration: none;
-  padding: 0.5rem 1rem;
   border-radius: 4px;
   transition: all 0.2s ease;
 }
 
 .nav-link:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: transparent;
 }
 
 .nav-link.home {

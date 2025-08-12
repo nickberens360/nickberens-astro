@@ -27,14 +27,21 @@ export const navItems = atom([
 
 // Helper function to update font items
 export const updateFontItems = (fonts) => {
+  console.log('updateFontItems called with:', fonts);
   const fontMenuItems = fonts.map(font => {
+    // For Astro content collections, font.id is the filename without extension
+    // font.data contains the actual JSON content
+    const fontId = font.id || font.slug || 'unknown';
+    const fontName = font.data?.name || font.name || 'Unknown Font';
     const menuItem = {
-      text: font.data?.name || font.name || 'Unknown Font',
-      url: `/fonts/${font.id || font.slug || 'unknown'}`
+      text: fontName,
+      url: `/fonts/${fontId}`
     };
+    console.log(`Creating menu item: ${fontName} -> /fonts/${fontId}`);
     return menuItem;
   });
 
+  console.log('Generated fontMenuItems:', fontMenuItems);
   fontItems.set(fontMenuItems);
 
   // Update the navItems with the new font dropdown items
@@ -43,12 +50,14 @@ export const updateFontItems = (fonts) => {
   const updatedNavItems = currentNavItems.map(item => {
     if (item.text === 'Fonts') {
       const updated = { ...item, dropdownItems: fontMenuItems };
+      console.log('Updated Fonts nav item:', updated);
       return updated;
     }
     return item;
   });
 
   navItems.set(updatedNavItems);
+  console.log('Final navItems:', navItems.get());
 };
 
 // Image overlay state

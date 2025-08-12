@@ -109,6 +109,19 @@ const titleFontSizeValue = computed(() => props.fontData.titleFontSize || props.
   gap: 16px;
 }
 
+@media (max-width: 600px) {
+  .font-display__controls {
+    display: block;
+  }
+  input, select {
+    margin-bottom: 16px;
+    display: block;
+  }
+  input {
+    width: 100%;
+  }
+}
+
 input, select {
   padding: 8px;
   font-size: 16px;
@@ -129,9 +142,11 @@ hr {
 .font-display__output {
   font-size: 24px;
   margin-bottom: 16px;
+  font-weight: bold;
 }
 .font-display__example {
   margin: 16px 0;
+  font-weight: bold;
 }
 h2.font-display__example {
   font-size: 48px;
@@ -152,5 +167,6 @@ h6.font-display__example {
   font-size: 16px;
   line-height: 1.5;
   margin: 8px 0;
+  font-weight: bold;
 }
 </style>
