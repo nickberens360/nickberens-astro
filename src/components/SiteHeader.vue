@@ -16,6 +16,7 @@
           :class="variant === 'pod' ? 'pod' : ''"
           :style="variant === 'pod' ? headerStyles : {}"
           ref="logo"
+          @click="handleLogoClick($event)"
         >
           <p class="site-header__name">nickberens
             <span class="git">git:<span class="git-paren">(</span>
@@ -65,6 +66,7 @@
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
+              @click="handleNavClick($event)"
             >
               <font-awesome-icon
                 v-if="item.icon"
@@ -103,7 +105,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="closeAllDropdowns"
+                    @click="handleNavClick($event); closeAllDropdowns()"
                   >
                     {{ subItem.text }}
                   </a>
@@ -138,7 +140,7 @@
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
-              @click="closeMobileMenu"
+              @click="handleNavClick($event); closeMobileMenu()"
             >
               <font-awesome-icon
                 v-if="item.icon"
@@ -178,7 +180,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="closeMobileMenu"
+                    @click="handleNavClick($event); closeMobileMenu()"
                   >
                     {{ subItem.text }}
                   </a>
@@ -196,6 +198,7 @@
         <a
           href="/nick-ai"
           class="ai-icon"
+          @click="handleAIClick($event)"
         >
           <img
             :src="aiIconSvg"
@@ -268,6 +271,7 @@ export default {
       aiIconSvg,
       openDropdowns: new Set(),
       openMobileDropdowns: new Set(),
+      animatingLinks: new Set(),
     };
   },
   computed: {
@@ -525,6 +529,85 @@ export default {
         this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
 
       });
+    },
+    handleNavClick(event) {
+      const link = event.currentTarget;
+
+      if (this.animatingLinks.has(link)) return;
+
+      // Add to animating set to prevent multiple animations
+      this.animatingLinks.add(link);
+
+      // Check if it's an icon or text - look for FontAwesome components
+      const iconElement = link.querySelector('svg[data-icon], .fa-icon, [class*="fa-"]');
+      const textElement = link.querySelector('span:not([class*="fa"]):not([data-icon])');
+
+      if (iconElement) {
+        // Handle icon animation (like GitHub) - only prevent default for external links
+        if (link.target === '_blank') {
+          event.preventDefault();
+          iconElement.classList.add('nav-icon-bounce');
+          setTimeout(() => {
+            iconElement.classList.remove('nav-icon-bounce');
+            this.animatingLinks.delete(link);
+            window.open(link.href, '_blank');
+          }, 600);
+        } else {
+          // Let internal navigation proceed normally for view transitions
+          iconElement.classList.add('nav-icon-bounce');
+          setTimeout(() => {
+            iconElement.classList.remove('nav-icon-bounce');
+            this.animatingLinks.delete(link);
+          }, 600);
+        }
+      } else if (textElement && textElement.textContent.trim()) {
+        // Handle text animation with border effect - don't prevent default
+        // Add border animation class to the text element
+        textElement.classList.add('nav-border-animate');
+        
+        // Don't remove the class - let the view transition handle cleanup
+        // The border will persist until the page changes
+        this.animatingLinks.delete(link);
+      } else {
+        // No valid element found, just clean up
+        this.animatingLinks.delete(link);
+      }
+    },
+    handleLogoClick(event) {
+      const link = event.currentTarget;
+      const nameElements = link.querySelectorAll('.site-header__name');
+
+      if (this.animatingLinks.has(link)) return;
+
+      this.animatingLinks.add(link);
+
+      // Add border animation to visible name elements
+      nameElements.forEach(nameEl => {
+        if (nameEl.offsetParent !== null) { // Check if visible
+          nameEl.classList.add('nav-border-animate');
+        }
+      });
+
+      // Don't remove the class - let the view transition handle cleanup
+      this.animatingLinks.delete(link);
+    },
+    handleAIClick(event) {
+      const link = event.currentTarget;
+
+      if (this.animatingLinks.has(link)) return;
+
+      this.animatingLinks.add(link);
+
+      // Add bounce class to the icon
+      const img = link.querySelector('img');
+      if (img) {
+        img.classList.add('ai-icon-bounce');
+
+        setTimeout(() => {
+          img.classList.remove('ai-icon-bounce');
+          this.animatingLinks.delete(link);
+        }, 600);
+      }
     }
   }
 };
@@ -539,6 +622,7 @@ export default {
   background-color: white;
   color: black;
 }
+
 </style>
 
 <style scoped>
@@ -697,9 +781,6 @@ export default {
   display: none;
 }
 
-.theme-dark .pod {
-  box-shadow: 0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -4px rgba(255, 255, 255, 0.05);
-}
 
 /* Mobile Navigation */
 .site-header__mobile-nav {
@@ -880,9 +961,6 @@ export default {
   color: #82aaff;
 }
 
-.site-header.theme-dark .git-emoji {
-  color: yellow;
-}
 
 /* Dropdown Styles */
 .site-header__nav-item.has-dropdown {
@@ -1004,16 +1082,49 @@ export default {
   color: #666;
 }
 
-/* Hamburger animation when menu is open */
-.site-header__hamburger.is-active span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px);
+
+/* Navigation border animation */
+@keyframes navBorderGrow {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
 }
 
-.site-header__hamburger.is-active span:nth-child(2) {
-  opacity: 0;
+:deep(.nav-border-animate) {
+  position: relative;
 }
 
-.site-header__hamburger.is-active span:nth-child(3) {
-  transform: rotate(-45deg) translate(7px, -7px);
+:deep(.nav-border-animate::after) {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  height: 2px;
+  background-color: currentColor;
+  animation: navBorderGrow 0.8s ease-out forwards;
 }
+
+/* AI icon bounce animation */
+@keyframes aiBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-8px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(-4px);
+  }
+}
+
+:deep(.ai-icon-bounce), :deep(.nav-icon-bounce) {
+  animation: aiBounce 0.6s ease-out;
+}
+
 </style>
