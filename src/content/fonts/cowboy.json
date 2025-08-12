@@ -1,0 +1,12 @@
+{
+  "name": "Cowboy",
+  "family": "Cowboy",
+  "category": "display",
+  "weight": 400,
+  "style": "normal",
+  "source": "Custom Font",
+  "backgroundColor": "yellow",
+  "titleFontSize": "24vw",
+  "description": "A bold display font perfect for headings and titles",
+  "specimen": "Howdy partner! The quick brown fox jumps over the lazy dog."
+}

@@ -130,8 +130,14 @@ export default {
           this.$refs.terminalOutput.scrollTop = this.$refs.terminalOutput.scrollHeight;
         }
       });
+    },
+    // Expose terminal output element for parent access
+    getTerminalOutput() {
+      return this.$refs.terminalOutput;
     }
-  }
+  },
+  // Expose methods and DOM elements for parent component
+  expose: ['focusInput', 'scrollToBottom', 'getTerminalOutput']
 };
 </script>
 

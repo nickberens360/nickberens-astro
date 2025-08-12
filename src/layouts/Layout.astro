@@ -9,6 +9,9 @@ import AnnoyingEyelash from '../components/AnnoyingEyelash.vue';
 import {getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepoUrl} from '../utils/gitInfo.js';
 import EasterEgg from '../components/EasterEgg.vue';
 import EasterEggsFound from '../components/EasterEggsFound.vue';
+import FontMenuLoader from '../components/FontMenuLoader.vue';
+import '@fortawesome/fontawesome-svg-core/styles.css'
+import { getCollection } from 'astro:content';
 
 export interface Props {
     title?: string;
@@ -37,6 +40,7 @@ const gitBranch = await getGitBranch();
 const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
 const repoUrl = getGitHubRepoUrl();
+const fonts = await getCollection('fonts');
 ---
 
 <html lang="en">
@@ -47,15 +51,6 @@ const repoUrl = getGitHubRepoUrl();
 >
 </Head>
 <body>
-<TerminalWindow
-    client:only="vue"
-    title="Nick's Terminal"
-    initialOutput={[
-        "Welcome to Nick Berens' Terminal",
-        "Type 'help' for available commands"
-    ]}
-    hideTerminal={hideTerminal}
-></TerminalWindow>
 <SiteHeader
     client:only="vue"
     gitBranch={gitBranch}
@@ -68,12 +63,25 @@ const repoUrl = getGitHubRepoUrl();
     initial-y={75}
     hideAnnoyingEyelash={hideAnnoyingEyelash}
 />
+<FontMenuLoader 
+    client:only="vue" 
+    fonts={fonts} 
+/>
 <slot/>
 <EasterEgg
     client:only="vue"
     hideEggs={hideEggs}
 />
 <EasterEggsFound client:only="vue" />
+<TerminalWindow
+    client:only="vue"
+    title="Nick's Terminal"
+    initialOutput={[
+        "Welcome to Nick Berens' Terminal",
+        "Type 'help' for available commands"
+    ]}
+    hideTerminal={hideTerminal}
+></TerminalWindow>
 <SiteFooter
     commitHash={commitHash}
     commitMessage={commitMessage}
@@ -97,5 +105,6 @@ const repoUrl = getGitHubRepoUrl();
         "color: #00ff00; font-weight: bold; font-size: 20px;"
     );
 </script>
+
 </body>
 </html>

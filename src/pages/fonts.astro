@@ -1,0 +1,69 @@
+---
+import {getCollection} from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import PageSection from '../components/PageSection.vue';
+import FontCard from '../components/FontCard.vue';
+
+// Import font libraries
+import '@fontsource-variable/roboto-flex';
+import '@fontsource-variable/jetbrains-mono';
+import '@fontsource-variable/doto';
+
+// Import custom fonts
+import '../styles/fonts.css';
+
+const fonts = await getCollection('fonts');
+---
+
+<Layout
+    title="Font Collection"
+    description="Font specimen showcase"
+>
+  <PageSection
+      data-section-color="black"
+      data-section-theme="dark"
+      background-color="black"
+      full-height
+      width="1200"
+  >
+    <div class="font-header">
+      <h1 class="font-header__title">Font Collection</h1>
+      <p>Some admittedly awful fonts I made for fun.</p>
+    </div>
+      {fonts.length === 0 ? (
+          <p class="no-fonts-message">No fonts found in the
+            collection.</p>
+      ) : (
+          <div class="fonts-grid">
+              {fonts.map((font) => (
+                  <FontCard
+                      font={font}
+                      client:only="vue"
+                  />
+              ))}
+          </div>
+      )}
+  </PageSection>
+</Layout>
+
+<style>
+    .font-header {
+        margin-bottom: 3rem;
+        text-align: center;
+    }
+
+    .font-header__title {
+        font-size: 3rem;
+    }
+
+    .fonts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .no-fonts-message {
+        text-align: center;
+    }
+</style>
