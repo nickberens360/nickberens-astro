@@ -24,12 +24,7 @@
     </div>
 
     <div class="font-display__output" :style="{ fontSize }">
-      <span
-        class="font-display__output-text"
-        contenteditable="true"
-        @input="handleContentEdit"
-        @blur="handleContentEdit"
-      >{{ fontOutput }}</span>
+      <span class="font-display__output-text">{{ fontOutput }}</span>
       <span v-if="needsFakeBold" class="font-display__output-fake-bold">{{ fontOutput }}</span>
     </div>
 
@@ -81,10 +76,6 @@ const charsets = [
   '1234567890',
   '&​.​,​?​!​@​(​)​#​$​%​+​-​=​:​;'
 ];
-
-const handleContentEdit = (event) => {
-  fontOutput.value = event.target.textContent;
-};
 
 </script>
 
@@ -142,7 +133,8 @@ const handleContentEdit = (event) => {
 .font-display__output {
   position: relative;
   font-size: 48px;
-  margin-bottom: 48px;
+  margin: 48px 0;
+  padding-bottom: 48px;
   border-bottom: 1px solid currentColor;
   min-height: 1.2em;
 }
@@ -150,9 +142,6 @@ const handleContentEdit = (event) => {
 .font-display__output-text {
   position: relative;
   z-index: 2;
-  outline: none;
-  display: inline-block;
-  min-width: 50px;
 }
 
 .font-display__output-fake-bold {
@@ -164,7 +153,7 @@ const handleContentEdit = (event) => {
 
 .font-container {
   position: relative;
-  font-size: 10.5vw;
+  font-size: 9.5vw;
   word-wrap: break-word;
 }
 
