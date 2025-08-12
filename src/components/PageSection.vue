@@ -7,6 +7,7 @@
       'page-section--no-padding': noPadding,
     }"
     :style="{ backgroundColor: backgroundColor }"
+    v-bind="$attrs"
   >
     <div
       class="page-section__inner"
@@ -21,6 +22,7 @@
 <script>
 export default {
   name: 'PageSection',
+  inheritAttrs: false,
   props: {
     backgroundColor: {
       type: String,
