@@ -230,9 +230,13 @@ export default {
     // Existing code
     window.addEventListener('scroll', this.handleScroll, { passive: true });
     this.handleScroll();
+
+    // Re-run theme detection on page navigation (for view transitions)
+    document.addEventListener('astro:page-load', this.performScrollCheck);
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
+    document.removeEventListener('astro:page-load', this.performScrollCheck);
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
     }
@@ -347,34 +351,54 @@ export default {
       const headerEl = this.$refs.siteHeader;
       if (!headerEl) return;
 
-      const headerRect = headerEl.getBoundingClientRect();
-      const checkX = window.innerWidth / 2;
-      const checkY = headerRect.bottom + 10; // Check just below the header
-
-      // Temporarily disable pointer events
-      headerEl.style.pointerEvents = 'none';
-
       // Use requestAnimationFrame to ensure DOM is ready
       requestAnimationFrame(() => {
-        const elementUnder = document.elementFromPoint(checkX, checkY);
-        headerEl.style.pointerEvents = 'auto';
-
-        if (!elementUnder) {
-          this.headerBackgroundColor = window.scrollY > 0 ? 'white' : 'transparent';
-          this.overlayTheme = 'light';
+        // Check for pages with single dark full-height sections (like nick-ai, resume)
+        const allPageSections = document.querySelectorAll('.page-section');
+        const darkSections = document.querySelectorAll('[data-section-theme="dark"]');
+        const blackSections = document.querySelectorAll('[data-section-color="black"]');
+        
+        
+        // Apply dark theme if there's exactly one PageSection AND it has dark theme
+        if (allPageSections.length === 1 && darkSections.length === 1 && blackSections.length === 1) {
+          this.headerBackgroundColor = blackSections[0].dataset.sectionColor;
+          this.overlayTheme = darkSections[0].dataset.sectionTheme;
           return;
         }
 
-        const colorSection = elementUnder.closest('[data-section-color]');
-        const themeSection = elementUnder.closest('[data-section-theme]');
-        const terminalInputElement = elementUnder.closest('[data-has-terminal-input]');
+        // Fallback: Try intersection detection with multiple check points
+        const headerRect = headerEl.getBoundingClientRect();
+        const checkPoints = [
+          { x: window.innerWidth / 2, y: headerRect.bottom + 20 },
+          { x: window.innerWidth / 2, y: headerRect.bottom + 50 },
+          { x: window.innerWidth / 2, y: headerRect.bottom + 100 }
+        ];
 
+        // Temporarily disable pointer events
+        headerEl.style.pointerEvents = 'none';
+        
+        let colorSection = null;
+        let themeSection = null;
+        
+        for (const point of checkPoints) {
+          const elementUnder = document.elementFromPoint(point.x, point.y);
+          if (elementUnder && elementUnder.tagName !== 'HTML' && elementUnder.tagName !== 'BODY') {
+            colorSection = elementUnder.closest('[data-section-color]');
+            themeSection = elementUnder.closest('[data-section-theme]');
+            if (colorSection || themeSection) break;
+          }
+        }
+
+        headerEl.style.pointerEvents = 'auto';
+
+        const terminalInputElement = document.querySelector('[data-has-terminal-input]');
         this.useTerminalInput = terminalInputElement && terminalInputElement.dataset.hasTerminalInput === 'true';
 
         this.headerBackgroundColor = colorSection
           ? colorSection.dataset.sectionColor
           : (window.scrollY > 0 ? 'white' : 'transparent');
         this.overlayTheme = themeSection ? themeSection.dataset.sectionTheme : 'light';
+
       });
     }
   }

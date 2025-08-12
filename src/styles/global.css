@@ -13,11 +13,17 @@ html {
     scroll-behavior: smooth;
     overflow-x: hidden;
 }
-
+/* Register your custom font family and tell the browser where to find it. */
+@font-face {
+    font-family: 'DistantGalaxy';
+    src: url('/fonts/Drip.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 h1, h2, h3, h4, h5, h6 {
     margin: 0;
 }
-
 body {
     margin: 0;
     padding: 0;

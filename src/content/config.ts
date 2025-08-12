@@ -14,6 +14,23 @@ const blogCollection = defineCollection({
   }),
 });
 
+const fontsCollection = defineCollection({
+  type: 'data',
+  schema: z.object({
+    name: z.string(),
+    family: z.string(),
+    category: z.enum(['serif', 'sans-serif', 'display', 'handwriting', 'monospace']),
+    weight: z.union([z.number(), z.array(z.number())]).default(400),
+    style: z.enum(['normal', 'italic']).default('normal'),
+    source: z.string().optional(),
+    cssImport: z.string().optional(),
+    description: z.string().optional(),
+    specimen: z.string().default('The quick brown fox jumps over the lazy dog.'),
+    sizes: z.array(z.number()).default([12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72]),
+  }),
+});
+
 export const collections = {
   'blog': blogCollection,
+  'fonts': fontsCollection,
 };

@@ -1,0 +1,11 @@
+{
+  "name": "Roboto Flex",
+  "family": "Roboto Flex",
+  "category": "sans-serif",
+  "weight": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+  "style": "normal",
+  "source": "@fontsource-variable/roboto-flex",
+  "cssImport": "@fontsource-variable/roboto-flex",
+  "description": "A variable font version of Roboto with extensive customization options",
+  "specimen": "The quick brown fox jumps over the lazy dog."
+}

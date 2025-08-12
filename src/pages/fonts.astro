@@ -1,0 +1,54 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import PageSection from '../components/PageSection.vue';
+import FontDisplay from '../components/FontDisplay.vue';
+import FontCard from '../components/FontCard.vue';
+
+// Import font libraries
+import '@fontsource-variable/roboto-flex';
+import '@fontsource-variable/jetbrains-mono';
+import '@fontsource-variable/doto';
+
+const fonts = await getCollection('fonts');
+console.log('Fonts collection:', fonts);
+---
+
+<Layout title="Font Collection" description="Font specimen showcase">
+  <PageSection
+    data-section-color="white"
+    data-section-theme="light"
+    background-color="white"
+    width="1200"
+    style="padding: 6rem 0; min-height: 100vh;"
+  >
+    <h1 style="font-size: 3rem; margin-bottom: 3rem; text-align: center; color: #333;">Font Collection</h1>
+    {fonts.length === 0 ? (
+      <p style="text-align: center; color: #666;">No fonts found in the collection.</p>
+    ) : (
+      <div class="fonts-grid">
+        {fonts.map((font) => (
+          <FontCard font={font} client:only="vue" />
+        ))}
+      </div>
+    )}
+  </PageSection>
+</Layout>
+
+<style>
+  /* Import any custom fonts if needed */
+  @font-face {
+    font-family: 'Drip';
+    src: url('/fonts/drip.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  .fonts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+</style>

@@ -1,0 +1,11 @@
+{
+  "name": "Doto",
+  "family": "Doto",
+  "category": "sans-serif",
+  "weight": [100, 200, 300, 400, 500, 600, 700, 800, 900],
+  "style": "normal",
+  "source": "@fontsource-variable/doto",
+  "cssImport": "@fontsource-variable/doto",
+  "description": "A modern geometric sans-serif font with clean lines",
+  "specimen": "The quick brown fox jumps over the lazy dog."
+}

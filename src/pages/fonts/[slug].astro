@@ -1,0 +1,66 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import PageSection from '../../components/PageSection.vue';
+import FontDisplay from '../../components/FontDisplay.vue';
+import FontNavigation from '../../components/FontNavigation.vue';
+
+// Import font libraries
+import '@fontsource-variable/roboto-flex';
+import '@fontsource-variable/jetbrains-mono';
+import '@fontsource-variable/doto';
+
+export async function getStaticPaths() {
+  const fonts = await getCollection('fonts');
+  return fonts.map((font) => ({
+    params: { slug: font.id },
+    props: { font },
+  }));
+}
+
+const { font } = Astro.props;
+const fonts = await getCollection('fonts');
+const currentIndex = fonts.findIndex(f => f.id === font.id);
+const prevFont = currentIndex > 0 ? fonts[currentIndex - 1] : null;
+const nextFont = currentIndex < fonts.length - 1 ? fonts[currentIndex + 1] : null;
+---
+
+<Layout title={`${font.data.name} - Font Specimen`} description={font.data.description || `${font.data.name} font specimen showcase`}>
+  <PageSection
+    data-section-color="white"
+    data-section-theme="light"
+    background-color="white"
+    full-height
+    width="1200"
+    style="padding-top: 6rem; position: relative;"
+  >
+    <FontNavigation prevFont={prevFont} nextFont={nextFont} client:only="vue" />
+
+    <FontDisplay fontData={font.data} client:load />
+
+    {font.data.description && (
+      <div class="font-description">
+        <p>{font.data.description}</p>
+      </div>
+    )}
+  </PageSection>
+</Layout>
+
+<style>
+  .font-description {
+    max-width: 800px;
+    margin: 2rem auto;
+    text-align: center;
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+
+  /* Import custom fonts if needed */
+  @font-face {
+    font-family: 'Drip';
+    src: url('/fonts/drip.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+</style>

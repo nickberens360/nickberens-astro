@@ -1,0 +1,11 @@
+{
+  "name": "JetBrains Mono",
+  "family": "JetBrains Mono",
+  "category": "monospace",
+  "weight": [100, 200, 300, 400, 500, 600, 700, 800],
+  "style": "normal",
+  "source": "@fontsource-variable/jetbrains-mono",
+  "cssImport": "@fontsource-variable/jetbrains-mono",
+  "description": "A monospaced font designed for developers with increased readability",
+  "specimen": "const code = () => { return 'Hello, World!'; };"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Drip",
+  "family": "Drip",
+  "category": "display",
+  "weight": 400,
+  "style": "normal",
+  "source": "Custom Font",
+  "description": "A unique display font with fluid, dripping characteristics",
+  "specimen": "The quick brown fox jumps over the lazy dog."
+}
