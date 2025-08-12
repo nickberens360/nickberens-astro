@@ -2,10 +2,6 @@
   "name": "Kinda Sans Serif",
   "family": "Kinda Sans Serif",
   "category": "sans-serif",
-  "weight": 400,
-  "style": "normal",
-  "source": "Custom Font",
   "backgroundColor": "lightblue",
-  "description": "A unique sans-serif font with subtle serif-like characteristics",
-  "specimen": "The quick brown fox jumps over the lazy dog."
+  "description": "A unique sans-serif font with subtle serif-like characteristics"
 }
