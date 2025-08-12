@@ -76,8 +76,8 @@ const needsFakeBold = computed(() =>
 const defaultSizes = [12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72];
 
 const charsets = [
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-  'abcdefghijklmnopqrstuvwxyz',
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ.',
+  'abcdefghijklmnopqrstuvwxyz.',
   '1234567890',
   '&​.​,​?​!​@​(​)​#​$​%​+​-​=​:​;'
 ];
