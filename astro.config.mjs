@@ -5,7 +5,7 @@ import icon from "astro-icon";
 
 export default defineConfig({
   // Set canonical site URL so Astro.site is available in code
-  site: 'https://nickberens.com',
+  site: 'https://nickberens.me',
   integrations: [
     vue({
       appEntrypoint: '/src/plugins/vue-app.js'
