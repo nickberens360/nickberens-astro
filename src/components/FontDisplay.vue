@@ -100,13 +100,12 @@ onMounted(async () => {
     // Check if font is already loaded
     if (document.fonts.check(fontFace)) {
       fontsLoaded.value = true;
-      fontCheckComplete.value = true;
       return;
     }
 
     // Force load the font
     const loadPromise = document.fonts.load(fontFace);
-    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 3000));
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000));
     
     // Race between font loading and timeout
     const result = await Promise.race([loadPromise, timeoutPromise]);
@@ -114,7 +113,6 @@ onMounted(async () => {
     if (result === 'timeout') {
       console.warn('Font loading timed out, showing content');
       fontsLoaded.value = true;
-      fontCheckComplete.value = true;
       return;
     }
     
@@ -128,11 +126,10 @@ onMounted(async () => {
       console.warn('Font not available, using fallback');
       fontsLoaded.value = true;
     }
-    
-    fontCheckComplete.value = true;
   } catch (error) {
     console.warn('Font loading error:', error);
     fontsLoaded.value = true;
+  } finally {
     fontCheckComplete.value = true;
   }
 });
@@ -161,7 +158,7 @@ onMounted(async () => {
 }
 
 .loading-spinner {
-  position: fixed;
+  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);

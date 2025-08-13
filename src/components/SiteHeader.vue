@@ -86,7 +86,7 @@
                 @click="toggleDropdown(item.text)"
                 :aria-expanded="isDropdownOpen(item.text)"
                 aria-haspopup="menu"
-                :aria-controls="getDropdownId(item.text)"
+                :aria-controls="getDropdownId(item)"
                 @keydown.esc.stop.prevent="closeAllDropdowns"
               >
                 <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
@@ -101,7 +101,7 @@
                 class="dropdown-menu"
                 :style="dropdownStyles"
                 role="menu"
-                :id="getDropdownId(item.text)"
+                :id="getDropdownId(item)"
                 @keydown.esc.stop.prevent="closeAllDropdowns"
               >
                 <li
@@ -180,7 +180,7 @@
                 @click="toggleMobileDropdown(item.text)"
                 :aria-expanded="isMobileDropdownOpen(item.text)"
                 aria-haspopup="menu"
-                :aria-controls="getMobileDropdownId(item.text)"
+                :aria-controls="getMobileDropdownId(item)"
                 @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
               >
                 <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
@@ -194,7 +194,7 @@
                 v-if="isMobileDropdownOpen(item.text)"
                 class="mobile-dropdown-menu"
                 role="menu"
-                :id="getMobileDropdownId(item.text)"
+                :id="getMobileDropdownId(item)"
                 @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
               >
                 <li
@@ -425,11 +425,17 @@ export default {
       this.animatedParent = parentText;
       this.closeMobileMenu();
     },
-    getDropdownId(text) {
-      return `dropdown-` + String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    getDropdownId(item) {
+      const text = typeof item === 'string' ? item : item.text;
+      const url = typeof item === 'object' && item.url ? item.url : '';
+      const uniquePart = url ? btoa(url).substring(0, 8) : String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+      return `dropdown-${uniquePart}`;
     },
-    getMobileDropdownId(text) {
-      return `mobile-dropdown-` + String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    getMobileDropdownId(item) {
+      const text = typeof item === 'string' ? item : item.text;
+      const url = typeof item === 'object' && item.url ? item.url : '';
+      const uniquePart = url ? btoa(url).substring(0, 8) : String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+      return `mobile-dropdown-${uniquePart}`;
     },
     convertToRgba(color, alpha = 0.8) {
       // Handle transparent case
@@ -630,7 +636,7 @@ export default {
           setTimeout(() => {
             iconElement.classList.remove('nav-icon-bounce');
             this.animatingLinks.delete(link);
-            const newWin = window.open(link.href, '_blank', 'noopener');
+            const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
             if (newWin) newWin.opener = null;
           }, 600);
         } else {
