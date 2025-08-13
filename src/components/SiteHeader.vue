@@ -73,6 +73,7 @@
                 v-if="item.icon"
                 size="2x"
                 :icon="item.icon"
+                :class="{ 'icon-bounce': navIconBouncing }"
               />
               <span v-else>{{ item.text }}</span>
             </a>
@@ -157,11 +158,12 @@
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
-              @click="handleNavClick($event); closeMobileMenu()"
+              @click="handleMobileNavClick"
             >
               <font-awesome-icon
                 v-if="item.icon"
                 :icon="item.icon"
+                :class="{ 'icon-bounce': navIconBouncing }"
               />
               <span
                 v-if="item.icon"
@@ -210,7 +212,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="handleMobileDropdownItemClick(item.text, $event)"
+                    @click="handleMobileNavClick"
                   >
                     {{ subItem.text }}
                   </a>
@@ -234,6 +236,7 @@
             :src="aiIconSvg"
             alt="AI Icon"
             style="width: 34px;"
+            :class="{ 'icon-bounce': aiIconBouncing }"
           />
         </a>
         <font-awesome-icon
@@ -244,7 +247,7 @@
         />
         <button
           class="site-header__hamburger "
-          :class="[{ 'is-active': isMobileMenuOpen }]"
+          :class="[{ 'is-active': isMobileMenuOpen }, { 'icon-bounce': mobileNavItemClicked }]"
           @click="toggleMobileMenu"
           aria-label="Toggle menu"
         >
@@ -303,7 +306,9 @@ export default {
       openDropdownId: null,
       openMobileDropdownId: null,
       animatedParent: null,
-      animatingLinks: new Set(),
+      mobileNavItemClicked: false,
+      aiIconBouncing: false,
+      navIconBouncing: false,
     };
   },
   computed: {
@@ -422,10 +427,6 @@ export default {
       this.animatedParent = parentText;
       this.closeAllDropdowns();
       // Allow navigation to proceed; animation cleans up on transition
-    },
-    handleMobileDropdownItemClick(parentText) {
-      this.animatedParent = parentText;
-      this.closeMobileMenu();
     },
     safeBase64(str) {
       try {
@@ -632,54 +633,33 @@ export default {
     handleNavClick(event) {
       const link = event.currentTarget;
 
-      if (this.animatingLinks.has(link)) return;
-
-      // Add to animating set to prevent multiple animations
-      this.animatingLinks.add(link);
-
       // Check if it's an icon or text - look for FontAwesome components
       const iconElement = link.querySelector('svg[data-icon], .fa-icon, [class*="fa-"]');
       const textElement = link.querySelector('span:not([class*="fa"]):not([data-icon])');
 
       if (iconElement) {
         // Handle icon animation (like GitHub) - only prevent default for external links
+        this.navIconBouncing = true;
+        // Reset the flag after the animation duration to stop the animation
+        setTimeout(() => {
+          this.navIconBouncing = false;
+        }, 600); // Corresponds to animation duration
+
         if (link.target === '_blank') {
           event.preventDefault();
-          iconElement.classList.add('nav-icon-bounce');
-          setTimeout(() => {
-            iconElement.classList.remove('nav-icon-bounce');
-            this.animatingLinks.delete(link);
-            const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
-            if (newWin) newWin.opener = null;
-          }, 600);
-        } else {
-          // Let internal navigation proceed normally for view transitions
-          iconElement.classList.add('nav-icon-bounce');
-          setTimeout(() => {
-            iconElement.classList.remove('nav-icon-bounce');
-            this.animatingLinks.delete(link);
-          }, 600);
+          const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
+          if (newWin) newWin.opener = null;
         }
       } else if (textElement && textElement.textContent.trim()) {
         // Handle text animation with border effect - don't prevent default
         // Add border animation class to the text element
         textElement.classList.add('nav-border-animate');
-
         // Don't remove the class - let the view transition handle cleanup
-        // The border will persist until the page changes
-        this.animatingLinks.delete(link);
-      } else {
-        // No valid element found, just clean up
-        this.animatingLinks.delete(link);
       }
     },
     handleLogoClick(event) {
       const link = event.currentTarget;
       const nameElements = link.querySelectorAll('.site-header__name');
-
-      if (this.animatingLinks.has(link)) return;
-
-      this.animatingLinks.add(link);
 
       // Add border animation to visible name elements
       nameElements.forEach(nameEl => {
@@ -687,27 +667,25 @@ export default {
           nameEl.classList.add('nav-border-animate');
         }
       });
-
-      // Don't remove the class - let the view transition handle cleanup
-      this.animatingLinks.delete(link);
     },
     handleAIClick(event) {
-      const link = event.currentTarget;
-
-      if (this.animatingLinks.has(link)) return;
-
-      this.animatingLinks.add(link);
-
-      // Add bounce class to the icon
-      const img = link.querySelector('img');
-      if (img) {
-        img.classList.add('ai-icon-bounce');
-
-        setTimeout(() => {
-          img.classList.remove('ai-icon-bounce');
-          this.animatingLinks.delete(link);
-        }, 600);
-      }
+      this.aiIconBouncing = true;
+      // Reset the flag after the animation duration to stop the animation
+      setTimeout(() => {
+        this.aiIconBouncing = false;
+      }, 600); // Corresponds to animation duration
+    },
+    animateHamburger() {
+      this.mobileNavItemClicked = true;
+      // Reset the flag after the animation duration
+      setTimeout(() => {
+        this.mobileNavItemClicked = false;
+      }, 600); // Corresponds to animation duration
+    },
+    handleMobileNavClick() {
+      // Combined method for mobile navigation clicks
+      this.animateHamburger();
+      this.closeMobileMenu();
     }
   }
 };
@@ -1206,8 +1184,8 @@ export default {
   animation: navBorderGrow 0.8s ease-out forwards;
 }
 
-/* AI icon bounce animation */
-@keyframes aiBounce {
+/* Icon bounce animation */
+@keyframes iconBounce {
   0%, 100% {
     transform: translateY(0);
   }
@@ -1222,8 +1200,8 @@ export default {
   }
 }
 
-:deep(.ai-icon-bounce), :deep(.nav-icon-bounce) {
-  animation: aiBounce 0.6s ease-out;
+:deep(.icon-bounce) {
+  animation: iconBounce 0.6s ease-out;
 }
 
 </style>
