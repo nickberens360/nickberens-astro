@@ -158,7 +158,7 @@
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
-              @click="animateHamburger(); closeMobileMenu()"
+              @click="handleMobileNavClick"
             >
               <font-awesome-icon
                 v-if="item.icon"
@@ -212,7 +212,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="animateHamburger(); closeMobileMenu()"
+                    @click="handleMobileNavClick"
                   >
                     {{ subItem.text }}
                   </a>
@@ -640,6 +640,11 @@ export default {
       if (iconElement) {
         // Handle icon animation (like GitHub) - only prevent default for external links
         this.navIconBouncing = true;
+        // Reset the flag after the animation duration to stop the animation
+        setTimeout(() => {
+          this.navIconBouncing = false;
+        }, 600); // Corresponds to animation duration
+
         if (link.target === '_blank') {
           event.preventDefault();
           const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
@@ -665,9 +670,22 @@ export default {
     },
     handleAIClick(event) {
       this.aiIconBouncing = true;
+      // Reset the flag after the animation duration to stop the animation
+      setTimeout(() => {
+        this.aiIconBouncing = false;
+      }, 600); // Corresponds to animation duration
     },
     animateHamburger() {
       this.mobileNavItemClicked = true;
+      // Reset the flag after the animation duration
+      setTimeout(() => {
+        this.mobileNavItemClicked = false;
+      }, 600); // Corresponds to animation duration
+    },
+    handleMobileNavClick() {
+      // Combined method for mobile navigation clicks
+      this.animateHamburger();
+      this.closeMobileMenu();
     }
   }
 };
@@ -1183,7 +1201,7 @@ export default {
 }
 
 :deep(.icon-bounce) {
-  animation: iconBounce 0.6s ease-out infinite;
+  animation: iconBounce 0.6s ease-out;
 }
 
 </style>
