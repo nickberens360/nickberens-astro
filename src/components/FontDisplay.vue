@@ -25,6 +25,15 @@
           {{ size }}px
         </option>
       </select>
+      <a
+        v-if="slug"
+        :href="downloadUrl"
+        :download="`${slug}.woff`"
+        class="font-display__download"
+        title="Download font"
+      >
+        Download
+      </a>
     </div>
 
     <div v-show="fontCheckComplete && fontsLoaded" class="font-display__output" :style="{ fontSize }">
@@ -59,6 +68,10 @@ const props = defineProps({
       family: 'sans-serif',
       titleFontSize: '12vw'
     })
+  },
+  slug: {
+    type: String,
+    default: ''
   }
 });
 
@@ -67,6 +80,7 @@ const fontFamily = computed(() => props.fontData.family || 'sans-serif');
 const fontOutput = ref('Try Me.');
 const fontSize = ref('48px');
 const titleFontSize = computed(() => props.fontData.titleFontSize || '12vw');
+const downloadUrl = computed(() => props.fontData.fontUrl || `/fonts/${props.slug}.woff`);
 
 const fontsLoaded = ref(false);
 const fontCheckComplete = ref(false);
@@ -198,6 +212,7 @@ onMounted(async () => {
 .font-display__controls {
   display: flex;
   gap: 16px;
+  align-items: center;
 }
 
 .font-display__input,
@@ -210,6 +225,23 @@ onMounted(async () => {
   color: inherit;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.20);
+}
+
+.font-display__download {
+  font-family: var(--font-primary), monospace;
+  padding: 8px 16px;
+  font-size: 16px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.20);
+  margin-left: auto;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.font-display__download:hover {
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .font-display__output {
@@ -259,10 +291,16 @@ onMounted(async () => {
   }
 
   .font-display__input,
-  .font-display__select {
+  .font-display__select,
+  .font-display__download {
     margin-bottom: 16px;
     display: block;
     width: 100%;
+    text-align: center;
+  }
+
+  .font-display__download {
+    margin-left: 0;
   }
 }
 </style>

@@ -45,7 +45,7 @@ const fontUrl = font.data.fontUrl || '';
   >
     <FontNavigation prevFont={prevFont} nextFont={nextFont} client:only="vue" />
 
-    <FontDisplay fontData={font.data} isTitleFontBold={font.data.isTitleFontBold} titleFontSize={font.data.titleFontSize} client:load />
+    <FontDisplay fontData={font.data} slug={font.id} isTitleFontBold={font.data.isTitleFontBold} titleFontSize={font.data.titleFontSize} client:load />
 
     {font.data.description && (
       <div class="font-description">
