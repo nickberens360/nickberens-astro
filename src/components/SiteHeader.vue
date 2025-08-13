@@ -89,7 +89,7 @@
                 :aria-controls="getDropdownId(item.text)"
                 @keydown.esc.stop.prevent="closeAllDropdowns"
               >
-                <span>{{ item.text }}</span>
+                <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
                 <font-awesome-icon
                   :icon="['fas', 'chevron-down']"
                   :class="{ 'rotated': isDropdownOpen(item.text) }"
@@ -117,7 +117,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="handleNavClick($event); closeAllDropdowns()"
+                    @click="handleDropdownItemClick(item.text, $event)"
                     role="menuitem"
                   >
                     {{ subItem.text }}
@@ -183,7 +183,7 @@
                 :aria-controls="getMobileDropdownId(item.text)"
                 @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
               >
-                <span>{{ item.text }}</span>
+                <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
                 <font-awesome-icon
                   :icon="['fas', 'chevron-down']"
                   :class="{ 'rotated': isMobileDropdownOpen(item.text) }"
@@ -210,7 +210,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="handleNavClick($event); closeMobileMenu()"
+                    @click="handleMobileDropdownItemClick(item.text, $event)"
                   >
                     {{ subItem.text }}
                   </a>
@@ -302,6 +302,7 @@ export default {
       aiIconSvg,
       openDropdownId: null,
       openMobileDropdownId: null,
+      animatedParent: null,
       animatingLinks: new Set(),
     };
   },
@@ -415,6 +416,15 @@ export default {
     }
   },
   methods: {
+    handleDropdownItemClick(parentText) {
+      this.animatedParent = parentText;
+      this.closeAllDropdowns();
+      // Allow navigation to proceed; animation cleans up on transition
+    },
+    handleMobileDropdownItemClick(parentText) {
+      this.animatedParent = parentText;
+      this.closeMobileMenu();
+    },
     getDropdownId(text) {
       return `dropdown-` + String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
     },
