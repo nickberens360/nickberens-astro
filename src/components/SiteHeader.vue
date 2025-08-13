@@ -86,7 +86,7 @@
                 @click="toggleDropdown(item.text)"
                 :aria-expanded="isDropdownOpen(item.text)"
                 aria-haspopup="menu"
-                :aria-controls="getDropdownId(item.text)"
+                :aria-controls="getDropdownId(item)"
                 @keydown.esc.stop.prevent="closeAllDropdowns"
               >
                 <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
@@ -101,7 +101,7 @@
                 class="dropdown-menu"
                 :style="dropdownStyles"
                 role="menu"
-                :id="getDropdownId(item.text)"
+                :id="getDropdownId(item)"
                 @keydown.esc.stop.prevent="closeAllDropdowns"
               >
                 <li
@@ -180,8 +180,8 @@
                 @click="toggleMobileDropdown(item.text)"
                 :aria-expanded="isMobileDropdownOpen(item.text)"
                 aria-haspopup="menu"
-                :aria-controls="getMobileDropdownId(item.text)"
-                @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
+                :aria-controls="getMobileDropdownId(item)"
+                @keydown.esc.stop.prevent="closeMobileDropdowns"
               >
                 <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
                 <font-awesome-icon
@@ -194,8 +194,8 @@
                 v-if="isMobileDropdownOpen(item.text)"
                 class="mobile-dropdown-menu"
                 role="menu"
-                :id="getMobileDropdownId(item.text)"
-                @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
+                :id="getMobileDropdownId(item)"
+                @keydown.esc.stop.prevent="closeMobileDropdowns"
               >
                 <li
                   v-if="!item.dropdownItems || item.dropdownItems.length === 0"
@@ -394,7 +394,9 @@ export default {
 
     this.boundAfterSwap = () => {
       this.performScrollCheck();
-      setTimeout(() => this.performScrollCheck(), 100);
+      // Wait for next frame to ensure DOM updates are complete after view transition
+      // This ensures proper theme detection after page swap
+      requestAnimationFrame(() => this.performScrollCheck());
     };
   },
   beforeUnmount() {
@@ -425,11 +427,25 @@ export default {
       this.animatedParent = parentText;
       this.closeMobileMenu();
     },
-    getDropdownId(text) {
-      return `dropdown-` + String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    safeBase64(str) {
+      try {
+        if (typeof btoa === 'function') return btoa(str);
+        if (typeof Buffer !== 'undefined') return Buffer.from(str, 'utf-8').toString('base64');
+      } catch (_) {}
+      // Fallback to a slug if encoding not possible
+      return String(str || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
     },
-    getMobileDropdownId(text) {
-      return `mobile-dropdown-` + String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    _getGeneratedId(prefix, item) {
+      const text = typeof item === 'string' ? item : item.text;
+      const url = typeof item === 'object' && item.url ? item.url : '';
+      const uniquePart = url ? this.safeBase64(url).substring(0, 8) : String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+      return `${prefix}-${uniquePart}`;
+    },
+    getDropdownId(item) {
+      return this._getGeneratedId('dropdown', item);
+    },
+    getMobileDropdownId(item) {
+      return this._getGeneratedId('mobile-dropdown', item);
     },
     convertToRgba(color, alpha = 0.8) {
       // Handle transparent case
@@ -541,6 +557,9 @@ export default {
     closeAllDropdowns() {
       this.openDropdownId = null;
     },
+    closeMobileDropdowns() {
+      this.openMobileDropdownId = null;
+    },
     handleClickOutside(event) {
       // Check if the click is outside all dropdown elements
       if (!event.target.closest('.dropdown') && !event.target.closest('.mobile-dropdown')) {
@@ -630,7 +649,7 @@ export default {
           setTimeout(() => {
             iconElement.classList.remove('nav-icon-bounce');
             this.animatingLinks.delete(link);
-            const newWin = window.open(link.href, '_blank', 'noopener');
+            const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
             if (newWin) newWin.opener = null;
           }, 600);
         } else {
@@ -1088,6 +1107,10 @@ export default {
   z-index: var(--z-index-modal);
   margin: 0.5rem 0 0;
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pod .dropdown-menu {
+  top: 180%;
 }
 
 .theme-dark .dropdown-menu {

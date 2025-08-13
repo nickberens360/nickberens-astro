@@ -1,18 +1,18 @@
 /* Custom font face declarations */
 @font-face {
   font-family: 'Dripity';
-  src: url('/fonts/Dripity.woff') format('woff');
+  src: url('/fonts/dripity.woff') format('woff');
   font-weight: 400;
   font-style: normal;
-  font-display: block;
+  font-display: swap; /* Use swap for better UX - allows fallback text to show immediately */
 }
 
 @font-face {
   font-family: 'Cowboy';
-  src: url('/fonts/Cowboy.woff') format('woff');
+  src: url('/fonts/cowboy.woff') format('woff');
   font-weight: 400;
   font-style: normal;
-  font-display: block;
+  font-display: swap; /* Use swap for better UX - allows fallback text to show immediately */
 }
 
 @font-face {
@@ -20,5 +20,5 @@
   src: url('/fonts/kinda-sans-serif.woff') format('woff');
   font-weight: 400;
   font-style: normal;
-  font-display: block;
+  font-display: swap; /* Use swap for better UX - allows fallback text to show immediately */
 }
