@@ -181,7 +181,7 @@
                 :aria-expanded="isMobileDropdownOpen(item.text)"
                 aria-haspopup="menu"
                 :aria-controls="getMobileDropdownId(item)"
-                @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
+                @keydown.esc.stop.prevent="closeMobileDropdowns"
               >
                 <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
                 <font-awesome-icon
@@ -195,7 +195,7 @@
                 class="mobile-dropdown-menu"
                 role="menu"
                 :id="getMobileDropdownId(item)"
-                @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
+                @keydown.esc.stop.prevent="closeMobileDropdowns"
               >
                 <li
                   v-if="!item.dropdownItems || item.dropdownItems.length === 0"
@@ -394,6 +394,8 @@ export default {
 
     this.boundAfterSwap = () => {
       this.performScrollCheck();
+      // Wait for DOM updates after view transition
+      // This ensures proper theme detection after page swap
       setTimeout(() => this.performScrollCheck(), 100);
     };
   },
@@ -425,17 +427,25 @@ export default {
       this.animatedParent = parentText;
       this.closeMobileMenu();
     },
-    getDropdownId(item) {
+    safeBase64(str) {
+      try {
+        if (typeof btoa === 'function') return btoa(str);
+        if (typeof Buffer !== 'undefined') return Buffer.from(str, 'utf-8').toString('base64');
+      } catch (_) {}
+      // Fallback to a slug if encoding not possible
+      return String(str || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    },
+    _getGeneratedId(prefix, item) {
       const text = typeof item === 'string' ? item : item.text;
       const url = typeof item === 'object' && item.url ? item.url : '';
-      const uniquePart = url ? btoa(url).substring(0, 8) : String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
-      return `dropdown-${uniquePart}`;
+      const uniquePart = url ? this.safeBase64(url).substring(0, 8) : String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+      return `${prefix}-${uniquePart}`;
+    },
+    getDropdownId(item) {
+      return this._getGeneratedId('dropdown', item);
     },
     getMobileDropdownId(item) {
-      const text = typeof item === 'string' ? item : item.text;
-      const url = typeof item === 'object' && item.url ? item.url : '';
-      const uniquePart = url ? btoa(url).substring(0, 8) : String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
-      return `mobile-dropdown-${uniquePart}`;
+      return this._getGeneratedId('mobile-dropdown', item);
     },
     convertToRgba(color, alpha = 0.8) {
       // Handle transparent case
@@ -546,6 +556,9 @@ export default {
     },
     closeAllDropdowns() {
       this.openDropdownId = null;
+    },
+    closeMobileDropdowns() {
+      this.openMobileDropdownId = null;
     },
     handleClickOutside(event) {
       // Check if the click is outside all dropdown elements
