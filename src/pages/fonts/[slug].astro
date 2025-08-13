@@ -35,18 +35,6 @@ const fontUrl = font.data.fontUrl || '';
   {fontUrl && (
     <link slot="head" rel="preload" href={fontUrl} as="font" type="font/woff" crossorigin="anonymous" />
   )}
-  <style slot="head">
-    /* Force all fonts on this page to use block rendering */
-    @font-face {
-      font-family: '${font.data.family}';
-      font-display: block !important;
-    }
-    
-    /* Hide content until fonts are loaded */
-    .font-display:not(.fonts-ready) {
-      visibility: hidden !important;
-    }
-  </style>
   <PageSection
     data-section-color={font.data.backgroundColor || "white"}
     data-section-theme="light"
