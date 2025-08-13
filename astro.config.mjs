@@ -4,6 +4,8 @@ import mdx from '@astrojs/mdx';
 import icon from "astro-icon";
 
 export default defineConfig({
+  // Set canonical site URL so Astro.site is available in code
+  site: 'https://nickberens.com',
   integrations: [
     vue({
       appEntrypoint: '/src/plugins/vue-app.js'
