@@ -304,18 +304,34 @@ export default {
     },
     dropdownStyles() {
       let backgroundColor = this.headerBackgroundColor;
+      let styles = {};
 
-      // Fallback to white if transparent (view transition issue)
-      if (backgroundColor === 'transparent') {
-        backgroundColor = 'white';
+      // For pod variant, adjust opacity but don't add backdrop-filter
+      // since parent already has it
+      if (this.variant === 'pod') {
+        // Use lower alpha for glass effect since parent has backdrop-filter
+        backgroundColor = this.convertToRgba(backgroundColor, 0.6);
+
+        styles = {
+          backgroundColor: backgroundColor,
+          // Don't add backdrop-filter here - parent pod already has it
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        };
+
+        // Adjust for dark theme
+        if (this.overlayTheme === 'dark') {
+          styles.border = '1px solid rgba(255, 255, 255, 0.1)';
+          // Add subtle gradient overlay for dark theme
+          styles.backgroundImage = `linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01))`;
+        }
+      } else {
+        styles = {
+          backgroundColor: backgroundColor
+        };
       }
 
-      // Apply transparency for glass effect
-      backgroundColor = this.convertToRgba(backgroundColor, 0.9);
-
-      return {
-        backgroundColor: backgroundColor,
-      };
+      return styles;
     },
     maybeTerminalInput() {
       return this.hasTerminalInput || this.useTerminalInput;
@@ -336,24 +352,52 @@ export default {
     this.isMobileMenuOpen = false;
     document.body.style.overflow = '';
 
+    // Perform initial scroll check to set proper background colors
+    this.performScrollCheck();
+
     // Existing code
     window.addEventListener('scroll', this.handleScroll, { passive: true });
-    this.handleScroll();
 
     // Re-run theme detection on page navigation (for view transitions)
-    document.addEventListener('astro:page-load', this.performScrollCheck);
-    document.addEventListener('astro:after-swap', this.performScrollCheck);
+    document.addEventListener('astro:page-load', this.boundPageLoad);
+    document.addEventListener('astro:after-swap', this.boundAfterSwap);
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', this.handleClickOutside);
   },
+  created() {
+    // Create bound methods for event listeners so we can remove them properly
+    this.boundPageLoad = () => {
+      this.closeAllDropdowns();
+      this.performScrollCheck();
+    };
+
+    this.boundAfterSwap = () => {
+      this.performScrollCheck();
+      setTimeout(() => this.performScrollCheck(), 100);
+    };
+  },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
-    document.removeEventListener('astro:page-load', this.performScrollCheck);
-    document.removeEventListener('astro:after-swap', this.performScrollCheck);
+    document.removeEventListener('astro:page-load', this.boundPageLoad);
+    document.removeEventListener('astro:after-swap', this.boundAfterSwap);
     document.removeEventListener('click', this.handleClickOutside);
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
+    }
+  },
+  watch: {
+    openDropdowns: {
+      handler(newVal) {
+        // When a dropdown opens, ensure background is set
+        if (newVal.size > 0) {
+          // Quick check to ensure header background is properly set
+          if (this.headerBackgroundColor === 'transparent' && window.scrollY === 0) {
+            this.performScrollCheck();
+          }
+        }
+      },
+      deep: true
     }
   },
   methods: {
@@ -1026,11 +1070,6 @@ export default {
   z-index: var(--z-index-modal);
   margin: 0.5rem 0 0;
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.pod .dropdown-menu {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .theme-dark .dropdown-menu {
