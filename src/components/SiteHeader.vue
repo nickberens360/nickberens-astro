@@ -73,6 +73,7 @@
                 v-if="item.icon"
                 size="2x"
                 :icon="item.icon"
+                :class="{ 'icon-bounce': navIconBouncing }"
               />
               <span v-else>{{ item.text }}</span>
             </a>
@@ -162,6 +163,7 @@
               <font-awesome-icon
                 v-if="item.icon"
                 :icon="item.icon"
+                :class="{ 'icon-bounce': navIconBouncing }"
               />
               <span
                 v-if="item.icon"
@@ -234,6 +236,7 @@
             :src="aiIconSvg"
             alt="AI Icon"
             style="width: 34px;"
+            :class="{ 'icon-bounce': aiIconBouncing }"
           />
         </a>
         <font-awesome-icon
@@ -303,8 +306,9 @@ export default {
       openDropdownId: null,
       openMobileDropdownId: null,
       animatedParent: null,
-      animatingLinks: new Set(),
       mobileNavItemClicked: false,
+      aiIconBouncing: false,
+      navIconBouncing: false,
     };
   },
   computed: {
@@ -629,48 +633,28 @@ export default {
     handleNavClick(event) {
       const link = event.currentTarget;
 
-      if (this.animatingLinks.has(link)) return;
-
-      // Add to animating set to prevent multiple animations
-      this.animatingLinks.add(link);
-
       // Check if it's an icon or text - look for FontAwesome components
       const iconElement = link.querySelector('svg[data-icon], .fa-icon, [class*="fa-"]');
       const textElement = link.querySelector('span:not([class*="fa"]):not([data-icon])');
 
       if (iconElement) {
         // Handle icon animation (like GitHub) - only prevent default for external links
+        this.navIconBouncing = true;
         if (link.target === '_blank') {
           event.preventDefault();
-          iconElement.classList.add('icon-bounce');
-          this.animatingLinks.delete(link);
           const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
           if (newWin) newWin.opener = null;
-        } else {
-          // Let internal navigation proceed normally for view transitions
-          iconElement.classList.add('icon-bounce');
-          this.animatingLinks.delete(link);
         }
       } else if (textElement && textElement.textContent.trim()) {
         // Handle text animation with border effect - don't prevent default
         // Add border animation class to the text element
         textElement.classList.add('nav-border-animate');
-
         // Don't remove the class - let the view transition handle cleanup
-        // The border will persist until the page changes
-        this.animatingLinks.delete(link);
-      } else {
-        // No valid element found, just clean up
-        this.animatingLinks.delete(link);
       }
     },
     handleLogoClick(event) {
       const link = event.currentTarget;
       const nameElements = link.querySelectorAll('.site-header__name');
-
-      if (this.animatingLinks.has(link)) return;
-
-      this.animatingLinks.add(link);
 
       // Add border animation to visible name elements
       nameElements.forEach(nameEl => {
@@ -678,23 +662,9 @@ export default {
           nameEl.classList.add('nav-border-animate');
         }
       });
-
-      // Don't remove the class - let the view transition handle cleanup
-      this.animatingLinks.delete(link);
     },
     handleAIClick(event) {
-      const link = event.currentTarget;
-
-      if (this.animatingLinks.has(link)) return;
-
-      this.animatingLinks.add(link);
-
-      // Add bounce class to the icon
-      const img = link.querySelector('img');
-      if (img) {
-        img.classList.add('icon-bounce');
-        this.animatingLinks.delete(link);
-      }
+      this.aiIconBouncing = true;
     },
     animateHamburger() {
       this.mobileNavItemClicked = true;
