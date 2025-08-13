@@ -29,7 +29,8 @@
               <span class="git-paren">)</span>
             </span>
           </p>
-          <p class="site-header__name site-header__name--mobile">nick:<span class="git"><span class="git-paren">(</span>
+          <p class="site-header__name site-header__name--mobile">nick:
+            <span class="git"><span class="git-paren">(</span>
               <span class="git-branch"><font-awesome-icon
                 icon="house-chimney"
                 class="base-icon"
@@ -75,9 +76,11 @@
               />
               <span v-else>{{ item.text }}</span>
             </a>
-
             <!-- Dropdown Menu -->
-            <div v-if="item.hasDropdown" class="dropdown">
+            <div
+              v-if="item.hasDropdown"
+              class="dropdown"
+            >
               <button
                 class="dropdown-toggle"
                 @click="toggleDropdown(item.text)"
@@ -95,7 +98,10 @@
                 class="dropdown-menu"
                 :style="dropdownStyles"
               >
-                <li v-if="!item.dropdownItems || item.dropdownItems.length === 0" class="dropdown-item">
+                <li
+                  v-if="!item.dropdownItems || item.dropdownItems.length === 0"
+                  class="dropdown-item"
+                >
                   <span>No fonts available</span>
                 </li>
                 <li
@@ -154,7 +160,10 @@
             </a>
 
             <!-- Mobile dropdown items -->
-            <div v-if="item.hasDropdown" class="mobile-dropdown">
+            <div
+              v-if="item.hasDropdown"
+              class="mobile-dropdown"
+            >
               <button
                 class="mobile-dropdown-toggle"
                 @click="toggleMobileDropdown(item.text)"
@@ -170,7 +179,10 @@
                 v-if="isMobileDropdownOpen(item.text)"
                 class="mobile-dropdown-menu"
               >
-                <li v-if="!item.dropdownItems || item.dropdownItems.length === 0" class="mobile-dropdown-item">
+                <li
+                  v-if="!item.dropdownItems || item.dropdownItems.length === 0"
+                  class="mobile-dropdown-item"
+                >
                   <span style="color: #666;">No fonts available</span>
                 </li>
                 <li
@@ -292,7 +304,7 @@ export default {
     },
     dropdownStyles() {
       let backgroundColor = this.headerBackgroundColor;
-      
+
       // Fallback to white if transparent (view transition issue)
       if (backgroundColor === 'transparent') {
         backgroundColor = 'white';
@@ -571,7 +583,7 @@ export default {
         // Handle text animation with border effect - don't prevent default
         // Add border animation class to the text element
         textElement.classList.add('nav-border-animate');
-        
+
         // Don't remove the class - let the view transition handle cleanup
         // The border will persist until the page changes
         this.animatingLinks.delete(link);

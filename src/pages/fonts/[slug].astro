@@ -26,9 +26,34 @@ const fonts = await getCollection('fonts');
 const currentIndex = fonts.findIndex(f => f.id === font.id);
 const prevFont = currentIndex > 0 ? fonts[currentIndex - 1] : null;
 const nextFont = currentIndex < fonts.length - 1 ? fonts[currentIndex + 1] : null;
+
+// Determine font source URL for preloading
+let fontUrl = '';
+if (font.data.family === 'Dripity') {
+  fontUrl = '/fonts/Dripity.woff';
+} else if (font.data.family === 'Cowboy') {
+  fontUrl = '/fonts/Cowboy.woff';
+} else if (font.data.family === 'Kinda Sans Serif') {
+  fontUrl = '/fonts/kinda-sans-serif.woff';
+}
 ---
 
 <Layout title={`${font.data.name} - Font Specimen`} description={font.data.description || `${font.data.name} font specimen showcase`}>
+  {fontUrl && (
+    <link slot="head" rel="preload" href={fontUrl} as="font" type="font/woff" crossorigin="anonymous" />
+  )}
+  <style slot="head">
+    /* Force all fonts on this page to use block rendering */
+    @font-face {
+      font-family: '{font.data.family}';
+      font-display: block !important;
+    }
+    
+    /* Hide content until fonts are loaded */
+    .font-display:not(.fonts-ready) {
+      visibility: hidden !important;
+    }
+  </style>
   <PageSection
     data-section-color={font.data.backgroundColor || "white"}
     data-section-theme="light"

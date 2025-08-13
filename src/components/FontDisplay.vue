@@ -1,11 +1,15 @@
 <template>
-  <div class="font-display">
-    <h1 class="font-display__title text-center">
+  <div class="font-display" :class="{ 'fonts-loading': !fontCheckComplete || !fontsLoaded, 'fonts-ready': fontCheckComplete && fontsLoaded }">
+    <div v-if="!fontCheckComplete || !fontsLoaded" class="loading-spinner">
+      Loading font...
+    </div>
+    
+    <h1 v-show="fontCheckComplete && fontsLoaded" class="font-display__title text-center">
       <span class="font-display__title-text">{{ fontName }}</span>
       <span v-if="needsFakeBold" class="font-display__title-fake-bold">{{ fontName }}</span>
     </h1>
 
-    <div class="font-display__controls">
+    <div v-show="fontCheckComplete && fontsLoaded" class="font-display__controls">
       <input
         v-model="fontOutput"
         type="text"
@@ -23,12 +27,12 @@
       </select>
     </div>
 
-    <div class="font-display__output" :style="{ fontSize }">
+    <div v-show="fontCheckComplete && fontsLoaded" class="font-display__output" :style="{ fontSize }">
       <span class="font-display__output-text">{{ fontOutput }}</span>
       <span v-if="needsFakeBold" class="font-display__output-fake-bold">{{ fontOutput }}</span>
     </div>
 
-    <div class="font-container">
+    <div v-show="fontCheckComplete && fontsLoaded" class="font-container">
       <div class="font-container__content">
         <template v-for="(charset, index) in charsets" :key="index">
           {{ charset }}<br>
@@ -45,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 
 const props = defineProps({
   fontData: {
@@ -64,6 +68,9 @@ const fontOutput = ref('Try Me.');
 const fontSize = ref('48px');
 const titleFontSize = computed(() => props.fontData.titleFontSize || '12vw');
 
+const fontsLoaded = ref(false);
+const fontCheckComplete = ref(false);
+
 const needsFakeBold = computed(() =>
   fontName.value === 'Dripity' || fontName.value === 'Kinda Sans Serif'
 );
@@ -77,6 +84,59 @@ const charsets = [
   '&​.​,​?​!​@​(​)​#​$​%​+​-​=​:​;'
 ];
 
+onMounted(async () => {
+  // Add a small delay to ensure DOM is ready
+  await new Promise(resolve => setTimeout(resolve, 10));
+  
+  try {
+    const fontFace = `16px "${fontFamily.value}"`;
+    
+    // First, ensure font faces are defined
+    if (document.fonts.size === 0) {
+      // Wait for fonts to be registered
+      await document.fonts.ready;
+    }
+    
+    // Check if font is already loaded
+    if (document.fonts.check(fontFace)) {
+      fontsLoaded.value = true;
+      fontCheckComplete.value = true;
+      return;
+    }
+
+    // Force load the font
+    const loadPromise = document.fonts.load(fontFace);
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 3000));
+    
+    // Race between font loading and timeout
+    const result = await Promise.race([loadPromise, timeoutPromise]);
+    
+    if (result === 'timeout') {
+      console.warn('Font loading timed out, showing content');
+      fontsLoaded.value = true;
+      fontCheckComplete.value = true;
+      return;
+    }
+    
+    // Wait for all fonts to be ready
+    await document.fonts.ready;
+    
+    // Final check
+    if (document.fonts.check(fontFace)) {
+      fontsLoaded.value = true;
+    } else {
+      console.warn('Font not available, using fallback');
+      fontsLoaded.value = true;
+    }
+    
+    fontCheckComplete.value = true;
+  } catch (error) {
+    console.warn('Font loading error:', error);
+    fontsLoaded.value = true;
+    fontCheckComplete.value = true;
+  }
+});
+
 </script>
 
 <style scoped>
@@ -85,6 +145,29 @@ const charsets = [
   font-family: v-bind(fontFamily), sans-serif;
   padding: 16px;
   border-radius: 8px;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.font-display.fonts-loading {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.font-display.fonts-loading .loading-spinner {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loading-spinner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  color: currentColor;
+  z-index: 10;
 }
 
 .font-display__title {
