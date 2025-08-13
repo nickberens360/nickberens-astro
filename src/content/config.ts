@@ -29,6 +29,7 @@ const fontsCollection = defineCollection({
     backgroundColor: z.string().optional(),
     isTitleFontBold: z.boolean().default(true),
     titleFontSize: z.string().optional(),
+    fontUrl: z.string().optional(),
     sizes: z.array(z.number()).default([12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72]),
   }),
 });

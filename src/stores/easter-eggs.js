@@ -27,8 +27,8 @@ const defaultState = {
   // AnnoyingEyelash component state
   annoyingEyelash: {
     isVisible: true,
-    currentX: 50,
-    currentY: 75,
+    currentX: undefined,  // Let component props determine initial position
+    currentY: undefined,  // Let component props determine initial position
     dragAttempts: 0,
     isAnimating: false,
     isComponentVisible: true

@@ -59,13 +59,13 @@ const fonts = await getCollection('fonts');
 />
 <AnnoyingEyelash
     client:load
-    initial-x={50}
-    initial-y={75}
+    initialX={50}
+    initialY={50}
     hideAnnoyingEyelash={hideAnnoyingEyelash}
 />
-<FontMenuLoader 
-    client:only="vue" 
-    fonts={fonts} 
+<FontMenuLoader
+    client:only="vue"
+    fonts={fonts}
 />
 <slot/>
 <EasterEgg

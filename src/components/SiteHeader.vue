@@ -29,7 +29,8 @@
               <span class="git-paren">)</span>
             </span>
           </p>
-          <p class="site-header__name site-header__name--mobile">nick:<span class="git"><span class="git-paren">(</span>
+          <p class="site-header__name site-header__name--mobile">nick:
+            <span class="git"><span class="git-paren">(</span>
               <span class="git-branch"><font-awesome-icon
                 icon="house-chimney"
                 class="base-icon"
@@ -75,15 +76,20 @@
               />
               <span v-else>{{ item.text }}</span>
             </a>
-
             <!-- Dropdown Menu -->
-            <div v-if="item.hasDropdown" class="dropdown">
+            <div
+              v-if="item.hasDropdown"
+              class="dropdown"
+            >
               <button
                 class="dropdown-toggle"
                 @click="toggleDropdown(item.text)"
                 :aria-expanded="isDropdownOpen(item.text)"
+                aria-haspopup="menu"
+                :aria-controls="getDropdownId(item)"
+                @keydown.esc.stop.prevent="closeAllDropdowns"
               >
-                <span>{{ item.text }}</span>
+                <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
                 <font-awesome-icon
                   :icon="['fas', 'chevron-down']"
                   :class="{ 'rotated': isDropdownOpen(item.text) }"
@@ -94,8 +100,14 @@
                 v-if="isDropdownOpen(item.text)"
                 class="dropdown-menu"
                 :style="dropdownStyles"
+                role="menu"
+                :id="getDropdownId(item)"
+                @keydown.esc.stop.prevent="closeAllDropdowns"
               >
-                <li v-if="!item.dropdownItems || item.dropdownItems.length === 0" class="dropdown-item">
+                <li
+                  v-if="!item.dropdownItems || item.dropdownItems.length === 0"
+                  class="dropdown-item"
+                >
                   <span>No fonts available</span>
                 </li>
                 <li
@@ -105,7 +117,8 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="handleNavClick($event); closeAllDropdowns()"
+                    @click="handleDropdownItemClick(item.text, $event)"
+                    role="menuitem"
                   >
                     {{ subItem.text }}
                   </a>
@@ -119,6 +132,10 @@
         class="site-header__mobile-nav"
         :class="{ 'is-active': isMobileMenuOpen }"
         :style="headerStyles"
+        role="dialog"
+        aria-modal="true"
+        :aria-hidden="!isMobileMenuOpen"
+        @keydown.esc.stop.prevent="closeMobileMenu"
       >
         <button
           class="site-header__mobile-nav-close"
@@ -154,12 +171,19 @@
             </a>
 
             <!-- Mobile dropdown items -->
-            <div v-if="item.hasDropdown" class="mobile-dropdown">
+            <div
+              v-if="item.hasDropdown"
+              class="mobile-dropdown"
+            >
               <button
                 class="mobile-dropdown-toggle"
                 @click="toggleMobileDropdown(item.text)"
+                :aria-expanded="isMobileDropdownOpen(item.text)"
+                aria-haspopup="menu"
+                :aria-controls="getMobileDropdownId(item)"
+                @keydown.esc.stop.prevent="closeMobileDropdowns"
               >
-                <span>{{ item.text }}</span>
+                <span :class="{ 'nav-border-animate': animatedParent === item.text }">{{ item.text }}</span>
                 <font-awesome-icon
                   :icon="['fas', 'chevron-down']"
                   :class="{ 'rotated': isMobileDropdownOpen(item.text) }"
@@ -169,8 +193,14 @@
               <ul
                 v-if="isMobileDropdownOpen(item.text)"
                 class="mobile-dropdown-menu"
+                role="menu"
+                :id="getMobileDropdownId(item)"
+                @keydown.esc.stop.prevent="closeMobileDropdowns"
               >
-                <li v-if="!item.dropdownItems || item.dropdownItems.length === 0" class="mobile-dropdown-item">
+                <li
+                  v-if="!item.dropdownItems || item.dropdownItems.length === 0"
+                  class="mobile-dropdown-item"
+                >
                   <span style="color: #666;">No fonts available</span>
                 </li>
                 <li
@@ -180,7 +210,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="handleNavClick($event); closeMobileMenu()"
+                    @click="handleMobileDropdownItemClick(item.text, $event)"
                   >
                     {{ subItem.text }}
                   </a>
@@ -268,9 +298,11 @@ export default {
       isMobileMenuOpen: false,
       useTerminalInput: false,
       scrollTimeout: null,
+      isTicking: false,
       aiIconSvg,
-      openDropdowns: new Set(),
-      openMobileDropdowns: new Set(),
+      openDropdownId: null,
+      openMobileDropdownId: null,
+      animatedParent: null,
       animatingLinks: new Set(),
     };
   },
@@ -292,18 +324,34 @@ export default {
     },
     dropdownStyles() {
       let backgroundColor = this.headerBackgroundColor;
-      
-      // Fallback to white if transparent (view transition issue)
-      if (backgroundColor === 'transparent') {
-        backgroundColor = 'white';
+      let styles = {};
+
+      // For pod variant, adjust opacity but don't add backdrop-filter
+      // since parent already has it
+      if (this.variant === 'pod') {
+        // Use lower alpha for glass effect since parent has backdrop-filter
+        backgroundColor = this.convertToRgba(backgroundColor, 0.6);
+
+        styles = {
+          backgroundColor: backgroundColor,
+          // Don't add backdrop-filter here - parent pod already has it
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        };
+
+        // Adjust for dark theme
+        if (this.overlayTheme === 'dark') {
+          styles.border = '1px solid rgba(255, 255, 255, 0.1)';
+          // Add subtle gradient overlay for dark theme
+          styles.backgroundImage = `linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01))`;
+        }
+      } else {
+        styles = {
+          backgroundColor: backgroundColor
+        };
       }
 
-      // Apply transparency for glass effect
-      backgroundColor = this.convertToRgba(backgroundColor, 0.9);
-
-      return {
-        backgroundColor: backgroundColor,
-      };
+      return styles;
     },
     maybeTerminalInput() {
       return this.hasTerminalInput || this.useTerminalInput;
@@ -324,27 +372,81 @@ export default {
     this.isMobileMenuOpen = false;
     document.body.style.overflow = '';
 
+    // Perform initial scroll check to set proper background colors
+    this.performScrollCheck();
+
     // Existing code
     window.addEventListener('scroll', this.handleScroll, { passive: true });
-    this.handleScroll();
 
     // Re-run theme detection on page navigation (for view transitions)
-    document.addEventListener('astro:page-load', this.performScrollCheck);
-    document.addEventListener('astro:after-swap', this.performScrollCheck);
+    document.addEventListener('astro:page-load', this.boundPageLoad);
+    document.addEventListener('astro:after-swap', this.boundAfterSwap);
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', this.handleClickOutside);
   },
+  created() {
+    // Create bound methods for event listeners so we can remove them properly
+    this.boundPageLoad = () => {
+      this.closeAllDropdowns();
+      this.performScrollCheck();
+    };
+
+    this.boundAfterSwap = () => {
+      this.performScrollCheck();
+      // Wait for next frame to ensure DOM updates are complete after view transition
+      // This ensures proper theme detection after page swap
+      requestAnimationFrame(() => this.performScrollCheck());
+    };
+  },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
-    document.removeEventListener('astro:page-load', this.performScrollCheck);
-    document.removeEventListener('astro:after-swap', this.performScrollCheck);
+    document.removeEventListener('astro:page-load', this.boundPageLoad);
+    document.removeEventListener('astro:after-swap', this.boundAfterSwap);
     document.removeEventListener('click', this.handleClickOutside);
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
     }
   },
+  watch: {
+    openDropdownId(newVal) {
+      if (newVal) {
+        if (this.headerBackgroundColor === 'transparent' && window.scrollY === 0) {
+          this.performScrollCheck();
+        }
+      }
+    }
+  },
   methods: {
+    handleDropdownItemClick(parentText) {
+      this.animatedParent = parentText;
+      this.closeAllDropdowns();
+      // Allow navigation to proceed; animation cleans up on transition
+    },
+    handleMobileDropdownItemClick(parentText) {
+      this.animatedParent = parentText;
+      this.closeMobileMenu();
+    },
+    safeBase64(str) {
+      try {
+        if (typeof btoa === 'function') return btoa(str);
+        if (typeof Buffer !== 'undefined') return Buffer.from(str, 'utf-8').toString('base64');
+      } catch (_) {}
+      // Fallback to a slug if encoding not possible
+      return String(str || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    },
+    _getGeneratedId(prefix, item) {
+      const text = typeof item === 'string' ? item : item.text;
+      const url = typeof item === 'object' && item.url ? item.url : '';
+      const uniquePart = url ? this.safeBase64(url).substring(0, 8) : String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+      return `${prefix}-${uniquePart}`;
+    },
+    getDropdownId(item) {
+      return this._getGeneratedId('dropdown', item);
+    },
+    getMobileDropdownId(item) {
+      return this._getGeneratedId('mobile-dropdown', item);
+    },
     convertToRgba(color, alpha = 0.8) {
       // Handle transparent case
       if (color === 'transparent') {
@@ -437,51 +539,41 @@ export default {
     },
     closeMobileMenu() {
       this.isMobileMenuOpen = false;
-      this.openMobileDropdowns.clear();
+      this.openMobileDropdownId = null;
       document.body.style.overflow = '';
     },
     toggleDropdown(itemText) {
-      if (this.openDropdowns.has(itemText)) {
-        this.openDropdowns.delete(itemText);
-      } else {
-        this.openDropdowns.clear();
-        this.openDropdowns.add(itemText);
-      }
+      this.openDropdownId = this.openDropdownId === itemText ? null : itemText;
     },
     toggleMobileDropdown(itemText) {
-      if (this.openMobileDropdowns.has(itemText)) {
-        this.openMobileDropdowns.delete(itemText);
-      } else {
-        this.openMobileDropdowns.clear();
-        this.openMobileDropdowns.add(itemText);
-      }
+      this.openMobileDropdownId = this.openMobileDropdownId === itemText ? null : itemText;
     },
     isDropdownOpen(itemText) {
-      return this.openDropdowns.has(itemText);
+      return this.openDropdownId === itemText;
     },
     isMobileDropdownOpen(itemText) {
-      return this.openMobileDropdowns.has(itemText);
+      return this.openMobileDropdownId === itemText;
     },
     closeAllDropdowns() {
-      this.openDropdowns.clear();
+      this.openDropdownId = null;
+    },
+    closeMobileDropdowns() {
+      this.openMobileDropdownId = null;
     },
     handleClickOutside(event) {
       // Check if the click is outside all dropdown elements
       if (!event.target.closest('.dropdown') && !event.target.closest('.mobile-dropdown')) {
-        this.openDropdowns.clear();
-        this.openMobileDropdowns.clear();
+        this.openDropdownId = null;
+        this.openMobileDropdownId = null;
       }
     },
     handleScroll() {
-      // Clear existing timeout
-      if (this.scrollTimeout) {
-        clearTimeout(this.scrollTimeout);
-      }
-
-      // Throttle the scroll handling
-      this.scrollTimeout = setTimeout(() => {
+      if (this.isTicking) return;
+      this.isTicking = true;
+      requestAnimationFrame(() => {
         this.performScrollCheck();
-      }, 16); // ~60fps
+        this.isTicking = false;
+      });
     },
     performScrollCheck() {
       const headerEl = this.$refs.siteHeader;
@@ -557,7 +649,8 @@ export default {
           setTimeout(() => {
             iconElement.classList.remove('nav-icon-bounce');
             this.animatingLinks.delete(link);
-            window.open(link.href, '_blank');
+            const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
+            if (newWin) newWin.opener = null;
           }, 600);
         } else {
           // Let internal navigation proceed normally for view transitions
@@ -571,7 +664,7 @@ export default {
         // Handle text animation with border effect - don't prevent default
         // Add border animation class to the text element
         textElement.classList.add('nav-border-animate');
-        
+
         // Don't remove the class - let the view transition handle cleanup
         // The border will persist until the page changes
         this.animatingLinks.delete(link);
@@ -1017,8 +1110,7 @@ export default {
 }
 
 .pod .dropdown-menu {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  top: 180%;
 }
 
 .theme-dark .dropdown-menu {

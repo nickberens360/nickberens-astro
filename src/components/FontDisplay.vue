@@ -1,11 +1,15 @@
 <template>
-  <div class="font-display">
-    <h1 class="font-display__title text-center">
+  <div class="font-display" :class="{ 'fonts-loading': !fontCheckComplete || !fontsLoaded, 'fonts-ready': fontCheckComplete && fontsLoaded }">
+    <div v-if="!fontCheckComplete || !fontsLoaded" class="loading-spinner">
+      Loading font...
+    </div>
+
+    <h1 v-show="fontCheckComplete && fontsLoaded" class="font-display__title text-center">
       <span class="font-display__title-text">{{ fontName }}</span>
       <span v-if="needsFakeBold" class="font-display__title-fake-bold">{{ fontName }}</span>
     </h1>
 
-    <div class="font-display__controls">
+    <div v-show="fontCheckComplete && fontsLoaded" class="font-display__controls">
       <input
         v-model="fontOutput"
         type="text"
@@ -21,14 +25,23 @@
           {{ size }}px
         </option>
       </select>
+      <a
+        v-if="slug"
+        :href="downloadUrl"
+        :download="`${slug}.woff`"
+        class="font-display__download"
+        title="Download font"
+      >
+        Download
+      </a>
     </div>
 
-    <div class="font-display__output" :style="{ fontSize }">
+    <div v-show="fontCheckComplete && fontsLoaded" class="font-display__output" :style="{ fontSize }">
       <span class="font-display__output-text">{{ fontOutput }}</span>
       <span v-if="needsFakeBold" class="font-display__output-fake-bold">{{ fontOutput }}</span>
     </div>
 
-    <div class="font-container">
+    <div v-show="fontCheckComplete && fontsLoaded" class="font-container">
       <div class="font-container__content">
         <template v-for="(charset, index) in charsets" :key="index">
           {{ charset }}<br>
@@ -45,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 
 const props = defineProps({
   fontData: {
@@ -55,6 +68,10 @@ const props = defineProps({
       family: 'sans-serif',
       titleFontSize: '12vw'
     })
+  },
+  slug: {
+    type: String,
+    default: ''
   }
 });
 
@@ -63,6 +80,10 @@ const fontFamily = computed(() => props.fontData.family || 'sans-serif');
 const fontOutput = ref('Try Me.');
 const fontSize = ref('48px');
 const titleFontSize = computed(() => props.fontData.titleFontSize || '12vw');
+const downloadUrl = computed(() => props.fontData.fontUrl || `/fonts/${props.slug}.woff`);
+
+const fontsLoaded = ref(false);
+const fontCheckComplete = ref(false);
 
 const needsFakeBold = computed(() =>
   fontName.value === 'Dripity' || fontName.value === 'Kinda Sans Serif'
@@ -77,6 +98,60 @@ const charsets = [
   '&​.​,​?​!​@​(​)​#​$​%​+​-​=​:​;'
 ];
 
+onMounted(async () => {
+  try {
+    const fontFace = `16px "${fontFamily.value}"`;
+
+    // Guard against missing Font Loading API
+    if (!document.fonts || typeof document.fonts.check !== 'function' || typeof document.fonts.load !== 'function') {
+      // Font Loading API not supported; don't block UI
+      fontsLoaded.value = true;
+      return;
+    }
+
+    // First, ensure font faces are defined
+    if (document.fonts.size === 0) {
+      // Wait for fonts to be registered
+      await document.fonts.ready;
+    }
+
+    // Check if font is already loaded
+    if (document.fonts.check(fontFace)) {
+      fontsLoaded.value = true;
+      return;
+    }
+
+    // Force load the font
+    const loadPromise = document.fonts.load(fontFace);
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000));
+
+    // Race between font loading and timeout
+    const result = await Promise.race([loadPromise, timeoutPromise]);
+
+    if (result === 'timeout') {
+      console.warn('Font loading timed out, showing content');
+      fontsLoaded.value = true;
+      return;
+    }
+
+    // Wait for all fonts to be ready
+    await document.fonts.ready;
+
+    // Final check
+    if (document.fonts.check(fontFace)) {
+      fontsLoaded.value = true;
+    } else {
+      console.warn('Font not available, using fallback');
+      fontsLoaded.value = true;
+    }
+  } catch (error) {
+    console.warn('Font loading error:', error);
+    fontsLoaded.value = true;
+  } finally {
+    fontCheckComplete.value = true;
+  }
+});
+
 </script>
 
 <style scoped>
@@ -85,6 +160,27 @@ const charsets = [
   font-family: v-bind(fontFamily), sans-serif;
   padding: 16px;
   border-radius: 8px;
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.font-display.fonts-loading {
+  opacity: 0.15; /* dim content to reduce layout jump while spinner shows */
+}
+
+.font-display.fonts-loading .loading-spinner {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loading-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  color: currentColor;
+  z-index: 10;
 }
 
 .font-display__title {
@@ -116,6 +212,7 @@ const charsets = [
 .font-display__controls {
   display: flex;
   gap: 16px;
+  align-items: center;
 }
 
 .font-display__input,
@@ -130,12 +227,29 @@ const charsets = [
   background: rgba(0, 0, 0, 0.20);
 }
 
+.font-display__download {
+  font-family: var(--font-primary), monospace;
+  padding: 8px 16px;
+  font-size: 16px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.20);
+  margin-left: auto;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.font-display__download:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
 .font-display__output {
   position: relative;
   font-size: 48px;
   margin: 48px 0;
   padding-bottom: 48px;
-  border-bottom: 1px solid currentColor;
+  border-bottom: 1px dashed currentColor;
   min-height: 1.2em;
 }
 
@@ -177,10 +291,16 @@ const charsets = [
   }
 
   .font-display__input,
-  .font-display__select {
+  .font-display__select,
+  .font-display__download {
     margin-bottom: 16px;
     display: block;
     width: 100%;
+    text-align: center;
+  }
+
+  .font-display__download {
+    margin-left: 0;
   }
 }
 </style>
