@@ -394,9 +394,9 @@ export default {
 
     this.boundAfterSwap = () => {
       this.performScrollCheck();
-      // Wait for DOM updates after view transition
+      // Wait for next frame to ensure DOM updates are complete after view transition
       // This ensures proper theme detection after page swap
-      setTimeout(() => this.performScrollCheck(), 100);
+      requestAnimationFrame(() => this.performScrollCheck());
     };
   },
   beforeUnmount() {
