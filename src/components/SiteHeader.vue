@@ -158,7 +158,7 @@
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
-              @click="animateHamburger(); closeMobileMenu()"
+              @click="handleMobileNavClick"
             >
               <font-awesome-icon
                 v-if="item.icon"
@@ -212,7 +212,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="animateHamburger(); closeMobileMenu()"
+                    @click="handleMobileNavClick"
                   >
                     {{ subItem.text }}
                   </a>
@@ -681,6 +681,11 @@ export default {
       setTimeout(() => {
         this.mobileNavItemClicked = false;
       }, 600); // Corresponds to animation duration
+    },
+    handleMobileNavClick() {
+      // Combined method for mobile navigation clicks
+      this.animateHamburger();
+      this.closeMobileMenu();
     }
   }
 };
