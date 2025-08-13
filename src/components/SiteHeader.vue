@@ -1096,6 +1096,10 @@ export default {
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.pod .dropdown-menu {
+  top: 180%;
+}
+
 .theme-dark .dropdown-menu {
   border: 1px solid #404040;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
