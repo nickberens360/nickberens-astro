@@ -85,6 +85,9 @@
                 class="dropdown-toggle"
                 @click="toggleDropdown(item.text)"
                 :aria-expanded="isDropdownOpen(item.text)"
+                aria-haspopup="menu"
+                :aria-controls="getDropdownId(item.text)"
+                @keydown.esc.stop.prevent="closeAllDropdowns"
               >
                 <span>{{ item.text }}</span>
                 <font-awesome-icon
@@ -97,6 +100,9 @@
                 v-if="isDropdownOpen(item.text)"
                 class="dropdown-menu"
                 :style="dropdownStyles"
+                role="menu"
+                :id="getDropdownId(item.text)"
+                @keydown.esc.stop.prevent="closeAllDropdowns"
               >
                 <li
                   v-if="!item.dropdownItems || item.dropdownItems.length === 0"
@@ -112,6 +118,7 @@
                   <a
                     :href="subItem.url"
                     @click="handleNavClick($event); closeAllDropdowns()"
+                    role="menuitem"
                   >
                     {{ subItem.text }}
                   </a>
@@ -125,6 +132,10 @@
         class="site-header__mobile-nav"
         :class="{ 'is-active': isMobileMenuOpen }"
         :style="headerStyles"
+        role="dialog"
+        aria-modal="true"
+        :aria-hidden="!isMobileMenuOpen"
+        @keydown.esc.stop.prevent="closeMobileMenu"
       >
         <button
           class="site-header__mobile-nav-close"
@@ -167,6 +178,10 @@
               <button
                 class="mobile-dropdown-toggle"
                 @click="toggleMobileDropdown(item.text)"
+                :aria-expanded="isMobileDropdownOpen(item.text)"
+                aria-haspopup="menu"
+                :aria-controls="getMobileDropdownId(item.text)"
+                @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
               >
                 <span>{{ item.text }}</span>
                 <font-awesome-icon
@@ -178,6 +193,9 @@
               <ul
                 v-if="isMobileDropdownOpen(item.text)"
                 class="mobile-dropdown-menu"
+                role="menu"
+                :id="getMobileDropdownId(item.text)"
+                @keydown.esc.stop.prevent="toggleMobileDropdown(item.text)"
               >
                 <li
                   v-if="!item.dropdownItems || item.dropdownItems.length === 0"
@@ -280,9 +298,10 @@ export default {
       isMobileMenuOpen: false,
       useTerminalInput: false,
       scrollTimeout: null,
+      isTicking: false,
       aiIconSvg,
-      openDropdowns: new Set(),
-      openMobileDropdowns: new Set(),
+      openDropdownId: null,
+      openMobileDropdownId: null,
       animatingLinks: new Set(),
     };
   },
@@ -387,20 +406,21 @@ export default {
     }
   },
   watch: {
-    openDropdowns: {
-      handler(newVal) {
-        // When a dropdown opens, ensure background is set
-        if (newVal.size > 0) {
-          // Quick check to ensure header background is properly set
-          if (this.headerBackgroundColor === 'transparent' && window.scrollY === 0) {
-            this.performScrollCheck();
-          }
+    openDropdownId(newVal) {
+      if (newVal) {
+        if (this.headerBackgroundColor === 'transparent' && window.scrollY === 0) {
+          this.performScrollCheck();
         }
-      },
-      deep: true
+      }
     }
   },
   methods: {
+    getDropdownId(text) {
+      return `dropdown-` + String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    },
+    getMobileDropdownId(text) {
+      return `mobile-dropdown-` + String(text || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
+    },
     convertToRgba(color, alpha = 0.8) {
       // Handle transparent case
       if (color === 'transparent') {
@@ -493,51 +513,38 @@ export default {
     },
     closeMobileMenu() {
       this.isMobileMenuOpen = false;
-      this.openMobileDropdowns.clear();
+      this.openMobileDropdownId = null;
       document.body.style.overflow = '';
     },
     toggleDropdown(itemText) {
-      if (this.openDropdowns.has(itemText)) {
-        this.openDropdowns.delete(itemText);
-      } else {
-        this.openDropdowns.clear();
-        this.openDropdowns.add(itemText);
-      }
+      this.openDropdownId = this.openDropdownId === itemText ? null : itemText;
     },
     toggleMobileDropdown(itemText) {
-      if (this.openMobileDropdowns.has(itemText)) {
-        this.openMobileDropdowns.delete(itemText);
-      } else {
-        this.openMobileDropdowns.clear();
-        this.openMobileDropdowns.add(itemText);
-      }
+      this.openMobileDropdownId = this.openMobileDropdownId === itemText ? null : itemText;
     },
     isDropdownOpen(itemText) {
-      return this.openDropdowns.has(itemText);
+      return this.openDropdownId === itemText;
     },
     isMobileDropdownOpen(itemText) {
-      return this.openMobileDropdowns.has(itemText);
+      return this.openMobileDropdownId === itemText;
     },
     closeAllDropdowns() {
-      this.openDropdowns.clear();
+      this.openDropdownId = null;
     },
     handleClickOutside(event) {
       // Check if the click is outside all dropdown elements
       if (!event.target.closest('.dropdown') && !event.target.closest('.mobile-dropdown')) {
-        this.openDropdowns.clear();
-        this.openMobileDropdowns.clear();
+        this.openDropdownId = null;
+        this.openMobileDropdownId = null;
       }
     },
     handleScroll() {
-      // Clear existing timeout
-      if (this.scrollTimeout) {
-        clearTimeout(this.scrollTimeout);
-      }
-
-      // Throttle the scroll handling
-      this.scrollTimeout = setTimeout(() => {
+      if (this.isTicking) return;
+      this.isTicking = true;
+      requestAnimationFrame(() => {
         this.performScrollCheck();
-      }, 16); // ~60fps
+        this.isTicking = false;
+      });
     },
     performScrollCheck() {
       const headerEl = this.$refs.siteHeader;
@@ -613,7 +620,8 @@ export default {
           setTimeout(() => {
             iconElement.classList.remove('nav-icon-bounce');
             this.animatingLinks.delete(link);
-            window.open(link.href, '_blank');
+            const newWin = window.open(link.href, '_blank', 'noopener');
+            if (newWin) newWin.opener = null;
           }, 600);
         } else {
           // Let internal navigation proceed normally for view transitions
