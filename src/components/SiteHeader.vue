@@ -157,7 +157,7 @@
               :target="item.isExternal ? '_blank' : undefined"
               :rel="item.isExternal ? 'noopener noreferrer' : undefined"
               :aria-label="item.ariaLabel"
-              @click="handleNavClick($event); closeMobileMenu()"
+              @click="animateHamburger(); closeMobileMenu()"
             >
               <font-awesome-icon
                 v-if="item.icon"
@@ -210,7 +210,7 @@
                 >
                   <a
                     :href="subItem.url"
-                    @click="handleMobileDropdownItemClick(item.text, $event)"
+                    @click="animateHamburger(); closeMobileMenu()"
                   >
                     {{ subItem.text }}
                   </a>
@@ -244,7 +244,7 @@
         />
         <button
           class="site-header__hamburger "
-          :class="[{ 'is-active': isMobileMenuOpen }]"
+          :class="[{ 'is-active': isMobileMenuOpen }, { 'icon-bounce': mobileNavItemClicked }]"
           @click="toggleMobileMenu"
           aria-label="Toggle menu"
         >
@@ -304,6 +304,7 @@ export default {
       openMobileDropdownId: null,
       animatedParent: null,
       animatingLinks: new Set(),
+      mobileNavItemClicked: false,
     };
   },
   computed: {
@@ -422,10 +423,6 @@ export default {
       this.animatedParent = parentText;
       this.closeAllDropdowns();
       // Allow navigation to proceed; animation cleans up on transition
-    },
-    handleMobileDropdownItemClick(parentText) {
-      this.animatedParent = parentText;
-      this.closeMobileMenu();
     },
     safeBase64(str) {
       try {
@@ -645,20 +642,14 @@ export default {
         // Handle icon animation (like GitHub) - only prevent default for external links
         if (link.target === '_blank') {
           event.preventDefault();
-          iconElement.classList.add('nav-icon-bounce');
-          setTimeout(() => {
-            iconElement.classList.remove('nav-icon-bounce');
-            this.animatingLinks.delete(link);
-            const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
-            if (newWin) newWin.opener = null;
-          }, 600);
+          iconElement.classList.add('icon-bounce');
+          this.animatingLinks.delete(link);
+          const newWin = window.open(link.href, '_blank', 'noopener,noreferrer');
+          if (newWin) newWin.opener = null;
         } else {
           // Let internal navigation proceed normally for view transitions
-          iconElement.classList.add('nav-icon-bounce');
-          setTimeout(() => {
-            iconElement.classList.remove('nav-icon-bounce');
-            this.animatingLinks.delete(link);
-          }, 600);
+          iconElement.classList.add('icon-bounce');
+          this.animatingLinks.delete(link);
         }
       } else if (textElement && textElement.textContent.trim()) {
         // Handle text animation with border effect - don't prevent default
@@ -701,13 +692,12 @@ export default {
       // Add bounce class to the icon
       const img = link.querySelector('img');
       if (img) {
-        img.classList.add('ai-icon-bounce');
-
-        setTimeout(() => {
-          img.classList.remove('ai-icon-bounce');
-          this.animatingLinks.delete(link);
-        }, 600);
+        img.classList.add('icon-bounce');
+        this.animatingLinks.delete(link);
       }
+    },
+    animateHamburger() {
+      this.mobileNavItemClicked = true;
     }
   }
 };
@@ -1206,8 +1196,8 @@ export default {
   animation: navBorderGrow 0.8s ease-out forwards;
 }
 
-/* AI icon bounce animation */
-@keyframes aiBounce {
+/* Icon bounce animation */
+@keyframes iconBounce {
   0%, 100% {
     transform: translateY(0);
   }
@@ -1222,8 +1212,8 @@ export default {
   }
 }
 
-:deep(.ai-icon-bounce), :deep(.nav-icon-bounce) {
-  animation: aiBounce 0.6s ease-out;
+:deep(.icon-bounce) {
+  animation: iconBounce 0.6s ease-out infinite;
 }
 
 </style>
