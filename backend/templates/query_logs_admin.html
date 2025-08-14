@@ -563,17 +563,14 @@
                 parts.push(location.city);
             }
             
-            // Add region if it exists, is not empty, and is different from city
-            if (location.region && location.region.trim() !== '' && location.region !== location.city) {
+            // Add region if it exists and is not empty
+            if (location.region && location.region.trim() !== '') {
                 parts.push(location.region);
             }
             
             // Add country information
             if (location.country_name && location.country_name.trim() !== '') {
-                // Don't add country name if it's the same as city (for local networks)
-                if (location.country_name !== location.city) {
-                    parts.push(location.country_name);
-                }
+                parts.push(location.country_name);
             } else if (location.country_code && location.country_code.trim() !== '') {
                 parts.push(location.country_code);
             }
