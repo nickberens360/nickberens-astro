@@ -6,7 +6,6 @@ const EEA_COUNTRIES = [
 
 class GeolocationService {
   constructor() {
-    this.cache = new Map();
     this.cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
   }
 
@@ -163,14 +162,10 @@ class GeolocationService {
     }
   }
 
-  isEEACountry(countryCode) {
-    return EEA_COUNTRIES.includes(countryCode);
-  }
 
   // Clear cache (useful for testing)
   clearCache() {
     localStorage.removeItem('user-location');
-    this.cache.clear();
   }
 }
 

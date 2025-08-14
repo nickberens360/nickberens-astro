@@ -57,6 +57,14 @@
 <script>
 import { geolocationService } from '../utils/geolocation.js'
 
+// Constants for localStorage keys and consent statuses
+const CONSENT_KEY = 'analytics-consent'
+const CONSENT_STATUS = {
+  ACCEPTED: 'accepted',
+  DECLINED: 'declined',
+  AUTO_ACCEPTED: 'auto-accepted'
+}
+
 export default {
   name: 'ConsentBanner',
   data() {
@@ -72,60 +80,52 @@ export default {
   methods: {
     async checkLocationAndConsent() {
       try {
-        // Get user location
         this.locationData = await geolocationService.getUserLocation()
-        
-        // Check existing consent
-        const consent = localStorage.getItem('analytics-consent')
-        
         if (this.locationData.isEEA) {
-          // EEA user - need consent
-          if (!consent) {
-            this.showBanner = true
-          } else if (consent === 'accepted') {
-            this.loadGoogleAnalytics()
-          }
+          this.handleExistingConsent()
         } else {
           // Non-EEA user - automatically load GA
           this.loadGoogleAnalytics()
-          // Store automatic consent for consistency
-          if (!consent) {
-            localStorage.setItem('analytics-consent', 'auto-accepted')
+          if (!localStorage.getItem(CONSENT_KEY)) {
+            localStorage.setItem(CONSENT_KEY, CONSENT_STATUS.AUTO_ACCEPTED)
           }
         }
       } catch (error) {
-        console.warn('Location detection failed, showing consent banner:', error)
-        // Fallback: show banner if location detection fails
-        const consent = localStorage.getItem('analytics-consent')
-        if (!consent) {
-          this.showBanner = true
-        } else if (consent === 'accepted') {
-          this.loadGoogleAnalytics()
-        }
+        console.warn('Location detection failed, using fallback to require consent:', error)
+        this.handleExistingConsent()
       } finally {
         this.isCheckingLocation = false
       }
     },
+    handleExistingConsent() {
+      const consent = localStorage.getItem(CONSENT_KEY)
+      if (consent === CONSENT_STATUS.ACCEPTED) {
+        this.loadGoogleAnalytics()
+      } else if (consent !== CONSENT_STATUS.DECLINED) {
+        this.showBanner = true
+      }
+    },
     acceptCookies() {
-      localStorage.setItem('analytics-consent', 'accepted')
+      localStorage.setItem(CONSENT_KEY, CONSENT_STATUS.ACCEPTED)
       this.showBanner = false
       this.loadGoogleAnalytics()
     },
     declineCookies() {
-      localStorage.setItem('analytics-consent', 'declined')
+      localStorage.setItem(CONSENT_KEY, CONSENT_STATUS.DECLINED)
       this.showBanner = false
     },
     loadGoogleAnalytics() {
       const gaTrackingId = import.meta.env.PUBLIC_GA_TRACKING_ID
       if (!gaTrackingId) return
 
-      // Check if GA is already loaded
-      if (window.gtag) return
+      // Check if GA is already loaded or script tag exists
+      const gaScriptSrc = `https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`
+      if (window.gtag || document.querySelector(`script[src="${gaScriptSrc}"]`)) return
 
       // Load Google Analytics script
       const script = document.createElement('script')
       script.async = true
-      script.src = `https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`
+      script.src = gaScriptSrc
       document.head.appendChild(script)
 
       // Initialize GA when script loads
