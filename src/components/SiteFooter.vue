@@ -11,7 +11,10 @@
           <span class="font-bold">© 2025 Nick Berens</span>
         </p>
         <p class="site-footer__text">
-          <span class="git">latest-commit: <span class="git-paren">(</span><span class="git-hash">
+          <span class="git">OK ❤️ you byyyye.</span>
+          <span v-if="false" class="git">latest-commit: <span
+            class="git-paren">(
+          </span><span class="git-hash">
             <span class="tooltip-container">
               <a :href="`${repoUrl}/commit/${commitHash}`" target="_blank" rel="noopener noreferrer">
                 {{ commitHash }}
