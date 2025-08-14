@@ -5,7 +5,6 @@
       :class="{ 'is-visible': isMobile && isMobileMenuOpen }"
       @click="closeMobileMenu"
     ></div>
-
     <div
       class="chat-history-drawer"
       :class="[
@@ -19,11 +18,7 @@
     >
       <div class="drawer-content">
       <div class="drawer-header">
-        <div
-          v-if="!isMobile"
-          class="button-group"
-          :class="{ 'button-group--stacked': !isVisible && !isMobile }"
-        >
+        <div v-if="!isMobile">
           <button
             v-if="!isMobile"
             @click="handleToggleVisibility"
@@ -61,7 +56,8 @@
           />
           <span
             v-if="isVisible || isMobile"
-            class="ml-2"
+            class="ml-2 fadeable-content"
+            :class="{ 'content-visible': isDrawerFullyVisible }"
           >New Chat</span>
         </button>
         <button
@@ -77,14 +73,16 @@
       </div>
       <p
         v-if="isVisible || isMobile"
-        class="history-heading"
+        class="history-heading fadeable-content"
+        :class="{ 'content-visible': isDrawerFullyVisible }"
       >Recent</p>
       <div
         :class="{ 'disabled-history-items': hasTypingMessage || isProcessing }"
       >
         <div
           v-if="isVisible || isMobile"
-          class="history-list"
+          class="history-list fadeable-content"
+          :class="{ 'content-visible': isDrawerFullyVisible }"
         >
           <div
             v-for="chat in chatList"
@@ -165,6 +163,7 @@ export default {
     const isVisible = useStore(isChatHistoryVisible);
     const isProcessing = useStore(isChatProcessing);
     const mobileMenuOpen = useStore(isMobileMenuOpen);
+    const isDrawerFullyVisible = ref(false);
 
     // Use mobile detection composable
     const { isMobile } = useMobile();
@@ -202,7 +201,18 @@ export default {
     });
 
     const toggleVisibility = () => {
-      isChatHistoryVisible.set(!isVisible.value);
+      const newVisibilityState = !isVisible.value;
+      isChatHistoryVisible.set(newVisibilityState);
+
+      if (newVisibilityState) {
+        // When opening: wait for drawer animation to complete before showing content
+        setTimeout(() => {
+          isDrawerFullyVisible.value = true;
+        }, 300); // Match the CSS transition duration
+      } else {
+        // When closing: hide content immediately
+        isDrawerFullyVisible.value = false;
+      }
     };
 
     const handleToggleVisibility = () => {
@@ -213,6 +223,7 @@ export default {
         // On desktop, toggle the rail state
         toggleVisibility();
       }
+
     };
 
     const closeMobileMenu = () => {
@@ -233,6 +244,7 @@ export default {
         isChatHistoryVisible.set(false);
         // Close mobile menu when transitioning to mobile
         isMobileMenuOpen.set(false);
+        isDrawerFullyVisible.value = false;
       } else if (!newIsMobile && oldIsMobile) {
         // Transitioning from mobile to desktop
         if (wasVisibleBeforeCollapse.value !== null) {
@@ -241,6 +253,27 @@ export default {
         }
         // Ensure mobile menu is closed when going to desktop
         isMobileMenuOpen.set(false);
+        // Update drawer content visibility based on desktop state
+        if (isVisible.value) {
+          setTimeout(() => {
+            isDrawerFullyVisible.value = true;
+          }, 300);
+        }
+      }
+    });
+
+    // Watch for mobile menu changes to handle content visibility
+    watch(mobileMenuOpen, (isOpen) => {
+      if (isMobile.value) {
+        if (isOpen) {
+          // When opening mobile menu: wait for animation
+          setTimeout(() => {
+            isDrawerFullyVisible.value = true;
+          }, 300);
+        } else {
+          // When closing mobile menu: hide content immediately
+          isDrawerFullyVisible.value = false;
+        }
       }
     });
 
@@ -285,6 +318,8 @@ export default {
 
     onMounted(() => {
       // Note: Resize listener is now handled by useMobile composable
+      // Set initial state for drawer content visibility
+      isDrawerFullyVisible.value = isVisible.value || (isMobile.value && mobileMenuOpen.value);
     });
 
     // Add the clearLocalStorage function
@@ -308,7 +343,8 @@ export default {
       isMobileMenuOpen: mobileMenuOpen,
       handleToggleVisibility,
       closeMobileMenu,
-      clearLocalStorage
+      clearLocalStorage,
+      isDrawerFullyVisible
     };
   },
 };
@@ -380,8 +416,14 @@ export default {
   z-index: var(--z-index-base);
 }
 
-.button-group--stacked {
-  flex-direction: column;
+/* Fadeable content that should transition */
+.fadeable-content {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.fadeable-content.content-visible {
+  opacity: 1;
 }
 
 .base-icon-button {
@@ -425,16 +467,12 @@ export default {
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
-
-.button-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.collapse-icon-button {
   margin-bottom: 1.5rem;
 }
 
 .drawer-header {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   position: relative;
 }
 
@@ -442,10 +480,6 @@ export default {
   margin-top: 0;
   margin-bottom: 1rem;
   font-size: .75rem;
-}
-
-.collapsed .collapse-icon-button {
-  margin-bottom: 1rem;
 }
 
 .collapsed .history-item-collapsed {
