@@ -1,6 +1,7 @@
 beautifulsoup4
 chromadb
 fastapi
+jinja2
 langchain
 langchain-anthropic
 langchain-community

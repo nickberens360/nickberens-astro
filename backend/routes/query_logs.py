@@ -26,7 +26,8 @@ router = APIRouter()
 security = HTTPBearer()
 
 # Initialize templates
-templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates")
+template_dir = Path(__file__).parent.parent / "templates"
+templates = Jinja2Templates(directory=str(template_dir))
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
