@@ -192,6 +192,7 @@ class QueryLogger:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         query_type: Optional[str] = None,
+        exclude_ips: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Retrieve logs with optional filtering.
@@ -201,11 +202,16 @@ class QueryLogger:
             start_date: Start date filter (ISO format)
             end_date: End date filter (ISO format)
             query_type: Filter by query type
+            exclude_ips: Comma-separated list of IPs to exclude
 
         Returns:
             List of log entries matching the criteria
         """
         try:
+            # Prepare excluded IPs set once, outside the loop for performance
+            excluded_set = set()
+            if exclude_ips:
+                excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
 
             def _log_stream():
                 """Stream logs from file without loading all into memory."""
@@ -227,6 +233,7 @@ class QueryLogger:
                 if (not start_date or log.get("timestamp", "") >= start_date)
                 and (not end_date or log.get("timestamp", "") <= end_date)
                 and (not query_type or log.get("query_type") == query_type)
+                and (not excluded_set or log.get("client_ip") not in excluded_set)
             )
 
             # Sort logs (requires materializing the generator)
@@ -259,6 +266,11 @@ class QueryLogger:
             earliest_ts: Optional[str] = None
             latest_ts: Optional[str] = None
 
+            # Prepare excluded IPs set once, outside the loop for performance
+            excluded_set = set()
+            if exclude_ips:
+                excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
+
             try:
                 with open(self.log_file_path, "r") as f:
                     for line in f:
@@ -272,10 +284,8 @@ class QueryLogger:
 
                         # Skip this log entry if it's from the excluded IPs
                         client_ip = log.get("client_ip")
-                        if exclude_ips:
-                            excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
-                            if client_ip in excluded_set:
-                                continue
+                        if excluded_set and client_ip in excluded_set:
+                            continue
 
                         total_queries += 1
 

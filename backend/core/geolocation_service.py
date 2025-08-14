@@ -7,6 +7,7 @@ This module provides functionality to:
 - Handle errors gracefully
 """
 
+import ipaddress
 import json
 import logging
 from functools import lru_cache
@@ -92,30 +93,14 @@ class GeolocationService:
 
     def _is_local_ip(self, ip_address: str) -> bool:
         """Check if an IP address is local/private."""
-        local_prefixes = [
-            "127.",  # Loopback
-            "10.",  # Private network
-            "172.",  # Private network (needs more checking)
-            "192.168.",  # Private network
-            "::1",  # IPv6 loopback
-            "fe80:",  # IPv6 link-local
-            "localhost",
-        ]
-
-        for prefix in local_prefixes:
-            if ip_address.startswith(prefix):
-                return True
-
-        # Check 172.16.0.0 - 172.31.255.255
-        if ip_address.startswith("172."):
-            try:
-                second_octet = int(ip_address.split(".")[1])
-                if 16 <= second_octet <= 31:
-                    return True
-            except (IndexError, ValueError):
-                pass
-
-        return False
+        if ip_address.lower() == "localhost":
+            return True
+        try:
+            ip = ipaddress.ip_address(ip_address)
+            return ip.is_private or ip.is_loopback or ip.is_link_local
+        except ValueError:
+            # Not a valid IP address, so not a local one we can handle.
+            return False
 
     def _empty_location(self, error: Optional[str] = None) -> Dict[str, Optional[str]]:
         """Return an empty location dictionary."""

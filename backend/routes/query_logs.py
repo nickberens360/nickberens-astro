@@ -99,12 +99,9 @@ async def get_query_logs(
     if query_type and query_type not in ["text", "image"]:
         raise HTTPException(status_code=400, detail="Invalid query_type. Must be 'text' or 'image'.")
 
-    logs = logger.get_logs(limit=limit, start_date=start_date, end_date=end_date, query_type=query_type)
-
-    # Filter out logs from excluded IPs if specified
-    if exclude_ips:
-        excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
-        logs = [log for log in logs if log.get("client_ip") not in excluded_set]
+    logs = logger.get_logs(
+        limit=limit, start_date=start_date, end_date=end_date, query_type=query_type, exclude_ips=exclude_ips
+    )
 
     return {
         "logs": logs,

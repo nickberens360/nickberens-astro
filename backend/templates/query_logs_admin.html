@@ -206,6 +206,22 @@
                 gap: 5px;
             }
         }
+
+        /* Location styling classes */
+        .location-known {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .location-hidden {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .location-unknown {
+            background: #fff3cd;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -332,23 +348,27 @@
             statusEl.className = type;
         }
 
+        // Helper function to build exclude_ips parameter
+        function buildExcludeIpsParam(hideMyIP) {
+            if (!hideMyIP) return '';
+            
+            const myIPHash = document.getElementById('myIPHash').value;
+            const myLocalIPHash = document.getElementById('myLocalIPHash').value;
+            const ipsToExclude = [myIPHash, myLocalIPHash].filter(ip => ip).join(',');
+            
+            return ipsToExclude ? `exclude_ips=${ipsToExclude}` : '';
+        }
+
         // Stats loading
         function loadStats() {
             if (!authToken) return;
             
-            const myIPHash = document.getElementById('myIPHash').value;
-            const myLocalIPHash = document.getElementById('myLocalIPHash').value;
             let url = '/admin/query-logs/stats';
-            if (hideMyIP) {
-                const ipsToExclude = [myIPHash, myLocalIPHash].filter(ip => ip).join(',');
-                if (ipsToExclude) {
-                    url += `?exclude_ips=${ipsToExclude}`;
-                }
+            const excludeParam = buildExcludeIpsParam(hideMyIP);
+            if (excludeParam) {
+                url += `?${excludeParam}`;
             }
             
-            console.log('Loading stats with URL:', url);
-            console.log('Hide My IPs:', hideMyIP);
-
             fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
@@ -356,7 +376,6 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Stats response:', data);
                 currentStats = data.stats;
                 displayStats(data.stats);
             })
@@ -426,18 +445,14 @@
             const startDate = document.getElementById('startDateFilter').value;
             const endDate = document.getElementById('endDateFilter').value;
             const queryType = document.getElementById('queryTypeFilter').value;
-            const myIPHash = document.getElementById('myIPHash').value;
-            const myLocalIPHash = document.getElementById('myLocalIPHash').value;
-
             let url = `/admin/query-logs?limit=${limit}`;
             if (startDate) url += `&start_date=${startDate}`;
             if (endDate) url += `&end_date=${endDate}`;
             if (queryType) url += `&query_type=${queryType}`;
-            if (hideMyIP) {
-                const ipsToExclude = [myIPHash, myLocalIPHash].filter(ip => ip).join(',');
-                if (ipsToExclude) {
-                    url += `&exclude_ips=${ipsToExclude}`;
-                }
+            
+            const excludeParam = buildExcludeIpsParam(hideMyIP);
+            if (excludeParam) {
+                url += `&${excludeParam}`;
             }
 
             document.getElementById('logsContainer').innerHTML = '<div class="loading">Loading logs...</div>';
@@ -550,11 +565,11 @@
             }
             
             if (parts.length > 0) {
-                return `<span style="background: #d4edda; color: #155724;">📍 ${parts.join(', ')}</span>`;
+                return `<span class="location-known">📍 ${parts.join(', ')}</span>`;
             } else if (location.error === 'Anonymized IP') {
-                return '<span style="background: #f8d7da; color: #721c24;">📍 Location Hidden</span>';
+                return '<span class="location-hidden">📍 Location Hidden</span>';
             } else {
-                return '<span style="background: #fff3cd; color: #856404;">📍 Location Unknown</span>';
+                return '<span class="location-unknown">📍 Location Unknown</span>';
             }
         }
 
