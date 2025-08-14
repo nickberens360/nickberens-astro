@@ -10,7 +10,7 @@ This module provides functionality to:
 import ipaddress
 import json
 import logging
-from functools import lru_cache
+from collections import OrderedDict
 from typing import Dict, Optional
 
 import requests
@@ -19,14 +19,15 @@ import requests
 class GeolocationService:
     """Service for IP geolocation lookups with caching."""
 
-    def __init__(self):
+    def __init__(self, cache_size: int = 1000):
         """Initialize the GeolocationService."""
         self.logger = logging.getLogger(__name__)
         # Using ipapi.co free tier (1000 requests/day, no API key needed)
         self.base_url = "https://ipapi.co"
         self.timeout = 5  # seconds
+        self._cache: OrderedDict[str, Dict[str, Optional[str]]] = OrderedDict()
+        self._cache_size = cache_size
 
-    @lru_cache(maxsize=1000)
     def get_location(self, ip_address: str) -> Dict[str, Optional[str]]:
         """
         Get geolocation data for an IP address.
@@ -37,19 +38,29 @@ class GeolocationService:
         Returns:
             Dictionary with city, region (state), country_name, and country_code
         """
+        # Check cache first
+        if ip_address in self._cache:
+            # Move to end (mark as recently used)
+            self._cache.move_to_end(ip_address)
+            return self._cache[ip_address]
+
         # If it's an anonymized IP (starts with "anon_"), return empty location
         if ip_address.startswith("anon_"):
-            return {"city": None, "region": None, "country_name": None, "country_code": None, "error": "Anonymized IP"}
+            result = {"city": None, "region": None, "country_name": None, "country_code": None, "error": "Anonymized IP"}
+            self._cache_result(ip_address, result)
+            return result
 
         # Handle local IPs
         if self._is_local_ip(ip_address):
-            return {
+            result = {
                 "city": "Local",
                 "region": "Local",
                 "country_name": "Local Network",
                 "country_code": "LOCAL",
                 "error": None,
             }
+            self._cache_result(ip_address, result)
+            return result
 
         try:
             # Make API request
@@ -62,21 +73,25 @@ class GeolocationService:
                 # Check for errors in response
                 if data.get("error"):
                     self.logger.warning(f"Geolocation API error for {ip_address}: {data.get('reason')}")
-                    return {
+                    result = {
                         "city": None,
                         "region": None,
                         "country_name": None,
                         "country_code": None,
                         "error": data.get("reason", "Unknown error"),
                     }
+                    self._cache_result(ip_address, result)
+                    return result
 
-                return {
+                result = {
                     "city": data.get("city"),
                     "region": data.get("region"),  # State/Province
                     "country_name": data.get("country_name"),
                     "country_code": data.get("country_code"),
                     "error": None,
                 }
+                self._cache_result(ip_address, result)
+                return result
             else:
                 self.logger.warning(f"Geolocation API returned status {response.status_code} for {ip_address}")
                 return self._empty_location("API error")
@@ -101,6 +116,13 @@ class GeolocationService:
         except ValueError:
             # Not a valid IP address, so not a local one we can handle.
             return False
+
+    def _cache_result(self, ip_address: str, result: Dict[str, Optional[str]]) -> None:
+        """Cache a geolocation result with LRU eviction."""
+        # Remove oldest item if cache is full
+        if len(self._cache) >= self._cache_size:
+            self._cache.popitem(last=False)
+        self._cache[ip_address] = result
 
     def _empty_location(self, error: Optional[str] = None) -> Dict[str, Optional[str]]:
         """Return an empty location dictionary."""
