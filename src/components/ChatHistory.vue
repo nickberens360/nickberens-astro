@@ -63,7 +63,8 @@
         <button
           v-if="isMobile"
           @click="closeMobileMenu"
-          class="base-icon-button mobile-close-button"
+          class="base-icon-button mobile-close-button fadeable-content"
+          :class="{ 'content-visible': isDrawerFullyVisible }"
         >
           <font-awesome-icon
             class="base-icon"
