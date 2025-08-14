@@ -18,18 +18,23 @@ const {
 // Resolve absolute image URL from the current site origin (or configured Astro.site)
 const base = Astro.site?.origin || Astro.url.origin;
 const ogImgUrl = ogImage.startsWith('http') ? ogImage : new URL(ogImage, base).href;
+const gaTrackingId = import.meta.env.PUBLIC_GA_TRACKING_ID;
 ---
 
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YRSSE66Z31"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+  {gaTrackingId && (
+    <>
+      <!-- Google tag (gtag.js) -->
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`}></script>
+      <script define:vars={{ gaTrackingId }}>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
 
-    gtag('config', 'G-YRSSE66Z31');
-  </script>
+        gtag('config', gaTrackingId);
+      </script>
+    </>
+  )}
 
   <meta charset="utf-8" />
   <link rel="icon" type="image/svg+xml" href={favicon} />
