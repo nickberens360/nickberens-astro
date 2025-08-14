@@ -9,6 +9,8 @@ dist/
 claude-exports/
 podman-commands.sh
 
+RAG_IMPROVEMENTS.md
+
 # dependencies
 node_modules/
 
