@@ -12,8 +12,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
+from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.templating import Jinja2Templates
@@ -211,8 +212,6 @@ async def query_logs_admin_page(request: Request):
     my_local_ip_hash = logger.anonymize_ip("127.0.0.1")  # Always include localhost
 
     # Render template with dynamic values
-    return templates.TemplateResponse("query_logs_admin.html", {
-        "request": request,
-        "my_ip_hash": my_ip_hash,
-        "my_local_ip_hash": my_local_ip_hash
-    })
+    return templates.TemplateResponse(
+        "query_logs_admin.html", {"request": request, "my_ip_hash": my_ip_hash, "my_local_ip_hash": my_local_ip_hash}
+    )

@@ -22,8 +22,11 @@ class GeolocationService:
     def __init__(self, cache_size: int = 1000):
         """Initialize the GeolocationService."""
         self.logger = logging.getLogger(__name__)
-        # Using ipapi.co free tier (1000 requests/day, no API key needed)
-        self.base_url = "https://ipapi.co"
+        # Using multiple APIs for fallback
+        self.apis = [
+            {"url": "https://ipapi.co", "format": "ipapi"},
+            {"url": "https://ip-api.com/json", "format": "ip-api"},
+        ]
         self.timeout = 5  # seconds
         self._cache: OrderedDict[str, Dict[str, Optional[str]]] = OrderedDict()
         self._cache_size = cache_size
@@ -46,7 +49,13 @@ class GeolocationService:
 
         # If it's an anonymized IP (starts with "anon_"), return empty location
         if ip_address.startswith("anon_"):
-            result = {"city": None, "region": None, "country_name": None, "country_code": None, "error": "Anonymized IP"}
+            result = {
+                "city": None,
+                "region": None,
+                "country_name": None,
+                "country_code": None,
+                "error": "Anonymized IP",
+            }
             self._cache_result(ip_address, result)
             return result
 
@@ -62,49 +71,105 @@ class GeolocationService:
             self._cache_result(ip_address, result)
             return result
 
-        try:
-            # Make API request
-            url = f"{self.base_url}/{ip_address}/json/"
-            response = requests.get(url, timeout=self.timeout)
+        # Try each API in order until one succeeds
+        for api in self.apis:
+            try:
+                if api["format"] == "ipapi":
+                    url = f"{api['url']}/{ip_address}/json/"
+                elif api["format"] == "ip-api":
+                    url = f"{api['url']}/{ip_address}"
+                else:
+                    continue  # Skip unsupported formats for geolocation
 
-            if response.status_code == 200:
-                data = response.json()
+                self.logger.debug(f"Trying geolocation API: {api['url']}")
+                response = requests.get(url, timeout=self.timeout)
 
-                # Check for errors in response
-                if data.get("error"):
-                    self.logger.warning(f"Geolocation API error for {ip_address}: {data.get('reason')}")
-                    result = {
-                        "city": None,
-                        "region": None,
-                        "country_name": None,
-                        "country_code": None,
-                        "error": data.get("reason", "Unknown error"),
-                    }
+                if response.status_code == 200:
+                    data = response.json()
+
+                    # Parse response based on API format
+                    if api["format"] == "ipapi":
+                        # Check for errors in ipapi.co response
+                        if data.get("error"):
+                            self.logger.warning(
+                                f"ipapi.co error for {self._redact_ip(ip_address)}: {data.get('reason')}"
+                            )
+                            continue  # Try next API
+
+                        result = {
+                            "city": data.get("city"),
+                            "region": data.get("region"),
+                            "country_name": data.get("country_name"),
+                            "country_code": data.get("country_code"),
+                            "error": None,
+                        }
+
+                    elif api["format"] == "ip-api":
+                        # Parse ip-api.com response
+                        if data.get("status") == "fail":
+                            self.logger.warning(
+                                f"ip-api.com error for {self._redact_ip(ip_address)}: {data.get('message')}"
+                            )
+                            continue  # Try next API
+
+                        result = {
+                            "city": data.get("city"),
+                            "region": data.get("regionName"),  # ip-api.com uses "regionName"
+                            "country_name": data.get("country"),
+                            "country_code": data.get("countryCode"),
+                            "error": None,
+                        }
+
+                    else:
+                        continue  # Unsupported format
+
+                    self.logger.debug(
+                        f"Successfully got geolocation for {self._redact_ip(ip_address)} from {api['url']}"
+                    )
                     self._cache_result(ip_address, result)
                     return result
 
-                result = {
-                    "city": data.get("city"),
-                    "region": data.get("region"),  # State/Province
-                    "country_name": data.get("country_name"),
-                    "country_code": data.get("country_code"),
-                    "error": None,
-                }
-                self._cache_result(ip_address, result)
-                return result
-            else:
-                self.logger.warning(f"Geolocation API returned status {response.status_code} for {ip_address}")
-                return self._empty_location("API error")
+                else:
+                    self.logger.warning(
+                        f"API {api['url']} returned status {response.status_code} for {self._redact_ip(ip_address)}"
+                    )
+                    continue  # Try next API
 
-        except requests.RequestException as e:
-            self.logger.error(f"Failed to get geolocation for {ip_address}: {e}")
-            return self._empty_location("Request failed")
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse geolocation response for {ip_address}: {e}")
-            return self._empty_location("Invalid response")
-        except Exception as e:
-            self.logger.error(f"Unexpected error getting geolocation for {ip_address}: {e}")
-            return self._empty_location("Unexpected error")
+            except requests.RequestException as e:
+                self.logger.warning(f"API {api['url']} request failed for {self._redact_ip(ip_address)}: {e}")
+                continue  # Try next API
+            except json.JSONDecodeError as e:
+                self.logger.warning(f"API {api['url']} returned invalid JSON for {self._redact_ip(ip_address)}: {e}")
+                continue  # Try next API
+            except Exception as e:
+                self.logger.warning(f"Unexpected error with API {api['url']} for {self._redact_ip(ip_address)}: {e}")
+                continue  # Try next API
+
+        # All APIs failed
+        self.logger.error(f"All geolocation APIs failed for {self._redact_ip(ip_address)}")
+        return self._empty_location("All APIs failed")
+
+    def _redact_ip(self, ip: str) -> str:
+        """Redact IP address for privacy in logs."""
+        try:
+            obj = ipaddress.ip_address(ip)
+            if obj.version == 4:
+                # Mask last octet
+                parts = ip.split(".")
+                parts[-1] = "xxx"
+                return ".".join(parts)
+            # IPv6: mask last segments
+            if ":" in ip:
+                parts = ip.rsplit(":", 2)
+                return f"{parts[0]}:xxxx:xxxx"
+            return "<invalid-ip>"
+        except ValueError:
+            # Handle special cases like localhost or invalid IPs
+            if ip.lower() == "localhost":
+                return "localhost"
+            if ip.startswith("anon_"):
+                return "anon_xxx"
+            return "<invalid-ip>"
 
     def _is_local_ip(self, ip_address: str) -> bool:
         """Check if an IP address is local/private."""
