@@ -935,6 +935,8 @@ export default {
   z-index: var(--z-index-drawer);
   padding: 0.5rem;
   border-radius: 50%;
+  height: 40px;
+  width: 40px;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 

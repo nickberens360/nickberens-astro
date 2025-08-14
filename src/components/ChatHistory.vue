@@ -443,6 +443,7 @@ export default {
 .base-icon {
   font-size: 16px;
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .mobile-close-button {
@@ -458,6 +459,9 @@ export default {
 
 .new-chat-button {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   left: 4px;
   border: none;
   background: none !important;
@@ -466,13 +470,15 @@ export default {
   color: white;
   cursor: pointer;
   transition: opacity 0.2s ease;
+  height: 22px;
 }
+
 .collapse-icon-button {
   margin-bottom: 1.5rem;
 }
 
 .drawer-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   position: relative;
 }
 
