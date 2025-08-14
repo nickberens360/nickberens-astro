@@ -5,7 +5,6 @@
       :class="{ 'is-visible': isMobile && isMobileMenuOpen }"
       @click="closeMobileMenu"
     ></div>
-
     <div
       class="chat-history-drawer"
       :class="[
@@ -19,13 +18,8 @@
     >
       <div class="drawer-content">
       <div class="drawer-header">
-        <div
-          v-if="!isMobile"
-          class="button-group"
-          :class="{ 'button-group--stacked': !isVisible && !isMobile }"
-        >
+        <div v-if="!isMobile">
           <button
-            v-if="!isMobile"
             @click="handleToggleVisibility"
             class="base-icon-button collapse-icon-button"
           >
@@ -61,13 +55,15 @@
           />
           <span
             v-if="isVisible || isMobile"
-            class="ml-2"
+            class="ml-2 fadeable-content"
+            :class="{ 'content-visible': isDrawerFullyVisible }"
           >New Chat</span>
         </button>
         <button
           v-if="isMobile"
           @click="closeMobileMenu"
-          class="base-icon-button mobile-close-button"
+          class="base-icon-button mobile-close-button fadeable-content"
+          :class="{ 'content-visible': isDrawerFullyVisible }"
         >
           <font-awesome-icon
             class="base-icon"
@@ -77,14 +73,16 @@
       </div>
       <p
         v-if="isVisible || isMobile"
-        class="history-heading"
+        class="history-heading fadeable-content"
+        :class="{ 'content-visible': isDrawerFullyVisible }"
       >Recent</p>
       <div
         :class="{ 'disabled-history-items': hasTypingMessage || isProcessing }"
       >
         <div
           v-if="isVisible || isMobile"
-          class="history-list"
+          class="history-list fadeable-content"
+          :class="{ 'content-visible': isDrawerFullyVisible }"
         >
           <div
             v-for="chat in chatList"
@@ -165,6 +163,11 @@ export default {
     const isVisible = useStore(isChatHistoryVisible);
     const isProcessing = useStore(isChatProcessing);
     const mobileMenuOpen = useStore(isMobileMenuOpen);
+    const isDrawerFullyVisible = ref(false);
+    
+    // Constants
+    const DRAWER_ANIMATION_DURATION = 300; // Match the CSS transition duration
+    let fadeTimer;
 
     // Use mobile detection composable
     const { isMobile } = useMobile();
@@ -201,8 +204,22 @@ export default {
       return Object.values(chats.value).sort((a, b) => b.id.localeCompare(a.id));
     });
 
+    // Helper function to manage drawer content visibility
+    const setDrawerContentVisibility = (visible) => {
+      clearTimeout(fadeTimer);
+      if (visible) {
+        fadeTimer = setTimeout(() => {
+          isDrawerFullyVisible.value = true;
+        }, DRAWER_ANIMATION_DURATION);
+      } else {
+        isDrawerFullyVisible.value = false;
+      }
+    };
+
     const toggleVisibility = () => {
-      isChatHistoryVisible.set(!isVisible.value);
+      const newVisibilityState = !isVisible.value;
+      isChatHistoryVisible.set(newVisibilityState);
+      setDrawerContentVisibility(newVisibilityState);
     };
 
     const handleToggleVisibility = () => {
@@ -213,6 +230,7 @@ export default {
         // On desktop, toggle the rail state
         toggleVisibility();
       }
+
     };
 
     const closeMobileMenu = () => {
@@ -233,6 +251,7 @@ export default {
         isChatHistoryVisible.set(false);
         // Close mobile menu when transitioning to mobile
         isMobileMenuOpen.set(false);
+        isDrawerFullyVisible.value = false;
       } else if (!newIsMobile && oldIsMobile) {
         // Transitioning from mobile to desktop
         if (wasVisibleBeforeCollapse.value !== null) {
@@ -241,6 +260,17 @@ export default {
         }
         // Ensure mobile menu is closed when going to desktop
         isMobileMenuOpen.set(false);
+        // Update drawer content visibility based on desktop state
+        if (isVisible.value) {
+          setDrawerContentVisibility(true);
+        }
+      }
+    });
+
+    // Watch for mobile menu changes to handle content visibility
+    watch(mobileMenuOpen, (isOpen) => {
+      if (isMobile.value) {
+        setDrawerContentVisibility(isOpen);
       }
     });
 
@@ -285,6 +315,12 @@ export default {
 
     onMounted(() => {
       // Note: Resize listener is now handled by useMobile composable
+      // Set initial state for drawer content visibility
+      isDrawerFullyVisible.value = isVisible.value || (isMobile.value && mobileMenuOpen.value);
+    });
+
+    onUnmounted(() => {
+      clearTimeout(fadeTimer);
     });
 
     // Add the clearLocalStorage function
@@ -308,7 +344,8 @@ export default {
       isMobileMenuOpen: mobileMenuOpen,
       handleToggleVisibility,
       closeMobileMenu,
-      clearLocalStorage
+      clearLocalStorage,
+      isDrawerFullyVisible
     };
   },
 };
@@ -380,8 +417,16 @@ export default {
   z-index: var(--z-index-base);
 }
 
-.button-group--stacked {
-  flex-direction: column;
+/* Fadeable content that should transition */
+.fadeable-content {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.fadeable-content.content-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .base-icon-button {
@@ -401,6 +446,7 @@ export default {
 .base-icon {
   font-size: 16px;
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .mobile-close-button {
@@ -416,6 +462,9 @@ export default {
 
 .new-chat-button {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   left: 4px;
   border: none;
   background: none !important;
@@ -424,12 +473,10 @@ export default {
   color: white;
   cursor: pointer;
   transition: opacity 0.2s ease;
+  height: 22px;
 }
 
-.button-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.collapse-icon-button {
   margin-bottom: 1.5rem;
 }
 
@@ -442,10 +489,6 @@ export default {
   margin-top: 0;
   margin-bottom: 1rem;
   font-size: .75rem;
-}
-
-.collapsed .collapse-icon-button {
-  margin-bottom: 1rem;
 }
 
 .collapsed .history-item-collapsed {
