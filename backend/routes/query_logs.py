@@ -12,10 +12,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi import Query as FastAPIQuery
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.templating import Jinja2Templates
 
 from ..core.config import AppConfig
 from ..core.query_logger import get_query_logger
@@ -23,6 +24,9 @@ from ..core.query_logger import get_query_logger
 # Initialize router and security
 router = APIRouter()
 security = HTTPBearer()
+
+# Initialize templates
+templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates")
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
@@ -188,17 +192,26 @@ async def query_logs_health():
 
 
 @router.get("/query-logs/admin", response_class=HTMLResponse)
-async def query_logs_admin_page():
+async def query_logs_admin_page(request: Request):
     """
     Serve the query logs admin web interface.
 
     This endpoint serves a web interface for managing query logs.
     No authentication required for serving the page (auth happens via API calls).
     """
-    template_path = Path(__file__).parent.parent / "templates" / "query_logs_admin.html"
+    # Get the client IP address
+    client_ip = request.client.host if request.client else "127.0.0.1"
 
-    try:
-        with open(template_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Admin page template not found")
+    # Get query logger to access anonymization method
+    logger = get_query_logger()
+
+    # Calculate anonymized IP hashes for the current user
+    my_ip_hash = logger.anonymize_ip(client_ip)
+    my_local_ip_hash = logger.anonymize_ip("127.0.0.1")  # Always include localhost
+
+    # Render template with dynamic values
+    return templates.TemplateResponse("query_logs_admin.html", {
+        "request": request,
+        "my_ip_hash": my_ip_hash,
+        "my_local_ip_hash": my_local_ip_hash
+    })
