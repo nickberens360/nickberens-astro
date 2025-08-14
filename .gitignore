@@ -10,6 +10,7 @@ claude-exports/
 podman-commands.sh
 
 RAG_IMPROVEMENTS.md
+RAG_Improvement_Plan.md
 
 # dependencies
 node_modules/
