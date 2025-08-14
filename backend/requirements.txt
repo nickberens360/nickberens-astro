@@ -13,6 +13,7 @@ python-docx
 python-dotenv
 python-magic
 pyyaml>=6.0
+requests
 slowapi
 thefuzz[speed]
 unstructured

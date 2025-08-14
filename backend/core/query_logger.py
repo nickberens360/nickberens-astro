@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from .config import AppConfig
+from .geolocation_service import get_geolocation_service
 
 
 class QueryLogger:
@@ -131,12 +132,17 @@ class QueryLogger:
         if not self.should_log_ip(client_ip):
             return
 
+        # Get geolocation data before anonymizing
+        geo_service = get_geolocation_service()
+        location_data = geo_service.get_location(client_ip)
+
         # Anonymize IP address before logging
         anonymized_ip = self.anonymize_ip(client_ip)
 
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),
             "client_ip": anonymized_ip,
+            "location": location_data,  # Add location data
             "question": question,
             "response": response,
             "model_used": model_used,
@@ -235,9 +241,12 @@ class QueryLogger:
             self.logger.error(f"Failed to retrieve logs: {e}")
             return []
 
-    def get_log_stats(self) -> Dict[str, Any]:
+    def get_log_stats(self, exclude_ips: Optional[str] = None) -> Dict[str, Any]:
         """
         Get statistics about the query logs.
+
+        Args:
+            exclude_ips: Optional comma-separated list of IPs to exclude from statistics
 
         Returns:
             Dictionary containing log statistics
@@ -261,9 +270,15 @@ class QueryLogger:
                         except json.JSONDecodeError:
                             continue
 
+                        # Skip this log entry if it's from the excluded IPs
+                        client_ip = log.get("client_ip")
+                        if exclude_ips:
+                            excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
+                            if client_ip in excluded_set:
+                                continue
+
                         total_queries += 1
 
-                        client_ip = log.get("client_ip")
                         if client_ip:
                             unique_ips.add(client_ip)
 

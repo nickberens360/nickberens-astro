@@ -259,10 +259,14 @@
                         </select>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center;">
                     <button onclick="loadLogs()">Refresh Logs</button>
                     <button onclick="loadStats()">Refresh Stats</button>
+                    <button onclick="toggleMyIP()" id="toggleIPBtn" style="background: #28a745;">Show My IPs</button>
                     <button onclick="clearLogs()" class="danger-btn">Clear All Logs</button>
+                    <!-- Multiple IP hashes: remote IP and likely localhost -->
+                    <input type="hidden" id="myIPHash" value="anon_5f31c09913dfc78f">
+                    <input type="hidden" id="myLocalIPHash" value="anon_2cf192ca90d234c4">
                 </div>
             </div>
 
@@ -278,6 +282,7 @@
     <script>
         let authToken = '';
         let currentStats = null;
+        let hideMyIP = true; // Default to hiding your IP
 
         // Authentication
         function authenticate() {
@@ -299,6 +304,7 @@
                 if (response.ok) {
                     showAuthStatus('✅ Authentication successful!', 'success');
                     document.getElementById('mainContent').style.display = 'block';
+                    // Load with default filter (hideMyIP is true by default)
                     loadStats();
                     loadLogs();
                 } else if (response.status === 403) {
@@ -329,14 +335,28 @@
         // Stats loading
         function loadStats() {
             if (!authToken) return;
+            
+            const myIPHash = document.getElementById('myIPHash').value;
+            const myLocalIPHash = document.getElementById('myLocalIPHash').value;
+            let url = '/admin/query-logs/stats';
+            if (hideMyIP) {
+                const ipsToExclude = [myIPHash, myLocalIPHash].filter(ip => ip).join(',');
+                if (ipsToExclude) {
+                    url += `?exclude_ips=${ipsToExclude}`;
+                }
+            }
+            
+            console.log('Loading stats with URL:', url);
+            console.log('Hide My IPs:', hideMyIP);
 
-            fetch('/admin/query-logs/stats', {
+            fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
             })
             .then(response => response.json())
             .then(data => {
+                console.log('Stats response:', data);
                 currentStats = data.stats;
                 displayStats(data.stats);
             })
@@ -348,15 +368,18 @@
 
         function displayStats(stats) {
             const statsGrid = document.getElementById('statsGrid');
+            
+            // Add filter indicator
+            const filterStatus = hideMyIP ? ' (excl. yours)' : ' (all)';
 
             let html = `
                 <div class="stat-card">
                     <span class="stat-number">${stats.total_queries || 0}</span>
-                    <div>Total Queries</div>
+                    <div>Total Queries${filterStatus}</div>
                 </div>
                 <div class="stat-card">
                     <span class="stat-number">${stats.unique_ips || 0}</span>
-                    <div>Unique IPs</div>
+                    <div>Unique IPs${filterStatus}</div>
                 </div>
             `;
 
@@ -385,6 +408,16 @@
             statsGrid.innerHTML = html;
         }
 
+        // Toggle My IP
+        function toggleMyIP() {
+            hideMyIP = !hideMyIP;
+            const btn = document.getElementById('toggleIPBtn');
+            btn.textContent = hideMyIP ? 'Show My IPs' : 'Hide My IPs';
+            btn.style.background = hideMyIP ? '#28a745' : '#6c757d';
+            loadStats(); // Also refresh stats
+            loadLogs();
+        }
+
         // Logs loading
         function loadLogs() {
             if (!authToken) return;
@@ -393,11 +426,19 @@
             const startDate = document.getElementById('startDateFilter').value;
             const endDate = document.getElementById('endDateFilter').value;
             const queryType = document.getElementById('queryTypeFilter').value;
+            const myIPHash = document.getElementById('myIPHash').value;
+            const myLocalIPHash = document.getElementById('myLocalIPHash').value;
 
             let url = `/admin/query-logs?limit=${limit}`;
             if (startDate) url += `&start_date=${startDate}`;
             if (endDate) url += `&end_date=${endDate}`;
             if (queryType) url += `&query_type=${queryType}`;
+            if (hideMyIP) {
+                const ipsToExclude = [myIPHash, myLocalIPHash].filter(ip => ip).join(',');
+                if (ipsToExclude) {
+                    url += `&exclude_ips=${ipsToExclude}`;
+                }
+            }
 
             document.getElementById('logsContainer').innerHTML = '<div class="loading">Loading logs...</div>';
 
@@ -436,6 +477,7 @@
                         </div>
                         <div class="log-meta">
                             <span>IP: ${log.client_ip}</span>
+                            ${formatLocation(log.location)}
                             <span>Model: ${log.model_used}</span>
                             <span>Type: ${log.query_type}</span>
                             <span>Time: ${responseTime}ms</span>
@@ -484,6 +526,36 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        function formatLocation(location) {
+            if (!location) {
+                return '';
+            }
+            
+            let parts = [];
+            
+            if (location.city) {
+                parts.push(location.city);
+            }
+            
+            if (location.region) {
+                parts.push(location.region);
+            }
+            
+            if (location.country_name) {
+                parts.push(location.country_name);
+            } else if (location.country_code) {
+                parts.push(location.country_code);
+            }
+            
+            if (parts.length > 0) {
+                return `<span style="background: #d4edda; color: #155724;">📍 ${parts.join(', ')}</span>`;
+            } else if (location.error === 'Anonymized IP') {
+                return '<span style="background: #f8d7da; color: #721c24;">📍 Location Hidden</span>';
+            } else {
+                return '<span style="background: #fff3cd; color: #856404;">📍 Location Unknown</span>';
+            }
         }
 
         // Auto-refresh every 30 seconds if authenticated

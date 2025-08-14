@@ -63,6 +63,9 @@ async def get_query_logs(
     start_date: Optional[str] = FastAPIQuery(default=None, description="Start date filter (YYYY-MM-DD format)"),
     end_date: Optional[str] = FastAPIQuery(default=None, description="End date filter (YYYY-MM-DD format)"),
     query_type: Optional[str] = FastAPIQuery(default=None, description="Filter by query type (text/image)"),
+    exclude_ips: Optional[str] = FastAPIQuery(
+        default=None, description="Comma-separated list of IP addresses to exclude (anonymized hashes)"
+    ),
 ):
     """
     Retrieve query logs with optional filtering.
@@ -74,6 +77,7 @@ async def get_query_logs(
     - start_date: Start date filter in YYYY-MM-DD format
     - end_date: End date filter in YYYY-MM-DD format
     - query_type: Filter by query type (text/image)
+    - exclude_ips: Comma-separated list of IP addresses to exclude (anonymized hashes)
     """
     logger = get_query_logger()
 
@@ -97,15 +101,31 @@ async def get_query_logs(
 
     logs = logger.get_logs(limit=limit, start_date=start_date, end_date=end_date, query_type=query_type)
 
+    # Filter out logs from excluded IPs if specified
+    if exclude_ips:
+        excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
+        logs = [log for log in logs if log.get("client_ip") not in excluded_set]
+
     return {
         "logs": logs,
         "count": len(logs),
-        "filters": {"limit": limit, "start_date": start_date, "end_date": end_date, "query_type": query_type},
+        "filters": {
+            "limit": limit,
+            "start_date": start_date,
+            "end_date": end_date,
+            "query_type": query_type,
+            "exclude_ips": exclude_ips,
+        },
     }
 
 
 @router.get("/query-logs/stats")
-async def get_query_log_stats(_token: str = Depends(verify_token)):
+async def get_query_log_stats(
+    _token: str = Depends(verify_token),
+    exclude_ips: Optional[str] = FastAPIQuery(
+        default=None, description="Comma-separated list of IPs to exclude from stats"
+    ),
+):
     """
     Get statistics about query logs.
 
@@ -117,11 +137,14 @@ async def get_query_log_stats(_token: str = Depends(verify_token)):
     - Query type breakdown
     - Model usage breakdown
     - Date range of logs
+
+    Query Parameters:
+    - exclude_ips: Comma-separated list of IPs to exclude from statistics
     """
     logger = get_query_logger()
-    stats = logger.get_log_stats()
+    stats = logger.get_log_stats(exclude_ips=exclude_ips)
 
-    return {"stats": stats, "generated_at": datetime.utcnow().isoformat()}
+    return {"stats": stats, "generated_at": datetime.utcnow().isoformat(), "excluded_ips": exclude_ips}
 
 
 @router.delete("/query-logs")
