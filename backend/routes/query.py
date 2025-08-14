@@ -40,15 +40,15 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
     # Get client IP and query logger
     client_ip = get_remote_address(request)
 
-    # Check for X-Forwarded-For header (for reverse proxies)
+    # Check for proxy headers to get the real client IP.
+    # Note: This assumes the service is behind a trusted proxy.
     forwarded_for = request.headers.get("X-Forwarded-For")
+    real_ip = request.headers.get("X-Real-IP")
+
     if forwarded_for:
         # Use the first IP in the chain (original client)
         client_ip = forwarded_for.split(",")[0].strip()
-
-    # Check for X-Real-IP header (alternative proxy header)
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
+    elif real_ip:
         client_ip = real_ip.strip()
 
     query_logger = get_query_logger()

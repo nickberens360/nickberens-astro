@@ -25,8 +25,7 @@ class GeolocationService:
         # Using multiple APIs for fallback
         self.apis = [
             {"url": "https://ipapi.co", "format": "ipapi"},
-            {"url": "http://ip-api.com/json", "format": "ip-api"},
-            {"url": "https://httpbin.org/ip", "format": "httpbin"},  # Just IP, no geo data
+            {"url": "https://ip-api.com/json", "format": "ip-api"},
         ]
         self.timeout = 5  # seconds
         self._cache: OrderedDict[str, Dict[str, Optional[str]]] = OrderedDict()
