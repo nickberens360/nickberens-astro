@@ -8,7 +8,7 @@ This endpoint uses only the smart retriever to demonstrate:
 """
 
 import logging
-from typing import Any, Dict
+from typing import Annotated, Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -23,7 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/smart-query")
-async def smart_query(query: Query, smart_handler: SmartQueryHandler = Depends(get_smart_handler)):
+async def smart_query(
+    query: Query,
+    smart_handler: Annotated[SmartQueryHandler, Depends(get_smart_handler)],
+) -> JSONResponse:
     """
     Test endpoint for the smart retriever system.
 
@@ -77,10 +80,14 @@ async def smart_query(query: Query, smart_handler: SmartQueryHandler = Depends(g
 
 
 @router.get("/smart-query/status")
-async def smart_query_status(services=Depends(get_services)):
+async def smart_query_status(
+    services: Annotated[Dict[str, Any], Depends(get_services)],
+) -> Dict[str, Any]:
     """Check the status of the smart retriever system."""
     try:
         all_retrievers = services.get("retrievers")
+        if not all_retrievers or not isinstance(all_retrievers, dict):
+            return {"status": "unavailable", "message": "Retrievers not available"}
         unified_retriever = get_unified_retriever(all_retrievers)
 
         if not unified_retriever:
@@ -105,7 +112,10 @@ async def smart_query_status(services=Depends(get_services)):
 
 
 @router.post("/smart-query/analyze")
-async def analyze_query(query: Query, smart_handler: SmartQueryHandler = Depends(get_smart_handler)):
+async def analyze_query(
+    query: Query,
+    smart_handler: Annotated[SmartQueryHandler, Depends(get_smart_handler)],
+) -> Dict[str, Any]:
     """Analyze a query without retrieving documents (for testing intent detection)."""
     try:
         intent_analysis = smart_handler.analyze_query_with_llm(query.question)
