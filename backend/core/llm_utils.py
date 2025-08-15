@@ -60,7 +60,23 @@ Your analysis should identify the following:
 
     try:
         response = chain.invoke({"query": query})
-        return response.dict() if hasattr(response, 'dict') else dict(response)
+        # Robust response conversion
+        if hasattr(response, "dict"):
+            result: Dict[str, Any] = response.dict()
+            return result
+        elif isinstance(response, dict):
+            return response
+        elif hasattr(response, "__dict__"):
+            result_vars: Dict[str, Any] = vars(response)
+            return result_vars
+        else:
+            logger.warning(f"Unexpected response type: {type(response)}; using default fallback.")
+            return {
+                "query": query,
+                "topics": ["general"],
+                "complexity": "simple",
+                "intent": "general",
+            }
     except Exception as e:
         logger.error(f"Error analyzing query with LLM: {e}")
         # Fallback to a simple default
@@ -126,10 +142,12 @@ def rerank_documents_with_llm(llm: BaseLanguageModel, query: str, documents: Lis
 
     output_parser = CommaSeparatedListOutputParser()
 
-    document_snippets = "\n".join([
-        f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}{'...' if len(doc.page_content) > _MAX_SNIPPET_LENGTH_FOR_RERANKING else ''}"
-        for i, doc in enumerate(documents)
-    ])
+    document_snippets = "\n".join(
+        [
+            f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}{'...' if len(doc.page_content) > _MAX_SNIPPET_LENGTH_FOR_RERANKING else ''}"
+            for i, doc in enumerate(documents)
+        ]
+    )
 
     prompt = PromptTemplate(
         template="""
@@ -153,8 +171,13 @@ Re-ordered list of relevant indices (most relevant first):
         response = chain.invoke({"query": query, "document_snippets": document_snippets})
 
         # Validate response format
-        if not isinstance(response, list):
-            logger.error(f"LLM response is not a list: {response}. Falling back to original order.")
+        if not isinstance(response, list) or not response:
+            logger.error(f"LLM response is not a non-empty list: {response}. Falling back to original order.")
+            return documents
+
+        # Ensure all items are strings (or convertible to int)
+        if not all(isinstance(i, (str, int)) for i in response):
+            logger.error(f"LLM response list contains invalid items: {response}. Falling back to original order.")
             return documents
 
         reordered_indices = []

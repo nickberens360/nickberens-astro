@@ -16,10 +16,12 @@ from langchain_community.document_loaders import (
 
 try:
     from langchain_unstructured import UnstructuredLoader
+
     _USE_NEW_UNSTRUCTURED = True
 except ImportError:
     # Fallback to deprecated version if new package not available
     from langchain_community.document_loaders import UnstructuredFileLoader as UnstructuredLoader
+
     _USE_NEW_UNSTRUCTURED = False
 
 import json

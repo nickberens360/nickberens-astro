@@ -18,6 +18,19 @@ class QueryType(Enum):
 class QueryRouter:
     """Service for routing and parsing different types of user queries."""
 
+    # Class constants for illustration query patterns
+    ILLUSTRATION_SHOW_ALL_PATTERNS = [
+        "illustrations",
+        "illustrations done",
+        "illustrations done?",
+        "illustrations created",
+        "illustrations created?",
+        "done",
+        "done?",
+        "created",
+        "created?",
+    ]
+
     def __init__(self):
         # Define patterns and keywords
         self.image_keywords = [
@@ -295,7 +308,7 @@ class QueryRouter:
 
         # Special case: if the filtered question is just punctuation or empty after filtering,
         # but contains illustration keywords, treat it as "show all"
-        if filtered_question.strip() in ["illustrations", "illustrations done", "illustrations done?", "illustrations created", "illustrations created?", "done", "done?", "created", "created?"]:
+        if filtered_question.strip() in self.ILLUSTRATION_SHOW_ALL_PATTERNS:
             return True
 
         return False

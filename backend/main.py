@@ -11,9 +11,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from langchain_core.language_models import BaseLanguageModel
-
 from dotenv import load_dotenv
+from langchain_core.language_models import BaseLanguageModel
 
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state

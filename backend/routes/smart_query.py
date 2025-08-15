@@ -45,7 +45,7 @@ async def smart_query(
             smart_handler.get_relevant_context,
             query.question,
             chat_history=[msg.dict() for msg in query.chat_history],
-            max_context_length=4000
+            max_context_length=4000,
         )
 
         # Prepare response
