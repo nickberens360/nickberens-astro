@@ -79,26 +79,20 @@ export default {
   },
   methods: {
     async checkLocationAndConsent() {
-      try {
-        this.locationData = await geolocationService.getUserLocation()
-        if (this.locationData.isEEA) {
-          this.handleExistingConsent()
-        } else {
-          // Non-EEA user - automatically load GA unless they've previously declined
-          const consent = localStorage.getItem(CONSENT_KEY)
-          if (consent !== CONSENT_STATUS.DECLINED) {
-            this.loadGoogleAnalytics()
-            if (!consent) {
-              localStorage.setItem(CONSENT_KEY, CONSENT_STATUS.AUTO_ACCEPTED)
-            }
+      this.locationData = await geolocationService.getUserLocation()
+      if (this.locationData.isEEA) {
+        this.handleExistingConsent()
+      } else {
+        // Non-EEA user - automatically load GA unless they've previously declined
+        const consent = localStorage.getItem(CONSENT_KEY)
+        if (consent !== CONSENT_STATUS.DECLINED) {
+          this.loadGoogleAnalytics()
+          if (!consent) {
+            localStorage.setItem(CONSENT_KEY, CONSENT_STATUS.AUTO_ACCEPTED)
           }
         }
-      } catch (error) {
-        console.warn('Location detection failed, using fallback to require consent:', error)
-        this.handleExistingConsent()
-      } finally {
-        this.isCheckingLocation = false
       }
+      this.isCheckingLocation = false
     },
     handleExistingConsent() {
       const consent = localStorage.getItem(CONSENT_KEY)

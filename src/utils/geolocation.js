@@ -7,6 +7,7 @@ const EEA_COUNTRIES = new Set([
 class GeolocationService {
   constructor() {
     this.cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
+    this.locationPromise = null;
   }
 
   async getUserLocation() {
@@ -16,16 +17,28 @@ class GeolocationService {
       return cached;
     }
 
-    try {
-      // Try multiple geolocation services for reliability
-      const location = await this.detectLocationWithFallback();
-      this.cacheLocation(location);
-      return location;
-    } catch (error) {
-      console.warn('Geolocation detection failed:', error);
-      // Default to requiring consent if we can't determine location
-      return { countryCode: 'UNKNOWN', isEEA: true, source: 'fallback' };
+    // If a request is already in flight, return its promise
+    if (this.locationPromise) {
+      return this.locationPromise;
     }
+
+    // Start a new request and store the promise
+    this.locationPromise = (async () => {
+      try {
+        const location = await this.detectLocationWithFallback();
+        this.cacheLocation(location);
+        return location;
+      } catch (error) {
+        console.warn('Geolocation detection failed:', error);
+        // Default to requiring consent if we can't determine location
+        return { countryCode: 'UNKNOWN', isEEA: true, source: 'fallback' };
+      } finally {
+        // Clear the promise after it resolves to allow for future retries
+        this.locationPromise = null;
+      }
+    })();
+
+    return this.locationPromise;
   }
 
   async detectLocationWithFallback() {
@@ -95,7 +108,11 @@ class GeolocationService {
       
       if (!locLine) throw new Error('No location data');
       
-      const countryCode = locLine.split('=')[1];
+      const parts = locLine.split('=');
+      if (parts.length < 2 || !parts[1]) {
+        throw new Error('Malformed location data from Cloudflare');
+      }
+      const countryCode = parts[1];
       
       return {
         countryCode: countryCode,
