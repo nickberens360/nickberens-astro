@@ -30,7 +30,7 @@ def test_vector_retrieval():
     try:
         # Initialize unified system
         print("📚 Initializing unified retriever system...")
-        app_state, illustration_service = initialize_app_state()
+        app_state, illustration_service, _ = initialize_app_state()
         unified_retriever = app_state.get("unified_retriever")
         if not unified_retriever:
             print("❌ Failed to initialize unified retriever")

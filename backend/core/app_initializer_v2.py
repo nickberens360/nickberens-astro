@@ -28,6 +28,12 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     Initialize application with unified retriever system.
 
     No manual configuration needed - automatically discovers and indexes all content!
+
+    Returns:
+        Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
+            - app_state: dict containing 'unified_retriever' and other state
+            - illustration_service: SmartIllustrationService for image search
+            - llm: BaseLanguageModel for user-facing queries
     """
     logger.info("Initializing application with unified retriever system...")
 
