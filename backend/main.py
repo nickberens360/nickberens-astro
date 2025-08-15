@@ -11,6 +11,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from langchain_core.language_models import BaseLanguageModel
+
 from dotenv import load_dotenv
 
 from .core.app_factory import create_app
@@ -34,6 +36,7 @@ logger = logging.getLogger(__name__)
 # Initialize application state
 retrievers: Optional[Dict[str, Any]] = None
 illustration_service: Optional[SmartIllustrationService] = None
+llm: Optional[BaseLanguageModel] = None
 try:
     retrievers, illustration_service, llm = initialize_app_state()
     app_initialized = True
