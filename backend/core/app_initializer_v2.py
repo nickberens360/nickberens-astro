@@ -31,14 +31,15 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     """
     logger.info("Initializing application with unified retriever system...")
 
-    # Initialize LLM with Claude
-    llm = ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1)
+    # Initialize LLMs - Claude Haiku for fast indexing, Claude Sonnet for user queries
+    indexing_llm = ChatAnthropic(model="claude-3-haiku-20240307", temperature=0.1)
+    user_query_llm = ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1)
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
 
-    # Create unified retriever
-    unified_retriever = UnifiedRetriever(embeddings, llm)
+    # Create unified retriever with Gemini for fast indexing
+    unified_retriever = UnifiedRetriever(embeddings, indexing_llm)
 
     # Auto-index all content directories
     directories_to_index = [
@@ -76,7 +77,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
 
-    return all_retrievers, smart_illustration_service, llm
+    return all_retrievers, smart_illustration_service, user_query_llm
 
 
 def get_unified_retriever(all_retrievers: Dict[str, Any]) -> Optional[UnifiedRetriever]:
