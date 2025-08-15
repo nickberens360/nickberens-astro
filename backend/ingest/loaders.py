@@ -87,8 +87,8 @@ def load_doc(path: Path) -> List[Document]:
     if ext in (".json",):
         return _json_to_documents(path)
 
-    # Skip non-text files
-    if ext in (".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp"):
+    # Skip non-text files and XML files (which can have complex metadata)
+    if ext in (".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".xml"):
         return []
 
     # Fallback: treat as plain text

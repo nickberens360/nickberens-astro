@@ -28,6 +28,7 @@ from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class UnifiedRetriever:
@@ -147,16 +148,19 @@ class UnifiedRetriever:
         # Discover all files
         for file_path in base_path.rglob("*"):
             if file_path.is_file() and not file_path.name.startswith("."):
+                logger.debug(f"Processing file: {file_path}")
                 file_hash = self._compute_file_hash(file_path)
 
                 # Skip if already indexed and unchanged
-                if str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash:
+                if str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash and not force_reindex:
+                    logger.debug(f"Skipping {file_path} - already indexed")
                     continue
 
                 # Load and process the document
                 try:
                     docs = load_doc(file_path)
                     if not docs:
+                        logger.debug(f"No documents loaded from {file_path}")
                         continue
 
                     # Use appropriate splitter based on file type
