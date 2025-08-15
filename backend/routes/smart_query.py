@@ -7,6 +7,7 @@ This endpoint uses only the smart retriever to demonstrate:
 - Context selection without manual configuration
 """
 
+import asyncio
 import logging
 from typing import Annotated, Any, Dict
 
@@ -36,12 +37,15 @@ async def smart_query(
     - Returns structured response with metadata
     """
     try:
-        # Analyze the query intent
-        intent_analysis = smart_handler.analyze_query_with_llm(query.question)
+        # Analyze the query intent (run in threadpool to avoid blocking event loop)
+        intent_analysis = await asyncio.to_thread(smart_handler.analyze_query_with_llm, query.question)
 
-        # Get relevant context using smart routing
-        relevant_docs = smart_handler.get_relevant_context(
-            query.question, chat_history=[msg.dict() for msg in query.chat_history], max_context_length=4000
+        # Get relevant context using smart routing (run in threadpool for LLM reranking)
+        relevant_docs = await asyncio.to_thread(
+            smart_handler.get_relevant_context,
+            query.question,
+            chat_history=[msg.dict() for msg in query.chat_history],
+            max_context_length=4000
         )
 
         # Prepare response
@@ -118,7 +122,8 @@ async def analyze_query(
 ) -> Dict[str, Any]:
     """Analyze a query without retrieving documents (for testing intent detection)."""
     try:
-        intent_analysis = smart_handler.analyze_query_with_llm(query.question)
+        # Run LLM analysis in threadpool to avoid blocking the event loop
+        intent_analysis = await asyncio.to_thread(smart_handler.analyze_query_with_llm, query.question)
 
         return {
             "query": query.question,
