@@ -121,6 +121,14 @@ class UnifiedRetriever:
 
         return metadata
 
+    def _should_skip_file(self, file_path: Path, file_hash: str, indexed_files: Dict[str, str], force_reindex: bool) -> bool:
+        """Check if a file should be skipped during indexing."""
+        return (
+            str(file_path) in indexed_files
+            and indexed_files[str(file_path)] == file_hash
+            and not force_reindex
+        )
+
     def index_directory(self, directory: str, force_reindex: bool = False) -> Tuple[int, int]:
         """
         Automatically discover and index all content in a directory.
@@ -151,7 +159,7 @@ class UnifiedRetriever:
                 file_hash = self._compute_file_hash(file_path)
 
                 # Skip if already indexed and unchanged
-                if str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash and not force_reindex:
+                if self._should_skip_file(file_path, file_hash, indexed_files, force_reindex):
                     logger.debug(f"Skipping {file_path} - already indexed")
                     continue
 
