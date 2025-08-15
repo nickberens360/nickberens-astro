@@ -116,13 +116,16 @@ export default {
       if (!gaTrackingId) return
 
       // Check if GA is already loaded or script tag exists
-      const gaScriptSrc = `https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`
-      if (window.gtag || document.querySelector(`script[src="${gaScriptSrc}"]`)) return
+      // Check for any script whose src contains the tracking ID
+      const gaScriptExists = Array.from(document.querySelectorAll('script')).some(
+        script => script.src && script.src.includes(gaTrackingId)
+      )
+      if (window.gtag || gaScriptExists) return
 
       // Load Google Analytics script
       const script = document.createElement('script')
       script.async = true
-      script.src = gaScriptSrc
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`
       document.head.appendChild(script)
 
       // Initialize GA when script loads
