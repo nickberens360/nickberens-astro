@@ -99,6 +99,14 @@ class UnifiedRetriever:
 
         return metadata
 
+    def _should_skip_file(self, file_path: Path, file_hash: str, indexed_files: Dict[str, str], force_reindex: bool) -> bool:
+        """Check if a file should be skipped during indexing."""
+        return (
+            str(file_path) in indexed_files
+            and indexed_files[str(file_path)] == file_hash
+            and not force_reindex
+        )
+
     def index_directory(self, directory: str, force_reindex: bool = False) -> Tuple[int, int]:
         """
         Automatically discover and index all content in a directory.
@@ -125,16 +133,19 @@ class UnifiedRetriever:
         # Discover all files
         for file_path in base_path.rglob("*"):
             if file_path.is_file() and not file_path.name.startswith("."):
+                logger.debug(f"Processing file: {file_path}")
                 file_hash = self._compute_file_hash(file_path)
 
                 # Skip if already indexed and unchanged
-                if str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash:
+                if self._should_skip_file(file_path, file_hash, indexed_files, force_reindex):
+                    logger.debug(f"Skipping {file_path} - already indexed")
                     continue
 
                 # Load and process the document
                 try:
                     docs = load_doc(file_path)
                     if not docs:
+                        logger.debug(f"No documents loaded from {file_path}")
                         continue
 
                     # Use appropriate splitter based on file type

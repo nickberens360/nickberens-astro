@@ -57,9 +57,12 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     total_files = 0
     total_chunks = 0
 
+    # Check if we should force rebuild
+    force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
+
     for directory in directories_to_index:
         if os.path.exists(directory):
-            files, chunks = unified_retriever.index_directory(directory)
+            files, chunks = unified_retriever.index_directory(directory, force_reindex=force_rebuild)
             total_files += files
             total_chunks += chunks
             logger.info(f"Indexed {directory}: {files} files, {chunks} chunks")
