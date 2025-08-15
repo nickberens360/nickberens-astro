@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List
 
 from langchain.prompts import PromptTemplate
+from langchain_core.documents import Document
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.output_parsers import CommaSeparatedListOutputParser, JsonOutputParser
 from pydantic import BaseModel
@@ -116,7 +117,7 @@ Your comma-separated list of topics:
         return ["general"]
 
 
-def rerank_documents_with_llm(llm: BaseLanguageModel, query: str, documents: List[Any]) -> List[Any]:
+def rerank_documents_with_llm(llm: BaseLanguageModel, query: str, documents: List[Document]) -> List[Document]:
     """
     Re-rank a list of documents based on their relevance to a query using an LLM.
     """
