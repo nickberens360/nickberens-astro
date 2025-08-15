@@ -59,7 +59,7 @@ Your analysis should identify the following:
 
     try:
         response = chain.invoke({"query": query})
-        return dict(response)
+        return response.dict() if hasattr(response, 'dict') else dict(response)
     except Exception as e:
         logger.error(f"Error analyzing query with LLM: {e}")
         # Fallback to a simple default
@@ -125,9 +125,10 @@ def rerank_documents_with_llm(llm: BaseLanguageModel, query: str, documents: Lis
 
     output_parser = CommaSeparatedListOutputParser()
 
-    document_snippets = "\n".join(
-        [f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}..." for i, doc in enumerate(documents)]
-    )
+    document_snippets = "\n".join([
+        f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}{'...' if len(doc.page_content) > _MAX_SNIPPET_LENGTH_FOR_RERANKING else ''}"
+        for i, doc in enumerate(documents)
+    ])
 
     prompt = PromptTemplate(
         template="""

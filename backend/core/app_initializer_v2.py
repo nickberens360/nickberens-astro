@@ -31,14 +31,14 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     """
     logger.info("Initializing application with unified retriever system...")
 
-    # Initialize LLMs - Claude Haiku for fast indexing, Claude Sonnet for user queries
+    # Initialize LLMs - Claude Haiku for fast indexing, and a configurable Claude model (AppConfig.CLAUDE_MODEL) for user queries
     indexing_llm = ChatAnthropic(model="claude-3-haiku-20240307", temperature=0.1)
     user_query_llm = ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1)
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
 
-    # Create unified retriever with Gemini for fast indexing
+    # Create unified retriever with Claude Haiku for fast indexing
     unified_retriever = UnifiedRetriever(embeddings, indexing_llm)
 
     # Auto-index all content directories

@@ -83,10 +83,13 @@ def load_doc(path: Path) -> List[Document]:
     if ext in (".docx",):
         return Docx2txtLoader(str(path)).load()
     if ext in (".txt",):
-        if _USE_NEW_UNSTRUCTURED:
-            return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
-        else:
-            return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+        try:
+            if _USE_NEW_UNSTRUCTURED:
+                return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
+            else:
+                return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+        except Exception:
+            return []
     if ext in (".csv",):
         return CSVLoader(str(path)).load()
     if ext in (".json",):
