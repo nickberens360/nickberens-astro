@@ -72,7 +72,7 @@ The project is organized into two main parts: the Astro frontend and the FastAPI
 │   ├── Nick_Berens_Resume.pdf       # PDF resume
 │   ├── about-nick-berens.md         # About content
 │   ├── unified_data.json            # AI knowledge base
-│   ├── illustrations.json           # Illustration metadata
+│   └── ...                          # Other static assets
 │   └── illustrations/               # Illustration image files
 ├── src/                             # Frontend source code
 │   ├── assets/                      # Static assets
@@ -104,6 +104,9 @@ The project is organized into two main parts: the Astro frontend and the FastAPI
 │   └── utils/                       # Utility functions
 ├── backend/                         # FastAPI backend
 │   ├── main.py                      # FastAPI application entrypoint
+│   ├── knowledge/                   # AI knowledge base and assets
+│   │   ├── illustrations.json       # Illustration metadata
+│   │   └── ...                      # Other knowledge files
 │   ├── core/                        # Core backend logic
 │   │   ├── __init__.py              # Package initialization
 │   │   ├── config.py                # Backend configuration

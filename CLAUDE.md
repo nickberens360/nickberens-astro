@@ -128,7 +128,7 @@ public/            # Static data files (also auto-indexed)
    - Supports: `.md`, `.pdf`, `.json`, `.txt`, `.html`, `.docx`
    - No configuration needed - automatically indexed and searchable!
 
-2. **Illustrations**: Add to `public/illustrations.json` with format:
+2. **Illustrations**: Add to `backend/knowledge/illustrations.json` with format:
    ```json
    {
      "file": "filename.jpg", 
