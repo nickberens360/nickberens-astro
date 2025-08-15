@@ -80,6 +80,46 @@ class QueryRouter:
             "your",
             "of",
             "for",
+            # Question words that should be filtered out when extracting search terms
+            "what",
+            "are",
+            "is",
+            "do",
+            "does",
+            "did",
+            "have",
+            "has",
+            "had",
+            "you",
+            "they",
+            "we",
+            "i",
+            "can",
+            "could",
+            "would",
+            "should",
+            "will",
+            "shall",
+            "may",
+            "might",
+            "been",
+            "being",
+            "done",
+            "made",
+            "created",
+            "different",
+            "various",
+            "which",
+            "that",
+            "this",
+            "these",
+            "those",
+            "there",
+            "here",
+            "when",
+            "where",
+            "why",
+            "how",
         }
 
         self.all_image_phrases = [
@@ -113,6 +153,30 @@ class QueryRouter:
             "display art",
             "display pictures",
             "display drawings",
+            # Question patterns that are asking to see all illustrations
+            "what illustrations",
+            "what illustrations have you done",
+            "what illustrations you have done",
+            "what different illustrations",
+            "what different illustrations have you done",
+            "what different illustrations you have done",
+            "what are different illustrations",
+            "what are different illustrations have you done",
+            "what are different illustrations you have done",
+            "illustrations",
+            "illustrations have you done",
+            "illustrations you have done",
+            "different illustrations",
+            "different illustrations have you done",
+            "different illustrations you have done",
+            # "Show me" patterns asking for variety/styles (show all)
+            "show me different art styles you have done",
+            "show me different art styles you've done",
+            "show me different art styles",
+            "show me art styles",
+            "show me styles",
+            "different art styles",
+            "art styles",
         ]
 
     def route_query(self, question: str) -> Tuple[QueryType, Optional[str]]:
@@ -226,7 +290,15 @@ class QueryRouter:
         filtered_words = [word for word in words if word not in self.ignore_words]
         filtered_question = " ".join(filtered_words)
 
-        return filtered_question in self.all_image_phrases
+        if filtered_question in self.all_image_phrases:
+            return True
+
+        # Special case: if the filtered question is just punctuation or empty after filtering,
+        # but contains illustration keywords, treat it as "show all"
+        if filtered_question.strip() in ["illustrations", "illustrations done", "illustrations done?", "illustrations created", "illustrations created?", "done", "done?", "created", "created?"]:
+            return True
+
+        return False
 
     def _check_general_image_pattern(self, question: str) -> Optional[str]:
         """Check for general patterns like 'X images' or 'X art'."""
