@@ -100,7 +100,6 @@ backend/
 public/            # Static data files (also auto-indexed)
 ├── resume.json
 ├── about.json  
-├── illustrations.json
 └── ...             # All files automatically discovered
 ```
 
