@@ -12,6 +12,8 @@ import logging
 import os
 from typing import Any, Dict, Optional, Tuple
 
+from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models import BaseLanguageModel
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
@@ -21,19 +23,29 @@ from .unified_retriever import UnifiedRetriever
 logger = logging.getLogger(__name__)
 
 
-def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService]:
+def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
     """
     Initialize application with unified retriever system.
 
     No manual configuration needed - automatically discovers and indexes all content!
+
+    Returns:
+        Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
+            - app_state: dict containing 'unified_retriever' and other state
+            - illustration_service: SmartIllustrationService for image search
+            - llm: BaseLanguageModel for user-facing queries
     """
     logger.info("Initializing application with unified retriever system...")
+
+    # Initialize LLMs - Claude Haiku for fast indexing, and a configurable Claude model (AppConfig.CLAUDE_MODEL) for user queries
+    indexing_llm = ChatAnthropic(model="claude-3-haiku-20240307", temperature=0.1)
+    user_query_llm = ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1)
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
 
-    # Create unified retriever
-    unified_retriever = UnifiedRetriever(embeddings)
+    # Create unified retriever with Claude Haiku for fast indexing
+    unified_retriever = UnifiedRetriever(embeddings, indexing_llm)
 
     # Auto-index all content directories
     directories_to_index = [
@@ -71,7 +83,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService]:
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
 
-    return all_retrievers, smart_illustration_service
+    return all_retrievers, smart_illustration_service, user_query_llm
 
 
 def get_unified_retriever(all_retrievers: Dict[str, Any]) -> Optional[UnifiedRetriever]:

@@ -16,9 +16,13 @@ from langchain_community.document_loaders import (
 
 try:
     from langchain_unstructured import UnstructuredLoader
+
+    _USE_NEW_UNSTRUCTURED = True
 except ImportError:
     # Fallback to deprecated version if new package not available
     from langchain_community.document_loaders import UnstructuredFileLoader as UnstructuredLoader
+
+    _USE_NEW_UNSTRUCTURED = False
 
 import json
 
@@ -81,7 +85,13 @@ def load_doc(path: Path) -> List[Document]:
     if ext in (".docx",):
         return Docx2txtLoader(str(path)).load()
     if ext in (".txt",):
-        return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+        try:
+            if _USE_NEW_UNSTRUCTURED:
+                return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
+            else:
+                return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+        except Exception:
+            return []
     if ext in (".csv",):
         return CSVLoader(str(path)).load()
     if ext in (".json",):
@@ -93,7 +103,10 @@ def load_doc(path: Path) -> List[Document]:
 
     # Fallback: treat as plain text
     try:
-        return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+        if _USE_NEW_UNSTRUCTURED:
+            return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
+        else:
+            return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
     except Exception:
         # If UnstructuredLoader fails, return empty list
         return []
