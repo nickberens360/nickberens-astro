@@ -1,8 +1,8 @@
 // EEA countries (EU + Iceland, Liechtenstein, Norway)
-const EEA_COUNTRIES = [
+const EEA_COUNTRIES = new Set([
   'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 
   'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO'
-];
+]);
 
 class GeolocationService {
   constructor() {
@@ -61,7 +61,6 @@ class GeolocationService {
           'Accept': 'application/json'
         }
       });
-      clearTimeout(timeout);
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
@@ -71,12 +70,11 @@ class GeolocationService {
       return {
         countryCode: data.country_code,
         country: data.country_name,
-        isEEA: EEA_COUNTRIES.includes(data.country_code),
+        isEEA: EEA_COUNTRIES.has(data.country_code),
         source: 'ipapi.co'
       };
-    } catch (error) {
+    } finally {
       clearTimeout(timeout);
-      throw error;
     }
   }
 
@@ -88,7 +86,6 @@ class GeolocationService {
       const response = await fetch('https://cloudflare.com/cdn-cgi/trace', {
         signal: controller.signal
       });
-      clearTimeout(timeout);
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
@@ -102,12 +99,11 @@ class GeolocationService {
       
       return {
         countryCode: countryCode,
-        isEEA: EEA_COUNTRIES.includes(countryCode),
+        isEEA: EEA_COUNTRIES.has(countryCode),
         source: 'cloudflare'
       };
-    } catch (error) {
+    } finally {
       clearTimeout(timeout);
-      throw error;
     }
   }
 
@@ -173,5 +169,5 @@ class GeolocationService {
 export const geolocationService = new GeolocationService();
 
 // Export helper functions
-export const isEEACountry = (countryCode) => EEA_COUNTRIES.includes(countryCode);
-export const EEA_COUNTRY_LIST = EEA_COUNTRIES;
+export const isEEACountry = (countryCode) => EEA_COUNTRIES.has(countryCode);
+export const EEA_COUNTRY_LIST = Array.from(EEA_COUNTRIES);

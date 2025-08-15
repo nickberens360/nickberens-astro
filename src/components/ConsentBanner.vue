@@ -84,10 +84,13 @@ export default {
         if (this.locationData.isEEA) {
           this.handleExistingConsent()
         } else {
-          // Non-EEA user - automatically load GA
-          this.loadGoogleAnalytics()
-          if (!localStorage.getItem(CONSENT_KEY)) {
-            localStorage.setItem(CONSENT_KEY, CONSENT_STATUS.AUTO_ACCEPTED)
+          // Non-EEA user - automatically load GA unless they've previously declined
+          const consent = localStorage.getItem(CONSENT_KEY)
+          if (consent !== CONSENT_STATUS.DECLINED) {
+            this.loadGoogleAnalytics()
+            if (!consent) {
+              localStorage.setItem(CONSENT_KEY, CONSENT_STATUS.AUTO_ACCEPTED)
+            }
           }
         }
       } catch (error) {
@@ -131,12 +134,11 @@ export default {
       // Initialize GA when script loads
       script.onload = () => {
         window.dataLayer = window.dataLayer || []
-        function gtag() {
-          dataLayer.push(arguments)
+        window.gtag = function() {
+          window.dataLayer.push(arguments)
         }
-        window.gtag = gtag
-        gtag('js', new Date())
-        gtag('config', gaTrackingId)
+        window.gtag('js', new Date())
+        window.gtag('config', gaTrackingId)
       }
     }
   }
