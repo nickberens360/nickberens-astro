@@ -31,7 +31,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     logger.info("Initializing application with unified retriever system...")
 
     # Initialize LLM
-    llm = ChatGoogleGenerativeAI(model=AppConfig.LLM_MODEL, temperature=AppConfig.LLM_TEMPERATURE)
+    llm = ChatGoogleGenerativeAI(model=AppConfig.GEMINI_MODEL, temperature=0.1)
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)

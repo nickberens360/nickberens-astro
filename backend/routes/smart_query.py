@@ -10,7 +10,7 @@ This endpoint uses only the smart retriever to demonstrate:
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..core.app_initializer_v2 import get_unified_retriever

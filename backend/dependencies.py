@@ -5,7 +5,10 @@ This module provides dependency functions that access application state
 stored in app.state, following FastAPI best practices for dependency injection.
 """
 
-from fastapi import Request
+from fastapi import Depends, HTTPException, Request
+
+from .core.app_initializer_v2 import get_unified_retriever
+from .core.smart_query_handler import SmartQueryHandler
 
 
 def get_app_state(request: Request):
@@ -43,17 +46,15 @@ def get_services(request: Request):
     }
 
 
-from fastapi import Depends, HTTPException
-
-from .core.app_initializer_v2 import get_unified_retriever
-from .core.smart_query_handler import SmartQueryHandler
-
-
 def get_smart_handler(request: Request, services: dict = Depends(get_services)) -> SmartQueryHandler:
     """
     Dependency to get an initialized SmartQueryHandler.
     """
-    unified_retriever = get_unified_retriever(services.get("retrievers"))
+    retrievers = services.get("retrievers")
+    if not retrievers:
+        raise HTTPException(status_code=500, detail="Retrievers not available")
+
+    unified_retriever = get_unified_retriever(retrievers)
     if not unified_retriever:
         raise HTTPException(status_code=500, detail="Unified retriever not available")
 

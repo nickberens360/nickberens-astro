@@ -12,7 +12,6 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from langchain.schema import Document
-
 from langchain_core.language_models import BaseLanguageModel
 
 from .llm_utils import analyze_query_with_llm, rerank_documents_with_llm
