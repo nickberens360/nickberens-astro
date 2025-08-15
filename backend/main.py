@@ -35,12 +35,13 @@ logger = logging.getLogger(__name__)
 retrievers: Optional[Dict[str, Any]] = None
 illustration_service: Optional[SmartIllustrationService] = None
 try:
-    retrievers, illustration_service = initialize_app_state()
+    retrievers, illustration_service, llm = initialize_app_state()
     app_initialized = True
 except Exception as e:
     logger.critical(f"Application startup failed: {e}", exc_info=True)
     retrievers = None
     illustration_service = None
+    llm = None
     app_initialized = False
 
 # Initialize singleton services
@@ -56,6 +57,7 @@ app = create_app()
 app.state.app_initialized = app_initialized
 app.state.retrievers = retrievers
 app.state.illustration_service = illustration_service
+app.state.llm = llm
 app.state.query_router = query_router
 app.state.response_service = response_service
 app.state.followup_service = followup_service

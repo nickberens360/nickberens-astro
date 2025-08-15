@@ -30,11 +30,17 @@ from ..ingest.loaders import load_doc
 logger = logging.getLogger(__name__)
 
 
+from langchain_core.language_models import BaseLanguageModel
+
+from .llm_utils import extract_topics_with_llm
+
+
 class UnifiedRetriever:
     """A single retriever that intelligently handles all content types."""
 
-    def __init__(self, embeddings: Any, persist_dir: str = "backend/.unified_chroma"):
+    def __init__(self, embeddings: Any, llm: BaseLanguageModel, persist_dir: str = "backend/.unified_chroma"):
         self.embeddings = embeddings
+        self.llm = llm
         self.persist_dir = persist_dir
         self.vector_store: Optional[Chroma] = None
         self._initialize_store()
@@ -57,43 +63,18 @@ class UnifiedRetriever:
         return sha256_hash.hexdigest()
 
     def _extract_content_metadata(self, doc: Document, file_path: Path) -> Dict:
-        """Extract intelligent metadata from document content."""
-        content = doc.page_content.lower()
+        """Extract intelligent metadata from document content using an LLM."""
+        content = doc.page_content
 
-        # Auto-detect content type based on content analysis
-        content_types = []
-
-        # Technical content detection
-        if any(term in content for term in ["function", "class", "api", "code", "implementation"]):
-            content_types.append("technical")
-
-        # Resume/experience detection
-        if any(term in content for term in ["experience", "role", "company", "position", "worked"]):
-            content_types.append("experience")
-
-        # Skills detection
-        if any(term in content for term in ["skill", "expertise", "proficient", "technology"]):
-            content_types.append("skills")
-
-        # About/personal detection
-        if any(term in content for term in ["about", "passion", "interest", "philosophy"]):
-            content_types.append("about")
-
-        # Illustration/creative detection - enhanced for illustration files
-        if any(
-            term in content for term in ["illustration", "design", "art", "creative", "drawing", "character", "tags"]
-        ):
-            content_types.append("creative")
-
-        # Project detection
-        if any(term in content for term in ["project", "built", "developed", "created"]):
-            content_types.append("project")
+        # Use LLM to extract topics for dynamic content tagging
+        content_types = extract_topics_with_llm(self.llm, content)
 
         # Special handling for illustration JSON files
         is_illustration_data = file_path.name == "illustrations.json"
         illustration_file = None
 
         if is_illustration_data:
+            content_types.append("creative") # Ensure creative tag for illustrations
             # Extract file name from JSON content for frontend display
             try:
                 if "file" in content:
@@ -108,9 +89,9 @@ class UnifiedRetriever:
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(content_types),
+            "content_types": ",".join(list(set(content_types))), # Use set to remove duplicates
             "content_length": len(content),
-            "has_code": "```" in doc.page_content or "function" in content,
+            "has_code": "```" in doc.page_content or "function" in content.lower(),
             "is_illustration_data": is_illustration_data,
         }
 

@@ -22,8 +22,10 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+
 @router.post("/smart-query")
-async def smart_query(query: Query, services=Depends(get_services)):
+async def smart_query(request: Request, query: Query, services=Depends(get_services)):
     """
     Test endpoint for the smart retriever system.
 
@@ -40,11 +42,16 @@ async def smart_query(query: Query, services=Depends(get_services)):
         if not unified_retriever:
             raise HTTPException(status_code=500, detail="Unified retriever not available")
 
+        # Get the LLM from app state
+        llm = request.app.state.llm
+        if not llm:
+            raise HTTPException(status_code=500, detail="LLM not initialized")
+
         # Create smart query handler
-        smart_handler = SmartQueryHandler(unified_retriever)
+        smart_handler = SmartQueryHandler(unified_retriever, llm)
 
         # Analyze the query intent
-        intent_analysis = smart_handler.analyze_query_intent(query.question)
+        intent_analysis = smart_handler.analyze_query_with_llm(query.question)
 
         # Get relevant context using smart routing
         relevant_docs = smart_handler.get_relevant_context(
@@ -115,7 +122,7 @@ async def smart_query_status(services=Depends(get_services)):
 
 
 @router.post("/smart-query/analyze")
-async def analyze_query(query: Query, services=Depends(get_services)):
+async def analyze_query(request: Request, query: Query, services=Depends(get_services)):
     """Analyze a query without retrieving documents (for testing intent detection)."""
     try:
         all_retrievers = services.get("retrievers")
@@ -124,8 +131,12 @@ async def analyze_query(query: Query, services=Depends(get_services)):
         if not unified_retriever:
             raise HTTPException(status_code=500, detail="Unified retriever not available")
 
-        smart_handler = SmartQueryHandler(unified_retriever)
-        intent_analysis = smart_handler.analyze_query_intent(query.question)
+        llm = request.app.state.llm
+        if not llm:
+            raise HTTPException(status_code=500, detail="LLM not initialized")
+
+        smart_handler = SmartQueryHandler(unified_retriever, llm)
+        intent_analysis = smart_handler.analyze_query_with_llm(query.question)
 
         return {
             "query": query.question,

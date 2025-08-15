@@ -12,7 +12,8 @@ import logging
 import os
 from typing import Any, Dict, Optional, Tuple
 
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_core.language_models import BaseLanguageModel
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
 from .smart_illustration_service import SmartIllustrationService
@@ -21,7 +22,7 @@ from .unified_retriever import UnifiedRetriever
 logger = logging.getLogger(__name__)
 
 
-def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService]:
+def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
     """
     Initialize application with unified retriever system.
 
@@ -29,11 +30,14 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService]:
     """
     logger.info("Initializing application with unified retriever system...")
 
+    # Initialize LLM
+    llm = ChatGoogleGenerativeAI(model=AppConfig.LLM_MODEL, temperature=AppConfig.LLM_TEMPERATURE)
+
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
 
     # Create unified retriever
-    unified_retriever = UnifiedRetriever(embeddings)
+    unified_retriever = UnifiedRetriever(embeddings, llm)
 
     # Auto-index all content directories
     directories_to_index = [
@@ -71,7 +75,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService]:
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
 
-    return all_retrievers, smart_illustration_service
+    return all_retrievers, smart_illustration_service, llm
 
 
 def get_unified_retriever(all_retrievers: Dict[str, Any]) -> Optional[UnifiedRetriever]:

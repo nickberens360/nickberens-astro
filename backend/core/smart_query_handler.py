@@ -13,6 +13,9 @@ from typing import Any, Dict, List, Optional
 
 from langchain.schema import Document
 
+from langchain_core.language_models import BaseLanguageModel
+
+from .llm_utils import analyze_query_with_llm, rerank_documents_with_llm
 from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
@@ -21,8 +24,9 @@ logger = logging.getLogger(__name__)
 class SmartQueryHandler:
     """Handles queries intelligently using the unified retriever."""
 
-    def __init__(self, unified_retriever: UnifiedRetriever):
+    def __init__(self, unified_retriever: UnifiedRetriever, llm: BaseLanguageModel):
         self.unified_retriever = unified_retriever
+        self.llm = llm
         self._query_cache: Dict[str, List[Document]] = {}  # Simple cache for repeated queries
 
     def get_relevant_context(
@@ -75,35 +79,14 @@ class SmartQueryHandler:
                 unique_docs.append(doc)
                 seen_content.add(content_fingerprint)
 
-        # Sort by relevance (documents are already sorted by vector similarity)
-        # But we can add additional scoring based on metadata
-        scored_docs = []
-        for doc in unique_docs:
-            score = 1.0  # Base score from vector similarity
-
-            # Boost score based on content type matches
-            if "content_types" in doc.metadata:
-                query_lower = query.lower()
-                content_types = doc.metadata["content_types"].split(",")
-                for content_type in content_types:
-                    if content_type.strip() in query_lower:
-                        score *= 1.2
-
-            # Boost recent documents slightly
-            if "mtime" in doc.metadata:
-                # Recent documents get a small boost
-                score *= 1.05
-
-            scored_docs.append((score, doc))
-
-        # Sort by score
-        scored_docs.sort(key=lambda x: x[0], reverse=True)
+        # Use LLM to re-rank documents for relevance
+        reranked_docs = rerank_documents_with_llm(self.llm, query, unique_docs)
 
         # Select documents that fit within context length
         selected_docs = []
         current_length = 0
 
-        for score, doc in scored_docs:
+        for doc in reranked_docs:
             doc_length = len(doc.page_content)
             if current_length + doc_length <= max_context_length:
                 selected_docs.append(doc)
@@ -117,63 +100,8 @@ class SmartQueryHandler:
 
         return selected_docs
 
-    def analyze_query_intent(self, query: str) -> Dict[str, Any]:
+    def analyze_query_with_llm(self, query: str) -> Dict[str, Any]:
         """
-        Analyze query to understand user intent.
-
-        Returns a dictionary with:
-        - intent_type: The primary intent (question, request, etc.)
-        - topics: Detected topics in the query
-        - complexity: Estimated complexity level
-        - suggested_approach: How to handle this query
+        Analyze query to understand user intent using an LLM.
         """
-        query_lower = query.lower()
-
-        # Detect intent type
-        if any(word in query_lower for word in ["what", "who", "when", "where", "why", "how"]):
-            intent_type = "question"
-        elif any(word in query_lower for word in ["show", "list", "display", "find"]):
-            intent_type = "retrieval"
-        elif any(word in query_lower for word in ["explain", "describe", "tell"]):
-            intent_type = "explanation"
-        else:
-            intent_type = "general"
-
-        # Detect topics
-        topics = []
-        topic_keywords = {
-            "technical": ["code", "api", "function", "technical", "implementation"],
-            "experience": ["experience", "work", "job", "company", "role", "resume", "cv"],
-            "skills": ["skill", "expertise", "technology", "language", "framework"],
-            "personal": ["about", "interest", "passion", "philosophy"],
-            "creative": ["illustration", "art", "design", "creative"],
-            "project": ["project", "built", "created", "developed"],
-        }
-
-        for topic, keywords in topic_keywords.items():
-            if any(keyword in query_lower for keyword in keywords):
-                topics.append(topic)
-
-        # Estimate complexity
-        word_count = len(query.split())
-        if word_count < 5:
-            complexity = "simple"
-        elif word_count < 15:
-            complexity = "moderate"
-        else:
-            complexity = "complex"
-
-        # Suggest approach
-        if len(topics) > 2 or complexity == "complex":
-            suggested_approach = "comprehensive"
-        elif intent_type == "retrieval":
-            suggested_approach = "list"
-        else:
-            suggested_approach = "focused"
-
-        return {
-            "intent_type": intent_type,
-            "topics": topics,
-            "complexity": complexity,
-            "suggested_approach": suggested_approach,
-        }
+        return analyze_query_with_llm(self.llm, query)
