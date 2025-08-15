@@ -41,3 +41,24 @@ def get_services(request: Request):
         "response_service": getattr(request.app.state, "response_service", None),
         "followup_service": getattr(request.app.state, "followup_service", None),
     }
+
+
+from fastapi import Depends, HTTPException
+
+from .core.app_initializer_v2 import get_unified_retriever
+from .core.smart_query_handler import SmartQueryHandler
+
+
+def get_smart_handler(request: Request, services: dict = Depends(get_services)) -> SmartQueryHandler:
+    """
+    Dependency to get an initialized SmartQueryHandler.
+    """
+    unified_retriever = get_unified_retriever(services.get("retrievers"))
+    if not unified_retriever:
+        raise HTTPException(status_code=500, detail="Unified retriever not available")
+
+    llm = getattr(request.app.state, "llm", None)
+    if not llm:
+        raise HTTPException(status_code=500, detail="LLM not initialized")
+
+    return SmartQueryHandler(unified_retriever, llm)

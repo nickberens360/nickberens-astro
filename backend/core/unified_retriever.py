@@ -74,7 +74,7 @@ class UnifiedRetriever:
         illustration_file = None
 
         if is_illustration_data:
-            content_types.append("creative") # Ensure creative tag for illustrations
+            content_types.append("creative")  # Ensure creative tag for illustrations
             # Extract file name from JSON content for frontend display
             try:
                 if "file" in content:
@@ -89,7 +89,7 @@ class UnifiedRetriever:
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(list(set(content_types))), # Use set to remove duplicates
+            "content_types": ",".join(list(set(content_types))),  # Use set to remove duplicates
             "content_length": len(content),
             "has_code": "```" in doc.page_content or "function" in content.lower(),
             "is_illustration_data": is_illustration_data,

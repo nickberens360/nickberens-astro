@@ -10,22 +10,20 @@ This endpoint uses only the smart retriever to demonstrate:
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from ..core.app_initializer_v2 import get_unified_retriever
 from ..core.smart_query_handler import SmartQueryHandler
-from ..dependencies import get_services
+from ..dependencies import get_services, get_smart_handler
 from ..models.request_models import Query
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-
 @router.post("/smart-query")
-async def smart_query(request: Request, query: Query, services=Depends(get_services)):
+async def smart_query(query: Query, smart_handler: SmartQueryHandler = Depends(get_smart_handler)):
     """
     Test endpoint for the smart retriever system.
 
@@ -35,21 +33,6 @@ async def smart_query(request: Request, query: Query, services=Depends(get_servi
     - Returns structured response with metadata
     """
     try:
-        # Get the unified retriever from services
-        all_retrievers = services.get("retrievers")
-        unified_retriever = get_unified_retriever(all_retrievers)
-
-        if not unified_retriever:
-            raise HTTPException(status_code=500, detail="Unified retriever not available")
-
-        # Get the LLM from app state
-        llm = request.app.state.llm
-        if not llm:
-            raise HTTPException(status_code=500, detail="LLM not initialized")
-
-        # Create smart query handler
-        smart_handler = SmartQueryHandler(unified_retriever, llm)
-
         # Analyze the query intent
         intent_analysis = smart_handler.analyze_query_with_llm(query.question)
 
@@ -122,20 +105,9 @@ async def smart_query_status(services=Depends(get_services)):
 
 
 @router.post("/smart-query/analyze")
-async def analyze_query(request: Request, query: Query, services=Depends(get_services)):
+async def analyze_query(query: Query, smart_handler: SmartQueryHandler = Depends(get_smart_handler)):
     """Analyze a query without retrieving documents (for testing intent detection)."""
     try:
-        all_retrievers = services.get("retrievers")
-        unified_retriever = get_unified_retriever(all_retrievers)
-
-        if not unified_retriever:
-            raise HTTPException(status_code=500, detail="Unified retriever not available")
-
-        llm = request.app.state.llm
-        if not llm:
-            raise HTTPException(status_code=500, detail="LLM not initialized")
-
-        smart_handler = SmartQueryHandler(unified_retriever, llm)
         intent_analysis = smart_handler.analyze_query_with_llm(query.question)
 
         return {

@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 from langchain.prompts import PromptTemplate
 from langchain_core.language_models import BaseLanguageModel
+from langchain.output_parsers import CommaSeparatedListOutputParser
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel
 
@@ -63,7 +64,6 @@ Your analysis should identify the following:
             "intent": "general",
         }
 
-from langchain.output_parsers import CommaSeparatedListOutputParser
 
 def extract_topics_with_llm(llm: BaseLanguageModel, text: str) -> List[str]:
     """
@@ -144,10 +144,15 @@ Re-ordered list of relevant indices (most relevant first):
     try:
         response = chain.invoke({"query": query, "document_snippets": document_snippets})
 
-        reordered_indices = [int(i.strip()) for i in response]
+        reordered_indices = []
+        for i in response:
+            try:
+                reordered_indices.append(int(i.strip()))
+            except ValueError:
+                logger.warning(f"LLM returned a non-integer index '{i.strip()}', skipping it.")
 
         # Create a new list of documents in the re-ordered sequence
-        reordered_docs = [documents[i] for i in reordered_indices if i < len(documents)]
+        reordered_docs = [documents[i] for i in reordered_indices if 0 <= i < len(documents)]
 
         return reordered_docs
     except Exception as e:
