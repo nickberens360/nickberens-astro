@@ -2,6 +2,7 @@
 import Head from '../components/Head.astro';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
+import ConsentBanner from '../components/ConsentBanner.vue';
 import "@fontsource-variable/doto";
 import "@fontsource-variable/jetbrains-mono";
 import TerminalWindow from '../components/TerminalWindow.vue';
@@ -89,6 +90,7 @@ const fonts = await getCollection('fonts');
     hideFooter={hideFooter}
     client:load
 />
+<ConsentBanner client:only="vue" />
 
 <script>
     console.log(`
