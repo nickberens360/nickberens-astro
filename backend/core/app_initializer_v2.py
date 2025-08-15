@@ -12,8 +12,9 @@ import logging
 import os
 from typing import Any, Dict, Optional, Tuple
 
+from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseLanguageModel
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
 from .smart_illustration_service import SmartIllustrationService
@@ -30,8 +31,8 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     """
     logger.info("Initializing application with unified retriever system...")
 
-    # Initialize LLM
-    llm = ChatGoogleGenerativeAI(model=AppConfig.GEMINI_MODEL, temperature=0.1)
+    # Initialize LLM with Claude
+    llm = ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1)
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
