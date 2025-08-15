@@ -28,7 +28,6 @@ from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class UnifiedRetriever:
