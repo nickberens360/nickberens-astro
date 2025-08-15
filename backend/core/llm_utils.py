@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 from langchain.prompts import PromptTemplate
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.output_parsers import CommaSeparatedListOutputParser, JsonOutputParser
+from langchain_core.output_parsers import CommaSeparatedListOutputParser, PydanticOutputParser
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def analyze_query_with_llm(llm: BaseLanguageModel, query: str) -> Dict[str, Any]
     """
     Analyze a user's query using an LLM to extract topics, complexity, and intent.
     """
-    parser = JsonOutputParser(pydantic_object=QueryAnalysis)
+    parser = PydanticOutputParser(pydantic_object=QueryAnalysis)
 
     prompt = PromptTemplate(
         template="""
