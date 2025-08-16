@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.docstore.document import Document
+from langchain_core.language_models import BaseLanguageModel
 from langchain_core.retrievers import BaseRetriever
 
 # Prefer the newer Chroma package
@@ -26,6 +27,7 @@ except ImportError:
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
+from .llm_utils import extract_topics_with_llm
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +35,9 @@ logger = logging.getLogger(__name__)
 class UnifiedRetriever:
     """A single retriever that intelligently handles all content types."""
 
-    def __init__(self, embeddings: Any, persist_dir: str = "backend/.unified_chroma"):
+    def __init__(self, embeddings: Any, llm: BaseLanguageModel, persist_dir: str = "backend/.unified_chroma"):
         self.embeddings = embeddings
+        self.llm = llm
         self.persist_dir = persist_dir
         self.vector_store: Optional[Chroma] = None
         self._initialize_store()
@@ -57,43 +60,18 @@ class UnifiedRetriever:
         return sha256_hash.hexdigest()
 
     def _extract_content_metadata(self, doc: Document, file_path: Path) -> Dict:
-        """Extract intelligent metadata from document content."""
-        content = doc.page_content.lower()
+        """Extract intelligent metadata from document content using an LLM."""
+        content = doc.page_content
 
-        # Auto-detect content type based on content analysis
-        content_types = []
-
-        # Technical content detection
-        if any(term in content for term in ["function", "class", "api", "code", "implementation"]):
-            content_types.append("technical")
-
-        # Resume/experience detection
-        if any(term in content for term in ["experience", "role", "company", "position", "worked"]):
-            content_types.append("experience")
-
-        # Skills detection
-        if any(term in content for term in ["skill", "expertise", "proficient", "technology"]):
-            content_types.append("skills")
-
-        # About/personal detection
-        if any(term in content for term in ["about", "passion", "interest", "philosophy"]):
-            content_types.append("about")
-
-        # Illustration/creative detection - enhanced for illustration files
-        if any(
-            term in content for term in ["illustration", "design", "art", "creative", "drawing", "character", "tags"]
-        ):
-            content_types.append("creative")
-
-        # Project detection
-        if any(term in content for term in ["project", "built", "developed", "created"]):
-            content_types.append("project")
+        # Use LLM to extract topics for dynamic content tagging
+        content_types = extract_topics_with_llm(self.llm, content)
 
         # Special handling for illustration JSON files
         is_illustration_data = file_path.name == "illustrations.json"
         illustration_file = None
 
         if is_illustration_data:
+            content_types.append("creative")  # Ensure creative tag for illustrations
             # Extract file name from JSON content for frontend display
             try:
                 if "file" in content:
@@ -108,9 +86,9 @@ class UnifiedRetriever:
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(content_types),
+            "content_types": ",".join(list(set(content_types))),  # Use set to remove duplicates
             "content_length": len(content),
-            "has_code": "```" in doc.page_content or "function" in content,
+            "has_code": "```" in doc.page_content or "function" in content.lower(),
             "is_illustration_data": is_illustration_data,
         }
 
@@ -120,6 +98,12 @@ class UnifiedRetriever:
             metadata["display_path"] = f"/illustrations/{illustration_file}"
 
         return metadata
+
+    def _should_skip_file(
+        self, file_path: Path, file_hash: str, indexed_files: Dict[str, str], force_reindex: bool
+    ) -> bool:
+        """Check if a file should be skipped during indexing."""
+        return str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash and not force_reindex
 
     def index_directory(self, directory: str, force_reindex: bool = False) -> Tuple[int, int]:
         """
@@ -147,16 +131,19 @@ class UnifiedRetriever:
         # Discover all files
         for file_path in base_path.rglob("*"):
             if file_path.is_file() and not file_path.name.startswith("."):
+                logger.debug(f"Processing file: {file_path}")
                 file_hash = self._compute_file_hash(file_path)
 
                 # Skip if already indexed and unchanged
-                if str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash:
+                if self._should_skip_file(file_path, file_hash, indexed_files, force_reindex):
+                    logger.debug(f"Skipping {file_path} - already indexed")
                     continue
 
                 # Load and process the document
                 try:
                     docs = load_doc(file_path)
                     if not docs:
+                        logger.debug(f"No documents loaded from {file_path}")
                         continue
 
                     # Use appropriate splitter based on file type

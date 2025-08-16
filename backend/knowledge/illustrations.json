@@ -22,7 +22,7 @@
   {
     "file": "doug-fights-back.jpg",
     "title": "Doug Fights Back",
-    "tags": ["doug", "character", "action", "fighting", "illustration"]
+    "tags": ["doug", "character", "action", "fighting", "illustration", "different"]
   },
   {
     "file": "pool-shark.jpg",
@@ -37,7 +37,7 @@
   {
     "file": "dope-goose.jpg",
     "title": "Dope Goose",
-    "tags": ["goose", "bird", "cool", "character", "illustration"]
+    "tags": ["goose", "bird", "cool", "character", "illustration", "different"]
   },
   {
     "file": "smalltime.png",
@@ -62,7 +62,7 @@
   {
     "file": "snake-hug.jpg",
     "title": "Snake Hug",
-    "tags": ["snake", "hug", "affection", "character", "illustration"]
+    "tags": ["snake", "hug", "affection", "character", "illustration", "favorite"]
   },
   {
     "file": "haz-hug.png",

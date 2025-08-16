@@ -38,7 +38,7 @@ class AppConfig:
         logger.error("Invalid MAX_RESULTS value. Using default value of 15.")
         MAX_RESULTS = 15
 
-    ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "public/illustrations.json")
+    ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
 
     # Server Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

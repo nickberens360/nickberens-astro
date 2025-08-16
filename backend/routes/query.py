@@ -146,11 +146,15 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
 
         unified_retriever = get_unified_retriever(services["retrievers"])
         if unified_retriever:
-            smart_handler = SmartQueryHandler(unified_retriever)
-            intent_analysis = smart_handler.analyze_query_intent(sanitized_question)
-            logger.info(
-                f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
-            )
+            llm = request.app.state.llm
+            if not llm:
+                logger.error("LLM not initialized, skipping smart query analysis.")
+            else:
+                smart_handler = SmartQueryHandler(unified_retriever, llm)
+                intent_analysis = smart_handler.analyze_query_with_llm(sanitized_question)
+                logger.info(
+                    f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
+                )
 
         text_stream, actual_model_used, metadata = await stream_with_fallback(
             services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model

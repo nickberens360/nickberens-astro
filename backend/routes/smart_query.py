@@ -7,15 +7,16 @@ This endpoint uses only the smart retriever to demonstrate:
 - Context selection without manual configuration
 """
 
+import asyncio
 import logging
-from typing import Any, Dict
+from typing import Annotated, Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..core.app_initializer_v2 import get_unified_retriever
 from ..core.smart_query_handler import SmartQueryHandler
-from ..dependencies import get_services
+from ..dependencies import get_services, get_smart_handler
 from ..models.request_models import Query
 
 router = APIRouter()
@@ -23,7 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/smart-query")
-async def smart_query(query: Query, services=Depends(get_services)):
+async def smart_query(
+    query: Query,
+    smart_handler: Annotated[SmartQueryHandler, Depends(get_smart_handler)],
+) -> JSONResponse:
     """
     Test endpoint for the smart retriever system.
 
@@ -33,22 +37,15 @@ async def smart_query(query: Query, services=Depends(get_services)):
     - Returns structured response with metadata
     """
     try:
-        # Get the unified retriever from services
-        all_retrievers = services.get("retrievers")
-        unified_retriever = get_unified_retriever(all_retrievers)
+        # Analyze the query intent (run in threadpool to avoid blocking event loop)
+        intent_analysis = await asyncio.to_thread(smart_handler.analyze_query_with_llm, query.question)
 
-        if not unified_retriever:
-            raise HTTPException(status_code=500, detail="Unified retriever not available")
-
-        # Create smart query handler
-        smart_handler = SmartQueryHandler(unified_retriever)
-
-        # Analyze the query intent
-        intent_analysis = smart_handler.analyze_query_intent(query.question)
-
-        # Get relevant context using smart routing
-        relevant_docs = smart_handler.get_relevant_context(
-            query.question, chat_history=[msg.dict() for msg in query.chat_history], max_context_length=4000
+        # Get relevant context using smart routing (run in threadpool for LLM reranking)
+        relevant_docs = await asyncio.to_thread(
+            smart_handler.get_relevant_context,
+            query.question,
+            chat_history=[msg.dict() for msg in query.chat_history],
+            max_context_length=4000,
         )
 
         # Prepare response
@@ -87,10 +84,14 @@ async def smart_query(query: Query, services=Depends(get_services)):
 
 
 @router.get("/smart-query/status")
-async def smart_query_status(services=Depends(get_services)):
+async def smart_query_status(
+    services: Annotated[Dict[str, Any], Depends(get_services)],
+) -> Dict[str, Any]:
     """Check the status of the smart retriever system."""
     try:
         all_retrievers = services.get("retrievers")
+        if not all_retrievers or not isinstance(all_retrievers, dict):
+            return {"status": "unavailable", "message": "Retrievers not available"}
         unified_retriever = get_unified_retriever(all_retrievers)
 
         if not unified_retriever:
@@ -115,17 +116,14 @@ async def smart_query_status(services=Depends(get_services)):
 
 
 @router.post("/smart-query/analyze")
-async def analyze_query(query: Query, services=Depends(get_services)):
+async def analyze_query(
+    query: Query,
+    smart_handler: Annotated[SmartQueryHandler, Depends(get_smart_handler)],
+) -> Dict[str, Any]:
     """Analyze a query without retrieving documents (for testing intent detection)."""
     try:
-        all_retrievers = services.get("retrievers")
-        unified_retriever = get_unified_retriever(all_retrievers)
-
-        if not unified_retriever:
-            raise HTTPException(status_code=500, detail="Unified retriever not available")
-
-        smart_handler = SmartQueryHandler(unified_retriever)
-        intent_analysis = smart_handler.analyze_query_intent(query.question)
+        # Run LLM analysis in threadpool to avoid blocking the event loop
+        intent_analysis = await asyncio.to_thread(smart_handler.analyze_query_with_llm, query.question)
 
         return {
             "query": query.question,
