@@ -7,7 +7,7 @@
         style="width: 34px;"
       />
       <div>
-        <cite class="content-prompt__label">AI Prompt</cite>
+        <p class="content-prompt__label">AI Prompt</p>
         <p class="content-prompt__label content-prompt__sub-label">Most likely
           hallucinated</p>
       </div>
