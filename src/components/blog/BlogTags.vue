@@ -1,5 +1,5 @@
 <template>
-  <div class="blog-tags">
+  <div class="blog-tags" :class="themeClass">
     <span v-for="tag in tags" :key="tag" class="blog-tag">{{ tag }}</span>
   </div>
 </template>
@@ -11,6 +11,15 @@ export default {
     tags: {
       type: Array,
       required: true
+    },
+    theme: {
+      type: String,
+      default: 'light'
+    }
+  },
+  computed: {
+    themeClass() {
+      return this.theme === 'light' ? 'theme-light' : 'theme-dark';
     }
   }
 }
@@ -20,13 +29,24 @@ export default {
 .blog-tags {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.5rem;
 }
 
 .blog-tag {
-  background-color: #f0f0f0;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.8rem;
+}
+
+/* Theme-based styling */
+.theme-light .blog-tag {
+  background-color: #f0f0f0;
+  color: #333333;
+}
+
+.theme-dark .blog-tag {
+  background-color: #333333;
+  color: #e0e0e0;
 }
 </style>

@@ -9,7 +9,7 @@
     "astro": "astro",
     "test": "vitest",
     "test:run": "vitest run",
-    "backend:build": "podman build -t nickberens:latest -f Dockerfile .",
+    "backend:build": "./scripts/copy-blog-to-knowledge.sh && podman build -t nickberens:latest -f Dockerfile .",
     "backend:dev": "podman run --rm --name nickberens -p 8000:8000 -v $(pwd)/backend:/app/backend:Z -v $(pwd)/public:/app/public:Z -e WATCHFILES_FORCE_POLLING=true --env-file .env nickberens:latest uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/backend",
     "backend:stop": "podman stop nickberens || true"
   },

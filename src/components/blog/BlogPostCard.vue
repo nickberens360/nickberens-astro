@@ -1,5 +1,5 @@
 <template>
-  <div class="blog-post-card">
+  <div class="blog-post-card" :class="themeClass" :style="cardStyle">
     <h2 class="blog-post-card__title">
       <a :href="`/blog/${post.slug}`">{{ post.data.title }}</a>
     </h2>
@@ -8,7 +8,7 @@
       <time :datetime="post.data.pubDate.toISOString()">
         {{ formatDate(post.data.pubDate) }}
       </time>
-      <BlogTags v-if="post.data.tags" :tags="post.data.tags" />
+      <BlogTags v-if="post.data.tags" :tags="post.data.tags" :theme="post.data.theme || 'light'" />
     </div>
   </div>
 </template>
@@ -25,6 +25,16 @@ export default {
     post: {
       type: Object,
       required: true
+    }
+  },
+  computed: {
+    themeClass() {
+      return (this.post.data.theme || 'light') === 'light' ? 'theme-light' : 'theme-dark';
+    },
+    cardStyle() {
+      return {
+        backgroundColor: this.post.data.backgroundColor || 'white'
+      }
     }
   },
   methods: {
@@ -49,7 +59,6 @@ export default {
 
   border-radius: 8px;
   padding: 1.5rem;
-  background-color: rgb(255 255 255 / 26%);
   transition: transform 0.2s ease;
 }
 
@@ -81,9 +90,33 @@ export default {
 .blog-post-card__meta {
   margin-top: clamp(0.8rem, 1vw, 1.2rem);
   font-size: clamp(0.8rem, 0.8rem + 0.1vw, 0.9rem);
-  color: #666;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Theme-based styling */
+.theme-light .blog-post-card__title {
+  color: #1a1a1a;
+}
+
+.theme-light .blog-post-card__description {
+  color: #333333;
+}
+
+.theme-light .blog-post-card__meta {
+  color: #666666;
+}
+
+.theme-dark .blog-post-card__title {
+  color: #ffffff;
+}
+
+.theme-dark .blog-post-card__description {
+  color: #e0e0e0;
+}
+
+.theme-dark .blog-post-card__meta {
+  color: #b0b0b0;
 }
 </style>
