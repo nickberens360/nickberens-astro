@@ -6,7 +6,11 @@
         alt="AI Icon"
         style="width: 34px;"
       />
-      <span class="content-prompt__label">AI Prompt</span>
+      <div>
+        <p class="content-prompt__label">AI Prompt</p>
+        <p class="content-prompt__label content-prompt__sub-label">Most likely
+          hallucinated</p>
+      </div>
     </div>
     <div class="content-prompt__content">
       {{ aiPrompt }}
@@ -83,8 +87,13 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   opacity: 0.9;
+  font-style: normal;
 }
-
+.content-prompt__sub-label {
+  font-size: 0.75rem;
+  margin: 0;
+  text-transform: none;
+}
 .content-prompt__content {
   font-size: 1rem;
   line-height: 1.6;
