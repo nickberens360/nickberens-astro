@@ -17,11 +17,16 @@ export default {
     posts: {
       handler(newPosts) {
         if (newPosts && newPosts.length > 0) {
+          // Helper function to convert to Date
+          const toDate = (post) => {
+            const value = (post && (post.data?.pubDate ?? post.pubDate)) ?? 0;
+            const date = value instanceof Date ? value : new Date(value || 0);
+            return Number.isNaN(date.getTime()) ? new Date(0) : date;
+          };
+          
           // Sort posts by date (newest first) before adding to menu
           const sortedPosts = [...newPosts].sort((a, b) => {
-            const dateA = a.data?.pubDate || a.pubDate || new Date(0);
-            const dateB = b.data?.pubDate || b.pubDate || new Date(0);
-            return dateB.valueOf() - dateA.valueOf();
+            return toDate(b).getTime() - toDate(a).getTime();
           });
           
           // Limit to most recent 10 posts for the dropdown

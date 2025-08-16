@@ -43,7 +43,11 @@ const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
 const repoUrl = getGitHubRepoUrl();
 const fonts = await getCollection('fonts');
-const blogPosts = await getCollection('blog');
+const blogPosts = (await getCollection('blog')).map(({ slug, data }) => ({
+  slug,
+  title: data?.title ?? 'Untitled',
+  pubDate: data?.pubDate ? data.pubDate.toISOString() : null
+}));
 ---
 
 <html lang="en">

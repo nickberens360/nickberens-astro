@@ -3,7 +3,7 @@
     <div class="blog-post-header__inner">
       <h1 class="blog-post-header__title">{{ title }}</h1>
       <div class="blog-post-header__meta">
-        <time :datetime="pubDate.toISOString()">
+        <time :datetime="toISOString(pubDate)">
           {{ formatDate(pubDate) }}
         </time>
         <span
@@ -34,7 +34,7 @@ export default {
       required: true
     },
     pubDate: {
-      type: Date,
+      type: [Date, String],
       required: true
     },
     author: {
@@ -56,12 +56,18 @@ export default {
     }
   },
   methods: {
-    formatDate(date) {
+    formatDate(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
       return date.toLocaleDateString('en-us', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
       });
+    },
+    toISOString(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : date.toISOString();
     }
   }
 };

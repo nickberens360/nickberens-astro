@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit immediately if any command fails
+set -e
+
 # Create the backend/knowledge directory if it doesn't exist
 mkdir -p backend/knowledge
 
