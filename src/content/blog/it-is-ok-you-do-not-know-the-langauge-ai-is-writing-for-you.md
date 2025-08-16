@@ -5,7 +5,7 @@ languages - the benefits, risks, and finding the right balance between capabilit
 pubDate: 2025-08-14
 tags: ["ai", "programming", "development", "learning", "productivity"]
 author: "Probably AI"
-backgroundColor: "#eee"
+backgroundColor: "#e0ecff"
 theme: "light"
 aiPrompt: "Write an article about the implications of using AI to build software in languages you don't know well. Discuss the benefits, risks, and how to balance AI assistance with understanding the underlying technology."
 ---
@@ -18,7 +18,7 @@ This experience got me thinking about something we don't talk about enough in te
 
 ## What I'm Actually Experiencing
 
-I've been programming for about 15 years now, and the last two have been unlike anything I've experienced before. I spun up a Flask app last month without really understanding Python decorators. I deployed a Vue.js site while being completely confused about component lifecycle methods. Yesterday, I built a Chrome extension in JavaScript even though I'm primarily a backend developer.
+I've been programming for about 15 years now, and the last two have been unlike anything I've experienced before. I spun up a Flask app last month without really understanding Python decorators.
 
 The tools are just that good now. Claude writes me functioning Rust programs. GitHub Copilot auto-completes entire functions in languages I've never touched. ChatGPT debugs my Swift code and explains exactly what went wrong.
 

@@ -4,7 +4,7 @@ description: "Using AI like browser-first design: rapid prototyping, quick itera
 pubDate: 2025-07-15
 tags: ["ai", "design", "productivity", "workflow", "prototyping"]
 author: "Probably AI"
-backgroundColor: "#fff"
+backgroundColor: "#ffdeba"
 theme: "light"
 aiPrompt: "Create an article based on the following:
 Use AI as a rapid prototyping tool, similar to designing directly in the browser. Build functional prototypes quickly without worrying about perfection, then refine once you've validated the direction. Prioritize speed and iteration over polish in the initial stages."
