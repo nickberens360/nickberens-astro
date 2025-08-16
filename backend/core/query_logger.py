@@ -186,6 +186,89 @@ class QueryLogger:
             metadata=metadata,
         )
 
+    def update_streaming_response(
+        self,
+        cache_key: str,
+        client_ip: str,
+        question: str,
+        actual_response: str,
+    ) -> bool:
+        """
+        Update a streaming response log entry with the actual response content.
+
+        This method finds the most recent streaming log entry for the given client_ip
+        and question, then updates it with the actual response content.
+
+        Args:
+            cache_key: The cache key used for the response
+            client_ip: The client's IP address
+            question: The user's question
+            actual_response: The actual response content to log
+
+        Returns:
+            bool: True if the update was successful, False otherwise
+        """
+        if not self.should_log_ip(client_ip):
+            return True  # Skip logging but return success
+
+        try:
+            # Read all log entries
+            log_entries = []
+            try:
+                with open(self.log_file_path, "r") as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                log_entries.append(json.loads(line))
+                            except json.JSONDecodeError:
+                                # Keep malformed entries as-is
+                                log_entries.append(line.rstrip())
+            except FileNotFoundError:
+                self.logger.warning(f"Log file not found: {self.log_file_path}")
+                return False
+
+            # Find the most recent streaming response entry for this client/question
+            updated = False
+            anonymized_ip = self.anonymize_ip(client_ip)
+
+            # Search from the end (most recent entries first)
+            for i in range(len(log_entries) - 1, -1, -1):
+                entry = log_entries[i]
+                if isinstance(entry, dict):
+                    if (
+                        entry.get("client_ip") == anonymized_ip
+                        and entry.get("question") == question
+                        and entry.get("response") == "[STREAMING RESPONSE]"
+                        and entry.get("query_type") == "text"
+                    ):
+                        # Update this entry with the actual response
+                        entry["response"] = actual_response
+                        entry["metadata"] = entry.get("metadata", {})
+                        entry["metadata"]["cache_key"] = cache_key
+                        entry["metadata"]["response_updated"] = datetime.now().isoformat()
+                        updated = True
+                        break
+
+            if updated:
+                # Write all entries back to the file
+                with open(self.log_file_path, "w") as f:
+                    for entry in log_entries:
+                        if isinstance(entry, dict):
+                            f.write(json.dumps(entry, default=str) + "\n")
+                        else:
+                            # Write back malformed entries as-is
+                            f.write(str(entry) + "\n")
+
+                self.logger.debug(f"Updated streaming response for cache_key: {cache_key}")
+                return True
+            else:
+                self.logger.warning(f"No matching streaming response found to update for cache_key: {cache_key}")
+                return False
+
+        except (IOError, TypeError) as e:
+            self.logger.error(f"Failed to update streaming response: {e}")
+            return False
+
     def get_logs(
         self,
         limit: Optional[int] = None,

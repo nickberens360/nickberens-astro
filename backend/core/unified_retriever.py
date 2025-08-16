@@ -192,6 +192,16 @@ class UnifiedRetriever:
             raise ValueError("Vector store not initialized")
         return self.vector_store.as_retriever(search_kwargs=search_kwargs)  # type: ignore[no-any-return]
 
+    def get_relevant_documents(
+        self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None
+    ) -> List[Document]:
+        """
+        Get relevant documents for a query (compatibility method).
+
+        This method provides compatibility with LangChain's retriever interface.
+        """
+        return self.semantic_search(query, k, filter_content_types)
+
     def semantic_search(
         self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None, score_threshold: float = 0.5
     ) -> List[Document]:

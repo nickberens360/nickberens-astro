@@ -19,6 +19,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .config import AppConfig
+from .query_logger import get_query_logger
 
 logger = logging.getLogger(__name__)
 
@@ -300,6 +301,8 @@ async def stream_with_fallback(
     chat_history: List[BaseMessage],
     user_input: str,
     preferred_model: Optional[str] = None,
+    client_ip: Optional[str] = None,
+    question: Optional[str] = None,
 ) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
     Handle user input, perform retrieval (with caching),
@@ -391,6 +394,20 @@ async def stream_with_fallback(
                     full_response_chunks.append(chunk)
                 if cache_key:
                     CacheManager.cache_response(cache_key, full_response_chunks)
+
+                    # Update streaming response log with actual content
+                    if client_ip and question and full_response_chunks:
+                        try:
+                            complete_response = "".join(full_response_chunks)
+                            query_logger = get_query_logger()
+                            query_logger.update_streaming_response(
+                                cache_key=cache_key,
+                                client_ip=client_ip,
+                                question=question,
+                                actual_response=complete_response,
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to update streaming response log: {e}")
 
             logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
             metadata["rate_limit_status"] = rate_limit_tracker.get_status()

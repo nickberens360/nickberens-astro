@@ -9,15 +9,16 @@ This is the main entry point for the FastAPI application that:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from dotenv import load_dotenv
 from langchain_core.language_models import BaseLanguageModel
 
 from .core.app_factory import create_app
-from .core.app_initializer_v2 import initialize_app_state
+from .core.app_initializer_v2 import get_unified_retriever, initialize_app_state
 from .core.config import AppConfig
 from .core.followup_service import FollowUpService
+from .core.followup_service_llm import LLMFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
@@ -49,7 +50,21 @@ except Exception as e:
 # Initialize singleton services
 query_router = QueryRouter()
 response_service = ResponseService()
-followup_service = FollowUpService()
+
+# Use LLM-based follow-up service if we have the necessary components
+followup_service: Union[LLMFollowUpService, FollowUpService]
+if llm and retrievers:
+    unified_retriever = get_unified_retriever(retrievers)
+    if unified_retriever:
+        logger.info("Using LLM-based follow-up service for dynamic question generation")
+        followup_service = LLMFollowUpService(llm, unified_retriever)
+    else:
+        logger.warning("Unified retriever not available, falling back to static follow-up service")
+        followup_service = FollowUpService()
+else:
+    logger.warning("LLM or retrievers not available, using static follow-up service")
+    followup_service = FollowUpService()
+
 query_logger = get_query_logger()
 
 # Create the FastAPI app

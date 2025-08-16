@@ -157,7 +157,12 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 )
 
         text_stream, actual_model_used, metadata = await stream_with_fallback(
-            services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
+            services["retrievers"],
+            formatted_chat_history,
+            sanitized_question,
+            query.preferred_model,
+            client_ip=client_ip,
+            question=sanitized_question,
         )
 
         # If we get here, the LLM fallback succeeded, so return 200
