@@ -11,6 +11,7 @@ import {getGitBranch, getLatestCommitHash, getLatestCommitMessage, getGitHubRepo
 import EasterEgg from '../components/EasterEgg.vue';
 import EasterEggsFound from '../components/EasterEggsFound.vue';
 import FontMenuLoader from '../components/FontMenuLoader.vue';
+import BlogMenuLoader from '../components/BlogMenuLoader.vue';
 import '@fortawesome/fontawesome-svg-core/styles.css'
 import { getCollection } from 'astro:content';
 
@@ -42,6 +43,7 @@ const commitHash = await getLatestCommitHash();
 const commitMessage = await getLatestCommitMessage();
 const repoUrl = getGitHubRepoUrl();
 const fonts = await getCollection('fonts');
+const blogPosts = await getCollection('blog');
 ---
 
 <html lang="en">
@@ -67,6 +69,10 @@ const fonts = await getCollection('fonts');
 <FontMenuLoader
     client:only="vue"
     fonts={fonts}
+/>
+<BlogMenuLoader
+    client:only="vue"
+    posts={blogPosts}
 />
 <slot/>
 <EasterEgg

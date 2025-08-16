@@ -3,11 +3,15 @@ import { atom } from 'nanostores';
 // Font items store - will be populated dynamically
 export const fontItems = atom([]);
 
+// Blog items store - will be populated dynamically
+export const blogItems = atom([]);
+
 // Navigation items store
 export const navItems = atom([
   { text: 'nick.AI', url: '/nick-ai' },
   { text: 'Illustrations', url: '/illustrations' },
   { text: 'Atomic Docs', url: '/atomic-docs' },
+  { text: 'Blog', url: '/blog' },
   {
     text: 'Fonts',
     url: '#',
@@ -24,6 +28,24 @@ export const navItems = atom([
     ariaLabel: 'GitHub Profile'
   }
 ]);
+
+// Helper function to update blog items (keeping for potential future use)
+export const updateBlogItems = (blogs) => {
+  const blogMenuItems = blogs.map(blog => {
+    // For Astro content collections, blog.slug is the URL path
+    // blog.data contains the actual content metadata
+    const blogSlug = blog.slug || blog.id || 'unknown';
+    const blogTitle = blog.data?.title || blog.title || 'Unknown Post';
+    const menuItem = {
+      text: blogTitle,
+      url: `/blog/${blogSlug}`
+    };
+    return menuItem;
+  });
+
+  // Store blog items for potential future use
+  blogItems.set(blogMenuItems);
+};
 
 // Helper function to update font items
 export const updateFontItems = (fonts) => {

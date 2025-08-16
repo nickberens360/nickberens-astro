@@ -11,6 +11,8 @@ const blogCollection = defineCollection({
     tags: z.array(z.string()).optional(),
     author: z.string().optional(),
     backgroundColor: z.string().optional(), // Add backgroundColor property
+    theme: z.enum(['light', 'dark']).optional(), // Add theme property for styling
+    aiPrompt: z.string().optional(), // Add aiPrompt property for AI-generated content
   }),
 });
 
