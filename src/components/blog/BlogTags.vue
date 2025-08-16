@@ -41,12 +41,12 @@ export default {
 
 /* Theme-based styling */
 .theme-light .blog-tag {
-  background-color: #f0f0f0;
+  background-color: rgba(0, 0, 0, 0.07);
   color: #333333;
 }
 
 .theme-dark .blog-tag {
-  background-color: #333333;
+  background-color: rgba(255, 255, 255, 0.39);
   color: #e0e0e0;
 }
 </style>
