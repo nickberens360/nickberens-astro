@@ -84,10 +84,11 @@ export default {
 .content-prompt__label {
   font-size: 0.875rem;
   font-weight: 600;
+  font-style: normal;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   opacity: 0.9;
-  font-style: normal;
+  margin: 0;
 }
 .content-prompt__sub-label {
   font-size: 0.75rem;
