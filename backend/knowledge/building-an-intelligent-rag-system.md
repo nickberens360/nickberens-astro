@@ -4,7 +4,7 @@ description: "A deep dive into the evolution of my personal website's AI assista
 pubDate: 2025-08-15
 heroImage: "/blog-placeholder-3.jpg"
 author: "Probably AI"
-backgroundColor: "lightgoldenrodyellow"
+backgroundColor: "#b8ffe9"
 theme: "light"
 aiPrompt: "Please write a blog post about the development process to get the AI 
 RAG system running. Use the git commits as a reference to decide on what to 

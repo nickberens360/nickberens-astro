@@ -63,6 +63,7 @@ export default {
 
 .font-card__specimen {
   font-size: 1.125rem;
+  font-weight: bold;
   line-height: 1.5;
   margin: 0;
   color: #444;
