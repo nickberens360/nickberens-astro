@@ -308,14 +308,15 @@ export default {
 
 @supports not (height: 100dvh) {
   .conversation-pair:last-of-type {
-    height: calc(100vh - var(--chat-bot-form-height) - 25px);
+    height: calc(100vh - var(--chat-bot-form-height) - var(--site-header-height) - 25px);
   }
 }
 @supports (height: 100dvh) {
   .conversation-pair:last-of-type {
-    height: calc(100dvh - var(--chat-bot-form-height) - 25px);
+    height: calc(100dvh - var(--chat-bot-form-height) - var(--site-header-height) - 25px);
   }
 }
+
 
 /* Real typing cursor style */
 .typing-cursor {
@@ -458,7 +459,8 @@ export default {
 
 .followup-buttons {
   display: flex;
-  flex-direction: column;
+  width: 100%;
+  overflow-x: auto;
   gap: .5rem
 }
 
@@ -471,7 +473,13 @@ export default {
   font-size: .875rem;
   cursor: pointer;
   transition: background-color .2s;
-  text-align: left
+  text-align: left;
+  min-width: 200px;
+  width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
 }
 
 .followup-button:hover {

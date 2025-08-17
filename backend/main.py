@@ -15,10 +15,10 @@ from dotenv import load_dotenv
 from langchain_core.language_models import BaseLanguageModel
 
 from .core.app_factory import create_app
-from .core.app_initializer_v2 import get_unified_retriever, initialize_app_state
+from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
 from .core.followup_service import FollowUpService
-from .core.followup_service_llm import LLMFollowUpService
+from .core.followup_service_pregenerated import PreGeneratedFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
@@ -51,18 +51,13 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 
-# Use LLM-based follow-up service if we have the necessary components
-followup_service: Union[LLMFollowUpService, FollowUpService]
-if llm and retrievers:
-    unified_retriever = get_unified_retriever(retrievers)
-    if unified_retriever:
-        logger.info("Using LLM-based follow-up service for dynamic question generation")
-        followup_service = LLMFollowUpService(llm, unified_retriever)
-    else:
-        logger.warning("Unified retriever not available, falling back to static follow-up service")
-        followup_service = FollowUpService()
+# Use pre-generated follow-up service for maximum performance
+followup_service: Union[PreGeneratedFollowUpService, FollowUpService]
+if app_initialized:
+    logger.info("Using pre-generated follow-up service for instant responses (0ms overhead)")
+    followup_service = PreGeneratedFollowUpService()
 else:
-    logger.warning("LLM or retrievers not available, using static follow-up service")
+    logger.warning("App not initialized, using static follow-up service")
     followup_service = FollowUpService()
 
 query_logger = get_query_logger()
