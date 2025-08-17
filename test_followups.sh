@@ -17,16 +17,19 @@ test_question() {
     echo "Question: '$question'"
     
     # Make the request and parse response
-    response=$(curl -s -X POST "$BASE_URL/query" \
-        -H "Content-Type: application/json" \
-        -d "{\"question\": \"$question\", \"chat_history\": []}")
+response=$(jq -nc --arg q "$question" '{question: $q, chat_history: []}' | \
+  curl -sS -f -m 30 -X POST "$BASE_URL/query" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -d @- 2>&1)
     
     if [ $? -eq 0 ]; then
         # Extract follow-up questions using python
-        followups=$(echo "$response" | python3 -c "
+followups=$(echo "$response" | python3 -c "
 import json, sys
+body = sys.stdin.read()
 try:
-    data = json.load(sys.stdin)
+    data = json.loads(body)
     followups = data.get('followup_questions', [])
     print(f'Count: {len(followups)}')
     for i, q in enumerate(followups, 1):
@@ -52,7 +55,7 @@ try:
 except Exception as e:
     print(f'ERROR: {e}')
     print('Raw response:', file=sys.stderr)
-    print(sys.stdin.read(), file=sys.stderr)
+    print(body, file=sys.stderr)
 ")
         echo "$followups"
     else

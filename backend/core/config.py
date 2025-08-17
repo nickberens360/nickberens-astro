@@ -29,14 +29,39 @@ class AppConfig:
             return "pre_generated"
         return mode
 
-    FOLLOWUP_MODE = property(lambda self: self.get_followup_mode())
-
     @classmethod
     def is_followup_pregeneration_enabled(cls) -> bool:
         """Toggle pre-generation during startup to control cold-start costs."""
         return os.getenv("ENABLE_FOLLOWUP_PREGENERATION", "true").lower() == "true"
 
-    ENABLE_FOLLOWUP_PREGENERATION = property(lambda self: self.is_followup_pregeneration_enabled())
+    @classmethod
+    def get_followup_validation_score_threshold(cls) -> float:
+        """Threshold for validating follow-up relevance (0..1)."""
+        try:
+            val = float(os.getenv("FOLLOWUP_VALIDATION_SCORE_THRESHOLD", "0.5"))
+            if 0.0 <= val <= 1.0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid FOLLOWUP_VALIDATION_SCORE_THRESHOLD; defaulting to 0.5")
+        return 0.5
+
+    # Backward-compatible class-level properties
+    class classproperty(property):
+        def __get__(self, obj, owner):  # type: ignore[override]
+            return self.fget(owner)  # type: ignore[misc]
+
+    @classproperty
+    def FOLLOWUP_MODE(cls) -> str:
+        return cls.get_followup_mode()
+
+    @classproperty
+    def ENABLE_FOLLOWUP_PREGENERATION(cls) -> bool:
+        return cls.is_followup_pregeneration_enabled()
+
+    @classproperty
+    def FOLLOWUP_VALIDATION_SCORE_THRESHOLD(cls) -> float:
+        return cls.get_followup_validation_score_threshold()
 
     # Search Configuration with basic validation
     try:
@@ -203,7 +228,9 @@ class AppConfig:
 
         return excluded_ips
 
-    EXCLUDED_IPS = property(lambda self: self.get_excluded_ips())
+    @classproperty
+    def EXCLUDED_IPS(cls):
+        return cls.get_excluded_ips()
 
     # Query Log Authentication
     @classmethod
@@ -220,7 +247,9 @@ class AppConfig:
 
         return token if token else None
 
-    QUERY_LOG_AUTH_TOKEN = property(lambda self: self.get_query_log_auth_token())
+    @classproperty
+    def QUERY_LOG_AUTH_TOKEN(cls) -> Optional[str]:
+        return cls.get_query_log_auth_token()
 
     # IP Anonymization Settings (GDPR/CCPA compliance)
     ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default
@@ -247,7 +276,9 @@ class AppConfig:
 
         return salt
 
-    IP_HASH_SALT = property(lambda self: self.get_ip_hash_salt())
+    @classproperty
+    def IP_HASH_SALT(cls) -> str:
+        return cls.get_ip_hash_salt()
 
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"

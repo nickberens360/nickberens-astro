@@ -91,3 +91,13 @@ app.state.query_router = query_router
 app.state.response_service = response_service
 app.state.followup_service = followup_service
 app.state.query_logger = query_logger
+
+# Ensure graceful shutdown of background resources (e.g., thread pools)
+@app.on_event("shutdown")
+async def _shutdown_cleanup():
+    svc = app.state.followup_service
+    if hasattr(svc, "close"):
+        try:
+            svc.close()
+        except Exception:
+            logger.exception("Failed to close follow-up service cleanly")

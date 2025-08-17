@@ -227,8 +227,8 @@ class UnifiedRetriever:
             raise ValueError("Vector store not initialized")
         docs_and_scores = self.vector_store.similarity_search_with_score(query, k=search_k)
 
-        # Filter by score threshold
-        filtered_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
+        # Filter by distance threshold (lower distance = more similar)
+        filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
 
         # Apply content type filtering if specified
         if filter_content_types:

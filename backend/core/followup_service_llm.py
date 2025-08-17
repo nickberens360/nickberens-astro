@@ -15,6 +15,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
+from .config import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +138,13 @@ Response:""",
             parsed_response = self.parser.parse(content)
 
             # Validate questions are answerable
-            validated_questions = self._validate_questions(parsed_response["questions"])
+            if hasattr(parsed_response, "questions"):
+                questions = getattr(parsed_response, "questions")
+            elif isinstance(parsed_response, dict):
+                questions = parsed_response.get("questions", [])
+            else:
+                questions = []
+            validated_questions = self._validate_questions(questions)
 
             if validated_questions and len(validated_questions) >= 3:
                 logger.info(f"Generated {len(validated_questions)} follow-up questions using LLM")
@@ -247,6 +254,11 @@ Response:""",
     def _validate_questions(self, questions: List[str]) -> List[str]:
         """Validate that questions can be answered from the vector store."""
         validated = []
+        # Configurable score threshold (default 0.5)
+        try:
+            score_threshold = float(AppConfig.FOLLOWUP_VALIDATION_SCORE_THRESHOLD)
+        except Exception:
+            score_threshold = 0.5
 
         for question in questions:
             try:
@@ -258,7 +270,7 @@ Response:""",
                     for doc in results:
                         # Most retrievers include a score in metadata
                         if hasattr(doc, "metadata") and "score" in doc.metadata:
-                            if doc.metadata["score"] > 0.5:  # Reasonable threshold
+                            if doc.metadata["score"] > score_threshold:  # Reasonable threshold
                                 has_good_match = True
                                 break
                         else:

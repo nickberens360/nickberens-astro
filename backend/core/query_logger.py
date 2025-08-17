@@ -255,43 +255,11 @@ class QueryLogger:
                     self.logger.error(f"Failed to append streaming completion: {e}")
                     # Fall through to legacy rewrite method
 
-            # Find the most recent streaming response entry for this client/question
-            updated = False
-            anonymized_ip = self.anonymize_ip(client_ip)
-
-            # Search from the end (most recent entries first)
-            for i in range(len(log_entries) - 1, -1, -1):
-                entry = log_entries[i]
-                if isinstance(entry, dict):
-                    if (
-                        entry.get("client_ip") == anonymized_ip
-                        and entry.get("question") == question
-                        and entry.get("response") == "[STREAMING RESPONSE]"
-                        and entry.get("query_type") == "text"
-                    ):
-                        # Update this entry with the actual response
-                        entry["response"] = actual_response
-                        entry["metadata"] = entry.get("metadata", {})
-                        entry["metadata"]["cache_key"] = cache_key
-                        entry["metadata"]["response_updated"] = datetime.now().isoformat()
-                        updated = True
-                        break
-
-            if updated:
-                # Write all entries back to the file
-                with open(self.log_file_path, "w") as f:
-                    for entry in log_entries:
-                        if isinstance(entry, dict):
-                            f.write(json.dumps(entry, default=str) + "\n")
-                        else:
-                            # Write back malformed entries as-is
-                            f.write(str(entry) + "\n")
-
-                self.logger.debug(f"Updated streaming response for cache_key: {cache_key}")
-                return True
-            else:
-                self.logger.warning(f"No matching streaming response found to update for cache_key: {cache_key}")
-                return False
+            # Legacy rewrite path disabled to avoid race conditions
+            self.logger.warning(
+                "No request_id provided; skipping legacy rewrite of query logs to avoid race conditions"
+            )
+            return False
 
         except (IOError, TypeError) as e:
             self.logger.error(f"Failed to update streaming response: {e}")

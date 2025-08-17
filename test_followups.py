@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Test script for follow-up questions functionality."""
 
+import json
 import requests
 import time
 from typing import Dict, List, Any
@@ -63,13 +64,28 @@ def test_followup_questions():
             if i > 0:
                 time.sleep(12)  # Wait 12 seconds between requests
 
+            started = time.time()
             response = requests.post(
                 f"{base_url}/query", json={"question": test_case["question"], "chat_history": []}, timeout=30
             )
+            elapsed = time.time() - started
 
             if response.status_code == 200:
-                data = response.json()
-                followup_questions = data.get("followup_questions", [])
+                content_type = response.headers.get("Content-Type", "").lower()
+                followup_questions = []
+                processing_time = elapsed
+
+                if "application/json" in content_type:
+                    data = response.json()
+                    followup_questions = data.get("followup_questions", []) or data.get("followUps", [])
+                    processing_time = data.get("processing_time", processing_time)
+                else:
+                    # Streaming response: pick follow-ups from headers
+                    x_followups = response.headers.get("X-Followup-Questions", "[]")
+                    try:
+                        followup_questions = json.loads(x_followups)
+                    except Exception:
+                        followup_questions = []
 
                 print(f"Follow-up questions ({len(followup_questions)}):")
                 for j, q in enumerate(followup_questions, 1):
@@ -86,7 +102,7 @@ def test_followup_questions():
                         "question": test_case["question"],
                         "followup_questions": followup_questions,
                         "analysis": analysis,
-                        "response_time": data.get("processing_time", 0),
+                        "response_time": processing_time,
                     }
                 )
 

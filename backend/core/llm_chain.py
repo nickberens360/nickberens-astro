@@ -397,7 +397,7 @@ async def stream_with_fallback(
                     CacheManager.cache_response(cache_key, full_response_chunks)
 
                     # Update streaming response log with actual content
-                    if client_ip and question and full_response_chunks:
+                    if cache_key and client_ip and question and full_response_chunks:
                         try:
                             complete_response = "".join(full_response_chunks)
                             query_logger = get_query_logger()

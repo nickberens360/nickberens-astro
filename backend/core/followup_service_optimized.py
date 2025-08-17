@@ -203,7 +203,11 @@ class OptimizedFollowUpService:
         self.cache.clear()
         logger.info("Follow-up cache cleared")
 
-    def __del__(self):
-        """Cleanup thread pool on deletion."""
+    def close(self) -> None:
+        """Explicitly cleanup thread pool resources."""
         if hasattr(self, "executor"):
-            self.executor.shutdown(wait=False)
+            try:
+                self.executor.shutdown(wait=False)
+                logger.info("OptimizedFollowUpService executor shut down")
+            except Exception as e:
+                logger.warning(f"Failed to shut down executor: {e}")

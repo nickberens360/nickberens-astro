@@ -18,18 +18,30 @@ def test_followup_generation(question: str):
         )
 
         if response.status_code == 200:
-            data = response.json()
-
-            # Extract follow-up questions
-            followups = data.get("followup_questions", [])
+            content_type = response.headers.get("content-type", "")
+            model_used = response.headers.get("X-Model-Used")
+            request_id = response.headers.get("X-Request-Id")
+            followups = []
+            if content_type.startswith("application/json"):
+                data = response.json()
+                followups = data.get("followup_questions", [])
+            else:
+                # Streaming responses expose follow-ups via headers
+                import json as _json
+                x_followups = response.headers.get("X-Followup-Questions", "[]")
+                try:
+                    followups = _json.loads(x_followups)
+                except Exception:
+                    followups = []
 
             print(f"Generated {len(followups)} follow-up questions:")
             for i, q in enumerate(followups, 1):
                 print(f"  {i}. {q}")
 
-            # Check if LLM was used
-            if "model_used" in data:
-                print(f"Model used: {data['model_used']}")
+            if model_used:
+                print(f"Model used: {model_used}")
+            if request_id:
+                print(f"Request ID: {request_id}")
 
             return True
         else:

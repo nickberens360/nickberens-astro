@@ -239,18 +239,32 @@ Response:""",
 
             parsed = self.parser.parse(content)
 
+            # Validate and coerce to model
+            if isinstance(parsed, PreGeneratedFollowups):
+                model = parsed
+            elif isinstance(parsed, dict):
+                model = PreGeneratedFollowups(**parsed)
+            else:
+                # Last resort: try loading from JSON string
+                try:
+                    model = PreGeneratedFollowups.model_validate_json(str(parsed))
+                except Exception as ve:
+                    logger.error(f"Failed to validate LLM output: {ve}")
+                    return self._get_fallback_questions()
+
             # Convert to our format
-            questions = {}
+            questions: Dict[str, List[str]] = {}
 
             # Topic questions
-            for topic, topic_questions in parsed["topic_questions"].items():
-                questions[f"topic_{topic}"] = topic_questions
+            if isinstance(model.topic_questions, dict):
+                for topic, topic_questions in model.topic_questions.items():
+                    questions[f"topic_{topic}"] = list(topic_questions)
 
             # General questions
-            questions["general"] = parsed["general_questions"]
+            questions["general"] = list(model.general_questions or [])
 
             # Content-based questions
-            questions["content_based"] = parsed["content_based_questions"]
+            questions["content_based"] = list(model.content_based_questions or [])
 
             return questions
 
