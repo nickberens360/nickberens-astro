@@ -10,8 +10,8 @@ import logging
 from difflib import SequenceMatcher
 from typing import Dict, List, Tuple
 
-from .unified_retriever import UnifiedRetriever
 from .config import AppConfig
+from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,8 @@ class SmartIllustrationService:
 
     def __init__(self, unified_retriever: UnifiedRetriever):
         self.unified_retriever = unified_retriever
+        # Cache illustrations data to avoid repeated file I/O
+        self._illustrations_cache = self._load_illustrations_data()
 
     def validate_data(self):
         """Validate that illustration data is available."""
@@ -179,7 +181,7 @@ class SmartIllustrationService:
 
     def _fuzzy_fallback(self, search_term: str, limit: int, seen_files: set) -> List[Dict[str, str]]:
         """Return additional matches using fuzzy title/tag matching."""
-        entries = self._load_illustrations_data()
+        entries = self._illustrations_cache
         if not entries:
             return []
 
