@@ -99,6 +99,17 @@ class UnifiedRetriever:
 
         return metadata
 
+    def _should_index_file(self, file_path: Path) -> bool:
+        """Check if a file should be indexed based on its name and type."""
+        # Skip system/config files that aren't content
+        skip_files = {"robots.txt", "sitemap.xml", ".htaccess", "favicon.ico", "manifest.json"}
+
+        if file_path.name.lower() in skip_files:
+            logger.debug(f"Skipping system file: {file_path}")
+            return False
+
+        return True
+
     def _should_skip_file(
         self, file_path: Path, file_hash: str, indexed_files: Dict[str, str], force_reindex: bool
     ) -> bool:
@@ -130,7 +141,7 @@ class UnifiedRetriever:
 
         # Discover all files
         for file_path in base_path.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith("."):
+            if file_path.is_file() and not file_path.name.startswith(".") and self._should_index_file(file_path):
                 logger.debug(f"Processing file: {file_path}")
                 file_hash = self._compute_file_hash(file_path)
 

@@ -458,10 +458,12 @@ export default {
 }
 
 .followup-buttons {
+  position: relative;
   display: flex;
   width: 100%;
   overflow-x: auto;
-  gap: .5rem
+  gap: .5rem;
+  padding-bottom: .7rem;
 }
 
 .followup-button {
@@ -475,11 +477,10 @@ export default {
   transition: background-color .2s;
   text-align: left;
   min-width: 200px;
-  width: 200px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-
+  margin-right: .5rem;
 }
 
 .followup-button:hover {

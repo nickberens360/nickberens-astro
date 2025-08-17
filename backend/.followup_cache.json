@@ -1,41 +1,41 @@
 {
-  "44335256c99f87e5": {
+  "f087bf00897af1d1": {
     "questions": {
       "topic_Technical": [
-        "What specific frontend technologies and frameworks do you have experience with?",
-        "Can you describe your approach to building scalable and maintainable frontend applications?",
-        "How do you stay up-to-date with the latest frontend development trends and best practices?",
-        "Can you provide more details on your experience working with vector databases for information retrieval?"
+        "Show me your Vue.js projects",
+        "What frontend technologies do you use?",
+        "Tell me about your JavaScript expertise",
+        "How do you approach scalable frontend development?"
       ],
       "topic_Experience": [
-        "Can you tell us more about your work at Wisnet and Hillman Group?",
-        "What were some of the key challenges you faced in your previous roles, and how did you overcome them?",
-        "How has your professional experience shaped your approach to problem-solving and project management?",
-        "What are some of the most valuable lessons you've learned throughout your career?"
+        "Describe your work at Wisnet",
+        "What did you do at Hillman Group?",
+        "How have your past roles shaped your skills?",
+        "What kind of projects have you worked on?"
       ],
       "topic_Creative": [
-        "Can you share more about your unique illustration and design style?",
-        "How do you incorporate your creative sensibilities into your web development work?",
-        "What inspires your artistic and design choices, and how do you translate that into your portfolio?",
-        "Can you describe your process for creating the illustrations and design elements on your personal website?"
+        "Show me your creative illustrations",
+        "Tell me about your design sensibilities",
+        "How do you incorporate art into your work?",
+        "What inspires your unique visual style?"
       ],
-      "topic_Projects": [
-        "Can you provide more details on the specific projects featured in your portfolio?",
-        "What were the key goals and challenges for each of these projects?",
-        "How did you approach the UX research and information architecture for these projects?",
-        "What were some of the innovative or unique features you implemented in these projects?"
+      "topic_Philosophy": [
+        "What's your development philosophy?",
+        "How do you approach problem-solving?",
+        "Describe your commitment to learning",
+        "What principles guide your work?"
       ],
       "general": [
-        "Can you tell us a bit more about your background and how you got started in web development and design?",
-        "What are your long-term career goals, and how do you see your current work contributing to those goals?",
-        "What are some of your hobbies and interests outside of your professional work?",
-        "How would you describe your personal work style and approach to collaboration with clients or team members?"
+        "What's your background and experience?",
+        "Can you tell me more about yourself?",
+        "What are your key strengths and skills?",
+        "How did you get into web development?"
       ],
       "content_based": [
-        "Can you provide more details on the UX research methods you used, such as the card sorting techniques mentioned?",
-        "What were the key findings from the UX research that helped optimize the navigation and information architecture?",
-        "Can you elaborate on your experience working with vector databases and how they enabled efficient information retrieval?",
-        "What were the specific frontend technologies and tools you used in your work, such as Vue.js, Astro, and Sass?"
+        "What is your contact information?",
+        "Describe your technical stack in detail",
+        "How have you used vector databases?",
+        "What UX research methods have you used?"
       ]
     },
     "analysis": {
@@ -44,610 +44,26 @@
         "projects"
       ],
       "entities": [
-        "Design",
-        "Accuracy",
-        "\"Facilitated",
-        "Logging",
-        "\"Data",
-        "\"Contact",
-        "College\",",
-        "Frontend",
-        "Valley",
-        "\"Technology",
-        "Phase",
-        "Approach",
-        "\"Software",
-        "Advanced",
-        "'Times,",
-        "Stack\",",
-        "\"Sass",
-        "Features",
-        "Intelligent",
-        "Query"
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "unknown"
-  },
-  "64916d82af4ce83c": {
-    "questions": {
-      "topic_Technical": [
-        "What specific frontend technologies and frameworks do you have experience with?",
-        "Can you describe your approach to building scalable and maintainable frontend applications?",
-        "How do you stay up-to-date with the latest frontend development trends and best practices?",
-        "Can you provide more details on your experience working with vector databases for information retrieval?"
-      ],
-      "topic_Experience": [
-        "Can you tell us more about your work at Wisnet and Hillman Group? What were your key responsibilities and achievements?",
-        "How have your past experiences shaped your approach to problem-solving and project management?",
-        "What have been some of the most challenging projects you've worked on, and how did you overcome those challenges?"
-      ],
-      "topic_Creative": [
-        "Can you describe your process for incorporating your unique illustrations and design sensibilities into your portfolio website?",
-        "What inspires your creative work, and how do you balance your technical and creative skills?",
-        "Are there any specific design principles or philosophies that guide your creative decision-making?"
-      ],
-      "topic_Portfolio": [
-        "Can you provide more details on the specific projects featured in your portfolio?",
-        "How do you select and curate the projects to showcase your skills and experience?",
-        "What were some of the key challenges or goals you had in mind when developing the projects in your portfolio?"
-      ],
-      "general": [
-        "What motivated you to pursue a career in frontend development and design?",
-        "How would you describe your overall approach to problem-solving and continuous learning?",
-        "What are your long-term career goals, and how do you plan to achieve them?",
-        "Can you share any hobbies or interests outside of your professional work?"
-      ],
-      "content_based": [
-        "Can you provide more details on the UX research methods you used to optimize the navigation and information architecture of your portfolio website?",
-        "What was your reasoning behind choosing the specific technologies and tools in your technology stack?",
-        "How do you ensure the accuracy and performance of your data visualization projects, such as those using Chart.js?",
-        "Can you elaborate on your experience with Atomic Design principles and how they've influenced your frontend development workflow?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
-        "Know",
-        "\"Associate",
-        "Colors",
         "Why",
-        "Frontend",
-        "\"Software",
-        "\"Facilitated",
-        "'Times,",
-        "Accuracy",
-        "\"Aug",
-        "\"Custom",
-        "Valley",
         "Atomic",
-        "Analytics",
-        "Use",
-        "Features",
-        "His",
-        "Stack\",",
-        "Phase",
-        "Speed"
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "unknown"
-  },
-  "903f11404291646b": {
-    "questions": {
-      "topic_Technical": [
-        "What are some of the key frontend technologies you have worked with, such as Vue.js and Astro?",
-        "Can you describe your experience with data visualization tools like Chart.js?",
-        "How have you leveraged your knowledge of software tools like IntelliJ IDEA in your development work?",
-        "What are some of the strategies you use to ensure maintainable and scalable frontend architectures?"
-      ],
-      "topic_Experience": [
-        "Can you tell us more about your work experience at Wisnet and Hillman Group?",
-        "How have you applied your problem-solving skills and passion for learning in your professional roles?",
-        "What are some of the key challenges you've faced and how have you overcome them in your career?",
-        "How have you collaborated with stakeholders and end-users to optimize user experiences?"
-      ],
-      "topic_Creative": [
-        "Can you share more about your unique illustration and design style that you've incorporated into your personal website?",
-        "How do you balance your technical expertise with your creative sensibilities when working on projects?",
-        "What inspires your artistic and design work, and how do you translate that into your professional portfolio?",
-        "Can you describe your process for creating cohesive and visually appealing representations of your work?"
-      ],
-      "topic_Projects": [
-        "Can you provide more details about the specific projects you've worked on, such as the ones showcased in your portfolio?",
-        "How have you approached the development and design of these projects to meet the needs of your clients or users?",
-        "What were some of the key challenges or innovative solutions you implemented in these projects?",
-        "Can you share any metrics or feedback that demonstrate the success or impact of your project work?"
-      ],
-      "general": [
-        "Can you tell us a bit more about your background and what led you to pursue a career in web development and design?",
-        "What are your long-term career goals, and how do you see your current work and skills contributing to those goals?",
-        "How do you stay up-to-date with the latest trends and best practices in the web development and design industry?",
-        "What are some of your hobbies and interests outside of your professional work, and how do they influence your approach to your craft?"
-      ],
-      "content_based": [
-        "You mentioned working with vector databases for efficient information retrieval. Can you elaborate on how you've applied this technology in your work?",
-        "In your technology stack, you listed Astro as one of the frontend frameworks you've used. Can you share more about your experience with Astro and the benefits it has provided?",
-        "You mentioned facilitating UX research sessions with stakeholders using card sorting methods. Can you describe the process and how it helped optimize the navigation and information architecture of your projects?",
-        "Your portfolio showcases your work with data visualization tools like Chart.js. Can you provide some examples of how you've leveraged these tools to enhance the user experience and communicate complex information effectively?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
-        "Know",
-        "\"Fox",
-        "Analytics",
-        "Superior",
-        "Automatic",
-        "\"Atomic",
-        "\"Developed",
-        "College\",",
-        "Tools\"",
-        "Why",
-        "Web",
-        "\"Aug",
-        "\"Data",
-        "Docs\",",
-        "Astro,",
-        "Stack\",",
-        "Query",
-        "Works",
-        "Visualization\"",
-        "\"Frontend"
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "unknown"
-  },
-  "f1796da5fa922611": {
-    "questions": {
-      "topic_Technical": [
-        "What are the key frontend technologies you have expertise in?",
-        "Can you describe your experience working with Vue.js and how you've used it in your projects?",
-        "What are some of the data visualization libraries or tools you've worked with, such as Chart.js?",
-        "How do you approach optimizing the performance and speed of the frontend applications you build?",
-        "Can you share an example of a complex technical challenge you've solved in your work and how you approached it?"
-      ],
-      "topic_Experience": [
-        "Can you tell me more about your work experience at Wisnet and Hillman Group?",
-        "What were some of the key responsibilities and projects you worked on in those roles?",
-        "How did your experience at those companies help shape your approach to frontend development and design?",
-        "What are some of the most valuable lessons you've learned from your professional experience so far?",
-        "How has your background and experience prepared you for the type of work you're interested in pursuing next?"
-      ],
-      "topic_Creative": [
-        "Your portfolio showcases your unique illustration and design style. Can you tell me more about your creative process and inspirations?",
-        "How do you incorporate your creative sensibilities into the frontend applications you build?",
-        "Can you share an example of a project where you were able to blend your technical and creative skills effectively?",
-        "What role does illustration and visual design play in your overall approach to web development?",
-        "How do you continue to develop and refine your creative skills alongside your technical expertise?"
-      ],
-      "topic_Portfolio": [
-        "Can you walk me through one of your portfolio projects in more detail?",
-        "What were the key goals and challenges you faced in that particular project?",
-        "How did you approach the user experience and information architecture for that project?",
-        "What were some of the technical decisions you made to ensure the project was scalable and maintainable?",
-        "What are you most proud of or learned the most from in that portfolio piece?"
-      ],
-      "general": [
-        "Can you tell me a bit more about your background and how you got started in web development?",
-        "What are some of your key strengths and areas of focus as a frontend developer and designer?",
-        "How would you describe your overall approach to problem-solving and continuous learning?",
-        "What are your long-term career goals and the types of opportunities you're most interested in pursuing?",
-        "Is there anything else you'd like to share about yourself or your work that we haven't covered yet?"
-      ],
-      "content_based": [
-        "I noticed you mentioned working with vector databases for efficient information retrieval. Can you elaborate on that experience and how it's been useful in your work?",
-        "You mentioned facilitating UX research sessions with stakeholders using card sorting methods. Can you share more about that process and how it helped optimize the navigation and information architecture?",
-        "The technology stack section of your portfolio highlights your expertise in various frontend frameworks and tools. Can you talk about how you decide which technologies to use for a given project?",
-        "Your portfolio mentions your passion for problem-solving and lifelong learning. Can you give an example of a complex problem you've tackled and how your approach to continuous learning helped you solve it?",
-        "I'm curious to learn more about your experience with the auto-extract colors feature you mentioned. How has that capability impacted your frontend development workflow?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
-        "Advanced",
-        "His",
-        "Design",
-        "Visualization\"",
-        "Extract",
-        "Intelligent",
-        "\"Technology",
-        "Query",
-        "The",
-        "\"Custom",
-        "Docs\",",
-        "Stack\",",
-        "Speed",
-        "Frontend",
-        "\"Aug",
-        "Science:",
-        "College\",",
-        "\"Sass",
-        "Reduce",
-        "Frameworks\""
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "auto"
-  },
-  "8985155e48bdb7f2": {
-    "questions": {
-      "topic_Technical": [
-        "Can you tell me more about the specific frontend technologies you work with, such as Vue.js and Astro?",
-        "What kind of projects have you used these technologies for, and what were the key challenges you faced?",
-        "How do you stay up-to-date with the latest trends and advancements in frontend development?",
-        "Can you describe your approach to writing maintainable and scalable frontend code?",
-        "What are your thoughts on the role of data visualization in web development, and how have you incorporated tools like Chart.js into your work?"
-      ],
-      "topic_Experience": [
-        "Can you share more details about your work experience at Wisnet and Hillman Group?",
-        "What were some of the key projects you worked on, and what was your role in those projects?",
-        "How did your experience at these companies help shape your approach to software development and design?",
-        "What were some of the biggest challenges you faced in your previous roles, and how did you overcome them?",
-        "How have your past experiences influenced your current philosophy and approach to problem-solving?"
-      ],
-      "topic_Creative": [
-        "Can you tell us more about the unique illustrations and design elements you incorporate into your personal website?",
-        "What inspires your creative process, and how do you balance your technical and creative skills?",
-        "Do you have any other creative outlets or hobbies outside of web development?",
-        "How do you think your creative sensibilities influence the way you approach user experience and interface design?",
-        "Can you share any examples of projects where you were able to blend your technical and creative skills?"
-      ],
-      "general": [
-        "What motivated you to pursue a career in software development and design?",
-        "How would you describe your overall approach to problem-solving and learning new technologies?",
-        "What are your long-term career goals, and how do you plan to continue developing your skills and expertise?",
-        "Can you share any advice or insights you've gained from your experiences that you would offer to aspiring software developers?",
-        "What do you enjoy most about your work, and what aspects of it do you find the most challenging or rewarding?"
-      ],
-      "content_based": [
-        "Can you elaborate on your work with vector databases and how they enable efficient information retrieval?",
-        "What were the key findings from the UX research sessions you facilitated using card sorting methods?",
-        "How does the auto-extract colors feature in your development workflow, and what benefits does it provide?",
-        "Can you provide more details on the specific projects or case studies showcased in your portfolio?",
-        "What was your role and contribution in the projects that involved data science and machine learning?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
-        "Scss",
-        "\"Passionate",
-        "The",
-        "Technical",
-        "Know",
-        "Valley",
-        "Stack",
-        "\"Software",
-        "Docs",
-        "Technology",
-        "Automatic",
-        "\"Data",
-        "\"Associate",
-        "Reduce",
-        "Science:",
         "This",
-        "Approach",
-        "College\",",
-        "Query",
-        "'Times,"
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "auto"
-  },
-  "b6fd849e665d234e": {
-    "questions": {
-      "topic_Technical": [
-        "Can you tell me more about the specific frontend technologies you use, such as Vue.js and Astro?",
-        "What are some of the key challenges you've faced in working with these technologies, and how have you overcome them?",
-        "Can you provide some examples of complex or innovative frontend projects you've worked on that showcase your technical skills?",
-        "How do you stay up-to-date with the latest trends and best practices in frontend development?",
-        "Can you describe your approach to writing maintainable and scalable frontend code?",
-        "What are your thoughts on the role of data and design in frontend development, and how do you balance these aspects in your work?"
-      ],
-      "topic_Experience": [
-        "Can you tell me more about your work experience at Wisnet and Hillman Group? What were your key responsibilities and accomplishments in these roles?",
-        "How have your past experiences shaped your approach to frontend development and design?",
-        "What are some of the most valuable lessons you've learned from your work experience that you apply to your current projects?",
-        "Can you provide examples of how you've collaborated with cross-functional teams, such as designers or product managers, to deliver successful projects?",
-        "How do you approach problem-solving and decision-making in your work, and what strategies have you found to be most effective?"
-      ],
-      "topic_Creative": [
-        "Can you tell me more about your unique illustration and design style, and how you incorporate it into your portfolio and personal website?",
-        "What inspires your creative process, and how do you balance your technical and creative skills in your work?",
-        "Can you provide examples of projects where you've had the opportunity to showcase your creative abilities, such as in the design of user interfaces or the development of custom illustrations?",
-        "How do you approach the integration of creative elements, such as illustrations or custom typography, into your frontend development work?",
-        "What role does creativity play in your overall approach to problem-solving and project delivery?"
-      ],
-      "general": [
-        "Can you provide a brief overview of your professional background and career journey?",
-        "What are your long-term career goals, and how do you see your current work contributing to those goals?",
-        "Can you tell me more about your personal interests and hobbies outside of your professional work?",
-        "How would you describe your work style and the type of work environment that you thrive in?",
-        "What are some of the key principles or values that guide your approach to your work and professional development?"
-      ],
-      "content_based": [
-        "Can you elaborate on your experience working with vector databases for efficient information retrieval?",
-        "What were the key insights or findings from the UX research sessions you facilitated using card sorting methods?",
-        "Can you provide more details on the auto-extract colors feature you mentioned, and how it has been useful in your frontend development work?",
-        "What are some specific examples of complex or innovative frontend projects you've worked on that showcase your technical and creative skills?",
-        "Can you share more about your passion for problem-solving and lifelong learning, and how these qualities have influenced your approach to frontend development?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
         "Speed",
-        "Atomic",
-        "Colors",
-        "Frontend",
-        "Works",
-        "Natural",
-        "His",
-        "Valley",
-        "\"Data",
-        "Design",
-        "This",
-        "Frameworks\"",
-        "Science:",
-        "Automatic",
-        "Why",
-        "Approach",
-        "Web",
-        "\"Frontend",
-        "Docs\",",
-        "\"Aug"
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "auto"
-  },
-  "0dcf68f47ae8eb47": {
-    "questions": {
-      "topic_Technical Skills": [
-        "Can you tell me more about your experience with Vue.js and how you've used it in your projects?",
-        "What other frontend frameworks or libraries have you worked with besides Vue.js?",
-        "Can you describe your approach to writing maintainable and scalable frontend code?",
-        "How do you stay up-to-date with the latest frontend development trends and technologies?"
-      ],
-      "topic_Work Experience": [
-        "Can you share more details about your role and responsibilities at Wisnet and Hillman Group?",
-        "What were some of the key projects or challenges you worked on at those companies?",
-        "How did your work at those companies help develop your skills as a frontend developer and designer?",
-        "What did you learn about working in a team and collaborating with other stakeholders?"
-      ],
-      "topic_Creative Work": [
-        "Can you tell us more about your illustrations and design work featured on your personal website?",
-        "What inspires your unique visual style and how do you incorporate it into your professional projects?",
-        "How do you balance your technical skills with your creative abilities when working on web development projects?",
-        "Do you have any advice for other developers who want to showcase their creative side in their work?"
-      ],
-      "topic_Projects and Portfolio": [
-        "Can you provide more details about the specific projects featured in your portfolio?",
-        "What were the key challenges or goals you had to address in those projects?",
-        "How did you approach the design and development process for those projects?",
-        "What are you most proud of or learned the most from in your portfolio pieces?"
-      ],
-      "topic_Development Philosophy": [
-        "Can you share your approach to writing maintainable and scalable frontend code?",
-        "How do you ensure your work is accessible and user-friendly?",
-        "What are your thoughts on the importance of continuous learning and staying up-to-date in the frontend development field?",
-        "Can you describe your process for gathering user feedback and incorporating it into your work?"
-      ],
-      "general": [
-        "Can you tell us a bit more about your background and how you got started in web development?",
-        "What are your long-term career goals and aspirations?",
-        "What do you enjoy most about your work as a frontend developer and designer?",
-        "How would you describe your personal work style and approach to problem-solving?",
-        "Do you have any hobbies or interests outside of your professional work?"
-      ],
-      "content_based": [
-        "I noticed you mentioned working with vector databases for efficient information retrieval. Can you elaborate on that and how it has been useful in your projects?",
-        "You mentioned facilitating UX research sessions with stakeholders. Can you share more about the methods you used and how that helped optimize the navigation and information architecture?",
-        "The auto-extract colors feature you described sounds interesting. Can you explain how that works and how it has benefited your development workflow?",
-        "I'm curious to learn more about your experience with IntelliJ IDEA. What do you find most useful about that development tool?",
-        "You mentioned your passion for problem-solving and lifelong learning. Can you give an example of a particularly challenging problem you've solved and what you learned from the experience?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
-        "Reduce",
-        "Tools\"",
-        "Web",
-        "\"Aug",
-        "Extract",
-        "Auto",
-        "Stay",
-        "\"Frontend",
         "Applied",
-        "Stack\",",
-        "Logging",
-        "\"Technology",
-        "Docs\",",
-        "Intelligent",
+        "Use",
+        "\"Contact",
         "Scss",
-        "Why",
-        "His",
-        "Colors",
-        "\"Facilitated",
-        "\"Software"
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "auto"
-  },
-  "f236c7baacf710b3": {
-    "questions": {
-      "topic_Technical": [
-        "Can you tell me more about the specific frontend technologies you have experience with, such as Vue.js and Astro?",
-        "What kind of projects have you worked on that involved data visualization using tools like Chart.js?",
-        "How have you leveraged your expertise in software development tools like IntelliJ IDEA to improve your workflow and productivity?",
-        "Can you provide some examples of how you've used your knowledge of JavaScript and other programming languages to build scalable and maintainable frontend applications?"
-      ],
-      "topic_Experience": [
-        "Can you describe your role and responsibilities during your time at Wisnet and Hillman Group?",
-        "What were some of the key challenges you faced in your previous roles, and how did you overcome them?",
-        "How have the skills and experience you gained in your past positions helped shape your approach to problem-solving and project management?",
-        "What are some of the most valuable lessons you've learned from your 10+ years of experience in frontend development and design?"
-      ],
-      "topic_Creative": [
-        "Can you tell us more about your unique illustration and design style, and how you incorporate it into your professional work?",
-        "What inspires your creative process, and how do you balance your technical skills with your artistic sensibilities?",
-        "Can you provide some examples of projects where you've had the opportunity to showcase your creative abilities?",
-        "How do you think your creative work and design sensibilities have contributed to the overall user experience of the projects you've worked on?"
-      ],
-      "topic_Portfolio": [
-        "Can you walk us through some of the key projects featured in your portfolio and the challenges you faced in developing them?",
-        "How have you used your portfolio to showcase your range of skills and the diverse types of projects you've worked on?",
-        "What are some of the unique or innovative approaches you've taken in your portfolio projects to solve complex problems or enhance the user experience?",
-        "Can you share any insights into your development philosophy or approach that are reflected in the projects showcased in your portfolio?"
-      ],
-      "general": [
-        "Can you tell us a bit more about your background and what initially sparked your interest in frontend development and design?",
-        "What are some of your long-term career goals, and how do you see your current work and portfolio contributing to those aspirations?",
-        "How do you stay up-to-date with the latest trends and advancements in frontend technologies and design best practices?",
-        "What are some of the key principles or values that guide your work and approach to problem-solving?"
-      ],
-      "content_based": [
-        "Can you elaborate on your experience working with vector databases for efficient information retrieval?",
-        "What were some of the key insights you gained from the UX research sessions you facilitated using card sorting methods?",
-        "Can you provide more details on the auto-extract colors feature you mentioned, and how it has helped streamline your development workflow?",
-        "How have you leveraged your passion for problem-solving and lifelong learning to continuously improve your skills and deliver high-quality work?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
-        "Automatic",
-        "His",
-        "Query",
-        "The",
+        "Docs",
         "Natural",
-        "Know",
-        "Development\",",
-        "Intelligent",
-        "Technology",
-        "Astro,",
-        "Accuracy",
-        "Scss",
-        "Why",
+        "College\",",
         "Science:",
-        "Auto",
+        "Design",
+        "\"Aug",
         "Analytics",
-        "\"Passionate",
-        "Logging",
-        "Speed",
-        "Valley"
+        "Frameworks\"",
+        "Valley",
+        "\"Software",
+        "\"Custom",
+        "Works"
       ],
       "content_samples": [
         "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
@@ -665,43 +81,42 @@
     },
     "generated_at": "auto"
   },
-  "a95a76799bcf8481": {
+  "7e24fd6e9d51c673": {
     "questions": {
       "topic_Technical": [
-        "What are some of the key frontend technologies and frameworks you have worked with, such as Vue.js and Nuxt.js?",
-        "Can you describe your experience with JavaScript and how you approach writing maintainable and scalable frontend code?",
-        "What are some of the development tools and processes you use to ensure high-quality and efficient frontend development?",
-        "How do you stay up-to-date with the latest frontend trends and best practices?"
+        "Show me your Vue.js projects",
+        "What frontend frameworks do you use?",
+        "Tell me about your technology stack",
+        "How do you approach frontend development?",
+        "What tools do you use for development?"
       ],
       "topic_Experience": [
-        "Can you tell us more about your work experience at Wisnet and Hillman Group? What were some of your key responsibilities and accomplishments?",
-        "How have your past roles and projects helped you develop your skills as a frontend developer and designer?",
-        "What are some of the challenges you've faced in your career, and how have you overcome them?",
-        "How do you approach problem-solving and collaboration with cross-functional teams?"
+        "Tell me about your work at Wisnet",
+        "What projects did you work on at Hillman Group?",
+        "Describe your software development experience",
+        "How have you grown as a developer?",
+        "What challenges have you overcome in your work?"
       ],
       "topic_Creative": [
-        "Your portfolio showcases your unique illustrations and design sensibilities. Can you tell us more about your creative process and the inspiration behind your work?",
-        "How do you integrate your creative skills and design aesthetic into your frontend development projects?",
-        "What role does art and design play in your overall approach to web development and user experience?",
-        "Do you have any advice for aspiring developers who want to incorporate more creative elements into their work?"
-      ],
-      "topic_Projects": [
-        "Can you provide an overview of some of the key projects featured in your portfolio?",
-        "What were the main goals and challenges of these projects, and how did you approach them?",
-        "How did you incorporate user research and feedback into the design and development process?",
-        "What are some of the innovative or unique features you've implemented in your projects?"
+        "Show me your creative illustrations",
+        "Tell me about your design sensibilities",
+        "How do you incorporate art into your work?",
+        "What inspires your creative process?",
+        "How do you balance technical and creative work?"
       ],
       "general": [
-        "What inspired you to pursue a career in frontend development and design?",
-        "How would you describe your overall approach to web development and user experience?",
-        "What are your long-term career goals, and how do you plan to continue growing and evolving as a professional?",
-        "What do you enjoy most about your work, and what motivates you to keep learning and improving?"
+        "What's your development philosophy?",
+        "How do you stay up-to-date with technology?",
+        "What are your career goals?",
+        "Tell me about your background and education",
+        "Why should I hire you for this role?"
       ],
       "content_based": [
-        "You mentioned working with vector databases for efficient information retrieval. Can you elaborate on how you've applied this technology in your projects?",
-        "The content mentions your work on 'Atomic Design' and 'Intelligent Framework'. Can you explain what these concepts are and how you've implemented them in your development process?",
-        "The portfolio showcases your use of tools like IntelliJ IDEA and Chart.js. What are the specific benefits of these tools, and how have they contributed to your workflow?",
-        "The content highlights your experience with UX research methods like card sorting. Can you share more about how you've used these techniques to optimize navigation and information architecture?"
+        "What is your contact information?",
+        "How do you use vector databases?",
+        "What is your approach to UX research?",
+        "How do you automate color extraction?",
+        "What is your experience with data visualization?"
       ]
     },
     "analysis": {
@@ -710,26 +125,26 @@
         "projects"
       ],
       "entities": [
-        "Features",
-        "Visualization\"",
-        "Scss",
-        "Tools\"",
+        "\"Frontend",
+        "His",
+        "Information\",",
+        "The",
+        "Know",
+        "\"Software",
+        "\"Facilitated",
+        "\"Technology",
+        "Query",
+        "Stack",
         "\"Aug",
-        "\"Sass",
-        "Atomic",
-        "Design",
-        "Intelligent",
-        "Framework\",",
-        "\"Developed",
-        "This",
-        "Docs\",",
+        "College\",",
+        "Frontend",
+        "Frameworks\"",
+        "Tools\"",
+        "\"Associate",
         "\"Atomic",
         "Reduce",
-        "\"Technology",
-        "Query",
-        "Stay",
-        "Development\",",
-        "The"
+        "Technology",
+        "\"Sass"
       ],
       "content_samples": [
         "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
@@ -747,43 +162,276 @@
     },
     "generated_at": "auto"
   },
-  "2ab3f3f0220394f3": {
+  "081dc63437a8d10e": {
     "questions": {
       "topic_Technical": [
-        "What are some of the key frontend frameworks and technologies you have experience with?",
-        "Can you describe your approach to building scalable and maintainable frontend applications?",
-        "How do you stay up-to-date with the latest frontend development trends and best practices?",
-        "Can you share an example of a challenging technical problem you've solved in one of your projects?"
+        "Show me your Vue.js projects",
+        "What frontend frameworks do you use?",
+        "Tell me about your JavaScript expertise",
+        "How do you approach software development?",
+        "What tools are in your tech stack?"
       ],
       "topic_Experience": [
-        "Can you tell me more about your work experience at Wisnet and Hillman Group?",
-        "What were some of the key responsibilities and projects you worked on in those roles?",
-        "How did your experience at those companies help shape your approach to web development?",
-        "What are some of the most valuable lessons you've learned from your professional experience?"
+        "Describe your work at Wisnet",
+        "What projects did you lead at Hillman Group?",
+        "How have you grown as a developer?",
+        "What challenges have you overcome?",
+        "Tell me about your problem-solving approach"
       ],
       "topic_Creative": [
-        "Can you tell me more about the unique illustrations and design elements featured on your personal website?",
-        "How do you incorporate your creative sensibilities into your web development work?",
-        "What inspires your artistic style and how do you apply it to your projects?",
-        "Do you have any other creative outlets or hobbies outside of web development?"
+        "Show me your creative illustrations",
+        "How do you incorporate design into your work?",
+        "What inspires your unique visual style?",
+        "Describe your approach to art and design",
+        "How do you blend creativity and technology?"
+      ],
+      "general": [
+        "What's your development philosophy?",
+        "How do you stay up-to-date with tech trends?",
+        "What are your long-term career goals?",
+        "Tell me about your passion for learning",
+        "What makes you a strong team player?"
+      ],
+      "content_based": [
+        "What is your experience with vector databases?",
+        "How have you facilitated UX research sessions?",
+        "What is your approach to optimizing navigation?",
+        "Tell me about your work with auto-extracting colors",
+        "How have you used Chart.js in your projects?"
+      ]
+    },
+    "analysis": {
+      "topics": [],
+      "content_types": [
+        "projects"
+      ],
+      "entities": [
+        "Logging",
+        "Development\",",
+        "Reduce",
+        "Frameworks\"",
+        "Advanced",
+        "\"Software",
+        "\"Facilitated",
+        "Why",
+        "Docs",
+        "\"Developed",
+        "Stack",
+        "\"Frontend",
+        "Scss",
+        "Query",
+        "'Times,",
+        "Natural",
+        "Features",
+        "Superior",
+        "Intelligent",
+        "Analytics"
+      ],
+      "content_samples": [
+        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
+        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
+        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
+        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
+        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
+        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
+        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
+        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
+        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
+        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
+      ],
+      "total_queries_analyzed": 9
+    },
+    "generated_at": "auto"
+  },
+  "965d2bd89bc09927": {
+    "questions": {
+      "topic_Technical": [
+        "Show me your Vue.js projects",
+        "What's your JavaScript expertise?",
+        "Tell me about your frontend development work",
+        "What tools do you use for development?"
+      ],
+      "topic_Experience": [
+        "Describe your work at Wisnet",
+        "What did you do at Hillman Group?",
+        "How long have you been a developer?",
+        "What's your approach to problem-solving?"
+      ],
+      "topic_Creative": [
+        "Show me your creative illustrations",
+        "Tell me about your design sensibilities",
+        "How do you incorporate art into your work?",
+        "What inspires your creative process?"
+      ],
+      "general": [
+        "What's your overall career background?",
+        "What are your key strengths as a developer?",
+        "How do you stay up-to-date with technology?",
+        "What are your long-term career goals?"
+      ],
+      "content_based": [
+        "What's your experience with vector databases?",
+        "Tell me about the UX research you've done",
+        "How do you use automatic color extraction?",
+        "What's your technology stack for projects?"
+      ]
+    },
+    "analysis": {
+      "topics": [],
+      "content_types": [
+        "projects"
+      ],
+      "entities": [
+        "Applied",
+        "Auto",
+        "Natural",
+        "The",
+        "Science:",
+        "Logging",
+        "Works",
+        "Web",
+        "\"Software",
+        "Technical",
+        "Docs",
+        "Use",
+        "Approach",
+        "Know",
+        "\"Passionate",
+        "Information\",",
+        "Stack",
+        "Working",
+        "Query",
+        "Automatic"
+      ],
+      "content_samples": [
+        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
+        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
+        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
+        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
+        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
+        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
+        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
+        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
+        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
+        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
+      ],
+      "total_queries_analyzed": 9
+    },
+    "generated_at": "auto"
+  },
+  "6e0b47fcd271a871": {
+    "questions": {
+      "topic_Technical": [
+        "Show me your Vue.js projects",
+        "What's your frontend tech stack?",
+        "Tell me about your JavaScript skills",
+        "How do you approach web development?"
+      ],
+      "topic_Experience": [
+        "Describe your work at Wisnet",
+        "What did you do at Hillman Group?",
+        "How have your past roles shaped you?",
+        "What's your professional background?"
+      ],
+      "topic_Creative": [
+        "Show me your creative illustrations",
+        "Tell me about your design work",
+        "What's your artistic style?",
+        "How do you incorporate creativity?"
+      ],
+      "general": [
+        "What's your development philosophy?",
+        "How do you stay up-to-date with tech?",
+        "What are your career goals?",
+        "Why should I hire you?"
+      ],
+      "content_based": [
+        "What is your contact information?",
+        "Describe your technical expertise",
+        "Tell me about your portfolio website",
+        "What tools do you use for data visualization?"
+      ]
+    },
+    "analysis": {
+      "topics": [],
+      "content_types": [
+        "projects"
+      ],
+      "entities": [
+        "Tools\"",
+        "\"Technology",
+        "Intelligent",
+        "Stack",
+        "Working",
+        "Query",
+        "Technical",
+        "Docs\",",
+        "Auto",
+        "This",
+        "\"Atomic",
+        "Works",
+        "Why",
+        "Stay",
+        "Frontend",
+        "Stack\",",
+        "Analytics",
+        "The",
+        "\"Passionate",
+        "Know"
+      ],
+      "content_samples": [
+        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
+        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
+        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
+        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
+        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
+        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
+        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
+        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
+        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
+        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
+      ],
+      "total_queries_analyzed": 9
+    },
+    "generated_at": "auto"
+  },
+  "6a48163fe369b625": {
+    "questions": {
+      "topic_Technical": [
+        "Show me your Vue.js projects",
+        "What's your frontend tech stack?",
+        "Tell me about your JavaScript skills",
+        "How do you approach scalable development?"
+      ],
+      "topic_Experience": [
+        "Describe your work at Wisnet",
+        "What did you do at Hillman Group?",
+        "How have you grown as a developer?",
+        "What's your development philosophy?"
+      ],
+      "topic_Creative": [
+        "Show me your creative illustrations",
+        "Tell me about your design sensibilities",
+        "How do you incorporate art into your work?",
+        "What inspires your unique visual style?"
       ],
       "topic_Portfolio": [
-        "Can you walk me through some of the key projects featured in your portfolio?",
-        "What were the main challenges or goals you were trying to address with those projects?",
-        "How did you approach the design and development process for those portfolio pieces?",
-        "What are you most proud of or excited about in terms of your portfolio work?"
+        "Walk me through your portfolio projects",
+        "What was the biggest challenge you solved?",
+        "How do you approach UX research?",
+        "What technologies did you use for this?"
       ],
       "general": [
-        "Can you tell me a bit more about your background and how you got started in web development?",
-        "What are your long-term career goals and aspirations?",
-        "How would you describe your personal work style and approach to problem-solving?",
-        "What are some of your hobbies and interests outside of your professional work?"
+        "What's your background and experience?",
+        "How would you describe your skill set?",
+        "What are you most passionate about?",
+        "Where do you see your career going?"
       ],
       "content_based": [
-        "I noticed you have experience working with vector databases for efficient information retrieval. Can you elaborate on how you've applied that technology in your projects?",
-        "You mentioned facilitating UX research sessions with stakeholders using card sorting methods. Can you share more about how that process helped optimize the navigation and information architecture of your projects?",
-        "The content mentions your expertise with the Atomic Design methodology. How have you leveraged that approach in your frontend development work?",
-        "Can you provide more details on the specific frontend frameworks and technologies you've used, such as Vue.js, Astro, and HTML/CSS?"
+        "Tell me about your work with vector databases",
+        "What's the story behind your personal website?",
+        "How did you facilitate UX research sessions?",
+        "What's the purpose of the auto extract colors feature?"
       ]
     },
     "analysis": {
@@ -792,26 +440,26 @@
         "projects"
       ],
       "entities": [
-        "Frameworks\"",
-        "Stay",
-        "Speed",
-        "Web",
-        "\"Aug",
-        "Phase",
-        "Stack",
-        "\"Associate",
-        "Development\",",
-        "Science:",
-        "Use",
-        "Information\",",
-        "His",
-        "\"Facilitated",
-        "Extract",
         "Technology",
-        "Docs\",",
+        "Logging",
+        "'Times,",
         "\"Fox",
-        "Colors",
-        "\"Atomic"
+        "Features",
+        "Reduce",
+        "\"Developed",
+        "This",
+        "Phase",
+        "Auto",
+        "\"Aug",
+        "Why",
+        "\"Custom",
+        "Docs",
+        "Technical",
+        "Valley",
+        "The",
+        "Analytics",
+        "Scss",
+        "Stack"
       ],
       "content_samples": [
         "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
@@ -829,42 +477,43 @@
     },
     "generated_at": "auto"
   },
-  "209d824b2d3ae581": {
+  "d4ee68cd93a7dbe8": {
     "questions": {
       "topic_Technical": [
-        "What are some of the key frontend technologies and frameworks you have experience with?",
-        "Can you describe your approach to building maintainable and scalable frontend applications?",
-        "How do you stay up-to-date with the latest frontend development trends and best practices?",
-        "Can you share an example of a challenging technical problem you've solved and how you approached it?",
-        "What are your thoughts on the role of data visualization in web development projects?"
+        "Show me your Vue.js projects",
+        "What's your JavaScript expertise?",
+        "Tell me about your frontend development work",
+        "What technologies do you use?"
       ],
       "topic_Experience": [
-        "Can you tell me more about your work experience at Wisnet and Hillman Group?",
-        "What were some of the key projects or initiatives you worked on in those roles?",
-        "How did your previous experience help prepare you for your current work?",
-        "What are some of the most valuable lessons you've learned from your professional journey so far?",
-        "How do you approach collaborating with cross-functional teams on web development projects?"
+        "Describe your work at Wisnet",
+        "What did you do at Hillman Group?",
+        "How long have you been a developer?",
+        "What's your development philosophy?"
       ],
       "topic_Creative": [
-        "Can you describe your approach to incorporating your unique illustrations and design sensibilities into your portfolio website?",
-        "What inspires your creative process when it comes to visual design and art?",
-        "How do you balance your technical skills with your creative abilities in your work?",
-        "Can you share an example of a project where you were able to showcase your creative talents?",
-        "What role does creativity play in your overall approach to web development and problem-solving?"
+        "Show me your creative illustrations",
+        "Tell me about your design sensibilities",
+        "How do you incorporate art into your work?",
+        "What inspires your unique visual style?"
+      ],
+      "topic_Portfolio": [
+        "Walk me through your portfolio projects",
+        "What are your most notable works?",
+        "How do you showcase your skills?",
+        "What kind of projects do you enjoy?"
       ],
       "general": [
-        "Can you provide a brief overview of your professional background and career path?",
-        "What are some of your key strengths and areas of expertise?",
-        "How would you describe your personal work style and approach to problem-solving?",
-        "What are your long-term career goals and aspirations?",
-        "What motivates you to continuously learn and improve your skills?"
+        "What's your background?",
+        "Where are you based?",
+        "How can I get in touch with you?",
+        "What are your career goals?"
       ],
       "content_based": [
-        "Can you elaborate on your experience working with vector databases for efficient information retrieval?",
-        "What are some of the key benefits of the auto-extract colors feature you mentioned in your portfolio?",
-        "Can you provide more details on the UX research methods you used to optimize the navigation and information architecture of your portfolio website?",
-        "How did your passion for problem-solving and lifelong learning shape your approach to web development projects?",
-        "Can you share any specific examples of how you've incorporated your unique illustrations and design sensibilities into your professional work?"
+        "What is your experience with vector databases?",
+        "How do you facilitate UX research sessions?",
+        "Tell me about your auto-extract colors feature",
+        "What's your approach to data visualization?"
       ]
     },
     "analysis": {
@@ -873,107 +522,26 @@
         "projects"
       ],
       "entities": [
-        "Know",
-        "Use",
-        "\"Frontend",
+        "\"Passionate",
+        "Development\",",
+        "Technology",
+        "Stack\",",
         "Reduce",
-        "\"Data",
-        "Auto",
+        "\"Contact",
         "Logging",
-        "Information\",",
-        "\"Software",
-        "Superior",
-        "Accuracy",
-        "Works",
-        "Scss",
+        "His",
+        "Analytics",
+        "\"Associate",
+        "\"Data",
+        "Frameworks\"",
+        "Intelligent",
         "Technical",
         "Science:",
-        "Stack",
-        "His",
-        "Frameworks\"",
-        "Why",
-        "Tools\""
-      ],
-      "content_samples": [
-        "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",
-        "His personal website showcases his professional work while incorporating his unique illustrations and design sensibilities, creating a cohesive repres",
-        "Working with vector databases for efficient information retrieval\n\nTechnology Stack\n\nNick's technical expertise spans multiple technologies:\n\nFrontend",
-        "},\n    {\n      \"heading\": \"Technology Stack\",\n      \"content\": \"Nick's technical expertise spans multiple technologies: Frontend (Vue.js, Astro, HTML,",
-        "/>\n    </template>\n  </ExampleComponentUsage>\n</template>\n<script setup lang=\"ts\">\n  import { ref } from 'vue';\n  import SimpleTest from \"../component",
-        "\"Facilitated UX research sessions with stakeholders using card sorting methods to optimize navigation structure and information architecture.\",",
-        "componentFont: 'Times, serif'\n\nAuto Extract Colors\n\nThe autoExtractColors option enables automatic extraction of color variables from your components.",
-        "},\n  {\n    \"name\": \"Chart.js\",\n    \"category\": \"Data Visualization\"\n  },\n  {\n    \"name\": \"IntelliJ IDEA\",\n    \"category\": \"Software Tools\"\n  },\n  {",
-        "{\n  \"summary\": \"Passionate problem solver and lifelong learner with 10+ years' experience developing and designing maintainable and scalable frontends",
-        "[\n  {\n    \"name\": \"Vue.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \"name\": \"Nuxt.js\",\n    \"category\": \"Frontend Frameworks\"\n  },\n  {\n    \""
-      ],
-      "total_queries_analyzed": 9
-    },
-    "generated_at": "auto"
-  },
-  "2bd8af80d4bb08cb": {
-    "questions": {
-      "topic_Work Experience": [
-        "Can you tell me more about your work experience at Wisnet and Hillman Group?",
-        "What were some of your key responsibilities and accomplishments in those roles?",
-        "How did your work at those companies help develop your technical and creative skills?"
-      ],
-      "topic_Technical Skills": [
-        "Can you elaborate on your expertise in Vue.js and other frontend frameworks?",
-        "What types of projects have you used JavaScript and frontend development for?",
-        "How do you stay up-to-date with the latest frontend technologies and best practices?"
-      ],
-      "topic_Creative Work": [
-        "Can you tell me more about the illustrations and design work featured on your portfolio?",
-        "What inspires your unique artistic style and how do you incorporate it into your web projects?",
-        "How do you balance your technical and creative skills when working on web development projects?"
-      ],
-      "topic_Projects and Portfolio": [
-        "Can you walk me through some of the key projects in your portfolio?",
-        "What were the main challenges you faced and how did you overcome them?",
-        "How do you approach the design and development process for your portfolio pieces?"
-      ],
-      "topic_Development Approach": [
-        "Can you describe your philosophy and approach to web development?",
-        "How do you ensure your work is maintainable and scalable?",
-        "What role does user experience and research play in your development process?"
-      ],
-      "general": [
-        "Can you tell me a bit more about your background and how you got started in web development?",
-        "What are some of your key strengths and what do you enjoy most about your work?",
-        "Where do you see your career heading in the next few years, and what are your long-term goals?"
-      ],
-      "content_based": [
-        "I noticed you mentioned working with vector databases for efficient information retrieval. Can you elaborate on that and how it has benefited your projects?",
-        "You mentioned facilitating UX research sessions with stakeholders. Can you share more about the methods you used and how that informed the design and navigation of your projects?",
-        "The content mentions your expertise in technologies like Vue.js, Astro, and Nuxt.js. How have you leveraged these frameworks to build high-performing and scalable web applications?"
-      ]
-    },
-    "analysis": {
-      "topics": [],
-      "content_types": [
-        "projects"
-      ],
-      "entities": [
-        "Working",
-        "\"Facilitated",
-        "Atomic",
-        "Use",
-        "Query",
-        "His",
-        "Framework\",",
-        "\"Contact",
-        "Speed",
-        "Reduce",
-        "\"Fox",
-        "Know",
-        "Scss",
-        "Auto",
-        "\"Custom",
-        "Intelligent",
         "Automatic",
-        "Astro,",
-        "\"Software",
-        "Technical"
+        "Extract",
+        "\"Technology",
+        "Colors",
+        "The"
       ],
       "content_samples": [
         "{\n  \"introduction\": \"Nick's contact information.\",\n  \"sections\": [\n    {\n      \"heading\": \"Contact Information\",\n      \"content\": \"nickberens360@gmail",

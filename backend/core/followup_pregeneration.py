@@ -53,7 +53,8 @@ Based on the content analysis below, generate follow-up questions that:
 1. Are directly answerable from the indexed content
 2. Cover different aspects of Nick's work and experience
 3. Would be valuable and interesting to users
-4. Are specific enough to provide useful information
+4. Are concise and punchy (maximum 8-10 words each)
+5. Use action-oriented language ("Show me", "Tell me about", "What's your")
 
 Content Analysis:
 - Available Topics: {topics}
@@ -73,6 +74,13 @@ Generate a comprehensive set of follow-up questions organized by:
 1. Topic-specific questions (technical, experience, creative, etc.)
 2. General questions about Nick
 3. Content-based questions derived from the actual indexed material
+
+IMPORTANT: Keep questions SHORT (8-10 words max). Examples of good short questions:
+- "Show me your Vue.js projects"
+- "What's your development philosophy?"
+- "Tell me about Wisnet work"
+- "Show me your creative illustrations"
+- "What technologies do you use?"
 
 {format_instructions}
 
@@ -103,7 +111,7 @@ Response:""",
             if content_hash in self.followup_cache:
                 logger.info("Using cached pre-generated follow-up questions")
                 cached_questions = self.followup_cache[content_hash]["questions"]
-                return cached_questions
+                return dict(cached_questions)
 
             # Generate new questions using LLM
             questions = self._generate_with_llm(analysis)
@@ -293,7 +301,7 @@ Response:""",
             try:
                 with open(self.cache_file, "r") as f:
                     loaded_cache = json.load(f)
-                    return loaded_cache
+                    return dict(loaded_cache)
             except Exception as e:
                 logger.warning(f"Could not load followup cache: {e}")
         return {}

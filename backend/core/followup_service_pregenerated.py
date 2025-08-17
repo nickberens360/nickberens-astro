@@ -76,7 +76,7 @@ class PreGeneratedFollowUpService:
             conversation_history: Previous conversation for context
 
         Returns:
-            List of 3-4 follow-up question suggestions
+            List of 3 follow-up question suggestions
         """
 
         # Detect context from question and response
@@ -191,13 +191,13 @@ class PreGeneratedFollowUpService:
                 unique_candidates.append(q)
                 seen.add(q)
 
-        # Select 3-4 questions
-        if len(unique_candidates) <= 4:
+        # Select 3 questions
+        if len(unique_candidates) <= 3:
             return unique_candidates
         else:
-            # Shuffle and take 4 random questions
+            # Shuffle and take 3 random questions
             random.shuffle(unique_candidates)
-            return unique_candidates[:4]
+            return unique_candidates[:3]
 
     def _is_similar_to_asked(self, question: str, asked_questions: set) -> bool:
         """Check if a question is too similar to previously asked questions."""
