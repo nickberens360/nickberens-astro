@@ -43,13 +43,13 @@ class QueryLogger:
         # Ensure parent directory exists (important for mounted volumes)
         try:
             self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
+        except OSError as e:
             self.logger.warning(f"Failed to create log directory {self.log_file_path.parent}: {e}")
 
         # Ensure log file exists
         try:
             self.log_file_path.touch(exist_ok=True)
-        except Exception as e:
+        except OSError as e:
             self.logger.warning(f"Failed to create log file {self.log_file_path}: {e}")
 
         # Set excluded IPs (can be loaded from config)

@@ -61,7 +61,11 @@ async function main() {
 
   const data = new Uint8Array(await res.arrayBuffer());
   writeFileSync(outFile, data);
-  try { copyFileSync(outFile, latestFile); } catch {}
+  try {
+    copyFileSync(outFile, latestFile);
+  } catch (err) {
+    console.warn(`Warning: Could not copy to 'latest.jsonl': ${err.message}`);
+  }
 
   const bytes = data.byteLength;
   console.log(`Saved ${bytes.toLocaleString()} bytes to ${outFile}`);
