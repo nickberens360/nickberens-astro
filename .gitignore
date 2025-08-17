@@ -73,6 +73,7 @@ public/unified_data.json
 backend/query_logs.json
 backend/.followup_cache.json
 *.log
+query_logs.json
 
 
 # ChromaDB database files and cache
