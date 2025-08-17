@@ -255,7 +255,6 @@ Response:""",
     def _validate_questions(self, questions: List[str]) -> List[str]:
         """Validate that questions can be answered from the vector store."""
         validated = []
-        # Configurable score threshold (default 0.5)
         try:
             score_threshold = float(AppConfig.FOLLOWUP_VALIDATION_SCORE_THRESHOLD)
         except Exception:
@@ -263,29 +262,28 @@ Response:""",
 
         for question in questions:
             try:
-                # Quick check if the question would return relevant results
-                results = self.unified_retriever.get_relevant_documents(question, k=3)
-                if results and len(results) > 0:
-                    # Check if results have reasonable similarity scores
-                    has_good_match = False
-                    for doc in results:
-                        # Most retrievers include a score in metadata
-                        if hasattr(doc, "metadata") and "score" in doc.metadata:
-                            if doc.metadata["score"] > score_threshold:  # Reasonable threshold
-                                has_good_match = True
-                                break
-                        else:
-                            # If no score, assume it's relevant since it was returned
-                            has_good_match = True
-                            break
+                # Use similarity_search_with_score to get actual scores
+                if hasattr(self.unified_retriever, "vector_store") and self.unified_retriever.vector_store is not None:
+                    results_with_scores = self.unified_retriever.vector_store.similarity_search_with_score(question, k=1)
 
-                    if has_good_match:
-                        validated.append(question)
-                        logger.debug(f"Validated question: {question}")
+                    if results_with_scores:
+                        # ChromaDB returns distance, so lower score = better match
+                        _doc, score = results_with_scores[0]
+                        if score <= score_threshold:
+                            validated.append(question)
+                            logger.debug(f"Validated question: '{question}' with score {score:.2f}")
+                        else:
+                            logger.debug(f"Question '{question}' has low relevance score: {score:.2f}")
                     else:
-                        logger.debug(f"Question has low relevance scores: {question}")
+                        logger.debug(f"No results for question: {question}")
                 else:
-                    logger.debug(f"No results for question: {question}")
+                    # Fallback: if no vector store access, use basic retrieval check
+                    results = self.unified_retriever.get_relevant_documents(question, k=1)
+                    if results and len(results) > 0:
+                        validated.append(question)
+                        logger.debug(f"Validated question (fallback): {question}")
+                    else:
+                        logger.debug(f"No results for question: {question}")
 
             except Exception as e:
                 logger.error(f"Error validating question '{question}': {e}")
