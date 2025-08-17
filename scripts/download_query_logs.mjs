@@ -60,7 +60,9 @@ async function main() {
     process.exit(1);
   }
 
-  await pipeline(res.body, createWriteStream(outFile));
+  // Use Readable.fromWeb to convert web stream to Node stream
+  const { Readable } = await import('node:stream');
+  await pipeline(Readable.fromWeb(res.body), createWriteStream(outFile));
 
   try {
     copyFileSync(outFile, latestFile);
