@@ -2,8 +2,9 @@
 // Download the server's raw query logs to local query-logs/ directory.
 // Uses /admin/query-logs/download (Bearer protected) on your backend.
 
-import { readFileSync, mkdirSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, existsSync, copyFileSync, createWriteStream, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 
 function loadDotEnvIfPresent() {
   try {
@@ -59,15 +60,15 @@ async function main() {
     process.exit(1);
   }
 
-  const data = new Uint8Array(await res.arrayBuffer());
-  writeFileSync(outFile, data);
+  await pipeline(res.body, createWriteStream(outFile));
+
   try {
     copyFileSync(outFile, latestFile);
   } catch (err) {
     console.warn(`Warning: Could not copy to 'latest.jsonl': ${err.message}`);
   }
 
-  const bytes = data.byteLength;
+  const bytes = statSync(outFile).size;
   console.log(`Saved ${bytes.toLocaleString()} bytes to ${outFile}`);
 }
 
