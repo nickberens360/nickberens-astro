@@ -150,6 +150,15 @@ Streaming responses are first logged as a placeholder and then completed with an
 ### Shutdown Behavior
 - In `FOLLOWUP_MODE=optimized`, the follow-up service uses a small `ThreadPoolExecutor` for background work. The FastAPI app registers a shutdown hook that calls `followup_service.close()` to cleanly release thread pool resources during application shutdown. No manual action is required for normal operation.
 
+### Environment Setup (example)
+Set these in your `.env` or shell to control follow-up behavior:
+
+```
+FOLLOWUP_MODE=pre_generated        # or optimized | static
+ENABLE_FOLLOWUP_PREGENERATION=true # reduce cold-starts by setting to false
+FOLLOWUP_VALIDATION_SCORE_THRESHOLD=0.5
+```
+
 ---
 
 ## Manual Performance Scripts
