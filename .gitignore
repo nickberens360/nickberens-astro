@@ -79,3 +79,6 @@ backend/.followup_cache.json
 backend/.chroma/
 backend/.rag_cache/
 backend/.unified_chroma/
+
+# Local downloaded logs directory
+query-logs/

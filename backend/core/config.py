@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 from typing import List, Optional
+from pathlib import Path
 from urllib.parse import urlparse
 
 # Set up logging
@@ -279,6 +280,26 @@ class AppConfig:
     @classproperty
     def IP_HASH_SALT(cls) -> str:
         return cls.get_ip_hash_salt()
+
+    # Query Log storage
+    @classmethod
+    def get_query_log_file(cls) -> str:
+        """Return the log file path, overridable via QUERY_LOG_FILE.
+
+        Use this to point logs at a persistent volume path in production
+        (e.g., "/data/query_logs/query_logs.json" on Railway with a mounted volume).
+        """
+        env_path = os.getenv("QUERY_LOG_FILE")
+        if env_path and env_path.strip():
+            return env_path.strip()
+
+        # Default to repo path (ephemeral in many deployments)
+        backend_dir = Path(__file__).parent.parent
+        return str(backend_dir / "query_logs.json")
+
+    @classproperty
+    def QUERY_LOG_FILE(cls) -> str:
+        return cls.get_query_log_file()
 
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
