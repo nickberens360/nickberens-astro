@@ -12,6 +12,7 @@ This module contains the primary query endpoint that:
 import json
 import logging
 import time
+import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -52,6 +53,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         client_ip = real_ip.strip()
 
     query_logger = get_query_logger()
+    request_id = str(uuid.uuid4())
     start_time = time.time()
 
     # Restore validation and sanitization calls
@@ -157,7 +159,13 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 )
 
         text_stream, actual_model_used, metadata = await stream_with_fallback(
-            services["retrievers"], formatted_chat_history, sanitized_question, query.preferred_model
+            services["retrievers"],
+            formatted_chat_history,
+            sanitized_question,
+            query.preferred_model,
+            client_ip=client_ip,
+            question=sanitized_question,
+            request_id=request_id,
         )
 
         # If we get here, the LLM fallback succeeded, so return 200
@@ -184,6 +192,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             "followup_questions": followup_questions,
             **metadata,
         },
+        request_id=request_id,
     )
 
     # Include rate limit status in headers

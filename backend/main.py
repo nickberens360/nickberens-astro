@@ -9,7 +9,7 @@ This is the main entry point for the FastAPI application that:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from dotenv import load_dotenv
 from langchain_core.language_models import BaseLanguageModel
@@ -18,6 +18,8 @@ from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
 from .core.followup_service import FollowUpService
+from .core.followup_service_optimized import OptimizedFollowUpService
+from .core.followup_service_pregenerated import PreGeneratedFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
@@ -49,7 +51,32 @@ except Exception as e:
 # Initialize singleton services
 query_router = QueryRouter()
 response_service = ResponseService()
-followup_service = FollowUpService()
+
+# Use configurable follow-up service
+followup_service: Union[PreGeneratedFollowUpService, FollowUpService, OptimizedFollowUpService]
+config = AppConfig()
+if app_initialized:
+    mode = config.FOLLOWUP_MODE
+    if mode == "pre_generated":
+        logger.info("Using pre-generated follow-up service for instant responses")
+        followup_service = PreGeneratedFollowUpService()
+    elif mode == "optimized":
+        try:
+            from .core.app_initializer_v2 import get_unified_retriever
+
+            unified = get_unified_retriever(retrievers) if retrievers else None
+            followup_service = OptimizedFollowUpService(llm=llm, unified_retriever=unified)
+            logger.info("Using optimized follow-up service (LLM-enhanced with caching)")
+        except Exception as e:
+            logger.warning(f"Failed to initialize optimized follow-ups ({e}); falling back to static")
+            followup_service = FollowUpService()
+    else:
+        logger.info("Using static follow-up service")
+        followup_service = FollowUpService()
+else:
+    logger.warning("App not initialized, using static follow-up service")
+    followup_service = FollowUpService()
+
 query_logger = get_query_logger()
 
 # Create the FastAPI app
@@ -64,3 +91,14 @@ app.state.query_router = query_router
 app.state.response_service = response_service
 app.state.followup_service = followup_service
 app.state.query_logger = query_logger
+
+
+# Ensure graceful shutdown of background resources (e.g., thread pools)
+@app.on_event("shutdown")
+async def _shutdown_cleanup():
+    svc = app.state.followup_service
+    if hasattr(svc, "close"):
+        try:
+            svc.close()
+        except Exception:
+            logger.exception("Failed to close follow-up service cleanly")

@@ -71,6 +71,7 @@ public/unified_data.json
 
 # Log files
 backend/query_logs.json
+backend/.followup_cache.json
 *.log
 
 
@@ -78,4 +79,3 @@ backend/query_logs.json
 backend/.chroma/
 backend/.rag_cache/
 backend/.unified_chroma/
-

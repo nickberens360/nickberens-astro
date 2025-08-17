@@ -115,6 +115,7 @@ class QueryLogger:
         query_type: str,
         response_time: float,
         metadata: Optional[Dict[str, Any]] = None,
+        request_id: Optional[str] = None,
     ) -> None:
         """
         Log a query and its response.
@@ -148,6 +149,7 @@ class QueryLogger:
             "model_used": model_used,
             "query_type": query_type,
             "response_time": response_time,
+            "request_id": request_id,
             "metadata": metadata or {},
         }
 
@@ -165,6 +167,7 @@ class QueryLogger:
         model_used: str,
         response_time: float,
         metadata: Optional[Dict[str, Any]] = None,
+        request_id: Optional[str] = None,
     ) -> None:
         """
         Log a streaming query (response will be marked as [STREAMING]).
@@ -184,7 +187,83 @@ class QueryLogger:
             query_type="text",
             response_time=response_time,
             metadata=metadata,
+            request_id=request_id,
         )
+
+    def update_streaming_response(
+        self,
+        cache_key: str,
+        client_ip: str,
+        question: str,
+        actual_response: str,
+        request_id: Optional[str] = None,
+    ) -> bool:
+        """
+        Update a streaming response log entry with the actual response content.
+
+        This method finds the most recent streaming log entry for the given client_ip
+        and question, then updates it with the actual response content.
+
+        Args:
+            cache_key: The cache key used for the response
+            client_ip: The client's IP address
+            question: The user's question
+            actual_response: The actual response content to log
+
+        Returns:
+            bool: True if the update was successful, False otherwise
+        """
+        if not self.should_log_ip(client_ip):
+            return True  # Skip logging but return success
+
+        try:
+            # Read all log entries
+            log_entries = []
+            try:
+                with open(self.log_file_path, "r") as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                log_entries.append(json.loads(line))
+                            except json.JSONDecodeError:
+                                # Keep malformed entries as-is
+                                log_entries.append(line.rstrip())
+            except FileNotFoundError:
+                self.logger.warning(f"Log file not found: {self.log_file_path}")
+                return False
+
+            # If request_id is provided, append a completion entry instead of rewriting the file
+            if request_id:
+                completion_entry = {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "client_ip": self.anonymize_ip(client_ip),
+                    "location": get_geolocation_service().get_location(client_ip),
+                    "question": question,
+                    "response": actual_response,
+                    "model_used": "streaming_completion",
+                    "query_type": "text",
+                    "response_time": None,
+                    "request_id": request_id,
+                    "metadata": {"cache_key": cache_key, "response_updated": datetime.utcnow().isoformat()},
+                }
+                try:
+                    with open(self.log_file_path, "a") as f:
+                        f.write(json.dumps(completion_entry, default=str) + "\n")
+                    self.logger.debug(f"Appended streaming completion for request_id: {request_id}")
+                    return True
+                except (IOError, TypeError) as e:
+                    self.logger.error(f"Failed to append streaming completion: {e}")
+                    # Fall through to legacy rewrite method
+
+            # Legacy rewrite path disabled to avoid race conditions
+            self.logger.warning(
+                "No request_id provided; skipping legacy rewrite of query logs to avoid race conditions"
+            )
+            return False
+
+        except (IOError, TypeError) as e:
+            self.logger.error(f"Failed to update streaming response: {e}")
+            return False
 
     def get_logs(
         self,
