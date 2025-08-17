@@ -8,8 +8,8 @@ follow-up questions that can be served instantly during runtime.
 import hashlib
 import json
 import logging
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List
 
 from langchain_core.language_models import BaseLanguageModel
@@ -202,7 +202,7 @@ Response:""",
         # Light-weight entity extraction from content samples (best-effort)
         for sample in content_samples:
             for token in sample.replace("\n", " ").split():
-                t = token.strip('"\'\',.()[]{}:;!?').strip()
+                t = token.strip("\"'',.()[]{}:;!?").strip()
                 if len(t) > 2 and t[0].isupper() and t.isalpha():
                     entities.add(t)
 

@@ -130,9 +130,7 @@ class PreGeneratedFollowUpService:
                 self.questions_db = latest_entry.get("questions", {})
                 self.content_hash = best_key
 
-                logger.info(
-                    f"Loaded {sum(len(qs) for qs in self.questions_db.values())} pre-generated questions"
-                )
+                logger.info(f"Loaded {sum(len(qs) for qs in self.questions_db.values())} pre-generated questions")
             else:
                 logger.warning("Cache file is empty, using default questions")
                 self.questions_db = self._get_default_questions()

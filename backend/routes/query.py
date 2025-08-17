@@ -12,10 +12,10 @@ This module contains the primary query endpoint that:
 import json
 import logging
 import time
+import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-import uuid
 from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 

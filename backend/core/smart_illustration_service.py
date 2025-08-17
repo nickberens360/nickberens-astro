@@ -42,16 +42,26 @@ class SmartIllustrationService:
                 query="illustration art design creative",
                 k=200,  # High enough to get all illustrations
                 filter_content_types=["creative"],
-                score_threshold=0.0,
+                score_threshold=2.0,  # Generous threshold to include all illustrations
             )
+
+            logger.info(f"Semantic search returned {len(docs)} documents")
+            for i, doc in enumerate(docs[:5]):  # Debug first 5 docs
+                logger.info(f"Doc {i}: metadata = {doc.metadata}")
 
             illustrations: List[Dict[str, str]] = []
             seen_files = set()
 
             for doc in docs:
-                if doc.metadata.get("is_illustration_data"):
+                is_illustration = doc.metadata.get("is_illustration_data")
+                logger.info(
+                    f"Processing doc: is_illustration_data={is_illustration}, metadata keys={list(doc.metadata.keys())}"
+                )
+
+                if is_illustration:
                     display_path = doc.metadata.get("display_path")
                     file_key = doc.metadata.get("illustration_file")
+                    logger.info(f"Found illustration: display_path={display_path}, file_key={file_key}")
 
                     if display_path and file_key not in seen_files:
                         illustrations.append({"file": display_path})
@@ -87,7 +97,7 @@ class SmartIllustrationService:
                 query=f"{search_term} illustration art creative character",
                 k=top_k * 2,  # Get more docs to allow filtering
                 filter_content_types=["creative"],
-                score_threshold=0.0,
+                score_threshold=2.0,  # Same generous threshold as get_all()
             )
 
             illustrations: List[Dict[str, str]] = []

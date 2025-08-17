@@ -74,11 +74,12 @@ class UnifiedRetriever:
             content_types.append("creative")  # Ensure creative tag for illustrations
             # Extract file name from JSON content for frontend display
             try:
-                if "file" in content:
+                if '"file"' in doc.page_content:
                     # This is an individual illustration entry - parse JSON directly
                     data = json.loads(doc.page_content)
-                    if isinstance(data, dict):
+                    if isinstance(data, dict) and "file" in data:
                         illustration_file = data.get("file")
+                        logger.info(f"Found illustration file: {illustration_file}")
             except json.JSONDecodeError:
                 logger.warning(f"Could not parse JSON to find illustration file in doc from {file_path.name}")
 
@@ -142,19 +143,22 @@ class UnifiedRetriever:
         # Discover all files
         for file_path in base_path.rglob("*"):
             if file_path.is_file() and not file_path.name.startswith(".") and self._should_index_file(file_path):
-                logger.debug(f"Processing file: {file_path}")
+                logger.info(f"Processing file: {file_path}")
                 file_hash = self._compute_file_hash(file_path)
 
                 # Skip if already indexed and unchanged
-                if self._should_skip_file(file_path, file_hash, indexed_files, force_reindex):
-                    logger.debug(f"Skipping {file_path} - already indexed")
+                should_skip = self._should_skip_file(file_path, file_hash, indexed_files, force_reindex)
+                if should_skip:
+                    logger.info(f"Skipping {file_path} - already indexed (force_reindex={force_reindex})")
                     continue
+                else:
+                    logger.info(f"Will process {file_path} (force_reindex={force_reindex})")
 
                 # Load and process the document
                 try:
                     docs = load_doc(file_path)
                     if not docs:
-                        logger.debug(f"No documents loaded from {file_path}")
+                        logger.info(f"No documents loaded from {file_path}")
                         continue
 
                     # Use appropriate splitter based on file type
@@ -219,6 +223,10 @@ class UnifiedRetriever:
         """
         Perform semantic search with optional filtering and scoring.
         """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         # Get more results than needed for filtering and reranking
         search_k = k * 3
 
@@ -227,8 +235,15 @@ class UnifiedRetriever:
             raise ValueError("Vector store not initialized")
         docs_and_scores = self.vector_store.similarity_search_with_score(query, k=search_k)
 
+        logger.info(f"Raw search returned {len(docs_and_scores)} documents")
+        if docs_and_scores:
+            logger.info(
+                f"Score range: {min(score for _, score in docs_and_scores):.3f} - {max(score for _, score in docs_and_scores):.3f}"
+            )
+
         # Filter by distance threshold (lower distance = more similar)
         filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
+        logger.info(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
         # Apply content type filtering if specified
         if filter_content_types:
@@ -236,10 +251,15 @@ class UnifiedRetriever:
             for doc in filtered_docs:
                 if "content_types" in doc.metadata:
                     doc_content_types = doc.metadata["content_types"].split(",")
+                    logger.info(f"Doc content types: {doc_content_types}, looking for: {filter_content_types}")
                     # Check if any of the document's content types match our filter
                     if any(content_type.strip() in filter_content_types for content_type in doc_content_types):
                         content_filtered_docs.append(doc)
+                        logger.info(f"✅ Match found: {doc_content_types}")
+                    else:
+                        logger.info(f"❌ No match: {doc_content_types}")
             filtered_docs = content_filtered_docs
+            logger.info(f"After content type filtering: {len(filtered_docs)} documents")
 
         # Return top k results
         return filtered_docs[:k]

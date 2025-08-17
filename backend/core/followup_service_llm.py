@@ -15,6 +15,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
+
 from .config import AppConfig
 
 logger = logging.getLogger(__name__)

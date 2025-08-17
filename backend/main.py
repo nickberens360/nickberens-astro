@@ -18,8 +18,8 @@ from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
 from .core.followup_service import FollowUpService
-from .core.followup_service_pregenerated import PreGeneratedFollowUpService
 from .core.followup_service_optimized import OptimizedFollowUpService
+from .core.followup_service_pregenerated import PreGeneratedFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
@@ -91,6 +91,7 @@ app.state.query_router = query_router
 app.state.response_service = response_service
 app.state.followup_service = followup_service
 app.state.query_logger = query_logger
+
 
 # Ensure graceful shutdown of background resources (e.g., thread pools)
 @app.on_event("shutdown")
