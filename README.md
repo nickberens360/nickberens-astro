@@ -144,6 +144,12 @@ Control cold-start cost with `ENABLE_FOLLOWUP_PREGENERATION=true|false` (default
 
 Streaming responses are first logged as a placeholder and then completed with an append-only entry keyed by a per-request ID. This avoids log rewrites under load and keeps query logs consistent.
 
+### Additional Config
+- `FOLLOWUP_VALIDATION_SCORE_THRESHOLD` (default `0.5`): minimum similarity score used when validating LLM-generated follow-up questions against the retriever. Increase to make validation stricter; decrease to allow more suggestions.
+
+### Shutdown Behavior
+- In `FOLLOWUP_MODE=optimized`, the follow-up service uses a small `ThreadPoolExecutor` for background work. The FastAPI app registers a shutdown hook that calls `followup_service.close()` to cleanly release thread pool resources during application shutdown. No manual action is required for normal operation.
+
 ---
 
 ## Manual Performance Scripts
