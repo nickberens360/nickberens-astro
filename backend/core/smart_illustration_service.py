@@ -5,10 +5,13 @@ This service replaces the old illustration service and unified_data.json depende
 with intelligent illustration search using the unified retriever system.
 """
 
+import json
 import logging
-from typing import Dict, List
+from difflib import SequenceMatcher
+from typing import Dict, List, Tuple
 
 from .unified_retriever import UnifiedRetriever
+from .config import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +125,81 @@ class SmartIllustrationService:
                             logger.info(f"Found illustration via search: {file_key} -> {display_path}")
 
             logger.info(f"Smart illustration search returned {len(illustrations)} results for '{search_term}'")
-            return illustrations
+            # Fuzzy fallback: if we didn't get enough results, try matching against titles/tags
+            if len(illustrations) < top_k:
+                try:
+                    fuzzy_needed = top_k - len(illustrations)
+                    extra = self._fuzzy_fallback(search_term, fuzzy_needed, seen_files)
+                    illustrations.extend(extra)
+                    logger.info(
+                        f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for '{search_term}'"
+                    )
+                except Exception:
+                    logger.warning("Fuzzy fallback failed", exc_info=True)
+
+            return illustrations[:top_k]
 
         except Exception:
             logger.error("Smart illustration search failed", exc_info=True)
             return []
+
+    # --- Internal helpers ---
+    def _load_illustrations_data(self) -> List[Dict[str, str]]:
+        """Load illustrations from configured JSON file."""
+        path = AppConfig.ILLUSTRATIONS_PATH
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+        except Exception:
+            logger.warning(f"Unable to load illustrations from {path}", exc_info=True)
+        return []
+
+    def _score_entry(self, search: str, entry: Dict[str, str]) -> float:
+        """Compute a fuzzy score for an entry using title, tags, and filename."""
+        s = search.lower().strip()
+        title = (entry.get("title") or "").lower()
+        tags = " ".join(entry.get("tags") or [])
+        file_name = (entry.get("file") or "").lower()
+
+        scores: List[float] = []
+        if title:
+            scores.append(SequenceMatcher(None, s, title).ratio())
+        if tags:
+            scores.append(SequenceMatcher(None, s, tags).ratio())
+        if file_name:
+            scores.append(SequenceMatcher(None, s, file_name).ratio())
+
+        # Bonus for simple containment
+        if s and (s in title or s in tags or s in file_name):
+            scores.append(1.0)
+
+        return max(scores) if scores else 0.0
+
+    def _fuzzy_fallback(self, search_term: str, limit: int, seen_files: set) -> List[Dict[str, str]]:
+        """Return additional matches using fuzzy title/tag matching."""
+        entries = self._load_illustrations_data()
+        if not entries:
+            return []
+
+        scored: List[Tuple[float, Dict[str, str]]] = []
+        for e in entries:
+            score = self._score_entry(search_term, e)
+            if score >= 0.6:  # reasonable threshold for typos
+                scored.append((score, e))
+
+        # Sort by score descending
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        results: List[Dict[str, str]] = []
+        for _, e in scored:
+            file_key = e.get("file")
+            if not file_key or file_key in seen_files:
+                continue
+            results.append({"file": f"/illustrations/{file_key}"})
+            seen_files.add(file_key)
+            if len(results) >= limit:
+                break
+
+        return results
