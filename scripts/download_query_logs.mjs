@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Download the server's raw query logs to local query-logs/ directory.
-// Uses /query-logs/download (Bearer protected) on your backend.
+// Uses /admin/query-logs/download (Bearer protected) on your backend.
 
 import { readFileSync, mkdirSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
