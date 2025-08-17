@@ -464,6 +464,8 @@ export default {
   overflow-x: auto;
   gap: .5rem;
   padding-bottom: .7rem;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
 }
 
 .followup-button {
@@ -481,6 +483,12 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-right: .5rem;
+  scroll-snap-align: start;
+}
+
+.followup-button:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
 }
 
 .followup-button:hover {

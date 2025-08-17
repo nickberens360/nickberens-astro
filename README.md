@@ -130,3 +130,28 @@ The project is organized into two main parts: the Astro frontend and the FastAPI
 │   ├── test_illustration_service.py # Unit tests for illustration service
 │   └── test_response_service.py     # Unit tests for response service
 └── pytest.ini                      # Pytest configuration
+
+---
+
+## Follow-up Modes and Logging
+
+The backend supports configurable follow-up question strategies via environment variables:
+- `FOLLOWUP_MODE=pre_generated` (default): instant follow-ups loaded from a cache pre-generated at startup.
+- `FOLLOWUP_MODE=optimized`: fast static suggestions first, optionally enhanced by an LLM with timeouts and caching.
+- `FOLLOWUP_MODE=static`: static suggestions only.
+
+Control cold-start cost with `ENABLE_FOLLOWUP_PREGENERATION=true|false` (default true). When enabled, the backend generates and caches follow-up questions during startup. The cache file `backend/.followup_cache.json` is not committed.
+
+Streaming responses are first logged as a placeholder and then completed with an append-only entry keyed by a per-request ID. This avoids log rewrites under load and keeps query logs consistent.
+
+---
+
+## Manual Performance Scripts
+
+The repository includes several local scripts (not part of the pytest suite) to validate performance and follow-up quality. Run the backend first, then execute scripts from the project root:
+- `quick_performance_test.py` – one-off timing checks
+- `test_cache_performance.py` – cached vs. uncached comparison
+- `test_followups.py` / `test_followups.sh` – qualitative checks for follow-ups
+- `test_performance_followups.py` – multi-run timing stats
+
+Note: The backend applies rate limiting; scripts include delays between requests.

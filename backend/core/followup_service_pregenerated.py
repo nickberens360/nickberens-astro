@@ -103,14 +103,36 @@ class PreGeneratedFollowUpService:
             with open(self.cache_file, "r") as f:
                 cache_data = json.load(f)
 
-            # Find the most recent cache entry
+            # Find the most recent cache entry by generated_at if present
             if cache_data:
-                # Get the first (most recent) cache entry
-                latest_entry = list(cache_data.values())[0]
-                self.questions_db = latest_entry.get("questions", {})
-                self.content_hash = list(cache_data.keys())[0]
+                best_key = None
+                best_ts = None
+                for key, value in cache_data.items():
+                    ts = value.get("generated_at")
+                    if ts:
+                        try:
+                            current_ts = ts
+                        except Exception:
+                            current_ts = None
+                    else:
+                        current_ts = None
 
-                logger.info(f"Loaded {sum(len(qs) for qs in self.questions_db.values())} pre-generated questions")
+                    if best_ts is None and current_ts is not None:
+                        best_key, best_ts = key, current_ts
+                    elif current_ts is not None and current_ts > (best_ts or ""):
+                        best_key, best_ts = key, current_ts
+
+                # Fallback to first key if no timestamps
+                if best_key is None:
+                    best_key = next(iter(cache_data))
+
+                latest_entry = cache_data.get(best_key, {})
+                self.questions_db = latest_entry.get("questions", {})
+                self.content_hash = best_key
+
+                logger.info(
+                    f"Loaded {sum(len(qs) for qs in self.questions_db.values())} pre-generated questions"
+                )
             else:
                 logger.warning("Cache file is empty, using default questions")
                 self.questions_db = self._get_default_questions()

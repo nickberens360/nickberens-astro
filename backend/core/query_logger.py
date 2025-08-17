@@ -115,6 +115,7 @@ class QueryLogger:
         query_type: str,
         response_time: float,
         metadata: Optional[Dict[str, Any]] = None,
+        request_id: Optional[str] = None,
     ) -> None:
         """
         Log a query and its response.
@@ -148,6 +149,7 @@ class QueryLogger:
             "model_used": model_used,
             "query_type": query_type,
             "response_time": response_time,
+            "request_id": request_id,
             "metadata": metadata or {},
         }
 
@@ -165,6 +167,7 @@ class QueryLogger:
         model_used: str,
         response_time: float,
         metadata: Optional[Dict[str, Any]] = None,
+        request_id: Optional[str] = None,
     ) -> None:
         """
         Log a streaming query (response will be marked as [STREAMING]).
@@ -184,6 +187,7 @@ class QueryLogger:
             query_type="text",
             response_time=response_time,
             metadata=metadata,
+            request_id=request_id,
         )
 
     def update_streaming_response(
@@ -192,6 +196,7 @@ class QueryLogger:
         client_ip: str,
         question: str,
         actual_response: str,
+        request_id: Optional[str] = None,
     ) -> bool:
         """
         Update a streaming response log entry with the actual response content.
@@ -226,6 +231,29 @@ class QueryLogger:
             except FileNotFoundError:
                 self.logger.warning(f"Log file not found: {self.log_file_path}")
                 return False
+
+            # If request_id is provided, append a completion entry instead of rewriting the file
+            if request_id:
+                completion_entry = {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "client_ip": self.anonymize_ip(client_ip),
+                    "location": get_geolocation_service().get_location(client_ip),
+                    "question": question,
+                    "response": actual_response,
+                    "model_used": "streaming_completion",
+                    "query_type": "text",
+                    "response_time": None,
+                    "request_id": request_id,
+                    "metadata": {"cache_key": cache_key, "response_updated": datetime.utcnow().isoformat()},
+                }
+                try:
+                    with open(self.log_file_path, "a") as f:
+                        f.write(json.dumps(completion_entry, default=str) + "\n")
+                    self.logger.debug(f"Appended streaming completion for request_id: {request_id}")
+                    return True
+                except (IOError, TypeError) as e:
+                    self.logger.error(f"Failed to append streaming completion: {e}")
+                    # Fall through to legacy rewrite method
 
             # Find the most recent streaming response entry for this client/question
             updated = False

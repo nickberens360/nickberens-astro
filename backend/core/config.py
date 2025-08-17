@@ -19,6 +19,25 @@ class AppConfig:
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
 
+    # Follow-up generation configuration
+    @classmethod
+    def get_followup_mode(cls) -> str:
+        """Return follow-up mode: pre_generated | optimized | static."""
+        mode = os.getenv("FOLLOWUP_MODE", "pre_generated").strip().lower()
+        if mode not in {"pre_generated", "optimized", "static"}:
+            logger.warning(f"Invalid FOLLOWUP_MODE '{mode}', defaulting to 'pre_generated'")
+            return "pre_generated"
+        return mode
+
+    FOLLOWUP_MODE = property(lambda self: self.get_followup_mode())
+
+    @classmethod
+    def is_followup_pregeneration_enabled(cls) -> bool:
+        """Toggle pre-generation during startup to control cold-start costs."""
+        return os.getenv("ENABLE_FOLLOWUP_PREGENERATION", "true").lower() == "true"
+
+    ENABLE_FOLLOWUP_PREGENERATION = property(lambda self: self.is_followup_pregeneration_enabled())
+
     # Search Configuration with basic validation
     try:
         SEARCH_THRESHOLD = int(os.getenv("SEARCH_THRESHOLD", "55"))

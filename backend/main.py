@@ -19,6 +19,7 @@ from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
 from .core.followup_service import FollowUpService
 from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+from .core.followup_service_optimized import OptimizedFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
@@ -51,11 +52,27 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 
-# Use pre-generated follow-up service for maximum performance
-followup_service: Union[PreGeneratedFollowUpService, FollowUpService]
+# Use configurable follow-up service
+followup_service: Union[PreGeneratedFollowUpService, FollowUpService, OptimizedFollowUpService]
+config = AppConfig()
 if app_initialized:
-    logger.info("Using pre-generated follow-up service for instant responses (0ms overhead)")
-    followup_service = PreGeneratedFollowUpService()
+    mode = config.FOLLOWUP_MODE
+    if mode == "pre_generated":
+        logger.info("Using pre-generated follow-up service for instant responses")
+        followup_service = PreGeneratedFollowUpService()
+    elif mode == "optimized":
+        try:
+            from .core.app_initializer_v2 import get_unified_retriever
+
+            unified = get_unified_retriever(retrievers) if retrievers else None
+            followup_service = OptimizedFollowUpService(llm=llm, unified_retriever=unified)
+            logger.info("Using optimized follow-up service (LLM-enhanced with caching)")
+        except Exception as e:
+            logger.warning(f"Failed to initialize optimized follow-ups ({e}); falling back to static")
+            followup_service = FollowUpService()
+    else:
+        logger.info("Using static follow-up service")
+        followup_service = FollowUpService()
 else:
     logger.warning("App not initialized, using static follow-up service")
     followup_service = FollowUpService()

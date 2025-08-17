@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+from datetime import datetime
 from typing import Any, Dict, List
 
 from langchain_core.language_models import BaseLanguageModel
@@ -116,8 +117,12 @@ Response:""",
             # Generate new questions using LLM
             questions = self._generate_with_llm(analysis)
 
-            # Cache the results
-            self.followup_cache[content_hash] = {"questions": questions, "analysis": analysis, "generated_at": "auto"}
+            # Cache the results with a timestamp for deterministic selection
+            self.followup_cache[content_hash] = {
+                "questions": questions,
+                "analysis": analysis,
+                "generated_at": datetime.utcnow().isoformat(),
+            }
 
             # Save cache to file
             self._save_cache()
@@ -191,13 +196,15 @@ Response:""",
             except Exception as e:
                 logger.warning(f"Error analyzing query '{query}': {e}")
 
-        # Extract entities from content samples
+        # Prefer entities from metadata topics/tags
+        entities.update(list(topics))
+
+        # Light-weight entity extraction from content samples (best-effort)
         for sample in content_samples:
-            # Simple entity extraction (can be enhanced)
-            words = sample.split()
-            for word in words:
-                if word.istitle() and len(word) > 2:
-                    entities.add(word)
+            for token in sample.replace("\n", " ").split():
+                t = token.strip('"\'\',.()[]{}:;!?').strip()
+                if len(t) > 2 and t[0].isupper() and t.isalpha():
+                    entities.add(t)
 
         return {
             "topics": list(topics),
@@ -285,11 +292,14 @@ Response:""",
     def _generate_content_hash(self, analysis: Dict[str, Any]) -> str:
         """Generate a hash of the content analysis for cache invalidation."""
         # Create a stable representation of the analysis
+        # Include a digest of sample content to prevent stale cache hits
+        samples_concat = "\n".join(analysis.get("content_samples", []))
+        samples_digest = hashlib.md5(samples_concat.encode()).hexdigest()[:16] if samples_concat else "no_samples"
         stable_repr = {
             "topics": sorted(analysis["topics"]),
             "content_types": sorted(analysis["content_types"]),
             "entities": sorted(analysis["entities"]),
-            "sample_count": len(analysis["content_samples"]),
+            "samples_digest": samples_digest,
         }
 
         content_str = json.dumps(stable_repr, sort_keys=True)

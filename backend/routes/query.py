@@ -15,6 +15,7 @@ import time
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+import uuid
 from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
@@ -52,6 +53,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         client_ip = real_ip.strip()
 
     query_logger = get_query_logger()
+    request_id = str(uuid.uuid4())
     start_time = time.time()
 
     # Restore validation and sanitization calls
@@ -163,6 +165,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             query.preferred_model,
             client_ip=client_ip,
             question=sanitized_question,
+            request_id=request_id,
         )
 
         # If we get here, the LLM fallback succeeded, so return 200
@@ -189,6 +192,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             "followup_questions": followup_questions,
             **metadata,
         },
+        request_id=request_id,
     )
 
     # Include rate limit status in headers

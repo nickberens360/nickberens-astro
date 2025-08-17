@@ -303,6 +303,7 @@ async def stream_with_fallback(
     preferred_model: Optional[str] = None,
     client_ip: Optional[str] = None,
     question: Optional[str] = None,
+    request_id: Optional[str] = None,
 ) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
     Handle user input, perform retrieval (with caching),
@@ -405,6 +406,7 @@ async def stream_with_fallback(
                                 client_ip=client_ip,
                                 question=question,
                                 actual_response=complete_response,
+                                request_id=request_id,
                             )
                         except Exception as e:
                             logger.warning(f"Failed to update streaming response log: {e}")
