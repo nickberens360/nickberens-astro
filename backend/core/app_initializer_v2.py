@@ -17,6 +17,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
+from .followup_pregeneration import FollowupPreGenerator
 from .smart_illustration_service import SmartIllustrationService
 from .unified_retriever import UnifiedRetriever
 
@@ -68,6 +69,18 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
             logger.info(f"Indexed {directory}: {files} files, {chunks} chunks")
 
     logger.info(f"Total indexed: {total_files} files, {total_chunks} chunks")
+
+    # Pre-generate follow-up questions based on indexed content (configurable)
+    config = AppConfig()
+    if config.ENABLE_FOLLOWUP_PREGENERATION:
+        logger.info("Pre-generating follow-up questions...")
+        followup_pregenerator = FollowupPreGenerator(indexing_llm)
+        pregenerated_questions = followup_pregenerator.analyze_and_generate(unified_retriever)
+
+        question_count = sum(len(qs) for qs in pregenerated_questions.values())
+        logger.info(f"Pre-generated {question_count} follow-up questions for instant responses")
+    else:
+        logger.info("Follow-up pre-generation disabled by config")
 
     # Create retriever dictionary with only the unified retriever
     all_retrievers = {

@@ -130,3 +130,45 @@ The project is organized into two main parts: the Astro frontend and the FastAPI
 │   ├── test_illustration_service.py # Unit tests for illustration service
 │   └── test_response_service.py     # Unit tests for response service
 └── pytest.ini                      # Pytest configuration
+
+---
+
+## Follow-up Modes and Logging
+
+The backend supports configurable follow-up question strategies via environment variables:
+- `FOLLOWUP_MODE=pre_generated` (default): instant follow-ups loaded from a cache pre-generated at startup.
+- `FOLLOWUP_MODE=optimized`: fast static suggestions first, optionally enhanced by an LLM with timeouts and caching.
+- `FOLLOWUP_MODE=static`: static suggestions only.
+
+Control cold-start cost with `ENABLE_FOLLOWUP_PREGENERATION=true|false` (default true). When enabled, the backend generates and caches follow-up questions during startup. The cache file `backend/.followup_cache.json` is not committed.
+
+Note: The project uses a single environment file at the repository root (`.env`) for local development. The backend loads this root `.env` at startup; there is no separate `backend/.env`.
+
+Streaming responses are first logged as a placeholder and then completed with an append-only entry keyed by a per-request ID. This avoids log rewrites under load and keeps query logs consistent.
+
+### Additional Config
+- `FOLLOWUP_VALIDATION_SCORE_THRESHOLD` (default `0.5`): minimum similarity score used when validating LLM-generated follow-up questions against the retriever. Increase to make validation stricter; decrease to allow more suggestions.
+
+### Shutdown Behavior
+- In `FOLLOWUP_MODE=optimized`, the follow-up service uses a small `ThreadPoolExecutor` for background work. The FastAPI app registers a shutdown hook that calls `followup_service.close()` to cleanly release thread pool resources during application shutdown. No manual action is required for normal operation.
+
+### Environment Setup (example)
+Set these in your `.env` or shell to control follow-up behavior:
+
+```
+FOLLOWUP_MODE=pre_generated        # or optimized | static
+ENABLE_FOLLOWUP_PREGENERATION=true # reduce cold-starts by setting to false
+FOLLOWUP_VALIDATION_SCORE_THRESHOLD=0.5
+```
+
+---
+
+## Manual Performance Scripts
+
+The repository includes several local scripts (not part of the pytest suite) to validate performance and follow-up quality. Run the backend first, then execute scripts from the project root:
+- `quick_performance_test.py` – one-off timing checks
+- `test_cache_performance.py` – cached vs. uncached comparison
+- `test_followups.py` / `test_followups.sh` – qualitative checks for follow-ups
+- `test_performance_followups.py` – multi-run timing stats
+
+Note: The backend applies rate limiting; scripts include delays between requests.

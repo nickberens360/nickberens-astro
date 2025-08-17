@@ -110,11 +110,14 @@ const blogPosts = (await getCollection('blog')).map(({ slug, data }) => ({
 ██║╚██╗██║██║██║     ██╔═██╗    ██╔══██║██║
 ██║ ╚████║██║╚██████╗██║  ██╗██╗██║  ██║██║
 ╚═╝  ╚═══╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝`,
-        "background: linear-gradient(to right, #ff0000, #00ff00, #5959ff);; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; font-size: 24px;"
+        "background: linear-gradient(to right, #ff0000, #00ff00, #5959ff);;" +
+        " -webkit-background-clip: text; background-clip: text;" +
+        " -webkit-text-fill-color: transparent; font-weight: bold;" +
+        " font-size: 2vw; height: auto"
     )
     console.log(
         `%cWelcome to my website!`,
-        "color: #00ff00; font-weight: bold; font-size: 20px;"
+        "color: #00ff00; font-weight: bold; font-size: 4vw;"
     );
 </script>
 

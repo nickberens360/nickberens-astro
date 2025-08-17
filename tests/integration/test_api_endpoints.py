@@ -96,12 +96,20 @@ async def test_query_endpoint_successful_response(client: AsyncClient):
             assert expected_response in content
 
             # Verify the mock was called with the correct arguments
-            mock_stream_with_fallback.assert_called_once_with(
-                mock_retrievers,  # mocked retrievers
-                empty_chat_history,  # formatted_chat_history
-                test_question,  # sanitized_question
-                preferred_model,  # preferred_model
-            )
+            # Note: The function now includes additional optional kwargs (client_ip, question, request_id)
+            mock_stream_with_fallback.assert_called_once()
+            call_args = mock_stream_with_fallback.call_args
+
+            # Verify the positional arguments
+            assert call_args[0][0] == mock_retrievers  # retrievers
+            assert call_args[0][1] == empty_chat_history  # formatted_chat_history
+            assert call_args[0][2] == test_question  # sanitized_question
+            assert call_args[0][3] == preferred_model  # preferred_model
+
+            # Verify the keyword arguments are present
+            assert "client_ip" in call_args[1]
+            assert "question" in call_args[1]
+            assert "request_id" in call_args[1]
 
 
 async def test_query_endpoint_invalid_payload_returns_422(client: AsyncClient):
