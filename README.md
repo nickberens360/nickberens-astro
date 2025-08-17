@@ -142,6 +142,8 @@ The backend supports configurable follow-up question strategies via environment 
 
 Control cold-start cost with `ENABLE_FOLLOWUP_PREGENERATION=true|false` (default true). When enabled, the backend generates and caches follow-up questions during startup. The cache file `backend/.followup_cache.json` is not committed.
 
+Note: The project uses a single environment file at the repository root (`.env`) for local development. The backend loads this root `.env` at startup; there is no separate `backend/.env`.
+
 Streaming responses are first logged as a placeholder and then completed with an append-only entry keyed by a per-request ID. This avoids log rewrites under load and keeps query logs consistent.
 
 ### Additional Config
