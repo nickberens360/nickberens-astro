@@ -77,6 +77,7 @@ class QueryRouter:
         self.ignore_words = {
             "show",
             "me",
+            "tell",
             "get",
             "find",
             "display",
@@ -92,6 +93,8 @@ class QueryRouter:
             "all",
             "your",
             "of",
+            "about",
+            "please",
             "for",
             # Question words that should be filtered out when extracting search terms
             "what",
@@ -192,6 +195,14 @@ class QueryRouter:
             "art styles",
         ]
 
+    @staticmethod
+    def _clean_word(word: str) -> str:
+        """Strip leading/trailing punctuation and quotes from a word."""
+        if not word:
+            return word
+        strip_chars = "\"'()[]{}.,!?;:"
+        return word.strip(strip_chars)
+
     def route_query(self, question: str) -> Tuple[QueryType, Optional[str]]:
         """
         Route a query to determine its type and extract search terms.
@@ -265,7 +276,7 @@ class QueryRouter:
             return None
 
         # Split into words to handle whole word matching
-        words = remaining_text.split()
+        words = [self._clean_word(w) for w in remaining_text.split()]
 
         # Find the image indicator word and remove it, keeping other words
         search_words = []
@@ -277,7 +288,7 @@ class QueryRouter:
             return None
 
         # Filter out common words that are not part of the search term
-        filtered_words = [word for word in search_words if word not in self.ignore_words]
+        filtered_words = [word for word in search_words if word and word not in self.ignore_words]
         search_term = " ".join(filtered_words).strip()
 
         # If the search term is empty after filtering ignore words, return None
@@ -315,7 +326,8 @@ class QueryRouter:
 
     def _check_general_image_pattern(self, question: str) -> Optional[str]:
         """Check for general patterns like 'X images' or 'X art'."""
-        words = question.split()
+        original_words = question.split()
+        words = [self._clean_word(w) for w in original_words]
         for img_indicator in self.image_indicators:
             if img_indicator in words:
                 # Get the index of the image indicator
@@ -326,8 +338,8 @@ class QueryRouter:
                 words_after = words[idx + 1 :]
 
                 # Filter out ignore words
-                search_terms_before = [w for w in words_before if w not in self.ignore_words]
-                search_terms_after = [w for w in words_after if w not in self.ignore_words]
+                search_terms_before = [w for w in words_before if w and w not in self.ignore_words]
+                search_terms_after = [w for w in words_after if w and w not in self.ignore_words]
 
                 # Combine the search terms
                 search_term = " ".join(search_terms_before + search_terms_after).strip()

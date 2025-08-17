@@ -220,6 +220,20 @@ class TestQueryRouter:
             assert search_term == expected_term, f"Wrong search term for: {query}"
 
     @pytest.mark.unit
+    def test_filler_words_and_quotes_are_stripped(self):
+        """Search term extraction removes filler words and punctuation/quotes."""
+        cases = [
+            ("Tell me about the 'Smalltime' illustration", QueryType.GENERAL_IMAGE_PATTERN, "smalltime"),
+            ("please tell me about smalltime illustrations!", QueryType.GENERAL_IMAGE_PATTERN, "smalltime"),
+            ("can you show me 'Dope Goose' art?", QueryType.GENERAL_IMAGE_PATTERN, "dope goose"),
+        ]
+        for query, expected_type, expected_term in cases:
+            q = query.lower().strip()
+            qtype, term = self.router.route_query(q)
+            assert qtype == expected_type, f"Wrong type for: {query}"
+            assert term == expected_term, f"Wrong term for: {query} -> {term}"
+
+    @pytest.mark.unit
     def test_router_initialization(self):
         """Test that router initializes with expected patterns and keywords."""
         assert len(self.router.image_keywords) > 0
