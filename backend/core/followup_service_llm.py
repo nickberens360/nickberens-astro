@@ -257,7 +257,7 @@ Response:""",
         validated = []
         try:
             score_threshold = float(AppConfig.FOLLOWUP_VALIDATION_SCORE_THRESHOLD)
-        except Exception:
+        except (AttributeError, ValueError, TypeError):
             score_threshold = 0.5
 
         for question in questions:

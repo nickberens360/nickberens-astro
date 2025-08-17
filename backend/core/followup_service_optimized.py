@@ -11,7 +11,7 @@ import asyncio
 import hashlib
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.language_models import BaseLanguageModel
 
@@ -126,7 +126,7 @@ class OptimizedFollowUpService:
 
     def generate_followups_async(
         self, user_question: str, ai_response: str, conversation_history: Optional[List[Dict[str, str]]] = None
-    ) -> tuple[List[str], Optional[asyncio.Task]]:
+    ) -> Tuple[List[str], Optional[asyncio.Task]]:
         """
         Generate follow-ups with immediate static response and optional async LLM enhancement.
 

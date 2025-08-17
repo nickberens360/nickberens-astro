@@ -13,11 +13,14 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Use absolute path for the default cache file, based on the module location
+DEFAULT_CACHE_FILE = str((Path(__file__).parent.parent / ".followup_cache.json").resolve())
+
 
 class PreGeneratedFollowUpService:
     """Ultra-fast follow-up service using pre-generated questions."""
 
-    def __init__(self, cache_file: str = "backend/.followup_cache.json"):
+    def __init__(self, cache_file: str = DEFAULT_CACHE_FILE):
         """
         Initialize the pre-generated follow-up service.
 
