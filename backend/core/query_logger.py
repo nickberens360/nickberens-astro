@@ -32,15 +32,26 @@ class QueryLogger:
         """
         self.logger = logging.getLogger(__name__)
 
-        # Set default log file path if not provided
+        # Resolve log file path (env-overridable via AppConfig.QUERY_LOG_FILE)
         if log_file_path is None:
-            backend_dir = Path(__file__).parent.parent
-            self.log_file_path = backend_dir / "query_logs.json"
+            configured_path = AppConfig.QUERY_LOG_FILE
+            self.log_file_path = Path(configured_path)
         else:
             self.log_file_path = Path(log_file_path)
 
-        # Ensure log file exists
-        self.log_file_path.touch(exist_ok=True)
+        # Ensure parent directory exists (important for mounted volumes)
+        try:
+            self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            self.logger.warning(f"Failed to create log directory {self.log_file_path.parent}: {e}")
+
+        # Ensure log file exists (rely on append later, but try to touch for early feedback)
+        try:
+            self.log_file_path.touch(exist_ok=True)
+        except OSError as e:
+            self.logger.warning(f"Failed to create log file {self.log_file_path}: {e}")
+
+        self.logger.debug(f"Using query log file at {self.log_file_path}")
 
         # Set excluded IPs (can be loaded from config)
         self.excluded_ips = excluded_ips or set()
