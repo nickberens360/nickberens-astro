@@ -17,7 +17,7 @@ from langchain_core.language_models import BaseLanguageModel
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
-from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+from .core.followup_service_optimized import OptimizedFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
@@ -50,8 +50,23 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 
-# Use pre-generated follow-up service (simple and fast)
-followup_service = PreGeneratedFollowUpService()
+# Use optimized follow-up service (fast + smart)
+def create_followup_service():
+    if llm and retrievers:
+        from .core.app_initializer_v2 import get_unified_retriever
+        unified_retriever = get_unified_retriever(retrievers)
+        if unified_retriever:
+            return OptimizedFollowUpService(
+                llm=llm,
+                unified_retriever=unified_retriever,
+                llm_timeout=3.0,  # Quick timeout to maintain responsiveness
+                use_llm_enhancement=True
+            )
+    # Fallback to pre-generated if initialization fails
+    from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+    return PreGeneratedFollowUpService()
+
+followup_service = create_followup_service()
 
 query_logger = get_query_logger()
 

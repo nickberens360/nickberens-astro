@@ -37,7 +37,7 @@ class OptimizedFollowUpService:
         llm: Optional[BaseLanguageModel] = None,
         unified_retriever: Optional[Any] = None,
         llm_timeout: float = 5.0,
-        use_llm_enhancement: bool = True,
+        use_llm_enhancement: bool = False,
     ):
         """
         Initialize optimized follow-up service.

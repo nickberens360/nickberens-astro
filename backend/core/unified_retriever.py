@@ -60,22 +60,58 @@ class UnifiedRetriever:
         return sha256_hash.hexdigest()
 
     def _extract_content_metadata(self, doc: Document, file_path: Path) -> Dict:
-        """Extract intelligent metadata from document content using an LLM."""
+        """Extract metadata using LLM topics plus deterministic fallbacks.
+
+        Heuristics ensure key content remains discoverable even if LLM topic extraction fails.
+        """
         content = doc.page_content
 
-        # Use LLM to extract topics for dynamic content tagging
+        # Use LLM to extract topics for dynamic content tagging (may fallback to ["general"])
         content_types = extract_topics_with_llm(self.llm, content)
+
+        # Deterministic heuristics
+        fname = file_path.name.lower()
+        text_lc = content.lower()
+        heuristic_tags: List[str] = []
+
+        # Filename-based tags
+        if "about" in fname:
+            heuristic_tags.append("about")
+        if "resume" in fname:
+            heuristic_tags.extend(["experience", "skills"])
+        if "project" in fname:
+            heuristic_tags.append("project")
+        if "illustration" in fname or "illustrations" in fname:
+            heuristic_tags.append("creative")
+
+        # Content keyword-based tags (covers queries like "artistic inspiration")
+        creative_keywords = [
+            "art",
+            "artistic",
+            "inspiration",
+            "illustration",
+            "illustrations",
+            "design",
+            "creative",
+            "cartoon",
+            "cartoons",
+        ]
+        if any(k in text_lc for k in creative_keywords):
+            heuristic_tags.append("creative")
+
+        about_keywords = ["about", "background", "bio", "who is nick", "who am i"]
+        if any(k in text_lc for k in about_keywords):
+            heuristic_tags.append("about")
 
         # Special handling for illustration JSON files
         is_illustration_data = file_path.name == "illustrations.json"
         illustration_file = None
 
         if is_illustration_data:
-            content_types.append("creative")  # Ensure creative tag for illustrations
+            heuristic_tags.append("creative")  # Ensure creative tag for illustrations
             # Extract file name from JSON content for frontend display
             try:
                 if '"file"' in doc.page_content:
-                    # This is an individual illustration entry - parse JSON directly
                     data = json.loads(doc.page_content)
                     if isinstance(data, dict) and "file" in data:
                         illustration_file = data.get("file")
@@ -83,13 +119,16 @@ class UnifiedRetriever:
             except json.JSONDecodeError:
                 logger.warning(f"Could not parse JSON to find illustration file in doc from {file_path.name}")
 
+        # Merge, dedupe, normalize
+        merged_types = sorted({t.strip().lower() for t in (content_types + heuristic_tags) if t and t.strip()})
+
         metadata = {
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(list(set(content_types))),  # Use set to remove duplicates
+            "content_types": ",".join(merged_types),
             "content_length": len(content),
-            "has_code": "```" in doc.page_content or "function" in content.lower(),
+            "has_code": "```" in doc.page_content or "function" in text_lc,
             "is_illustration_data": is_illustration_data,
         }
 
@@ -283,8 +322,12 @@ class UnifiedRetriever:
         if any(term in query_lower for term in ["about", "who", "background", "interest"]):
             content_type_hints.append("about")
 
-        if any(term in query_lower for term in ["illustration", "art", "design", "creative"]):
+        # Creative/inspiration queries
+        if any(term in query_lower for term in ["illustration", "art", "design", "creative", "inspiration", "artistic"]):
             content_type_hints.append("creative")
+        if "inspiration" in query_lower or "artistic" in query_lower:
+            # Inspiration often overlaps with bio/about content
+            content_type_hints.append("about")
 
         if any(term in query_lower for term in ["project", "built", "created", "developed"]):
             content_type_hints.append("project")
