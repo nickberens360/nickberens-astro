@@ -78,6 +78,8 @@ class QueryRouter:
             "show",
             "me",
             "tell",
+            "describe",
+            "explain",
             "get",
             "find",
             "display",

@@ -194,8 +194,10 @@ class PreGeneratedFollowUpService:
         if "general" in self.questions_db:
             candidates.extend(self.questions_db["general"])
 
-        # Add content-based questions
-        if "content_based" in self.questions_db:
+        # Only include content-based questions when we have specific context beyond "general"
+        # This prevents unrelated content-specific follow-ups from appearing.
+        has_specific_context = any(ctx for ctx in contexts if ctx != "general")
+        if has_specific_context and "content_based" in self.questions_db:
             candidates.extend(self.questions_db["content_based"])
 
         # If still no candidates, use fallback

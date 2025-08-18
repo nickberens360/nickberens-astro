@@ -9,7 +9,7 @@ This is the main entry point for the FastAPI application that:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 from langchain_core.language_models import BaseLanguageModel
@@ -17,8 +17,6 @@ from langchain_core.language_models import BaseLanguageModel
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
-from .core.followup_service import FollowUpService
-from .core.followup_service_optimized import OptimizedFollowUpService
 from .core.followup_service_pregenerated import PreGeneratedFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
@@ -52,30 +50,8 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 
-# Use configurable follow-up service
-followup_service: Union[PreGeneratedFollowUpService, FollowUpService, OptimizedFollowUpService]
-config = AppConfig()
-if app_initialized:
-    mode = config.FOLLOWUP_MODE
-    if mode == "pre_generated":
-        logger.info("Using pre-generated follow-up service for instant responses")
-        followup_service = PreGeneratedFollowUpService()
-    elif mode == "optimized":
-        try:
-            from .core.app_initializer_v2 import get_unified_retriever
-
-            unified = get_unified_retriever(retrievers) if retrievers else None
-            followup_service = OptimizedFollowUpService(llm=llm, unified_retriever=unified)
-            logger.info("Using optimized follow-up service (LLM-enhanced with caching)")
-        except Exception as e:
-            logger.warning(f"Failed to initialize optimized follow-ups ({e}); falling back to static")
-            followup_service = FollowUpService()
-    else:
-        logger.info("Using static follow-up service")
-        followup_service = FollowUpService()
-else:
-    logger.warning("App not initialized, using static follow-up service")
-    followup_service = FollowUpService()
+# Always use pre-generated follow-up service (no dynamic generation at request time)
+followup_service: PreGeneratedFollowUpService = PreGeneratedFollowUpService()
 
 query_logger = get_query_logger()
 

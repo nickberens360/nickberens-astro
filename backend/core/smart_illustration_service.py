@@ -140,7 +140,7 @@ class SmartIllustrationService:
 
                     # Improved matching: check for exact match, partial match, or "all"
                     if (
-                        search_term == "all"
+                        cleaned_term.lower() == "all"
                         or search_lower in content_lower
                         or self._is_fuzzy_match(search_lower, content_lower)
                     ):
@@ -177,17 +177,65 @@ class SmartIllustrationService:
 
     # --- Internal helpers ---
     def _clean_search_term(self, term: str) -> str:
-        """Clean and normalize search terms for better matching."""
-        # Remove extra whitespace
-        cleaned = " ".join(term.strip().split())
+        """Clean and normalize search terms for better matching.
 
-        # Remove common punctuation but keep hyphens and apostrophes
-        cleaned = re.sub(r"[^\w\s\-\']", " ", cleaned)
+        Improvements:
+        - Prefer quoted phrases (e.g., 'Hide Out') as the primary key
+        - Remove common intent/filler words (e.g., describe, show, illustration)
+        - Strip stray quotes around tokens
+        """
+        if not term:
+            return ""
 
-        # Remove extra spaces again after punctuation removal
-        cleaned = " ".join(cleaned.split())
+        # Normalize whitespace
+        s = " ".join(term.strip().split())
 
-        return cleaned
+        # Prefer the longest quoted phrase if present
+        quoted = re.findall(r"[\"']([^\"']+)[\"']", s)
+        if quoted:
+            primary = max((q.strip() for q in quoted), key=len)
+            return " ".join(primary.split())
+
+        # Remove punctuation except hyphens and apostrophes
+        s = re.sub(r"[^\w\s\-\']", " ", s)
+        s = " ".join(s.split())
+
+        stopwords = {
+            "describe",
+            "show",
+            "see",
+            "find",
+            "display",
+            "list",
+            "tell",
+            "about",
+            "please",
+            "me",
+            "the",
+            "a",
+            "an",
+            "of",
+            "for",
+            "this",
+            "that",
+            "illustration",
+            "illustrations",
+            "image",
+            "images",
+            "art",
+            "picture",
+            "titled",
+            "called",
+        }
+
+        tokens: List[str] = []
+        for tok in s.split():
+            tok_norm = tok.strip("'\"")
+            if tok_norm and tok_norm.lower() not in stopwords:
+                tokens.append(tok_norm)
+
+        cleaned = " ".join(tokens) if tokens else s
+        return " ".join(cleaned.split())
 
     def _is_fuzzy_match(self, search: str, content: str, threshold: float = 0.7) -> bool:
         """Check if search term is a fuzzy match for content."""
