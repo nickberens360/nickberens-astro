@@ -83,3 +83,6 @@ backend/.unified_chroma/
 
 # Local downloaded logs directory
 query-logs/
+
+# Claude Code conversation logs
+2025-*-caveat-the-messages-below-were-generated-by-the-u.txt
