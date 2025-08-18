@@ -8,7 +8,7 @@ export function useMobile(breakpoint = MOBILE_BREAKPOINT) {
   const isMounted = ref(false); // Track if component is mounted to prevent layout shift
 
   const updateMobileState = () => {
-    isMobile.value = window.innerWidth < breakpoint;
+    isMobile.value = window.innerWidth <= breakpoint;
   };
 
   onMounted(() => {
