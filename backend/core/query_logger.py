@@ -36,8 +36,10 @@ class QueryLogger:
         if log_file_path is None:
             # Use configured path (can be on a mounted volume in production)
             configured_path = AppConfig.QUERY_LOG_FILE
+            self.logger.info(f"Using configured log path: {configured_path}")
             self.log_file_path = Path(configured_path)
         else:
+            self.logger.info(f"Using provided log path: {log_file_path}")
             self.log_file_path = Path(log_file_path)
 
         # Ensure parent directory exists (important for mounted volumes)

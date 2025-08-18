@@ -127,8 +127,8 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
 
 
 def is_rate_limit_error(error: Exception) -> bool:
-    """Check if an error is a rate limit error"""
-    if hasattr(error, "status_code") and error.status_code == 429:
+    """Check if an error is a rate limit error or overload error"""
+    if hasattr(error, "status_code") and error.status_code in [429, 529]:
         return True
     error_str = str(error).lower()
     rate_limit_indicators = [
@@ -136,9 +136,12 @@ def is_rate_limit_error(error: Exception) -> bool:
         "quota exceeded",
         "too many requests",
         "429",
+        "529",
         "resource exhausted",
         "rate_limit_exceeded",
         "rate_limit_error",
+        "overloaded",
+        "overloaded_error",
     ]
     return any(indicator in error_str for indicator in rate_limit_indicators)
 
@@ -389,10 +392,25 @@ async def stream_with_fallback(
             qa_chain = create_qa_chain(llm_instance)
 
             async def llm_stream():
-                full_response_chunks = []
+                full_response_chunks: List[str] = []
                 async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
-                    yield chunk
-                    full_response_chunks.append(chunk)
+                    # Coerce various chunk types to text for streaming and caching
+                    if hasattr(chunk, "content"):
+                        text_piece = getattr(chunk, "content", "")
+                    elif isinstance(chunk, str):
+                        text_piece = chunk
+                    elif isinstance(chunk, dict):
+                        text_piece = str(chunk.get("answer") or chunk.get("output") or chunk.get("content") or "")
+                    else:
+                        text_piece = str(chunk)
+
+                    if not isinstance(text_piece, str):
+                        text_piece = str(text_piece)
+
+                    if text_piece:
+                        yield text_piece
+                        full_response_chunks.append(text_piece)
+
                 if cache_key:
                     CacheManager.cache_response(cache_key, full_response_chunks)
 
@@ -411,9 +429,26 @@ async def stream_with_fallback(
                         except Exception as e:
                             logger.warning(f"Failed to update streaming response log: {e}")
 
-            logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
-            metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-            return llm_stream(), llm_name, metadata
+            # Test the streaming with a small attempt to catch immediate failures
+            test_stream = llm_stream()
+            try:
+                # Try to get the first chunk to validate the stream works
+                first_chunk = await test_stream.__anext__()
+
+                # If we get here, create a new stream that includes the first chunk
+                async def validated_stream():
+                    yield first_chunk
+                    async for chunk in test_stream:
+                        yield chunk
+
+                logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
+                metadata["rate_limit_status"] = rate_limit_tracker.get_status()
+                return validated_stream(), llm_name, metadata
+            except StopAsyncIteration:
+                # Empty response, but stream worked
+                logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
+                metadata["rate_limit_status"] = rate_limit_tracker.get_status()
+                return llm_stream(), llm_name, metadata
 
         except Exception as e:
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}")

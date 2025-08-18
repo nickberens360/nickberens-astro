@@ -3,8 +3,8 @@ import logging
 import os
 import re
 import secrets
-from typing import List, Optional
 from pathlib import Path
+from typing import List, Optional
 from urllib.parse import urlparse
 
 # Set up logging
@@ -293,9 +293,14 @@ class AppConfig:
         if env_path and env_path.strip():
             return env_path.strip()
 
-        # Default to repo path (ephemeral in many deployments)
-        backend_dir = Path(__file__).parent.parent
-        return str(backend_dir / "query_logs.json")
+        # Default to logs directory (with proper permissions in container)
+        backend_dir = Path(__file__).parent.parent.resolve()  # Make it absolute
+        logs_dir = backend_dir / "logs"
+        # Create logs directory if it doesn't exist
+        logs_dir.mkdir(exist_ok=True)
+        log_file_path = str(logs_dir / "query_logs.json")
+        logger.info(f"Query log file path: {log_file_path}")
+        return log_file_path
 
     @classproperty
     def QUERY_LOG_FILE(cls) -> str:
