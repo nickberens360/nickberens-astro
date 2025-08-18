@@ -101,6 +101,8 @@ class QueryRouter:
             "please",
             "describe",
             "for",
+            "more",  # Added "more" to ignore words
+            "details",  # Added "details" to ignore words
             # Question words that should be filtered out when extracting search terms
             "what",
             "are",
