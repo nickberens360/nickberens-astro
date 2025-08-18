@@ -1,11 +1,34 @@
 <template>
   <div>
+    <!-- Mobile backdrop - only show after mount to prevent layout shift -->
     <div
+      v-if="isMounted"
       class="mobile-backdrop"
       :class="{ 'is-visible': isMobile && isMobileMenuOpen }"
       @click="closeMobileMenu"
     ></div>
+    <!-- Placeholder to maintain layout while mounting -->
     <div
+      v-if="!isMounted"
+      class="chat-history-drawer collapsed theme-dark"
+    >
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <button class="base-icon-button collapse-icon-button">
+            <font-awesome-icon class="base-icon" icon="bars" />
+          </button>
+          <button class="new-chat-button">
+            <font-awesome-icon icon="pen-to-square" class="base-icon" />
+          </button>
+        </div>
+        <div class="mt-auto">
+          <ChatStatus :showText="false" />
+        </div>
+      </div>
+    </div>
+    <!-- Main drawer - only show after mount with correct mobile state -->
+    <div
+      v-if="isMounted"
       class="chat-history-drawer"
       :class="[
         `theme-${theme}`,
@@ -170,7 +193,7 @@ export default {
     let fadeTimer;
 
     // Use mobile detection composable
-    const { isMobile } = useMobile();
+    const { isMobile, isMounted } = useMobile();
 
     // Check if any message across ALL chats is currently typing
     const hasTypingMessage = computed(() => {
@@ -341,6 +364,7 @@ export default {
       handleSelectChat,
       isVisible,
       isMobile,
+      isMounted,
       isMobileMenuOpen: mobileMenuOpen,
       handleToggleVisibility,
       closeMobileMenu,

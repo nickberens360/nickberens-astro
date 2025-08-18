@@ -17,7 +17,7 @@ from langchain_core.language_models import BaseLanguageModel
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
-from .core.followup_service import FollowUpService
+from .core.followup_service_optimized import OptimizedFollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_service import ResponseService
@@ -49,7 +49,48 @@ except Exception as e:
 # Initialize singleton services
 query_router = QueryRouter()
 response_service = ResponseService()
-followup_service = FollowUpService()
+
+
+# Create follow-up service based on configuration
+def create_followup_service():
+    followup_mode = AppConfig.get_followup_mode()
+
+    if followup_mode == "static":
+        from .core.followup_service import FollowUpService
+
+        return FollowUpService()
+    elif followup_mode == "pre_generated":
+        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+
+        return PreGeneratedFollowUpService()
+    elif followup_mode == "optimized":
+        if llm and retrievers:
+            from .core.app_initializer_v2 import get_unified_retriever
+
+            unified_retriever = get_unified_retriever(retrievers)
+            if unified_retriever:
+                return OptimizedFollowUpService(
+                    llm=llm,
+                    unified_retriever=unified_retriever,
+                    llm_timeout=3.0,  # Quick timeout to maintain responsiveness
+                    use_llm_enhancement=AppConfig.FOLLOWUP_USE_LLM_ENHANCEMENT,
+                )
+        # Fallback to pre-generated if initialization fails
+        logger.warning(
+            "Optimized followup mode requested but LLM/retrievers not available, falling back to pre-generated"
+        )
+        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+
+        return PreGeneratedFollowUpService()
+    else:
+        logger.error(f"Unknown followup mode: {followup_mode}, defaulting to pre-generated")
+        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+
+        return PreGeneratedFollowUpService()
+
+
+followup_service = create_followup_service()
+
 query_logger = get_query_logger()
 
 # Create the FastAPI app
@@ -64,3 +105,14 @@ app.state.query_router = query_router
 app.state.response_service = response_service
 app.state.followup_service = followup_service
 app.state.query_logger = query_logger
+
+
+# Ensure graceful shutdown of background resources (e.g., thread pools)
+@app.on_event("shutdown")
+async def _shutdown_cleanup():
+    svc = app.state.followup_service
+    if hasattr(svc, "close"):
+        try:
+            svc.close()
+        except Exception:
+            logger.exception("Failed to close follow-up service cleanly")

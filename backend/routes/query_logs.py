@@ -15,7 +15,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
 from fastapi import Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.templating import Jinja2Templates
 
@@ -166,6 +166,26 @@ async def clear_query_logs(_token: str = Depends(verify_token)):
         return {"message": "Query logs cleared successfully", "cleared_at": datetime.utcnow().isoformat()}
     else:
         raise HTTPException(status_code=500, detail="Failed to clear query logs")
+
+
+@router.get("/query-logs/download")
+async def download_query_logs(_token: str = Depends(verify_token)):
+    """
+    Download the raw JSONL query log file as an attachment.
+
+    Requires authentication via Bearer token.
+    """
+    logger = get_query_logger()
+    log_path = logger.log_file_path
+    if not log_path.exists() or not log_path.is_file():
+        raise HTTPException(status_code=404, detail="Log file not found")
+
+    # Serve as attachment for easy saving; JSON Lines format (ndjson)
+    return FileResponse(
+        path=str(log_path),
+        media_type="application/x-ndjson",
+        filename="query_logs.jsonl",
+    )
 
 
 @router.get("/query-logs/health")

@@ -19,6 +19,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .config import AppConfig
+from .query_logger import get_query_logger
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +127,8 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
 
 
 def is_rate_limit_error(error: Exception) -> bool:
-    """Check if an error is a rate limit error"""
-    if hasattr(error, "status_code") and error.status_code == 429:
+    """Check if an error is a rate limit error or overload error"""
+    if hasattr(error, "status_code") and error.status_code in [429, 529]:
         return True
     error_str = str(error).lower()
     rate_limit_indicators = [
@@ -135,9 +136,12 @@ def is_rate_limit_error(error: Exception) -> bool:
         "quota exceeded",
         "too many requests",
         "429",
+        "529",
         "resource exhausted",
         "rate_limit_exceeded",
         "rate_limit_error",
+        "overloaded",
+        "overloaded_error",
     ]
     return any(indicator in error_str for indicator in rate_limit_indicators)
 
@@ -300,6 +304,9 @@ async def stream_with_fallback(
     chat_history: List[BaseMessage],
     user_input: str,
     preferred_model: Optional[str] = None,
+    client_ip: Optional[str] = None,
+    question: Optional[str] = None,
+    request_id: Optional[str] = None,
 ) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
     Handle user input, perform retrieval (with caching),
@@ -385,16 +392,48 @@ async def stream_with_fallback(
             qa_chain = create_qa_chain(llm_instance)
 
             async def llm_stream():
-                full_response_chunks = []
+                full_response_chunks: List[str] = []
                 async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
-                    yield chunk
-                    full_response_chunks.append(chunk)
+                    # Coerce various chunk types to text for streaming and caching
+                    if hasattr(chunk, "content"):
+                        text_piece = getattr(chunk, "content", "")
+                    elif isinstance(chunk, str):
+                        text_piece = chunk
+                    elif isinstance(chunk, dict):
+                        text_piece = str(chunk.get("answer") or chunk.get("output") or chunk.get("content") or "")
+                    else:
+                        text_piece = str(chunk)
+
+                    if not isinstance(text_piece, str):
+                        text_piece = str(text_piece)
+
+                    if text_piece:
+                        yield text_piece
+                        full_response_chunks.append(text_piece)
+
                 if cache_key:
                     CacheManager.cache_response(cache_key, full_response_chunks)
 
+                    # Update streaming response log with actual content
+                    if cache_key and client_ip and question and full_response_chunks:
+                        try:
+                            complete_response = "".join(full_response_chunks)
+                            query_logger = get_query_logger()
+                            query_logger.update_streaming_response(
+                                cache_key=cache_key,
+                                client_ip=client_ip,
+                                question=question,
+                                actual_response=complete_response,
+                                request_id=request_id,
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to update streaming response log: {e}")
+
+            # Create and return the stream - validation logic removed to avoid duplicate API calls
+            stream = llm_stream()
             logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
             metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-            return llm_stream(), llm_name, metadata
+            return stream, llm_name, metadata
 
         except Exception as e:
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}")

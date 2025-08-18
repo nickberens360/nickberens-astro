@@ -71,7 +71,9 @@ public/unified_data.json
 
 # Log files
 backend/query_logs.json
+backend/.followup_cache.json
 *.log
+query_logs.json
 
 
 # ChromaDB database files and cache
@@ -79,3 +81,8 @@ backend/.chroma/
 backend/.rag_cache/
 backend/.unified_chroma/
 
+# Local downloaded logs directory
+query-logs/
+
+# Claude Code conversation logs
+2025-*-caveat-the-messages-below-were-generated-by-the-u.txt
