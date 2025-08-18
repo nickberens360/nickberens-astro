@@ -11,6 +11,8 @@ import random
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .constants import STOP_WORDS
+
 logger = logging.getLogger(__name__)
 
 # Use absolute path for the default cache file, based on the module location
@@ -228,13 +230,12 @@ class PreGeneratedFollowUpService:
         question_lower = question.lower()
         question_words = set(question_lower.split())
 
-        # Remove common words
-        common_words = {"tell", "me", "about", "show", "your", "you", "what", "how", "do", "is", "the", "a", "an"}
-        question_words -= common_words
+        # Remove stop words
+        question_words -= STOP_WORDS
 
         for asked in asked_questions:
             asked_words = set(asked.split())
-            asked_words -= common_words
+            asked_words -= STOP_WORDS
 
             if not question_words or not asked_words:
                 continue
