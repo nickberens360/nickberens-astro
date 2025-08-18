@@ -45,14 +45,34 @@ class QueryLogger:
         # Ensure parent directory exists (important for mounted volumes)
         try:
             self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
+            self.logger.info(f"Log directory ready: {self.log_file_path.parent}")
         except OSError as e:
             self.logger.warning(f"Failed to create log directory {self.log_file_path.parent}: {e}")
+            # For Railway volumes, check if volume is mounted
+            if "/data" in str(self.log_file_path):
+                self.logger.warning("Railway volume may not be mounted. Check volume configuration.")
 
-        # Ensure log file exists
+        # Ensure log file exists and test write permissions
         try:
             self.log_file_path.touch(exist_ok=True)
+            # Test write permissions
+            with open(self.log_file_path, "a") as f:
+                f.write("")  # Test write without actually writing
+            self.logger.info(f"Query logger initialized successfully at: {self.log_file_path}")
         except OSError as e:
-            self.logger.warning(f"Failed to create log file {self.log_file_path}: {e}")
+            self.logger.error(f"Failed to initialize log file {self.log_file_path}: {e}")
+            # Fallback to local logs if volume fails
+            if "/data" in str(self.log_file_path):
+                fallback_path = Path("backend/logs/query_logs.json")
+                self.logger.warning(f"Falling back to local logs: {fallback_path}")
+                self.log_file_path = fallback_path
+                try:
+                    self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
+                    self.log_file_path.touch(exist_ok=True)
+                    self.logger.info(f"Fallback logging initialized at: {self.log_file_path}")
+                except OSError as fallback_error:
+                    self.logger.error(f"Fallback logging also failed: {fallback_error}")
+                    raise
 
         # Set excluded IPs (can be loaded from config)
         self.excluded_ips = excluded_ips or set()
