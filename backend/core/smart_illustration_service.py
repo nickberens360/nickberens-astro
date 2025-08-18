@@ -67,29 +67,29 @@ class SmartIllustrationService:
                 score_threshold=2.0,  # Generous threshold to include all illustrations
             )
 
-            logger.info(f"Semantic search returned {len(docs)} documents")
+            logger.debug(f"Semantic search returned {len(docs)} documents")
             for i, doc in enumerate(docs[:5]):  # Debug first 5 docs
-                logger.info(f"Doc {i}: metadata = {doc.metadata}")
+                logger.debug(f"Doc {i}: metadata = {doc.metadata}")
 
             illustrations: List[Dict[str, str]] = []
             seen_files = set()
 
             for doc in docs:
                 is_illustration = doc.metadata.get("is_illustration_data")
-                logger.info(
+                logger.debug(
                     f"Processing doc: is_illustration_data={is_illustration}, metadata keys={list(doc.metadata.keys())}"
                 )
 
                 if is_illustration:
                     display_path = doc.metadata.get("display_path")
                     file_key = doc.metadata.get("illustration_file")
-                    logger.info(f"Found illustration: display_path={display_path}, file_key={file_key}")
+                    logger.debug(f"Found illustration: display_path={display_path}, file_key={file_key}")
 
                     if display_path and file_key not in seen_files:
                         illustrations.append({"file": display_path})
                         seen_files.add(file_key)
 
-            logger.info(f"Found {len(illustrations)} illustrations via metadata filtering")
+            logger.debug(f"Found {len(illustrations)} illustrations via metadata filtering")
             # Cache the results
             self._all_illustrations_cache = illustrations
             return illustrations
@@ -157,9 +157,9 @@ class SmartIllustrationService:
                         if display_path and file_key not in seen_files:
                             illustrations.append({"file": display_path})
                             seen_files.add(file_key)
-                            logger.info(f"Found illustration via search: {file_key} -> {display_path}")
+                            logger.debug(f"Found illustration via search: {file_key} -> {display_path}")
 
-            logger.info(f"Smart illustration search returned {len(illustrations)} results for '{cleaned_term}'")
+            logger.debug(f"Smart illustration search returned {len(illustrations)} results for '{cleaned_term}'")
 
             # Enhanced fuzzy fallback: always try fuzzy matching for better results
             if len(illustrations) < top_k:
@@ -167,7 +167,7 @@ class SmartIllustrationService:
                     fuzzy_needed = top_k - len(illustrations)
                     extra = self._fuzzy_fallback(cleaned_term, fuzzy_needed, seen_files)
                     illustrations.extend(extra)
-                    logger.info(
+                    logger.debug(
                         f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for '{cleaned_term}'"
                     )
                 except Exception:

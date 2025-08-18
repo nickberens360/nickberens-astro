@@ -105,7 +105,7 @@ class QueryRouter:
             "of",
             "about",
             "please",
-            "describe"
+            "describe",
             "for",
             # Question words that should be filtered out when extracting search terms
             "what",

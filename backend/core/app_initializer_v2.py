@@ -76,13 +76,16 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
 
     logger.info(f"Total indexed: {total_files} files, {total_chunks} chunks")
 
-    # Pre-generate follow-up questions based on indexed content (always on)
-    logger.info("Pre-generating follow-up questions...")
-    followup_pregenerator = FollowupPreGenerator(indexing_llm)
-    pregenerated_questions = followup_pregenerator.analyze_and_generate(unified_retriever)
+    # Pre-generate follow-up questions based on indexed content (configurable)
+    if AppConfig.ENABLE_FOLLOWUP_PREGENERATION:
+        logger.info("Pre-generating follow-up questions...")
+        followup_pregenerator = FollowupPreGenerator(indexing_llm)
+        pregenerated_questions = followup_pregenerator.analyze_and_generate(unified_retriever)
 
-    question_count = sum(len(qs) for qs in pregenerated_questions.values())
-    logger.info(f"Pre-generated {question_count} follow-up questions for instant responses")
+        question_count = sum(len(qs) for qs in pregenerated_questions.values())
+        logger.info(f"Pre-generated {question_count} follow-up questions for instant responses")
+    else:
+        logger.info("Follow-up pregeneration disabled - skipping to reduce cold-start time")
 
     # Create retriever dictionary with only the unified retriever
     all_retrievers = {

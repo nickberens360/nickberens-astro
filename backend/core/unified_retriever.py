@@ -274,15 +274,15 @@ class UnifiedRetriever:
             raise ValueError("Vector store not initialized")
         docs_and_scores = self.vector_store.similarity_search_with_score(query, k=search_k)
 
-        logger.info(f"Raw search returned {len(docs_and_scores)} documents")
+        logger.debug(f"Raw search returned {len(docs_and_scores)} documents")
         if docs_and_scores:
-            logger.info(
+            logger.debug(
                 f"Score range: {min(score for _, score in docs_and_scores):.3f} - {max(score for _, score in docs_and_scores):.3f}"
             )
 
         # Filter by distance threshold (lower distance = more similar)
         filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
-        logger.info(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
+        logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
         # Apply content type filtering if specified
         if filter_content_types:
@@ -290,15 +290,15 @@ class UnifiedRetriever:
             for doc in filtered_docs:
                 if "content_types" in doc.metadata:
                     doc_content_types = doc.metadata["content_types"].split(",")
-                    logger.info(f"Doc content types: {doc_content_types}, looking for: {filter_content_types}")
+                    logger.debug(f"Doc content types: {doc_content_types}, looking for: {filter_content_types}")
                     # Check if any of the document's content types match our filter
                     if any(content_type.strip() in filter_content_types for content_type in doc_content_types):
                         content_filtered_docs.append(doc)
-                        logger.info(f"✅ Match found: {doc_content_types}")
+                        logger.debug(f"✅ Match found: {doc_content_types}")
                     else:
-                        logger.info(f"❌ No match: {doc_content_types}")
+                        logger.debug(f"❌ No match: {doc_content_types}")
             filtered_docs = content_filtered_docs
-            logger.info(f"After content type filtering: {len(filtered_docs)} documents")
+            logger.debug(f"After content type filtering: {len(filtered_docs)} documents")
 
         # Return top k results
         return filtered_docs[:k]
@@ -323,7 +323,9 @@ class UnifiedRetriever:
             content_type_hints.append("about")
 
         # Creative/inspiration queries
-        if any(term in query_lower for term in ["illustration", "art", "design", "creative", "inspiration", "artistic"]):
+        if any(
+            term in query_lower for term in ["illustration", "art", "design", "creative", "inspiration", "artistic"]
+        ):
             content_type_hints.append("creative")
         if "inspiration" in query_lower or "artistic" in query_lower:
             # Inspiration often overlaps with bio/about content

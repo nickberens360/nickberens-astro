@@ -249,3 +249,22 @@ class TestQueryRouter:
         assert "images of" in self.router.specific_image_keywords
         assert "show me" in self.router.show_me_patterns
         assert "the" in self.router.ignore_words
+
+    @pytest.mark.unit
+    def test_ignore_words_separated_correctly(self):
+        """Test that ignore words are properly separated (regression test for string concatenation bug)."""
+        # Before the fix, "describe" and "for" were concatenated as "describefor"
+        assert "describe" in self.router.ignore_words, "The word 'describe' should be in ignore_words"
+        assert "for" in self.router.ignore_words, "The word 'for' should be in ignore_words"
+
+        # Test that these words are actually filtered out during search term extraction
+        test_cases = [
+            ("show me describe fantasy images", "fantasy"),  # "describe" should be filtered
+            ("find images for dragons", "dragons"),          # "for" should be filtered
+            ("show me images for fantasy", "fantasy"),       # "for" should be filtered
+            ("describe the art images", "art"),              # "describe" should be filtered
+        ]
+
+        for query, expected_term in test_cases:
+            query_type, search_term = self.router.route_query(query)
+            assert search_term == expected_term, f"Words not filtered correctly for: {query}, got: {search_term}"

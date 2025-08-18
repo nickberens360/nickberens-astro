@@ -50,21 +50,44 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 
-# Use optimized follow-up service (fast + smart)
+
+# Create follow-up service based on configuration
 def create_followup_service():
-    if llm and retrievers:
-        from .core.app_initializer_v2 import get_unified_retriever
-        unified_retriever = get_unified_retriever(retrievers)
-        if unified_retriever:
-            return OptimizedFollowUpService(
-                llm=llm,
-                unified_retriever=unified_retriever,
-                llm_timeout=3.0,  # Quick timeout to maintain responsiveness
-                use_llm_enhancement=True
-            )
-    # Fallback to pre-generated if initialization fails
-    from .core.followup_service_pregenerated import PreGeneratedFollowUpService
-    return PreGeneratedFollowUpService()
+    followup_mode = AppConfig.get_followup_mode()
+
+    if followup_mode == "static":
+        from .core.followup_service import FollowUpService
+
+        return FollowUpService()
+    elif followup_mode == "pre_generated":
+        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+
+        return PreGeneratedFollowUpService()
+    elif followup_mode == "optimized":
+        if llm and retrievers:
+            from .core.app_initializer_v2 import get_unified_retriever
+
+            unified_retriever = get_unified_retriever(retrievers)
+            if unified_retriever:
+                return OptimizedFollowUpService(
+                    llm=llm,
+                    unified_retriever=unified_retriever,
+                    llm_timeout=3.0,  # Quick timeout to maintain responsiveness
+                    use_llm_enhancement=AppConfig.FOLLOWUP_USE_LLM_ENHANCEMENT,
+                )
+        # Fallback to pre-generated if initialization fails
+        logger.warning(
+            "Optimized followup mode requested but LLM/retrievers not available, falling back to pre-generated"
+        )
+        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+
+        return PreGeneratedFollowUpService()
+    else:
+        logger.error(f"Unknown followup mode: {followup_mode}, defaulting to pre-generated")
+        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
+
+        return PreGeneratedFollowUpService()
+
 
 followup_service = create_followup_service()
 

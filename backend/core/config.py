@@ -47,6 +47,11 @@ class AppConfig:
         logger.warning("Invalid FOLLOWUP_VALIDATION_SCORE_THRESHOLD; defaulting to 0.5")
         return 0.5
 
+    @classmethod
+    def is_followup_llm_enhancement_enabled(cls) -> bool:
+        """Enable LLM enhancement for follow-up generation (may cause timeouts)."""
+        return os.getenv("FOLLOWUP_USE_LLM_ENHANCEMENT", "false").lower() == "true"
+
     # Backward-compatible class-level properties
     class classproperty(property):
         def __get__(self, obj, owner):  # type: ignore[override]
@@ -63,6 +68,10 @@ class AppConfig:
     @classproperty
     def FOLLOWUP_VALIDATION_SCORE_THRESHOLD(cls) -> float:
         return cls.get_followup_validation_score_threshold()
+
+    @classproperty
+    def FOLLOWUP_USE_LLM_ENHANCEMENT(cls) -> bool:
+        return cls.is_followup_llm_enhancement_enabled()
 
     # Search Configuration with basic validation
     try:
