@@ -7,8 +7,9 @@ with intelligent illustration search using the unified retriever system.
 
 import json
 import logging
+import re
 from difflib import SequenceMatcher
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .config import AppConfig
 from .unified_retriever import UnifiedRetriever
@@ -23,6 +24,10 @@ class SmartIllustrationService:
         self.unified_retriever = unified_retriever
         # Cache illustrations data to avoid repeated file I/O
         self._illustrations_cache = self._load_illustrations_data()
+        # Cache for search results to improve performance
+        self._search_cache: Dict[str, List[Dict[str, str]]] = {}
+        # Cache all illustrations for faster retrieval
+        self._all_illustrations_cache: Optional[List[Dict[str, str]]] = None
 
     def validate_data(self):
         """Validate that illustration data is available."""
@@ -38,7 +43,12 @@ class SmartIllustrationService:
             return False, f"❌ Illustration validation failed: {e}"
 
     def get_all(self) -> List[Dict[str, str]]:
-        """Return all illustrations using metadata filtering."""
+        """Return all illustrations using metadata filtering with caching."""
+        # Return cached results if available
+        if self._all_illustrations_cache is not None:
+            logger.info(f"Returning cached all illustrations: {len(self._all_illustrations_cache)} items")
+            return self._all_illustrations_cache
+
         try:
             logger.info("Attempting to get all illustrations using metadata filtering...")
 
@@ -73,6 +83,8 @@ class SmartIllustrationService:
                         seen_files.add(file_key)
 
             logger.info(f"Found {len(illustrations)} illustrations via metadata filtering")
+            # Cache the results
+            self._all_illustrations_cache = illustrations
             return illustrations
 
         except Exception:
@@ -81,7 +93,7 @@ class SmartIllustrationService:
 
     def search(self, search_term: str, top_k: int = 10) -> List[Dict[str, str]]:
         """
-        Search illustrations using smart retriever.
+        Search illustrations using smart retriever with caching and improved matching.
 
         Args:
             search_term: The user's search query
@@ -94,13 +106,22 @@ class SmartIllustrationService:
             logger.warning("Invalid search term provided to illustration search.")
             return []
 
-        logger.info(f"Smart illustration search for: '{search_term}'")
+        # Clean and normalize the search term
+        cleaned_term = self._clean_search_term(search_term)
+
+        # Check cache first
+        cache_key = f"{cleaned_term}:{top_k}"
+        if cache_key in self._search_cache:
+            logger.info(f"Returning cached results for '{cleaned_term}'")
+            return self._search_cache[cache_key]
+
+        logger.info(f"Smart illustration search for: '{cleaned_term}' (original: '{search_term}')")
 
         try:
             # Use semantic search with creative content type filter and search term
             docs = self.unified_retriever.semantic_search(
-                query=f"{search_term} illustration art creative character",
-                k=top_k * 2,  # Get more docs to allow filtering
+                query=f"{cleaned_term} illustration art creative character",
+                k=top_k * 3,  # Get more docs to allow better filtering
                 filter_content_types=["creative"],
                 score_threshold=2.0,  # Same generous threshold as get_all()
             )
@@ -115,9 +136,14 @@ class SmartIllustrationService:
                 if doc.metadata.get("is_illustration_data"):
                     # Check if search term matches content for specific searches
                     content_lower = doc.page_content.lower()
-                    search_lower = search_term.lower()
+                    search_lower = cleaned_term.lower()
 
-                    if search_term == "all" or search_lower in content_lower:
+                    # Improved matching: check for exact match, partial match, or "all"
+                    if (
+                        search_term == "all"
+                        or search_lower in content_lower
+                        or self._is_fuzzy_match(search_lower, content_lower)
+                    ):
                         display_path = doc.metadata.get("display_path")
                         file_key = doc.metadata.get("illustration_file")
 
@@ -126,61 +152,128 @@ class SmartIllustrationService:
                             seen_files.add(file_key)
                             logger.info(f"Found illustration via search: {file_key} -> {display_path}")
 
-            logger.info(f"Smart illustration search returned {len(illustrations)} results for '{search_term}'")
-            # Fuzzy fallback: if we didn't get enough results, try matching against titles/tags
+            logger.info(f"Smart illustration search returned {len(illustrations)} results for '{cleaned_term}'")
+
+            # Enhanced fuzzy fallback: always try fuzzy matching for better results
             if len(illustrations) < top_k:
                 try:
                     fuzzy_needed = top_k - len(illustrations)
-                    extra = self._fuzzy_fallback(search_term, fuzzy_needed, seen_files)
+                    extra = self._fuzzy_fallback(cleaned_term, fuzzy_needed, seen_files)
                     illustrations.extend(extra)
                     logger.info(
-                        f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for '{search_term}'"
+                        f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for '{cleaned_term}'"
                     )
                 except Exception:
                     logger.warning("Fuzzy fallback failed", exc_info=True)
 
-            return illustrations[:top_k]
+            # Cache the results
+            result = illustrations[:top_k]
+            self._search_cache[cache_key] = result
+            return result
 
         except Exception:
             logger.error("Smart illustration search failed", exc_info=True)
             return []
 
     # --- Internal helpers ---
+    def _clean_search_term(self, term: str) -> str:
+        """Clean and normalize search terms for better matching."""
+        # Remove extra whitespace
+        cleaned = " ".join(term.strip().split())
+
+        # Remove common punctuation but keep hyphens and apostrophes
+        cleaned = re.sub(r"[^\w\s\-\']", " ", cleaned)
+
+        # Remove extra spaces again after punctuation removal
+        cleaned = " ".join(cleaned.split())
+
+        return cleaned
+
+    def _is_fuzzy_match(self, search: str, content: str, threshold: float = 0.7) -> bool:
+        """Check if search term is a fuzzy match for content."""
+        # Split into words for word-level matching
+        search_words = search.split()
+        content_words = content.split()
+
+        # Check if all search words have a fuzzy match in content
+        for search_word in search_words:
+            best_score = 0.0
+            for content_word in content_words:
+                score = SequenceMatcher(None, search_word, content_word).ratio()
+                best_score = max(best_score, score)
+
+            if best_score < threshold:
+                return False
+
+        return True
+
     def _load_illustrations_data(self) -> List[Dict[str, str]]:
-        """Load illustrations from configured JSON file."""
+        """Load illustrations from configured JSON file with caching."""
         path = AppConfig.ILLUSTRATIONS_PATH
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, list):
+                    logger.info(f"Loaded {len(data)} illustrations from {path}")
                     return data
         except Exception:
             logger.warning(f"Unable to load illustrations from {path}", exc_info=True)
         return []
 
     def _score_entry(self, search: str, entry: Dict[str, str]) -> float:
-        """Compute a fuzzy score for an entry using title, tags, and filename."""
+        """Enhanced fuzzy scoring with weighted components."""
         s = search.lower().strip()
         title = (entry.get("title") or "").lower()
-        tags = " ".join(entry.get("tags") or [])
+        # Normalize tags: ensure a list of strings before joining
+        raw_tags = entry.get("tags")
+        tags_list: List[str] = raw_tags if isinstance(raw_tags, list) else []
+        tags = " ".join(tags_list).lower()
         file_name = (entry.get("file") or "").lower()
 
-        scores: List[float] = []
+        scores: List[Tuple[float, float]] = []  # (score, weight)
+
+        # Title matching (highest weight)
         if title:
-            scores.append(SequenceMatcher(None, s, title).ratio())
+            title_score = SequenceMatcher(None, s, title).ratio()
+            scores.append((title_score, 2.0))
+
+            # Bonus for exact title match
+            if s == title:
+                scores.append((1.0, 3.0))
+
+        # Tag matching (medium weight)
         if tags:
-            scores.append(SequenceMatcher(None, s, tags).ratio())
+            tag_score = SequenceMatcher(None, s, tags).ratio()
+            scores.append((tag_score, 1.5))
+
+            # Check individual tags using normalized list
+            for tag in tags_list:
+                if s == tag.lower():
+                    scores.append((1.0, 2.0))
+                elif s in tag.lower() or tag.lower() in s:
+                    scores.append((0.8, 1.5))
+
+        # Filename matching (lower weight)
         if file_name:
-            scores.append(SequenceMatcher(None, s, file_name).ratio())
+            # Remove extension for better matching
+            clean_file = re.sub(r"\.[^.]+$", "", file_name)
+            file_score = SequenceMatcher(None, s, clean_file).ratio()
+            scores.append((file_score, 1.0))
 
-        # Bonus for simple containment
+        # Containment bonus
         if s and (s in title or s in tags or s in file_name):
-            scores.append(1.0)
+            scores.append((0.9, 1.5))
 
-        return max(scores) if scores else 0.0
+        # Calculate weighted average
+        if scores:
+            total_score = sum(score * weight for score, weight in scores)
+            total_weight = sum(weight for _, weight in scores)
+            return total_score / total_weight
+
+        return 0.0
 
     def _fuzzy_fallback(self, search_term: str, limit: int, seen_files: set) -> List[Dict[str, str]]:
-        """Return additional matches using fuzzy title/tag matching."""
+        """Enhanced fuzzy fallback with adaptive thresholds."""
         entries = self._illustrations_cache
         if not entries:
             return []
@@ -188,20 +281,36 @@ class SmartIllustrationService:
         scored: List[Tuple[float, Dict[str, str]]] = []
         for e in entries:
             score = self._score_entry(search_term, e)
-            if score >= 0.6:  # reasonable threshold for typos
+            # Adaptive threshold: more forgiving for shorter terms and typos
+            # Use 0.45 for very short terms, 0.5 for medium, 0.55 for longer
+            if len(search_term) <= 6:
+                threshold = 0.45
+            elif len(search_term) <= 10:
+                threshold = 0.5
+            else:
+                threshold = 0.55
+
+            if score >= threshold:
                 scored.append((score, e))
 
         # Sort by score descending
         scored.sort(key=lambda x: x[0], reverse=True)
 
         results: List[Dict[str, str]] = []
-        for _, e in scored:
+        for score, e in scored:
             file_key = e.get("file")
             if not file_key or file_key in seen_files:
                 continue
             results.append({"file": f"/illustrations/{file_key}"})
             seen_files.add(file_key)
+            logger.debug(f"Fuzzy match: '{search_term}' -> '{e.get('title', file_key)}' (score: {score:.2f})")
             if len(results) >= limit:
                 break
 
         return results
+
+    def clear_cache(self):
+        """Clear all cached data for fresh results."""
+        self._search_cache.clear()
+        self._all_illustrations_cache = None
+        logger.info("Illustration service cache cleared")
