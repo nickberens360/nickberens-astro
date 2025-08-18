@@ -60,35 +60,75 @@ class UnifiedRetriever:
         return sha256_hash.hexdigest()
 
     def _extract_content_metadata(self, doc: Document, file_path: Path) -> Dict:
-        """Extract intelligent metadata from document content using an LLM."""
+        """Extract metadata using LLM topics plus deterministic fallbacks.
+
+        Heuristics ensure key content remains discoverable even if LLM topic extraction fails.
+        """
         content = doc.page_content
 
-        # Use LLM to extract topics for dynamic content tagging
+        # Use LLM to extract topics for dynamic content tagging (may fallback to ["general"])
         content_types = extract_topics_with_llm(self.llm, content)
+
+        # Deterministic heuristics
+        fname = file_path.name.lower()
+        text_lc = content.lower()
+        heuristic_tags: List[str] = []
+
+        # Filename-based tags
+        if "about" in fname:
+            heuristic_tags.append("about")
+        if "resume" in fname:
+            heuristic_tags.extend(["experience", "skills"])
+        if "project" in fname:
+            heuristic_tags.append("project")
+        if "illustration" in fname or "illustrations" in fname:
+            heuristic_tags.append("creative")
+
+        # Content keyword-based tags (covers queries like "artistic inspiration")
+        creative_keywords = [
+            "art",
+            "artistic",
+            "inspiration",
+            "illustration",
+            "illustrations",
+            "design",
+            "creative",
+            "cartoon",
+            "cartoons",
+        ]
+        if any(k in text_lc for k in creative_keywords):
+            heuristic_tags.append("creative")
+
+        about_keywords = ["about", "background", "bio", "who is nick", "who am i"]
+        if any(k in text_lc for k in about_keywords):
+            heuristic_tags.append("about")
 
         # Special handling for illustration JSON files
         is_illustration_data = file_path.name == "illustrations.json"
         illustration_file = None
 
         if is_illustration_data:
-            content_types.append("creative")  # Ensure creative tag for illustrations
+            heuristic_tags.append("creative")  # Ensure creative tag for illustrations
             # Extract file name from JSON content for frontend display
             try:
-                if "file" in content:
-                    # This is an individual illustration entry - parse JSON directly
+                if '"file"' in doc.page_content:
                     data = json.loads(doc.page_content)
-                    if isinstance(data, dict):
+                    if isinstance(data, dict) and "file" in data:
                         illustration_file = data.get("file")
+                        logger.info(f"Found illustration file: {illustration_file}")
             except json.JSONDecodeError:
                 logger.warning(f"Could not parse JSON to find illustration file in doc from {file_path.name}")
+
+        # Merge, dedupe, normalize
+        merged_types = sorted({t.strip().lower() for t in (content_types + heuristic_tags) if t and t.strip()})
 
         metadata = {
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(list(set(content_types))),  # Use set to remove duplicates
+            "content_types": ",".join(merged_types),
             "content_length": len(content),
-            "has_code": "```" in doc.page_content or "function" in content.lower(),
+            "has_code": "```" in doc.page_content or "function" in text_lc,
             "is_illustration_data": is_illustration_data,
         }
 
@@ -98,6 +138,17 @@ class UnifiedRetriever:
             metadata["display_path"] = f"/illustrations/{illustration_file}"
 
         return metadata
+
+    def _should_index_file(self, file_path: Path) -> bool:
+        """Check if a file should be indexed based on its name and type."""
+        # Skip system/config files that aren't content
+        skip_files = {"robots.txt", "sitemap.xml", ".htaccess", "favicon.ico", "manifest.json"}
+
+        if file_path.name.lower() in skip_files:
+            logger.debug(f"Skipping system file: {file_path}")
+            return False
+
+        return True
 
     def _should_skip_file(
         self, file_path: Path, file_hash: str, indexed_files: Dict[str, str], force_reindex: bool
@@ -130,20 +181,23 @@ class UnifiedRetriever:
 
         # Discover all files
         for file_path in base_path.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith("."):
-                logger.debug(f"Processing file: {file_path}")
+            if file_path.is_file() and not file_path.name.startswith(".") and self._should_index_file(file_path):
+                logger.info(f"Processing file: {file_path}")
                 file_hash = self._compute_file_hash(file_path)
 
                 # Skip if already indexed and unchanged
-                if self._should_skip_file(file_path, file_hash, indexed_files, force_reindex):
-                    logger.debug(f"Skipping {file_path} - already indexed")
+                should_skip = self._should_skip_file(file_path, file_hash, indexed_files, force_reindex)
+                if should_skip:
+                    logger.info(f"Skipping {file_path} - already indexed (force_reindex={force_reindex})")
                     continue
+                else:
+                    logger.info(f"Will process {file_path} (force_reindex={force_reindex})")
 
                 # Load and process the document
                 try:
                     docs = load_doc(file_path)
                     if not docs:
-                        logger.debug(f"No documents loaded from {file_path}")
+                        logger.info(f"No documents loaded from {file_path}")
                         continue
 
                     # Use appropriate splitter based on file type
@@ -192,12 +246,26 @@ class UnifiedRetriever:
             raise ValueError("Vector store not initialized")
         return self.vector_store.as_retriever(search_kwargs=search_kwargs)  # type: ignore[no-any-return]
 
+    def get_relevant_documents(
+        self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None
+    ) -> List[Document]:
+        """
+        Get relevant documents for a query (compatibility method).
+
+        This method provides compatibility with LangChain's retriever interface.
+        """
+        return self.semantic_search(query, k, filter_content_types)
+
     def semantic_search(
         self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None, score_threshold: float = 0.5
     ) -> List[Document]:
         """
         Perform semantic search with optional filtering and scoring.
         """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         # Get more results than needed for filtering and reranking
         search_k = k * 3
 
@@ -206,8 +274,16 @@ class UnifiedRetriever:
             raise ValueError("Vector store not initialized")
         docs_and_scores = self.vector_store.similarity_search_with_score(query, k=search_k)
 
-        # Filter by score threshold
-        filtered_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
+        logger.debug(f"Raw search returned {len(docs_and_scores)} documents")
+        if docs_and_scores:
+            logger.debug(
+                f"Score range: {min(score for _, score in docs_and_scores):.3f} - {max(score for _, score in docs_and_scores):.3f}"
+            )
+
+        # Filter by similarity score threshold (lower score = more similar in distance-based metrics)
+        # Using <= because ChromaDB returns distance scores where lower values mean higher similarity
+        filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
+        logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
         # Apply content type filtering if specified
         if filter_content_types:
@@ -215,10 +291,15 @@ class UnifiedRetriever:
             for doc in filtered_docs:
                 if "content_types" in doc.metadata:
                     doc_content_types = doc.metadata["content_types"].split(",")
+                    logger.debug(f"Doc content types: {doc_content_types}, looking for: {filter_content_types}")
                     # Check if any of the document's content types match our filter
                     if any(content_type.strip() in filter_content_types for content_type in doc_content_types):
                         content_filtered_docs.append(doc)
+                        logger.debug(f"✅ Match found: {doc_content_types}")
+                    else:
+                        logger.debug(f"❌ No match: {doc_content_types}")
             filtered_docs = content_filtered_docs
+            logger.debug(f"After content type filtering: {len(filtered_docs)} documents")
 
         # Return top k results
         return filtered_docs[:k]
@@ -242,8 +323,14 @@ class UnifiedRetriever:
         if any(term in query_lower for term in ["about", "who", "background", "interest"]):
             content_type_hints.append("about")
 
-        if any(term in query_lower for term in ["illustration", "art", "design", "creative"]):
+        # Creative/inspiration queries
+        if any(
+            term in query_lower for term in ["illustration", "art", "design", "creative", "inspiration", "artistic"]
+        ):
             content_type_hints.append("creative")
+        if "inspiration" in query_lower or "artistic" in query_lower:
+            # Inspiration often overlaps with bio/about content
+            content_type_hints.append("about")
 
         if any(term in query_lower for term in ["project", "built", "created", "developed"]):
             content_type_hints.append("project")

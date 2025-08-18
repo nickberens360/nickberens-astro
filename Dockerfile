@@ -48,6 +48,9 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --chown=app:app backend/ ./backend/
 COPY --chown=app:app public/ ./public/
 
+# Create logs directory with proper permissions for the app user
+RUN mkdir -p /app/backend/logs && chown -R app:app /app/backend/logs
+
 USER app
 
 # Expose port
