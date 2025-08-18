@@ -10,6 +10,7 @@ This module provides a cleaner initialization process that:
 
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from langchain_anthropic import ChatAnthropic
@@ -38,9 +39,14 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     """
     logger.info("Initializing application with unified retriever system...")
 
+    # Ensure logs directory exists during app initialization
+    backend_dir = Path(__file__).parent.parent.resolve()
+    logs_dir = backend_dir / "logs"
+    logs_dir.mkdir(exist_ok=True)
+
     # Initialize LLMs - Claude Haiku for fast indexing, and a configurable Claude model (AppConfig.CLAUDE_MODEL) for user queries
-    indexing_llm = ChatAnthropic(model="claude-3-haiku-20240307", temperature=0.1)
-    user_query_llm = ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1)
+    indexing_llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1)
+    user_query_llm = ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1)
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)

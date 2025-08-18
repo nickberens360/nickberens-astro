@@ -264,7 +264,9 @@ Response:""",
             try:
                 # Use similarity_search_with_score to get actual scores
                 if hasattr(self.unified_retriever, "vector_store") and self.unified_retriever.vector_store is not None:
-                    results_with_scores = self.unified_retriever.vector_store.similarity_search_with_score(question, k=1)
+                    results_with_scores = self.unified_retriever.vector_store.similarity_search_with_score(
+                        question, k=1
+                    )
 
                     if results_with_scores:
                         # ChromaDB returns distance, so lower score = better match

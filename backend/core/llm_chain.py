@@ -429,23 +429,11 @@ async def stream_with_fallback(
                         except Exception as e:
                             logger.warning(f"Failed to update streaming response log: {e}")
 
-            # Create the stream once and return it directly
+            # Create and return the stream - validation logic removed to avoid duplicate API calls
             stream = llm_stream()
-            try:
-                # Test that we can create the stream without errors
-                # We'll validate it works by creating a test stream instance
-                test_stream = llm_stream()
-                await test_stream.__anext__()
-
-                # If we got here, streaming works - return the original stream
-                logger.info(f"Successfully validated streaming with {llm_name.title()}.")
-                metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-                return stream, llm_name, metadata
-            except StopAsyncIteration:
-                # Empty response, but stream worked
-                logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
-                metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-                return llm_stream(), llm_name, metadata
+            logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
+            metadata["rate_limit_status"] = rate_limit_tracker.get_status()
+            return stream, llm_name, metadata
 
         except Exception as e:
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}")

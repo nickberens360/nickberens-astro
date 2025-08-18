@@ -293,11 +293,9 @@ class AppConfig:
         if env_path and env_path.strip():
             return env_path.strip()
 
-        # Default to logs directory (with proper permissions in container)
+        # Default to logs directory (directory creation handled during app initialization)
         backend_dir = Path(__file__).parent.parent.resolve()  # Make it absolute
         logs_dir = backend_dir / "logs"
-        # Create logs directory if it doesn't exist
-        logs_dir.mkdir(exist_ok=True)
         log_file_path = str(logs_dir / "query_logs.json")
         logger.info(f"Query log file path: {log_file_path}")
         return log_file_path
