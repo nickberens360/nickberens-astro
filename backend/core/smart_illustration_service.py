@@ -281,7 +281,13 @@ class SmartIllustrationService:
         title = (entry.get("title") or "").lower()
         # Normalize tags: ensure a list of strings before joining
         raw_tags = entry.get("tags")
-        tags_list: List[str] = raw_tags if isinstance(raw_tags, list) else []
+        tags_list: List[str]
+        if isinstance(raw_tags, list):
+            tags_list = [str(tag).strip() for tag in raw_tags if tag is not None]
+        elif isinstance(raw_tags, str):
+            tags_list = [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+        else:
+            tags_list = []
         tags = " ".join(tags_list).lower()
         file_name = (entry.get("file") or "").lower()
 

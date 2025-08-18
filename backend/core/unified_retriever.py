@@ -280,7 +280,8 @@ class UnifiedRetriever:
                 f"Score range: {min(score for _, score in docs_and_scores):.3f} - {max(score for _, score in docs_and_scores):.3f}"
             )
 
-        # Filter by distance threshold (lower distance = more similar)
+        # Filter by similarity score threshold (lower score = more similar in distance-based metrics)
+        # Using <= because ChromaDB returns distance scores where lower values mean higher similarity
         filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
         logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
