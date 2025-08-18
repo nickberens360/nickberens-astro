@@ -83,6 +83,7 @@ class QueryRouter:
             "describe",
             "explain",
             "get",
+            "give",  # Added "give" to ignore words
             "find",
             "display",
             "see",
