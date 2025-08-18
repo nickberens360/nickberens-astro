@@ -50,8 +50,8 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 
-# Always use pre-generated follow-up service (no dynamic generation at request time)
-followup_service: PreGeneratedFollowUpService = PreGeneratedFollowUpService()
+# Use pre-generated follow-up service (simple and fast)
+followup_service = PreGeneratedFollowUpService()
 
 query_logger = get_query_logger()
 

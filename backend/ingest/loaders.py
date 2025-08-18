@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from pathlib import Path
 from typing import List
 
@@ -24,7 +26,7 @@ except ImportError:
 
     _USE_NEW_UNSTRUCTURED = False
 
-import json
+logger = logging.getLogger(__name__)
 
 
 def _clean_html(text: str) -> str:
@@ -78,13 +80,13 @@ def _json_to_documents(path: Path) -> List[Document]:
 
 
 def load_doc(path: Path) -> List[Document]:
-    import logging
+    """Load a document from disk into LangChain Document objects based on file extension.
 
-    logger = logging.getLogger(__name__)
-
+    Returns an empty list on unsupported types or errors; see logs for details.
+    """
     path = Path(path)
     ext = path.suffix.lower()
-    logger.info(f"Loading document: {path} with extension: {ext}")
+    logger.info("Loading document: %s with extension: %s", path, ext)
 
     try:
         if ext == ".pdf":

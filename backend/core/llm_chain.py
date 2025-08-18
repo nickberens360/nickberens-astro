@@ -429,21 +429,18 @@ async def stream_with_fallback(
                         except Exception as e:
                             logger.warning(f"Failed to update streaming response log: {e}")
 
-            # Test the streaming with a small attempt to catch immediate failures
-            test_stream = llm_stream()
+            # Create the stream once and return it directly
+            stream = llm_stream()
             try:
-                # Try to get the first chunk to validate the stream works
-                first_chunk = await test_stream.__anext__()
+                # Test that we can create the stream without errors
+                # We'll validate it works by creating a test stream instance
+                test_stream = llm_stream()
+                await test_stream.__anext__()
 
-                # If we get here, create a new stream that includes the first chunk
-                async def validated_stream():
-                    yield first_chunk
-                    async for chunk in test_stream:
-                        yield chunk
-
-                logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
+                # If we got here, streaming works - return the original stream
+                logger.info(f"Successfully validated streaming with {llm_name.title()}.")
                 metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-                return validated_stream(), llm_name, metadata
+                return stream, llm_name, metadata
             except StopAsyncIteration:
                 # Empty response, but stream worked
                 logger.info(f"Successfully initialized streaming with {llm_name.title()}.")

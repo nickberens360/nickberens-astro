@@ -317,3 +317,7 @@ class PreGeneratedFollowUpService:
             stats[f"{category}_count"] = len(questions)
 
         return stats
+
+    def close(self) -> None:
+        """Clean up resources (no-op for pre-generated service)."""
+        pass

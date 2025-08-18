@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 class SmartIllustrationService:
     """Smart illustration service that uses unified retriever for image search."""
 
+    # Adaptive threshold constants for search term length
+    SHORT_TERM_LENGTH = 6
+    MEDIUM_TERM_LENGTH = 10
+    SHORT_TERM_THRESHOLD = 0.45
+    MEDIUM_TERM_THRESHOLD = 0.5
+    LONG_TERM_THRESHOLD = 0.55
+
     def __init__(self, unified_retriever: UnifiedRetriever):
         self.unified_retriever = unified_retriever
         # Cache illustrations data to avoid repeated file I/O
@@ -331,12 +338,12 @@ class SmartIllustrationService:
             score = self._score_entry(search_term, e)
             # Adaptive threshold: more forgiving for shorter terms and typos
             # Use 0.45 for very short terms, 0.5 for medium, 0.55 for longer
-            if len(search_term) <= 6:
-                threshold = 0.45
-            elif len(search_term) <= 10:
-                threshold = 0.5
+            if len(search_term) <= self.SHORT_TERM_LENGTH:
+                threshold = self.SHORT_TERM_THRESHOLD
+            elif len(search_term) <= self.MEDIUM_TERM_LENGTH:
+                threshold = self.MEDIUM_TERM_THRESHOLD
             else:
-                threshold = 0.55
+                threshold = self.LONG_TERM_THRESHOLD
 
             if score >= threshold:
                 scored.append((score, e))
