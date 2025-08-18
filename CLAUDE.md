@@ -76,31 +76,51 @@ The system now uses a **unified smart retriever** that:
 backend/
 ├── core/           # Core business logic
 │   ├── app_factory.py
-│   ├── app_initializer_v2.py      # NEW: Unified retriever initialization
-│   ├── unified_retriever.py       # NEW: Smart auto-discovery system
-│   ├── smart_illustration_service.py  # NEW: Smart image search
-│   ├── smart_query_handler.py     # NEW: Intelligent query processing
-│   ├── query_logger.py            # NEW: Query logging service
-│   ├── query_router.py            # NEW: Query routing logic
-│   ├── response_service.py        # NEW: Response processing service
-│   ├── followup_service.py        # NEW: Follow-up question service
+│   ├── app_initializer_v2.py      # Unified retriever initialization
+│   ├── unified_retriever.py       # Smart auto-discovery system
+│   ├── smart_illustration_service.py  # Enhanced smart image search with caching
+│   ├── smart_query_handler.py     # Intelligent query processing
+│   ├── query_logger.py            # Query logging service
+│   ├── query_router.py            # Query routing logic
+│   ├── response_service.py        # Response processing service
+│   ├── followup_service.py        # Follow-up question service (configurable)
+│   ├── followup_service_optimized.py    # Optimized follow-up service
+│   ├── followup_service_llm.py          # LLM-powered follow-up service
+│   ├── followup_service_pregenerated.py # Pre-generated follow-up service
+│   ├── followup_pregeneration.py        # Follow-up pre-generation utilities
+│   ├── geolocation_service.py           # Location-based services
+│   ├── llm_utils.py                     # Shared LLM utilities
+│   ├── constants.py                     # Shared constants and stop words
 │   ├── config.py
 │   ├── llm_chain.py               # UPDATED: Now uses smart routing
 │   └── ...
-├── knowledge/      # NEW: Auto-indexed knowledge base
+├── knowledge/      # Auto-indexed knowledge base
 │   ├── *.md        # Markdown documentation
 │   ├── *.pdf       # PDF documents  
-│   ├── *.json      # Structured data
+│   ├── *.json      # Structured data including illustrations.json
 │   └── ...         # Any content - automatically indexed!
 ├── routes/         # API routes
 │   ├── query.py    # UPDATED: Uses smart retriever
-│   └── smart_query.py  # NEW: Advanced testing endpoints
+│   ├── smart_query.py  # Advanced testing endpoints
+│   ├── query_logs.py   # Protected query log interface
+│   └── health.py       # Health check endpoint
+├── templates/      # Jinja2 templates for admin interfaces
 └── main.py         # FastAPI app entry point
 
 public/            # Static data files (also auto-indexed)
 ├── resume.json
 ├── about.json  
 └── ...             # All files automatically discovered
+
+scripts/           # Utility scripts
+├── copy-content-to-knowledge.sh    # Content management scripts
+├── copy-fonts-to-knowledge.sh      # Font file management
+└── start-chromadb-visualizer.sh    # ChromaDB visualization
+
+tests/             # Comprehensive test suite
+├── unit/          # Unit tests
+├── integration/   # Integration tests
+└── *.py           # Test files with markers for organization
 ```
 
 ## Important Files
@@ -108,12 +128,15 @@ public/            # Static data files (also auto-indexed)
 ### Core Smart Retriever Files
 - `backend/core/unified_retriever.py` - **Main**: Auto-discovery and intelligent indexing
 - `backend/core/smart_query_handler.py` - Query intent analysis and smart routing
-- `backend/core/smart_illustration_service.py` - Image search without unified_data.json
+- `backend/core/smart_illustration_service.py` - Enhanced image search with caching and fuzzy matching
 - `backend/core/app_initializer_v2.py` - Unified system initialization
 - `backend/core/query_logger.py` - Query logging and analytics
 - `backend/core/query_router.py` - Advanced query routing logic
 - `backend/core/response_service.py` - Response processing and enhancement
-- `backend/core/followup_service.py` - Intelligent follow-up question generation
+- `backend/core/followup_service.py` - Intelligent follow-up question generation with multiple service implementations
+- `backend/core/geolocation_service.py` - Location-based query processing
+- `backend/core/llm_utils.py` - Shared LLM utilities
+- `backend/core/constants.py` - Shared constants for consistent processing
 
 ### Configuration
 - `backend/config/data_sources.yaml` - Legacy manual configuration (fallback only)
@@ -206,25 +229,41 @@ INFO - Stored 8 documents in retrieval cache for key: 73ffbd0e3e3a5e87
 
 ## Current Development Status
 
-### Active Branch: `easter-egg`
-The project is currently on the `easter-egg` branch with ongoing frontend enhancements.
+### Active Branch: `illustration-updates`
+The project is currently on the `illustration-updates` branch with enhanced backend services and improved code quality.
 
 ### Recent API Additions
-- **Query Logging**: `/api/query-logs` - Admin interface for query analytics
+- **Query Logging**: `/api/query-logs` - Admin interface for query analytics with protected access
 - **Health Check**: `/health` - Service health monitoring
 - **Smart Query Testing**: `/api/smart-query/*` - Advanced query analysis endpoints
+- **Query Log Download**: Automated scripts for downloading and analyzing query logs
+- **Protected Endpoints**: Security validation for admin interfaces
 
 ### New Services & Modules
 - `query_logger.py` - Comprehensive query logging and analytics
-- `response_service.py` - Enhanced response processing pipeline  
-- `followup_service.py` - Intelligent follow-up question generation
+- `response_service.py` - Enhanced response processing pipeline
+- `followup_service.py` - Intelligent follow-up question generation with configurable services
+- `followup_service_optimized.py` - Optimized follow-up question service
+- `followup_service_llm.py` - LLM-powered follow-up question generation (disabled by default)
+- `followup_service_pregenerated.py` - Pre-generated follow-up question service
+- `followup_pregeneration.py` - Follow-up question pre-generation utilities
 - `query_router.py` - Advanced query routing with intent analysis
+- `geolocation_service.py` - Location-based services for user queries
+- `llm_utils.py` - Shared LLM utilities and helper functions
+- `constants.py` - Shared constants including stop words for query processing
 
 ### Testing & Coverage
 - **Coverage Reports**: HTML coverage reports generated in `htmlcov/` directory
 - **Test Markers**: `unit`, `integration`, `slow` for test organization
 - **Coverage Target**: Focuses on `backend/core` modules
 - **Async Testing**: Configured for async/await patterns with pytest-asyncio
+- **Test Files**: Comprehensive test coverage including:
+  - `test_followup_service.py` - Follow-up service testing
+  - `test_response_service.py` - Response service testing
+  - `test_illustration_service.py` - Illustration service with fuzzy matching tests
+  - `test_query_router.py` - Query routing logic tests
+  - `test_llm_chain.py` - LLM chain functionality tests
+  - `integration/test_*.py` - Integration tests for API endpoints and search functionality
 
 ## Environment Variables
 - `FORCE_REBUILD_DATA=true` - Force rebuild of vector indices on server startup (optional)
@@ -294,14 +333,40 @@ pre-commit install
 - ✅ **Smart filtering** - better relevance without over-processing
 - ✅ **File hash tracking** - only re-index changed files
 
-## Key Advantages of New System
+## Recent Improvements & Code Quality
+
+### Code Quality Enhancements
+- **Static Analysis**: Improved code robustness based on static analysis suggestions
+- **Error Handling**: Enhanced error handling across all services
+- **Code Deduplication**: Shared constants to eliminate duplication
+- **Performance Optimization**: Illustration data caching during initialization
+- **Security**: Protected admin endpoints with token authentication
+- **Testing**: Comprehensive test coverage with fuzzy matching validation
+
+### Service Architecture Improvements
+- **Modular Follow-up Services**: Multiple configurable follow-up question services
+- **Smart Caching**: Illustration and query result caching for performance
+- **Geolocation Integration**: Location-aware query processing
+- **LLM Utilities**: Shared utilities for consistent LLM interactions
+- **Query Analytics**: Advanced query logging and analysis capabilities
+
+### Development Experience
+- **Better Debugging**: Enhanced logging and error messages
+- **Code Organization**: Clear separation of concerns across services
+- **Configuration Management**: Environment-based service selection
+- **Documentation**: Comprehensive inline documentation and type hints
+
+## Key Advantages of Current System
 
 1. **Zero Configuration**: Drop files → Automatic indexing → Smart search
 2. **Intent Understanding**: Analyzes what users actually want
-3. **Better Accuracy**: Semantic similarity + intelligent filtering  
+3. **Better Accuracy**: Semantic similarity + intelligent filtering + fuzzy matching
 4. **Easier Maintenance**: No YAML files, no manual setup
 5. **Scalable**: Handles growing content automatically
-6. **Performance**: Caching, efficient vector operations, smart context limits
+6. **Performance**: Multi-level caching, efficient vector operations, smart context limits
 7. **Developer Friendly**: Add content without touching code
+8. **Robust Error Handling**: Graceful fallbacks and comprehensive error management
+9. **Security**: Protected admin interfaces with proper authentication
+10. **Analytics**: Query logging and analysis for continuous improvement
 
-The system now operates like a smart assistant that understands both your content and your users' intent!
+The system now operates like a smart assistant that understands both your content and your users' intent, with enterprise-grade reliability and performance!
