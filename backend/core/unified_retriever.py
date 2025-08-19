@@ -285,9 +285,7 @@ class UnifiedRetriever:
 
         # Perform the search asynchronously using executor
         # This prevents blocking the event loop with the synchronous ChromaDB call
-        docs_and_scores = await asyncio.to_thread(
-            self.vector_store.similarity_search_with_score, query, search_k
-        )
+        docs_and_scores = await asyncio.to_thread(self.vector_store.similarity_search_with_score, query, search_k)
 
         logger.info(f"Async raw search returned {len(docs_and_scores)} documents for query: '{query[:50]}...'")
         if docs_and_scores:
