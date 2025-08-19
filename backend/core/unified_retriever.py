@@ -581,7 +581,9 @@ class UnifiedRetriever:
 
             # If not enough results, broaden the search
             if len(results) < 4:
-                additional_results = await self.semantic_search_async(query, k=8 - len(results), score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD)
+                additional_results = await self.semantic_search_async(
+                    query, k=8 - len(results), score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD
+                )
                 results.extend(additional_results)
         else:
             # No specific type detected, do general search
