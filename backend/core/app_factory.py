@@ -9,6 +9,7 @@ This module handles:
 - Security middleware application
 """
 
+from typing import Optional, Callable, AsyncContextManager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -22,9 +23,12 @@ from .config import AppConfig
 limiter = Limiter(key_func=get_remote_address)
 
 
-def create_app() -> FastAPI:
+def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = None) -> FastAPI:
     """
     Create and configure the FastAPI application instance.
+
+    Args:
+        lifespan: Optional lifespan context manager for startup/shutdown events
 
     Returns:
         FastAPI: Configured FastAPI application
@@ -34,6 +38,7 @@ def create_app() -> FastAPI:
         title=AppConfig.APP_TITLE,
         description=AppConfig.APP_DESCRIPTION,
         version=AppConfig.APP_VERSION,
+        lifespan=lifespan,
     )
 
     # Setup rate limiter - use the centralized limiter instance

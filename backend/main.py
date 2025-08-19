@@ -8,10 +8,12 @@ This is the main entry point for the FastAPI application that:
 """
 
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
+from fastapi import FastAPI
 from langchain_core.language_models import BaseLanguageModel
 
 from .core.app_factory import create_app
@@ -93,26 +95,30 @@ followup_service = create_followup_service()
 
 query_logger = get_query_logger()
 
-# Create the FastAPI app
-app = create_app()
 
-# Store state in app.state for dependency injection
-app.state.app_initialized = app_initialized
-app.state.retrievers = retrievers
-app.state.illustration_service = illustration_service
-app.state.llm = llm
-app.state.query_router = query_router
-app.state.response_service = response_service
-app.state.followup_service = followup_service
-app.state.query_logger = query_logger
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup: Store state in app.state for dependency injection
+    app.state.app_initialized = app_initialized
+    app.state.retrievers = retrievers
+    app.state.illustration_service = illustration_service
+    app.state.llm = llm
+    app.state.query_router = query_router
+    app.state.response_service = response_service
+    app.state.followup_service = followup_service
+    app.state.query_logger = query_logger
 
+    yield
 
-# Ensure graceful shutdown of background resources (e.g., thread pools)
-@app.on_event("shutdown")
-async def _shutdown_cleanup():
+    # Shutdown: Ensure graceful shutdown of background resources (e.g., thread pools)
     svc = app.state.followup_service
     if hasattr(svc, "close"):
         try:
             svc.close()
         except Exception:
             logger.exception("Failed to close follow-up service cleanly")
+
+
+# Create the FastAPI app with lifespan context manager
+app = create_app(lifespan=lifespan)

@@ -20,12 +20,8 @@ from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.retrievers import BaseRetriever
 
-# Prefer the newer Chroma package
-try:
-    from langchain_chroma import Chroma
-except ImportError:
-    # Fallback to community version if new package not available
-    from langchain_community.vectorstores import Chroma
+# Use the newer langchain_chroma package
+from langchain_chroma import Chroma
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
@@ -203,7 +199,7 @@ class UnifiedRetriever:
         """Generate a cache key for retrieval results."""
         filter_str = ",".join(sorted(filter_content_types)) if filter_content_types else ""
         cache_input = f"{query}:{k}:{filter_str}:{score_threshold}"
-        return hashlib.md5(cache_input.encode()).hexdigest()[:16]
+        return hashlib.sha256(cache_input.encode()).hexdigest()[:16]
 
     def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
         """Check if a cache entry is still valid."""
@@ -230,7 +226,7 @@ class UnifiedRetriever:
     async def _get_embedding_async(self, text: str) -> List[float]:
         """Get embedding for text with caching and async support."""
         # Check embedding cache first
-        cache_key = hashlib.md5(text.encode()).hexdigest()[:16]
+        cache_key = hashlib.sha256(text.encode()).hexdigest()[:16]
 
         if cache_key in self._embedding_cache:
             logger.debug(f"Embedding cache hit for key: {cache_key}")
@@ -442,7 +438,7 @@ class UnifiedRetriever:
 
         if self.vector_store is None:
             raise ValueError("Vector store not initialized")
-        return self.vector_store.as_retriever(search_kwargs=search_kwargs)  # type: ignore[no-any-return]
+        return self.vector_store.as_retriever(search_kwargs=search_kwargs)
 
     def get_relevant_documents(
         self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None

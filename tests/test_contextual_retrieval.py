@@ -50,12 +50,17 @@ class TestContextualRetrieval:
         file_name = "about.md"
         file_type = ".md"
 
-        # Make LLM throw an exception to test fallback
-        self.mock_llm.invoke.side_effect = Exception("LLM error")
+        # Test that the fallback actually works by making the LLM fail
+        from unittest.mock import Mock, patch
 
-        context = generate_document_context(self.mock_llm, content, file_name, file_type)
+        with patch('backend.core.llm_utils.PromptTemplate') as mock_prompt:
+            mock_chain = Mock()
+            mock_chain.invoke.side_effect = Exception("LLM chain failed")
+            mock_prompt.return_value.__or__.return_value = mock_chain
 
-        assert context == "This is content from about.md, a .md document."
+            context = generate_document_context(Mock(), content, file_name, file_type)
+
+            assert context == "This is content from about.md, a .md document."
 
     def test_enhance_chunk_with_context(self):
         """Test that chunks are properly enhanced with document context."""

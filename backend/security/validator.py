@@ -29,7 +29,7 @@ class SecurityValidator:
         r"data\s*:\s*text/html",
         r"(prompt|system)\s+(injection|hack|override)",
         # Made these patterns more specific to avoid blocking legitimate content
-        r"act\s+as\s+if\s+you\s+are\s+(a\s+)?(different|another|new)",
+        r"act\s+as\s+if\s+you\s+are\s+(a\s+)?(different|another|new|chatgpt)",
         r"pretend\s+(you\s+are|to\s+be)\s+(a\s+)?(different|another|new)",
     ]
     ALLOWED_MODELS: List[Optional[str]] = ["claude", "gemini", None]
