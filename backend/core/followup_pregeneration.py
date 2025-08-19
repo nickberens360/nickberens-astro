@@ -308,7 +308,7 @@ Response:""",
         # Create a stable representation of the analysis
         # Include a digest of sample content to prevent stale cache hits
         samples_concat = "\n".join(analysis.get("content_samples", []))
-        samples_digest = hashlib.sha256(samples_concat.encode()).hexdigest()[:16] if samples_concat else "no_samples"
+        samples_digest = hashlib.sha256(samples_concat.encode()).hexdigest()[:32] if samples_concat else "no_samples"
         stable_repr = {
             "topics": sorted(analysis["topics"]),
             "content_types": sorted(analysis["content_types"]),
@@ -317,7 +317,7 @@ Response:""",
         }
 
         content_str = json.dumps(stable_repr, sort_keys=True)
-        return hashlib.sha256(content_str.encode()).hexdigest()[:16]
+        return hashlib.sha256(content_str.encode()).hexdigest()[:32]
 
     def _load_cache(self) -> Dict[str, Any]:
         """Load existing cache from file."""

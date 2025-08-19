@@ -25,6 +25,7 @@ from langchain_core.retrievers import BaseRetriever
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
+from .config import AppConfig
 from .llm_utils import extract_topics_with_llm, generate_document_context
 
 logger = logging.getLogger(__name__)
@@ -43,8 +44,8 @@ class UnifiedRetriever:
         # Enhanced caching system
         self._retrieval_cache: Dict[str, Dict[str, Any]] = {}  # Cache for retrieval results
         self._embedding_cache: Dict[str, List[float]] = {}  # Cache for embeddings
-        self._cache_ttl = 3600  # 1 hour cache TTL
-        self._max_cache_size = 1000  # Maximum cache entries
+        self._cache_ttl = AppConfig.CACHE_TTL  # Configurable cache TTL
+        self._max_cache_size = AppConfig.MAX_CACHE_SIZE  # Configurable max cache entries
 
         self._initialize_store()
 
@@ -199,7 +200,7 @@ class UnifiedRetriever:
         """Generate a cache key for retrieval results."""
         filter_str = ",".join(sorted(filter_content_types)) if filter_content_types else ""
         cache_input = f"{query}:{k}:{filter_str}:{score_threshold}"
-        return hashlib.sha256(cache_input.encode()).hexdigest()[:16]
+        return hashlib.sha256(cache_input.encode()).hexdigest()[:32]
 
     def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
         """Check if a cache entry is still valid."""
@@ -226,7 +227,7 @@ class UnifiedRetriever:
     async def _get_embedding_async(self, text: str) -> List[float]:
         """Get embedding for text with caching and async support."""
         # Check embedding cache first
-        cache_key = hashlib.sha256(text.encode()).hexdigest()[:16]
+        cache_key = hashlib.sha256(text.encode()).hexdigest()[:32]
 
         if cache_key in self._embedding_cache:
             logger.debug(f"Embedding cache hit for key: {cache_key}")
@@ -575,15 +576,15 @@ class UnifiedRetriever:
         if content_type_hints:
             # First try filtered search with appropriate threshold
             results = await self.semantic_search_async(
-                query, filter_content_types=content_type_hints, score_threshold=0.85
+                query, filter_content_types=content_type_hints, score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD
             )
 
             # If not enough results, broaden the search
             if len(results) < 4:
-                additional_results = await self.semantic_search_async(query, k=8 - len(results), score_threshold=0.85)
+                additional_results = await self.semantic_search_async(query, k=8 - len(results), score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD)
                 results.extend(additional_results)
         else:
             # No specific type detected, do general search
-            results = await self.semantic_search_async(query, score_threshold=0.85)
+            results = await self.semantic_search_async(query, score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD)
 
         return results

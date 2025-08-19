@@ -177,7 +177,7 @@ class OptimizedFollowUpService:
         # Use first 200 chars of response to avoid huge keys
         response_snippet = ai_response[:200]
         content = f"{user_question}|{response_snippet}"
-        return hashlib.sha256(content.encode()).hexdigest()[:16]
+        return hashlib.sha256(content.encode()).hexdigest()[:32]
 
     def _add_to_cache(self, key: str, followups: List[str]) -> None:
         """Add follow-ups to cache with size management."""

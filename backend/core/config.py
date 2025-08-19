@@ -112,6 +112,30 @@ class AppConfig:
         logger.warning("Invalid RETRIEVAL_SCORE_THRESHOLD; defaulting to 0.3")
         return 0.3
 
+    @classmethod
+    def get_cache_ttl(cls) -> int:
+        """Cache TTL in seconds."""
+        try:
+            val = int(os.getenv("CACHE_TTL", "3600"))
+            if val > 0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid CACHE_TTL; defaulting to 3600")
+        return 3600
+
+    @classmethod
+    def get_max_cache_size(cls) -> int:
+        """Maximum cache entries."""
+        try:
+            val = int(os.getenv("MAX_CACHE_SIZE", "1000"))
+            if val > 0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid MAX_CACHE_SIZE; defaulting to 1000")
+        return 1000
+
     @classproperty
     def ENABLE_SMART_MODEL_SELECTION(cls) -> bool:
         return cls.is_smart_model_selection_enabled()
@@ -119,6 +143,14 @@ class AppConfig:
     @classproperty
     def RETRIEVAL_SCORE_THRESHOLD(cls) -> float:
         return cls.get_retrieval_score_threshold()
+
+    @classproperty
+    def CACHE_TTL(cls) -> int:
+        return cls.get_cache_ttl()
+
+    @classproperty
+    def MAX_CACHE_SIZE(cls) -> int:
+        return cls.get_max_cache_size()
 
     # Server Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

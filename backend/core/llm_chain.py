@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 PRIMARY_LLM = AppConfig.PRIMARY_LLM
 GEMINI_MODEL = AppConfig.GEMINI_MODEL
 
+# Model name constants
+FAST_MODEL = "claude_haiku"
+QUALITY_MODEL = "claude"
+
 # Default configuration values (replacing legacy data_source_config)
 DEFAULT_PROMPTS = {
     "system_template": """You are Nick Berens' AI assistant. You help visitors learn about Nick's professional background, skills, experience, and interests. Use the following pieces of context to answer the question. If you don't know the answer based on the context provided, just say you don't have that information.
@@ -179,14 +183,14 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
     # Decision logic
     if is_simple and not is_complex and is_short:
         logger.debug(f"Using Claude Haiku for simple query: '{query[:50]}...'")
-        return "claude_haiku"
+        return FAST_MODEL
     elif is_complex:
         logger.debug(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
-        return "claude"
+        return QUALITY_MODEL
     else:
         # Default to Haiku for moderate queries (speed over perfection)
         logger.debug(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
-        return "claude_haiku"
+        return FAST_MODEL
 
 
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
@@ -337,7 +341,7 @@ class CacheManager:
         if not ENABLE_CACHING or not isinstance(user_input, str):
             return None
         normalized_input = re.sub(r"[^\w\s]", "", user_input.lower()).strip()
-        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()[:16]
+        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()[:32]
 
     @staticmethod
     def get_cached_response(cache_key: str) -> Optional[str]:
@@ -531,7 +535,7 @@ async def stream_with_fallback(
                 full_response_chunks = []
                 try:
                     # Stream LLM response in real-time while collecting for cache
-                    async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
+                    async for chunk in qa_chain.astream({"input": user_input, "input_documents": unique_docs}):
                         # Coerce various chunk types to text for streaming and caching
                         if hasattr(chunk, "content"):
                             text_piece = getattr(chunk, "content", "")
