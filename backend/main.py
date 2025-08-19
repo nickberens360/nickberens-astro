@@ -122,3 +122,17 @@ async def lifespan(app: FastAPI):
 
 # Create the FastAPI app with lifespan context manager
 app = create_app(lifespan=lifespan)
+
+# Ensure app.state has expected attributes for tests that patch them
+# These are set definitively during lifespan startup, but we predefine them here
+# so patch.object(app.state, ...) works even before startup runs.
+if not hasattr(app.state, "retrievers"):
+    app.state.retrievers = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "illustration_service"):
+    app.state.illustration_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "response_service"):
+    app.state.response_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "followup_service"):
+    app.state.followup_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "llm"):
+    app.state.llm = None  # type: ignore[attr-defined]

@@ -2,13 +2,14 @@
 Unit tests for contextual retrieval functionality.
 """
 
-import pytest
-from unittest.mock import Mock
 from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
 from langchain.docstore.document import Document
 
-from backend.core.unified_retriever import UnifiedRetriever
 from backend.core.llm_utils import generate_document_context
+from backend.core.unified_retriever import UnifiedRetriever
 
 
 class TestContextualRetrieval:
@@ -53,7 +54,7 @@ class TestContextualRetrieval:
         # Test that the fallback actually works by making the LLM fail
         from unittest.mock import Mock, patch
 
-        with patch('backend.core.llm_utils.PromptTemplate') as mock_prompt:
+        with patch("backend.core.llm_utils.PromptTemplate") as mock_prompt:
             mock_chain = Mock()
             mock_chain.invoke.side_effect = Exception("LLM chain failed")
             mock_prompt.return_value.__or__.return_value = mock_chain

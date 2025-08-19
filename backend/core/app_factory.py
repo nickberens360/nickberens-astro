@@ -15,13 +15,30 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from ..middleware.security import add_security_headers
 from .config import AppConfig
 
+
 # Initialize the limiter - centralized application-wide rate limiting
-limiter = Limiter(key_func=get_remote_address)
+# Use a test-safe key function that gracefully handles missing client info.
+def _safe_key_func(request):
+    try:
+        # Prefer Starlette client host if available
+        client = getattr(request, "client", None)
+        if client and getattr(client, "host", None):
+            return client.host
+        # Fall back to X-Forwarded-For when behind proxies
+        fwd = request.headers.get("x-forwarded-for") if hasattr(request, "headers") else None
+        if fwd:
+            return fwd.split(",")[0].strip()
+    except Exception:
+        pass
+    # Final fallback for test transports without client info
+    return "local-test"
+
+
+limiter = Limiter(key_func=_safe_key_func)
 
 
 def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = None) -> FastAPI:

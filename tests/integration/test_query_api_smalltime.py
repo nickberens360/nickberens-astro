@@ -1,6 +1,7 @@
-import pytest
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -24,8 +25,8 @@ def test_query_api_smalltime():
         # Make initialize_app_state return mock objects instead of doing heavy initialization
         mock_init.return_value = ({}, None, None)  # retrievers, illustration_service, llm
 
-        from backend.main import app
         from backend.dependencies import get_services
+        from backend.main import app
 
         # Mock illustration service to return a result for 'smalltime'
         mock_illustration_service = MagicMock()
