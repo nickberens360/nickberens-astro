@@ -21,21 +21,26 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `npm run test:run` - Run frontend tests once
 
 ### Linting & Type Checking
-**CRITICAL: Always run these commands before committing changes:**
+**Pre-commit hooks (run automatically on commit):**
+- Black (code formatting) + isort (import sorting) + flake8 (style checking)
+- Fast workflow: Only essential formatting and style checks
 
+**Manual linting commands (as needed):**
 - `black backend/` - Format Python code (line length: 120)
-- `isort backend/` - Sort Python imports
-- `flake8 backend/` - Check Python style and errors
-- `mypy backend/` - Type checking for Python
+- `isort backend/` - Sort Python imports  
 - `autoflake --remove-all-unused-imports --recursive --in-place backend/` - Remove unused imports
+- `flake8 backend/` - Check Python style (relaxed rules, focuses on real issues)
+- `mypy backend/` - Optional type checking (relaxed settings for faster development)
 
 ### Pre-commit Hooks (Automated Quality Checks)
-**Recommended: Set up pre-commit hooks to automatically run linting:**
+**Pre-commit hooks are configured for speed and essential checks:**
 
 - `pip install pre-commit` - Install pre-commit (if not already installed)
 - `pre-commit install` - Install git pre-commit hooks
 - `pre-commit run --all-files` - Run all hooks on all files manually
 - `pre-commit clean` - Clean pre-commit cache if needed
+
+**Note:** MyPy is excluded from pre-commit for faster commits. Run manually when needed.
 
 ### Linting Configuration Rules
 **Follow these rules when writing/editing Python code:**

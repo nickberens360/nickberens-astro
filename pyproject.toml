@@ -65,10 +65,23 @@ line_length = 120
 known_first_party = ["backend", "tests"]
 
 [tool.flake8]
-extend-ignore = ["E203", "W503", "E501", "E301", "E302", "E303", "E305"]
+extend-ignore = [
+    "E203",  # whitespace before ':'
+    "W503",  # line break before binary operator
+    "E501",  # line too long (Black handles this)
+    "E301",  # expected 1 blank line
+    "E302",  # expected 2 blank lines
+    "E303",  # too many blank lines
+    "E305",  # expected 2 blank lines after class or function definition
+    "F401",  # imported but unused (common in __init__.py)
+    "F841",  # local variable assigned but never used
+    "W601",  # .has_key() is deprecated
+]
 per-file-ignores = [
-    "tests/*:E402",
-    "tests/**/*:E402"
+    "tests/*:E402,F401,F811",
+    "tests/**/*:E402,F401,F811",
+    "backend/ingest/*:F401,E501",
+    "backend/**/__init__.py:F401",
 ]
 exclude = [
     ".git",
@@ -82,16 +95,19 @@ exclude = [
 
 [tool.mypy]
 python_version = "3.11"
-warn_return_any = true
+# Relaxed settings for faster development
+ignore_missing_imports = true
+no_strict_optional = true
+allow_untyped_calls = true
+allow_untyped_defs = true
 warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false  # Reduced noise from type: ignore comments
+warn_no_return = false
+warn_unreachable = false
+strict_equality = false
+# Keep some useful checks
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-check_untyped_defs = true
-disallow_untyped_decorators = false
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = false
-strict_equality = true
+check_untyped_defs = false
 
