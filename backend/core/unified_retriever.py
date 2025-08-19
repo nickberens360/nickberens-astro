@@ -240,8 +240,7 @@ class UnifiedRetriever:
                 logger.debug("Generated embedding using async method")
             elif hasattr(self.embeddings, "embed_query"):
                 # Fallback to sync embedding in executor to avoid blocking
-                loop = asyncio.get_event_loop()
-                embedding = await loop.run_in_executor(None, self.embeddings.embed_query, text)
+                embedding = await asyncio.to_thread(self.embeddings.embed_query, text)
                 logger.debug("Generated embedding using sync method in executor")
             else:
                 raise ValueError("Embeddings object has no embed_query method")
@@ -286,9 +285,8 @@ class UnifiedRetriever:
 
         # Perform the search asynchronously using executor
         # This prevents blocking the event loop with the synchronous ChromaDB call
-        loop = asyncio.get_event_loop()
-        docs_and_scores = await loop.run_in_executor(
-            None, self.vector_store.similarity_search_with_score, query, search_k
+        docs_and_scores = await asyncio.to_thread(
+            self.vector_store.similarity_search_with_score, query, search_k
         )
 
         logger.info(f"Async raw search returned {len(docs_and_scores)} documents for query: '{query[:50]}...'")
