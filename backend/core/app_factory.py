@@ -9,7 +9,8 @@ This module handles:
 - Security middleware application
 """
 
-from typing import Optional, Callable, AsyncContextManager
+from typing import AsyncContextManager, Callable, Optional
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler

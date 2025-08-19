@@ -17,11 +17,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.docstore.document import Document
-from langchain_core.language_models import BaseLanguageModel
-from langchain_core.retrievers import BaseRetriever
 
 # Use the newer langchain_chroma package
 from langchain_chroma import Chroma
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.retrievers import BaseRetriever
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc

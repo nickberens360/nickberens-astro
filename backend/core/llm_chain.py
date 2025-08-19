@@ -133,6 +133,11 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
     if preferred_model and preferred_model in [p["name"] for p in LLM_PROVIDERS]:
         return preferred_model
 
+    # Check if smart model selection is enabled
+    if not AppConfig.ENABLE_SMART_MODEL_SELECTION:
+        logger.debug("Smart model selection disabled, using primary LLM")
+        return PRIMARY_LLM
+
     # Analyze query complexity
     query_lower = query.lower()
 
@@ -173,21 +178,25 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
 
     # Decision logic
     if is_simple and not is_complex and is_short:
-        logger.info(f"Using Claude Haiku for simple query: '{query[:50]}...'")
+        logger.debug(f"Using Claude Haiku for simple query: '{query[:50]}...'")
         return "claude_haiku"
     elif is_complex:
-        logger.info(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
+        logger.debug(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
         return "claude"
     else:
         # Default to Haiku for moderate queries (speed over perfection)
-        logger.info(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
+        logger.debug(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
         return "claude_haiku"
 
 
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
     """Routes a user query to the unified retriever."""
-    if "unified" in retrievers:
-        logger.info(f"Using unified retriever for query: '{query}'")
+    # Check for both possible keys to handle both old and new conventions
+    if "_unified_retriever" in retrievers:
+        logger.debug(f"Using unified retriever for query: '{query}'")
+        return [retrievers["_unified_retriever"]]
+    elif "unified" in retrievers:
+        logger.debug(f"Using unified retriever for query: '{query}'")
         return [retrievers["unified"]]
     else:
         logger.error("Unified retriever not found in retrievers dictionary")
@@ -205,18 +214,28 @@ async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriev
     # The actual UnifiedRetriever instance is stored under "_unified_retriever"
     unified_retriever = retrievers.get("_unified_retriever")
     if unified_retriever and isinstance(unified_retriever, UnifiedRetriever):
-        logger.info("Using async unified retriever for enhanced performance")
+        logger.debug("Using async unified retriever for enhanced performance")
         try:
             # Use async auto-routing for better performance
             docs = await unified_retriever.auto_route_query_async(query)
-            logger.info(f"Async retrieval successful, got {len(docs)} documents")
+            logger.debug(f"Async retrieval successful, got {len(docs)} documents")
             return docs
         except Exception as e:
             logger.warning(f"Async retrieval failed, falling back to sync: {e}")
             # Fallback to sync method
             return unified_retriever.auto_route_query(query)
     else:
-        logger.warning("Unified retriever not available, using standard retrieval")
+        logger.warning("Unified retriever not available, falling back to route_query_to_retrievers")
+        # Fallback to route_query_to_retrievers instead of returning empty list
+        selected_retrievers = route_query_to_retrievers(query, retrievers)
+        if selected_retrievers:
+            # Use the first available retriever with async invoke
+            try:
+                docs = await selected_retrievers[0].ainvoke(query)
+                return docs if isinstance(docs, list) else [docs] if docs else []
+            except Exception as e:
+                logger.error(f"Fallback retrieval failed: {e}")
+                return []
         return []
 
 
@@ -411,14 +430,14 @@ async def stream_with_fallback(
 
     # 1) Cached FINAL response?
     if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
-        logger.info(f"🎯 CACHE HIT! Returning cached response for key: {cache_key}")
+        logger.debug(f"Cache hit: returning cached response for key: {cache_key}")
 
         async def cached_stream():
             yield cached_response
 
         return cached_stream(), "cached", metadata
     else:
-        logger.info(f"🔍 CACHE MISS for key: {cache_key}. Will generate new response.")
+        logger.debug(f"Cache miss for key: {cache_key}. Will generate new response.")
 
     # 2) Initialize LLMs
     try:
@@ -439,7 +458,7 @@ async def stream_with_fallback(
         # Try async retrieval first for better performance
         try:
             all_docs = await async_retrieve_documents(user_input, retrievers)
-            logger.info(f"Async retrieval successful, got {len(all_docs)} documents")
+            logger.debug(f"Async retrieval successful, got {len(all_docs)} documents")
 
             # Ensure we have documents before proceeding
             if not all_docs:
@@ -506,7 +525,7 @@ async def stream_with_fallback(
             qa_chain = create_qa_chain(llm_instance)
 
             # Create true progressive streaming with background caching
-            logger.info(f"🚀 STARTING PROGRESSIVE STREAMING for cache key: {cache_key}")
+            logger.debug(f"Starting progressive streaming for cache key: {cache_key}")
 
             async def progressive_streaming_with_caching():
                 full_response_chunks = []
@@ -535,8 +554,8 @@ async def stream_with_fallback(
                 finally:
                     # Background caching after streaming completes
                     if cache_key and full_response_chunks:
-                        logger.info(
-                            f"💾 BACKGROUND CACHING for key: {cache_key} ({len(full_response_chunks)} chunks, total length: {len(''.join(full_response_chunks))})"
+                        logger.debug(
+                            f"Background caching for key: {cache_key} ({len(full_response_chunks)} chunks, total length: {len(''.join(full_response_chunks))})"
                         )
                         CacheManager.cache_response(cache_key, full_response_chunks)
 
@@ -555,7 +574,7 @@ async def stream_with_fallback(
                             except Exception as e:
                                 logger.warning(f"Failed to update streaming response log: {e}")
                     elif cache_key:
-                        logger.warning(f"❌ Not caching response for key {cache_key} - no chunks collected")
+                        logger.debug(f"Not caching response for key {cache_key} - no chunks collected")
 
             logger.info(f"Successfully initialized progressive streaming with {llm_name.title()}.")
             metadata["rate_limit_status"] = rate_limit_tracker.get_status()

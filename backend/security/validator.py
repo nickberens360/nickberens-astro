@@ -32,7 +32,7 @@ class SecurityValidator:
         r"act\s+as\s+if\s+you\s+are\s+(a\s+)?(different|another|new|chatgpt)",
         r"pretend\s+(you\s+are|to\s+be)\s+(a\s+)?(different|another|new)",
     ]
-    ALLOWED_MODELS: List[Optional[str]] = ["claude", "gemini", None]
+    ALLOWED_MODELS: List[Optional[str]] = ["claude", "claude_haiku", "gemini", None]
 
     @classmethod
     def validate_query(cls, query, client_ip: str) -> tuple[bool, str]:

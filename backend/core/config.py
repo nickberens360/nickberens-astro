@@ -94,6 +94,32 @@ class AppConfig:
 
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
 
+    # Smart Model Selection Configuration
+    @classmethod
+    def is_smart_model_selection_enabled(cls) -> bool:
+        """Toggle smart model selection based on query complexity."""
+        return os.getenv("ENABLE_SMART_MODEL_SELECTION", "true").lower() == "true"
+
+    @classmethod
+    def get_retrieval_score_threshold(cls) -> float:
+        """Threshold for retrieval relevance scoring (0..1)."""
+        try:
+            val = float(os.getenv("RETRIEVAL_SCORE_THRESHOLD", "0.3"))
+            if 0.0 <= val <= 1.0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid RETRIEVAL_SCORE_THRESHOLD; defaulting to 0.3")
+        return 0.3
+
+    @classproperty
+    def ENABLE_SMART_MODEL_SELECTION(cls) -> bool:
+        return cls.is_smart_model_selection_enabled()
+
+    @classproperty
+    def RETRIEVAL_SCORE_THRESHOLD(cls) -> float:
+        return cls.get_retrieval_score_threshold()
+
     # Server Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     HOST = os.getenv("HOST", "0.0.0.0")
