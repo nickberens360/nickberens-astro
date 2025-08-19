@@ -68,7 +68,12 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         {"sender": msg.sender, "text": SecurityValidator.sanitize_input(msg.text)} for msg in query.chat_history
     ]
 
-    query_type, search_term = services["query_router"].route_query(sanitized_question.lower().strip())
+    # Validate query router service is available
+    query_router = services.get("query_router")
+    if query_router is None:
+        raise HTTPException(status_code=500, detail="Query router service is not initialized")
+
+    query_type, search_term = query_router.route_query(sanitized_question.lower().strip())
 
     # Handle image queries
     if query_type != QueryType.AI_TEXT_RESPONSE:

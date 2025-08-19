@@ -136,3 +136,5 @@ if not hasattr(app.state, "followup_service"):
     app.state.followup_service = None  # type: ignore[attr-defined]
 if not hasattr(app.state, "llm"):
     app.state.llm = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "query_router"):
+    app.state.query_router = None  # type: ignore[attr-defined]
