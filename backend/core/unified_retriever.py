@@ -27,7 +27,7 @@ except ImportError:
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
-from .llm_utils import extract_topics_with_llm
+from .llm_utils import extract_topics_with_llm, generate_document_context
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ class UnifiedRetriever:
         self.llm = llm
         self.persist_dir = persist_dir
         self.vector_store: Optional[Chroma] = None
+        self._document_contexts: Dict[str, str] = {}  # Cache for document contexts
         self._initialize_store()
 
     def _initialize_store(self):
@@ -139,6 +140,54 @@ class UnifiedRetriever:
 
         return metadata
 
+    def _generate_document_context(self, docs: List[Document], file_path: Path) -> str:
+        """
+        Generate or retrieve cached document context for contextual retrieval.
+
+        This creates a brief summary of the document that will be prepended to each chunk
+        to provide better context during retrieval.
+        """
+        file_key = str(file_path)
+
+        # Check cache first
+        if file_key in self._document_contexts:
+            return self._document_contexts[file_key]
+
+        # Combine all document content for context generation
+        full_content = "\n\n".join([doc.page_content for doc in docs])
+
+        # Generate context using LLM
+        context = generate_document_context(self.llm, full_content, file_path.name, file_path.suffix)
+
+        # Cache the context
+        self._document_contexts[file_key] = context
+        logger.info(f"Generated document context for {file_path.name}: {context[:100]}...")
+
+        return context
+
+    def _enhance_chunk_with_context(self, chunk: Document, document_context: str) -> Document:
+        """
+        Enhance a chunk by prepending document context for better retrieval.
+
+        This is a key part of contextual retrieval - each chunk gets the document's
+        context prepended so it can be found more accurately during search.
+        """
+        # Create enhanced content with document context
+        enhanced_content = f"DOCUMENT CONTEXT: {document_context}\n\nCONTENT: {chunk.page_content}"
+
+        # Create new document with enhanced content but preserve all metadata
+        enhanced_chunk = Document(
+            page_content=enhanced_content,
+            metadata={
+                **chunk.metadata,
+                "has_document_context": True,
+                "original_content_length": len(chunk.page_content),
+                "document_context": document_context,
+            },
+        )
+
+        return enhanced_chunk
+
     def _should_index_file(self, file_path: Path) -> bool:
         """Check if a file should be indexed based on its name and type."""
         # Skip system/config files that aren't content
@@ -200,22 +249,31 @@ class UnifiedRetriever:
                         logger.info(f"No documents loaded from {file_path}")
                         continue
 
+                    # Generate document context for contextual retrieval
+                    document_context = self._generate_document_context(docs, file_path)
+
                     # Use appropriate splitter based on file type
                     splitter = splitter_for_ext(file_path.suffix)
                     chunks = splitter.split_documents(docs)
 
-                    # Add rich metadata to each chunk
+                    # Enhanced chunks with document context and metadata
+                    enhanced_chunks = []
                     for chunk in chunks:
+                        # Add rich metadata to each chunk
                         base_metadata = self._extract_content_metadata(chunk, file_path)
                         chunk.metadata.update(base_metadata)
 
+                        # Enhance chunk with document context for better retrieval
+                        enhanced_chunk = self._enhance_chunk_with_context(chunk, document_context)
+                        enhanced_chunks.append(enhanced_chunk)
+
                     # Add to vector store
-                    if chunks and self.vector_store is not None:
-                        self.vector_store.add_documents(chunks)
+                    if enhanced_chunks and self.vector_store is not None:
+                        self.vector_store.add_documents(enhanced_chunks)
                         files_indexed += 1
-                        total_chunks += len(chunks)
+                        total_chunks += len(enhanced_chunks)
                         indexed_files[str(file_path)] = file_hash
-                        logger.info(f"Indexed {file_path.name}: {len(chunks)} chunks")
+                        logger.info(f"Indexed {file_path.name}: {len(enhanced_chunks)} contextual chunks")
 
                 except Exception as e:
                     logger.error(f"Failed to index {file_path}: {e}")

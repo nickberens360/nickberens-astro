@@ -28,8 +28,9 @@ class SecurityValidator:
         r"javascript\s*:",
         r"data\s*:\s*text/html",
         r"(prompt|system)\s+(injection|hack|override)",
-        r"act\s+as\s+if\s+you\s+are",
-        r"pretend\s+(you\s+are|to\s+be)",
+        # Made these patterns more specific to avoid blocking legitimate content
+        r"act\s+as\s+if\s+you\s+are\s+(a\s+)?(different|another|new)",
+        r"pretend\s+(you\s+are|to\s+be)\s+(a\s+)?(different|another|new)",
     ]
     ALLOWED_MODELS: List[Optional[str]] = ["claude", "gemini", None]
 
