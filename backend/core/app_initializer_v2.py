@@ -45,8 +45,8 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     logs_dir.mkdir(exist_ok=True)
 
     # Initialize LLMs - Claude Haiku for fast indexing, and a configurable Claude model (AppConfig.CLAUDE_MODEL) for user queries
-    indexing_llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1)
-    user_query_llm = ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1)
+    indexing_llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
+    user_query_llm = ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)

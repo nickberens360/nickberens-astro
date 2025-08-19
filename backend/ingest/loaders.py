@@ -22,7 +22,7 @@ try:
     _USE_NEW_UNSTRUCTURED = True
 except ImportError:
     # Fallback to deprecated version if new package not available
-    from langchain_community.document_loaders import UnstructuredFileLoader as UnstructuredLoader
+    from langchain_community.document_loaders import UnstructuredFileLoader as UnstructuredLoader  # type: ignore[assignment]
 
     _USE_NEW_UNSTRUCTURED = False
 
@@ -104,9 +104,9 @@ def load_doc(path: Path) -> List[Document]:
         if ext in (".txt",):
             try:
                 if _USE_NEW_UNSTRUCTURED:
-                    return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
+                    return UnstructuredLoader(file_path=str(path)).load()
                 else:
-                    return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+                    return UnstructuredLoader(str(path)).load()
             except Exception:
                 return []
         if ext in (".csv",):
@@ -125,9 +125,9 @@ def load_doc(path: Path) -> List[Document]:
     # Fallback: treat as plain text
     try:
         if _USE_NEW_UNSTRUCTURED:
-            return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
+            return UnstructuredLoader(file_path=str(path)).load()
         else:
-            return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+            return UnstructuredLoader(str(path)).load()
     except Exception:
         # If UnstructuredLoader fails, return empty list
         return []

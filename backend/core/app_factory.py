@@ -44,7 +44,7 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
 
     # Setup rate limiter - use the centralized limiter instance
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
     # Add security middleware
     app.middleware("http")(add_security_headers)
