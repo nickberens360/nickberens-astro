@@ -54,6 +54,12 @@ LLM_PROVIDERS = [
         "init_kwargs": {"model": CLAUDE_MODEL, "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
     },
     {
+        "name": "claude_haiku",
+        "class": ChatAnthropic,
+        "model": "claude-3-haiku-20240307",
+        "init_kwargs": {"model": "claude-3-haiku-20240307", "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
+    },
+    {
         "name": "gemini",
         "class": ChatGoogleGenerativeAI,
         "model": GEMINI_MODEL,
@@ -116,6 +122,68 @@ _response_cache: Dict[str, Dict[str, Any]] = {}
 _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 
 
+def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = None) -> str:
+    """
+    Select the optimal LLM model based on query complexity.
+
+    Claude Haiku: Fast, cheap, good for simple factual queries
+    Claude Sonnet: Slower, expensive, better for complex reasoning
+    """
+    # If user explicitly prefers a model, respect that
+    if preferred_model and preferred_model in [p["name"] for p in LLM_PROVIDERS]:
+        return preferred_model
+
+    # Analyze query complexity
+    query_lower = query.lower()
+
+    # Simple query indicators (good for Haiku - 30-60% faster)
+    simple_indicators = [
+        "what programming languages",
+        "what technologies",
+        "what skills",
+        "list",
+        "show me",
+        "tell me about",
+        "experience with",
+        "know about",
+        "background in",
+    ]
+
+    # Complex query indicators (need Sonnet for quality)
+    complex_indicators = [
+        "how does",
+        "why",
+        "explain",
+        "approach to",
+        "philosophy",
+        "compare",
+        "analyze",
+        "strategy",
+        "architecture",
+        "design pattern",
+        "best practices",
+    ]
+
+    # Check for simple queries
+    is_simple = any(indicator in query_lower for indicator in simple_indicators)
+    is_complex = any(indicator in query_lower for indicator in complex_indicators)
+
+    # Short queries are usually simple
+    is_short = len(query.split()) <= 10
+
+    # Decision logic
+    if is_simple and not is_complex and is_short:
+        logger.info(f"Using Claude Haiku for simple query: '{query[:50]}...'")
+        return "claude_haiku"
+    elif is_complex:
+        logger.info(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
+        return "claude"
+    else:
+        # Default to Haiku for moderate queries (speed over perfection)
+        logger.info(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
+        return "claude_haiku"
+
+
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
     """Routes a user query to the unified retriever."""
     if "unified" in retrievers:
@@ -123,6 +191,32 @@ def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) 
         return [retrievers["unified"]]
     else:
         logger.error("Unified retriever not found in retrievers dictionary")
+        return []
+
+
+async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriever]) -> List[Document]:
+    """
+    Async document retrieval with enhanced performance optimizations.
+
+    This function tries to use async retrieval methods when available for better performance.
+    """
+    from .unified_retriever import UnifiedRetriever
+
+    # The actual UnifiedRetriever instance is stored under "_unified_retriever"
+    unified_retriever = retrievers.get("_unified_retriever")
+    if unified_retriever and isinstance(unified_retriever, UnifiedRetriever):
+        logger.info("Using async unified retriever for enhanced performance")
+        try:
+            # Use async auto-routing for better performance
+            docs = await unified_retriever.auto_route_query_async(query)
+            logger.info(f"Async retrieval successful, got {len(docs)} documents")
+            return docs
+        except Exception as e:
+            logger.warning(f"Async retrieval failed, falling back to sync: {e}")
+            # Fallback to sync method
+            return unified_retriever.auto_route_query(query)
+    else:
+        logger.warning("Unified retriever not available, using standard retrieval")
         return []
 
 
@@ -317,11 +411,14 @@ async def stream_with_fallback(
 
     # 1) Cached FINAL response?
     if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
+        logger.info(f"🎯 CACHE HIT! Returning cached response for key: {cache_key}")
 
         async def cached_stream():
             yield cached_response
 
         return cached_stream(), "cached", metadata
+    else:
+        logger.info(f"🔍 CACHE MISS for key: {cache_key}. Will generate new response.")
 
     # 2) Initialize LLMs
     try:
@@ -338,52 +435,69 @@ async def stream_with_fallback(
     unique_docs = CacheManager.get_cached_retrieval(cache_key) if cache_key else None
     if unique_docs is None:
         logger.info(f"Retrieval cache miss for key: {cache_key}. Performing vector search...")
-        selected_retrievers = route_query_to_retrievers(user_input, retrievers)
 
-        # History-aware?
-        if chat_history and (reformulation_llm := llms.get("claude") or llms.get("gemini")):
-            try:
-                history_prompt = create_history_aware_prompt()
-                history_aware_retrievers = [
-                    create_history_aware_retriever(reformulation_llm, r, history_prompt) for r in selected_retrievers
-                ]
-                tasks = [
-                    r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers
-                ]
-                logger.info("Using history-aware retrievers.")
-            except Exception as e:
-                logger.warning(f"Failed to create history-aware retrievers: {e}. Falling back to regular retrieval.")
+        # Try async retrieval first for better performance
+        try:
+            all_docs = await async_retrieve_documents(user_input, retrievers)
+            logger.info(f"Async retrieval successful, got {len(all_docs)} documents")
+
+            # Ensure we have documents before proceeding
+            if not all_docs:
+                logger.warning("Async retrieval returned no documents, falling back to sync")
+                raise ValueError("Empty async results")
+        except Exception as async_error:
+            logger.warning(f"Async retrieval failed: {async_error}. Falling back to standard retrieval...")
+
+            # Fallback to standard retrieval method
+            selected_retrievers = route_query_to_retrievers(user_input, retrievers)
+
+            # History-aware?
+            if chat_history and (reformulation_llm := llms.get("claude") or llms.get("gemini")):
+                try:
+                    history_prompt = create_history_aware_prompt()
+                    history_aware_retrievers = [
+                        create_history_aware_retriever(reformulation_llm, r, history_prompt)
+                        for r in selected_retrievers
+                    ]
+                    tasks = [
+                        r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers
+                    ]
+                    logger.info("Using history-aware retrievers.")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to create history-aware retrievers: {e}. Falling back to regular retrieval."
+                    )
+                    tasks = [r.ainvoke(user_input) for r in selected_retrievers]
+            else:
                 tasks = [r.ainvoke(user_input) for r in selected_retrievers]
-        else:
-            tasks = [r.ainvoke(user_input) for r in selected_retrievers]
 
-        if tasks:
-            retrieval_results = await asyncio.gather(*tasks, return_exceptions=True)
-            all_docs: List[Document] = []
-            for result in retrieval_results:
-                if isinstance(result, Exception):
-                    logger.error(f"Error during document retrieval: {result}")
-                elif result:
-                    all_docs.extend(cast(List[Document], result))
+            if tasks:
+                retrieval_results = await asyncio.gather(*tasks, return_exceptions=True)
+                all_docs = []
+                for result in retrieval_results:
+                    if isinstance(result, Exception):
+                        logger.error(f"Error during document retrieval: {result}")
+                    elif result:
+                        all_docs.extend(cast(List[Document], result))
+            else:
+                all_docs = []
+                logger.warning("No retrievers were selected for the query, context will be empty.")
 
-            # Deduplicate by content + metadata
-            unique_docs = list(
-                {
-                    hashlib.sha256(
-                        f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
-                    ).hexdigest(): doc
-                    for doc in all_docs
-                }.values()
-            )
-        else:
-            unique_docs = []
-            logger.warning("No retrievers were selected for the query, context will be empty.")
+        # Deduplicate by content + metadata
+        unique_docs = list(
+            {
+                hashlib.sha256(
+                    f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
+                ).hexdigest(): doc
+                for doc in all_docs
+            }.values()
+        )
 
         if cache_key:
             CacheManager.cache_retrieval(cache_key, unique_docs)
 
-    # 4) Generation with fallback order
-    llm_order = _determine_llm_order(preferred_model, llms)
+    # 4) Generation with smart model selection and fallback order
+    llm_order = _determine_llm_order(preferred_model, llms, user_input)
     for llm_name, llm_instance in llm_order:
         if not llm_instance:
             continue
@@ -391,49 +505,61 @@ async def stream_with_fallback(
             logger.info(f"Attempting to stream response using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
 
-            async def llm_stream():
-                full_response_chunks: List[str] = []
-                async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
-                    # Coerce various chunk types to text for streaming and caching
-                    if hasattr(chunk, "content"):
-                        text_piece = getattr(chunk, "content", "")
-                    elif isinstance(chunk, str):
-                        text_piece = chunk
-                    elif isinstance(chunk, dict):
-                        text_piece = str(chunk.get("answer") or chunk.get("output") or chunk.get("content") or "")
-                    else:
-                        text_piece = str(chunk)
+            # Create true progressive streaming with background caching
+            logger.info(f"🚀 STARTING PROGRESSIVE STREAMING for cache key: {cache_key}")
 
-                    if not isinstance(text_piece, str):
-                        text_piece = str(text_piece)
+            async def progressive_streaming_with_caching():
+                full_response_chunks = []
+                try:
+                    # Stream LLM response in real-time while collecting for cache
+                    async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
+                        # Coerce various chunk types to text for streaming and caching
+                        if hasattr(chunk, "content"):
+                            text_piece = getattr(chunk, "content", "")
+                        elif isinstance(chunk, str):
+                            text_piece = chunk
+                        elif isinstance(chunk, dict):
+                            text_piece = str(chunk.get("answer") or chunk.get("output") or chunk.get("content") or "")
+                        else:
+                            text_piece = str(chunk)
 
-                    if text_piece:
-                        yield text_piece
-                        full_response_chunks.append(text_piece)
+                        if not isinstance(text_piece, str):
+                            text_piece = str(text_piece)
 
-                if cache_key:
-                    CacheManager.cache_response(cache_key, full_response_chunks)
+                        if text_piece:
+                            # Yield immediately for progressive streaming
+                            yield text_piece
+                            # Collect for caching
+                            full_response_chunks.append(text_piece)
 
-                    # Update streaming response log with actual content
-                    if cache_key and client_ip and question and full_response_chunks:
-                        try:
-                            complete_response = "".join(full_response_chunks)
-                            query_logger = get_query_logger()
-                            query_logger.update_streaming_response(
-                                cache_key=cache_key,
-                                client_ip=client_ip,
-                                question=question,
-                                actual_response=complete_response,
-                                request_id=request_id,
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to update streaming response log: {e}")
+                finally:
+                    # Background caching after streaming completes
+                    if cache_key and full_response_chunks:
+                        logger.info(
+                            f"💾 BACKGROUND CACHING for key: {cache_key} ({len(full_response_chunks)} chunks, total length: {len(''.join(full_response_chunks))})"
+                        )
+                        CacheManager.cache_response(cache_key, full_response_chunks)
 
-            # Create and return the stream - validation logic removed to avoid duplicate API calls
-            stream = llm_stream()
-            logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
+                        # Update streaming response log with actual content
+                        if client_ip and question:
+                            try:
+                                complete_response = "".join(full_response_chunks)
+                                query_logger = get_query_logger()
+                                query_logger.update_streaming_response(
+                                    cache_key=cache_key,
+                                    client_ip=client_ip,
+                                    question=question,
+                                    actual_response=complete_response,
+                                    request_id=request_id,
+                                )
+                            except Exception as e:
+                                logger.warning(f"Failed to update streaming response log: {e}")
+                    elif cache_key:
+                        logger.warning(f"❌ Not caching response for key {cache_key} - no chunks collected")
+
+            logger.info(f"Successfully initialized progressive streaming with {llm_name.title()}.")
             metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-            return stream, llm_name, metadata
+            return progressive_streaming_with_caching(), llm_name, metadata
 
         except Exception as e:
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}")
@@ -455,11 +581,21 @@ async def stream_with_fallback(
 def _determine_llm_order(
     preferred_model: Optional[str],
     llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]],
+    query: Optional[str] = None,
 ) -> List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
-    """Determine the order in which to try LLMs based on preference and availability."""
+    """Determine the order in which to try LLMs based on preference, query complexity, and availability."""
     provider_names = [str(p["name"]) for p in LLM_PROVIDERS]
-    if preferred_model and preferred_model in provider_names and llms.get(preferred_model):
+
+    # Smart model selection based on query complexity
+    if query and not preferred_model:
+        optimal_model = select_optimal_model_for_query(query)
+        if optimal_model in provider_names and llms.get(optimal_model):
+            # Put optimal model first
+            provider_names.insert(0, provider_names.pop(provider_names.index(optimal_model)))
+    elif preferred_model and preferred_model in provider_names and llms.get(preferred_model):
+        # User preference overrides smart selection
         provider_names.insert(0, provider_names.pop(provider_names.index(preferred_model)))
+
     llm_order: List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]] = []
     for name in provider_names:
         instance = llms.get(name)
