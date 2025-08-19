@@ -118,6 +118,12 @@ class TestQueryRouter:
             ("find some fantasy art", "fantasy"),
             ("get all the character drawings", "character"),
             ("display any landscape pictures", "landscape"),
+            # Test new ignore words "more" and "details"
+            ("tell me more about the don't illustration", "don't"),
+            ("show me more details about dragon images", "dragon"),
+            ("more details about cosmic art", "cosmic"),
+            ("tell me more about snake hug illustration", "snake hug"),
+            ("give me more details for fantasy art", "fantasy"),
         ]
 
         for query, expected_term in test_cases:
@@ -249,6 +255,9 @@ class TestQueryRouter:
         assert "images of" in self.router.specific_image_keywords
         assert "show me" in self.router.show_me_patterns
         assert "the" in self.router.ignore_words
+        assert "more" in self.router.ignore_words
+        assert "details" in self.router.ignore_words
+        assert "give" in self.router.ignore_words
 
     @pytest.mark.unit
     def test_ignore_words_separated_correctly(self):
@@ -260,9 +269,9 @@ class TestQueryRouter:
         # Test that these words are actually filtered out during search term extraction
         test_cases = [
             ("show me describe fantasy images", "fantasy"),  # "describe" should be filtered
-            ("find images for dragons", "dragons"),          # "for" should be filtered
-            ("show me images for fantasy", "fantasy"),       # "for" should be filtered
-            ("describe the art images", "art"),              # "describe" should be filtered
+            ("find images for dragons", "dragons"),  # "for" should be filtered
+            ("show me images for fantasy", "fantasy"),  # "for" should be filtered
+            ("describe the art images", "art"),  # "describe" should be filtered
         ]
 
         for query, expected_term in test_cases:
