@@ -12,14 +12,13 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
-from .config import AppConfig
 from .llm_utils import extract_topics_with_llm
 
 logger = logging.getLogger(__name__)

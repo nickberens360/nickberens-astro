@@ -355,30 +355,6 @@ class PreGeneratedFollowUpService:
             if pattern in question_lower:
                 return False
 
-        # Patterns that indicate answerable questions (factual, based on available content)
-        good_patterns = [
-            "show me",
-            "tell me about",
-            "what's nick's experience",
-            "what technologies",
-            "what skills",
-            "what projects",
-            "what's in nick's",
-            "what frameworks",
-            "what libraries",
-            "how can i contact",
-            "what makes nick",
-            "what's nick's background",
-            "what does nick work with",
-            "what has nick built",
-            "what's nick worked on",
-        ]
-
-        # If it matches a known good pattern, it's likely answerable
-        for pattern in good_patterns:
-            if pattern in question_lower:
-                return True
-
         # Default to true if no clear problematic patterns detected
         return True
 

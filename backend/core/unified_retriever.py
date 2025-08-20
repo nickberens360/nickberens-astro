@@ -3,7 +3,7 @@ Unified retriever orchestrator using component-based architecture.
 
 This module provides a clean facade over the specialized components:
 - ContentIndexer: File processing and metadata extraction
-- SemanticSearcher: Vector store operations and similarity search  
+- SemanticSearcher: Vector store operations and similarity search
 - ContentRouter: Query routing and content type detection
 
 The UnifiedRetriever now acts as a coordinator/facade that maintains backward compatibility
@@ -18,7 +18,6 @@ from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.retrievers import BaseRetriever
 
-from .config import AppConfig
 from .content_indexer import ContentIndexer
 from .content_router import ContentRouter
 from .semantic_searcher import SemanticSearcher

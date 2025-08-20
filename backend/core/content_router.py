@@ -2,7 +2,7 @@
 Content router component for intelligent query routing and content type detection.
 
 This module provides focused functionality for:
-- Query intent analysis and content type detection  
+- Query intent analysis and content type detection
 - Smart routing based on query patterns
 - Adaptive search strategy selection
 - Content type hint extraction

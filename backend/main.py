@@ -99,25 +99,39 @@ query_logger = get_query_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
+    logger = logging.getLogger(__name__)
+
     # Startup: Store state in app.state for dependency injection
-    app.state.app_initialized = app_initialized
-    app.state.retrievers = retrievers
-    app.state.illustration_service = illustration_service
-    app.state.llm = llm
-    app.state.query_router = query_router
-    app.state.response_service = response_service
-    app.state.followup_service = followup_service
-    app.state.query_logger = query_logger
+    try:
+        logger.info("Starting application initialization...")
+        app.state.app_initialized = app_initialized
+        app.state.retrievers = retrievers
+        app.state.illustration_service = illustration_service
+        app.state.llm = llm
+        app.state.query_router = query_router
+        app.state.response_service = response_service
+        app.state.followup_service = followup_service
+        app.state.query_logger = query_logger
+        logger.info("Application startup completed successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
 
     yield
 
     # Shutdown: Ensure graceful shutdown of background resources (e.g., thread pools)
-    svc = app.state.followup_service
-    if hasattr(svc, "close"):
-        try:
-            svc.close()
-        except Exception:
-            logger.exception("Failed to close follow-up service cleanly")
+    try:
+        logger.info("Starting application shutdown...")
+        svc = app.state.followup_service
+        if hasattr(svc, "close"):
+            try:
+                svc.close()
+                logger.debug("Follow-up service closed successfully")
+            except Exception:
+                logger.exception("Failed to close follow-up service cleanly")
+        logger.info("Application shutdown completed successfully")
+    except Exception as e:
+        logger.error(f"Error during application shutdown: {e}")
 
 
 # Create the FastAPI app with lifespan context manager

@@ -242,7 +242,7 @@ async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriev
         logger.debug("Using async unified retriever for enhanced performance")
         try:
             # Use async auto-routing for better performance
-            docs = await unified_retriever.auto_route_query_async(query)
+            docs = await asyncio.to_thread(unified_retriever.auto_route_query, query)
             logger.debug(f"Async retrieval successful, got {len(docs)} documents")
             return docs
         except Exception as e:
