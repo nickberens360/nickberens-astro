@@ -33,6 +33,17 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def get_success_message_template(found_images: bool, query_type: QueryType, fell_back_to_all: bool) -> str:
+    """Get appropriate success message template based on query results."""
+    if found_images:
+        if query_type == QueryType.ALL_IMAGES or fell_back_to_all:
+            return "Here are some of my illustrations:"
+        else:
+            return "Here are the illustrations I found for '{}':"
+    else:
+        return "Sorry, no illustrations found for '{}'."
+
+
 @router.post("/query")
 @limiter.limit(AppConfig.RATE_LIMIT)
 async def query_endpoint(request: Request, query: Query, services: dict = Depends(get_services)):
@@ -96,13 +107,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                     fell_back_to_all = True
 
         # Update the response message based on whether we found specific results or fell back to all
-        if found_images:
-            if query_type == QueryType.ALL_IMAGES or fell_back_to_all:
-                success_message_template = "Here are some of my illustrations:"
-            else:
-                success_message_template = "Here are the illustrations I found for '{}':"
-        else:
-            success_message_template = "Sorry, no illustrations found for '{}'."
+        success_message_template = get_success_message_template(bool(found_images), query_type, fell_back_to_all)
 
         followup_service = services.get("followup_service")
         followup_questions = (

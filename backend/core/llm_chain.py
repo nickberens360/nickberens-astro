@@ -341,7 +341,7 @@ class CacheManager:
         if not ENABLE_CACHING or not isinstance(user_input, str):
             return None
         normalized_input = re.sub(r"[^\w\s]", "", user_input.lower()).strip()
-        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()[:32]
+        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()
 
     @staticmethod
     def get_cached_response(cache_key: str) -> Optional[str]:

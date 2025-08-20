@@ -370,16 +370,25 @@ class UnifiedRetriever:
         return Document(page_content=enhanced_content, metadata=enhanced_metadata)
 
     def _generate_document_context(self, documents: List[Document], file_path: Path) -> str:
-        """Generate or retrieve cached document context."""
+        """Generate or retrieve cached document context using LLM."""
+        from .llm_utils import generate_document_context
+
         file_key = str(file_path)
 
         # Return cached context if available
         if file_key in self._document_contexts:
             return self._document_contexts[file_key]
 
-        # Generate new context (simplified for testing)
-        # In practice, this would use the LLM to generate context
-        context = f"This is content from {file_path.name}, a {file_path.suffix} document."
+        # Use document content to generate meaningful context
+        if documents:
+            # Combine content from all documents for this file
+            combined_content = " ".join(doc.page_content for doc in documents)
+            context = generate_document_context(
+                self.llm, combined_content, file_path.name, file_path.suffix.lstrip(".")
+            )
+        else:
+            # Fallback for empty documents
+            context = f"This is content from {file_path.name}, a {file_path.suffix} document."
 
         # Cache the context
         self._document_contexts[file_key] = context

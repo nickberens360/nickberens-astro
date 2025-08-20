@@ -45,9 +45,9 @@ class TestLLMChain:
         user_input = "What is Nick's experience?"
         cache_key = get_cache_key(user_input)
 
-        # Should return a 32-character hex string
+        # Should return a 64-character hex string (full SHA256)
         assert cache_key is not None
-        assert len(cache_key) == 32
+        assert len(cache_key) == 64
         assert all(c in "0123456789abcdef" for c in cache_key)
 
         # Same input should produce same key

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 from langchain.schema import Document
 from langchain_core.language_models import BaseLanguageModel
 
+from .config import AppConfig
 from .llm_utils import analyze_query_with_llm
 from .unified_retriever import UnifiedRetriever
 
@@ -50,7 +51,7 @@ class SmartQueryHandler:
         self._query_cache[cache_key] = processed_docs
 
         # Limit cache size
-        if len(self._query_cache) > 100:
+        if len(self._query_cache) > AppConfig.MAX_CACHE_SIZE:
             # Remove oldest entries
             oldest_key = next(iter(self._query_cache))
             del self._query_cache[oldest_key]
@@ -85,7 +86,7 @@ class SmartQueryHandler:
         self._query_cache[cache_key] = processed_docs
 
         # Limit cache size
-        if len(self._query_cache) > 100:
+        if len(self._query_cache) > AppConfig.MAX_CACHE_SIZE:
             # Remove oldest entries
             oldest_key = next(iter(self._query_cache))
             del self._query_cache[oldest_key]
