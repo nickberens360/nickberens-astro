@@ -1,0 +1,251 @@
+"""
+Content indexer component for handling file processing and metadata extraction.
+
+This module provides focused functionality for:
+- File discovery and hash computation
+- Content metadata extraction using LLM and heuristics
+- Directory indexing with incremental updates
+- File filtering and validation
+"""
+
+import hashlib
+import json
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+from langchain.docstore.document import Document
+from langchain_core.language_models import BaseLanguageModel
+
+from ..ingest.chunking import splitter_for_ext
+from ..ingest.loaders import load_doc
+from .config import AppConfig
+from .llm_utils import extract_topics_with_llm
+
+logger = logging.getLogger(__name__)
+
+
+class ContentIndexer:
+    """Handles content discovery, processing, and metadata extraction for indexing."""
+
+    def __init__(self, llm: BaseLanguageModel, persist_dir: str = "backend/.unified_chroma"):
+        self.llm = llm
+        self.persist_dir = persist_dir
+        self._document_contexts: Dict[str, str] = {}  # Cache for document contexts
+
+    def compute_file_hash(self, file_path: Path) -> str:
+        """Compute SHA256 hash of a file."""
+        sha256_hash = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+
+    def extract_content_metadata(self, doc: Document, file_path: Path) -> Dict:
+        """Extract metadata using LLM topics plus deterministic fallbacks.
+
+        Heuristics ensure key content remains discoverable even if LLM topic extraction fails.
+        """
+        content = doc.page_content
+
+        # Use LLM to extract topics for dynamic content tagging (may fallback to ["general"])
+        content_types = extract_topics_with_llm(self.llm, content)
+
+        # Deterministic heuristics
+        fname = file_path.name.lower()
+        text_lc = content.lower()
+        heuristic_tags: List[str] = []
+
+        # Filename-based tags
+        if "about" in fname:
+            heuristic_tags.append("about")
+        if "resume" in fname:
+            heuristic_tags.extend(["experience", "skills"])
+        if "project" in fname:
+            heuristic_tags.append("project")
+        if "illustration" in fname or "illustrations" in fname:
+            heuristic_tags.append("creative")
+
+        # Content keyword-based tags (covers queries like "artistic inspiration")
+        creative_keywords = [
+            "art",
+            "artistic",
+            "inspiration",
+            "illustration",
+            "illustrations",
+            "design",
+            "creative",
+            "cartoon",
+            "cartoons",
+        ]
+        if any(k in text_lc for k in creative_keywords):
+            heuristic_tags.append("creative")
+
+        about_keywords = ["about", "background", "bio", "who is nick", "who am i"]
+        if any(k in text_lc for k in about_keywords):
+            heuristic_tags.append("about")
+
+        # Special handling for illustration JSON files
+        is_illustration_data = file_path.name == "illustrations.json"
+        illustration_file = None
+
+        if is_illustration_data:
+            heuristic_tags.append("creative")  # Ensure creative tag for illustrations
+            # Extract file name from JSON content for frontend display
+            try:
+                if '"file"' in doc.page_content:
+                    data = json.loads(doc.page_content)
+                    if isinstance(data, dict) and "file" in data:
+                        illustration_file = data.get("file")
+                        logger.info(f"Found illustration file: {illustration_file}")
+            except json.JSONDecodeError:
+                logger.warning(f"Could not parse JSON to find illustration file in doc from {file_path.name}")
+
+        # Merge, dedupe, normalize
+        merged_types = sorted({t.strip().lower() for t in (content_types + heuristic_tags) if t and t.strip()})
+
+        metadata = {
+            "file_path": str(file_path),
+            "file_name": file_path.name,
+            "file_type": file_path.suffix.lower(),
+            "content_types": ",".join(merged_types),
+            "content_length": len(content),
+            "has_code": "```" in doc.page_content or "function" in text_lc,
+            "is_illustration_data": is_illustration_data,
+        }
+
+        # Add illustration file path for frontend display
+        if illustration_file:
+            metadata["illustration_file"] = illustration_file
+            metadata["display_path"] = f"/illustrations/{illustration_file}"
+
+        return metadata
+
+    def should_index_file(self, file_path: Path) -> bool:
+        """Check if a file should be indexed based on its name and type."""
+        # Skip system/config files that aren't content
+        skip_files = {"robots.txt", "sitemap.xml", ".htaccess", "favicon.ico", "manifest.json"}
+
+        if file_path.name.lower() in skip_files:
+            logger.debug(f"Skipping system file: {file_path}")
+            return False
+
+        return True
+
+    def should_skip_file(
+        self, file_path: Path, file_hash: str, indexed_files: Dict[str, str], force_reindex: bool
+    ) -> bool:
+        """Check if a file should be skipped during indexing."""
+        return str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash and not force_reindex
+
+    def process_directory(self, directory: str, force_reindex: bool = False) -> Tuple[List[Document], int, int]:
+        """
+        Process all files in a directory and return documents ready for indexing.
+
+        Returns:
+            Tuple of (documents, files_processed, total_chunks)
+        """
+        base_path = Path(directory)
+        if not base_path.exists():
+            logger.warning(f"Directory {directory} does not exist")
+            return [], 0, 0
+
+        # Track indexed files
+        index_metadata_path = Path(self.persist_dir) / "index_metadata.json"
+        indexed_files = {}
+
+        if index_metadata_path.exists() and not force_reindex:
+            with open(index_metadata_path, "r") as f:
+                indexed_files = json.load(f)
+
+        all_documents = []
+        files_processed = 0
+        total_chunks = 0
+
+        # Discover all files
+        for file_path in base_path.rglob("*"):
+            if file_path.is_file() and not file_path.name.startswith(".") and self.should_index_file(file_path):
+                logger.info(f"Processing file: {file_path}")
+                file_hash = self.compute_file_hash(file_path)
+
+                # Skip if already indexed and unchanged
+                should_skip = self.should_skip_file(file_path, file_hash, indexed_files, force_reindex)
+                if should_skip:
+                    logger.info(f"Skipping {file_path} - already indexed (force_reindex={force_reindex})")
+                    continue
+                else:
+                    logger.info(f"Will process {file_path} (force_reindex={force_reindex})")
+
+                # Load and process the document
+                try:
+                    docs = load_doc(file_path)
+                    if not docs:
+                        logger.info(f"No documents loaded from {file_path}")
+                        continue
+
+                    # Use appropriate splitter based on file type
+                    splitter = splitter_for_ext(file_path.suffix)
+                    chunks = splitter.split_documents(docs)
+
+                    # Add rich metadata to each chunk
+                    for chunk in chunks:
+                        base_metadata = self.extract_content_metadata(chunk, file_path)
+                        chunk.metadata.update(base_metadata)
+
+                    all_documents.extend(chunks)
+                    files_processed += 1
+                    total_chunks += len(chunks)
+                    indexed_files[str(file_path)] = file_hash
+                    logger.info(f"Processed {file_path.name}: {len(chunks)} chunks")
+
+                except Exception as e:
+                    logger.error(f"Failed to process {file_path}: {e}")
+
+        # Save index metadata
+        Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
+        with open(index_metadata_path, "w") as f:
+            json.dump(indexed_files, f)
+
+        return all_documents, files_processed, total_chunks
+
+    def generate_document_context(self, documents: List[Document], file_path: Path) -> str:
+        """Generate or retrieve cached document context using LLM."""
+        from .llm_utils import generate_document_context
+
+        file_key = str(file_path)
+
+        # Return cached context if available
+        if file_key in self._document_contexts:
+            return self._document_contexts[file_key]
+
+        # Use document content to generate meaningful context
+        if documents:
+            # Combine content from all documents for this file
+            combined_content = " ".join(doc.page_content for doc in documents)
+            context = generate_document_context(
+                self.llm, combined_content, file_path.name, file_path.suffix.lstrip(".")
+            )
+        else:
+            # Fallback for empty documents
+            context = f"This is content from {file_path.name}, a {file_path.suffix} document."
+
+        # Cache the context
+        self._document_contexts[file_key] = context
+
+        return context
+
+    def enhance_chunk_with_context(self, chunk: Document, document_context: str) -> Document:
+        """Enhance a document chunk with contextual information."""
+        enhanced_content = f"DOCUMENT CONTEXT: {document_context}\n\nCONTENT: {chunk.page_content}"
+
+        # Create new metadata with context info
+        enhanced_metadata = chunk.metadata.copy()
+        enhanced_metadata.update(
+            {
+                "has_document_context": True,
+                "original_content_length": len(chunk.page_content),
+                "document_context": document_context,
+            }
+        )
+
+        return Document(page_content=enhanced_content, metadata=enhanced_metadata)
