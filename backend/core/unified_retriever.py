@@ -262,6 +262,18 @@ class UnifiedRetriever:
     ) -> List[Document]:
         """
         Perform semantic search with optional filtering and scoring.
+
+        Args:
+            query: Search query text
+            k: Number of results to return
+            filter_content_types: Optional list of content types to filter by
+            score_threshold: Distance threshold for filtering results
+                           - ChromaDB returns DISTANCE scores (lower = better similarity)
+                           - Typical range: 0.0-2.0 with L2 distance
+                           - Use 0.0 for no filtering, 0.5-1.0 for good matches, 1.0+ for broader results
+
+        Returns:
+            List of Document objects ranked by similarity (best matches first)
         """
         import logging
 
@@ -282,17 +294,18 @@ class UnifiedRetriever:
                 f"{max(score for _, score in docs_and_scores):.3f}"
             )
 
-        # Filter by similarity score threshold
-        # IMPORTANT: ChromaDB's similarity_search_with_score returns DISTANCE scores (lower = better)
-        # We need to handle two cases:
-        # 1. Illustration search uses threshold=0.0 expecting to get ALL results
-        # 2. Regular content search uses thresholds like 0.4-0.5 for filtering
+        # Filter by distance score threshold
+        # IMPORTANT: ChromaDB's similarity_search_with_score returns DISTANCE scores where:
+        # - LOWER scores = HIGHER similarity (closer vectors in embedding space)
+        # - Typical L2 distance range: 0.0-2.0 (with normalization)
+        # - Good matches usually have scores < 1.0
+        # - We use <= because we want documents with distance AT OR BELOW the threshold
 
         if score_threshold == 0.0:
-            # Special case for illustration search: threshold=0.0 means "get all results"
+            # Special case: threshold=0.0 means "get all results" (no filtering)
             filtered_docs = [doc for doc, score in docs_and_scores]
         else:
-            # Normal case: filter by distance (lower scores = better matches)
+            # Normal case: filter by distance threshold (keep documents with distance <= threshold)
             filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
         logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
@@ -348,9 +361,9 @@ class UnifiedRetriever:
 
         # Perform search with intelligent filtering
         if content_type_hints:
-            # Use more generous thresholds to ensure good coverage
-            # For distance scores, higher threshold = more inclusive
-            initial_threshold = 1.0  # Very inclusive threshold for primary search
+            # Use generous distance thresholds to ensure good coverage
+            # Since ChromaDB returns distance scores (lower=better), higher threshold = more inclusive
+            initial_threshold = 1.0  # Include documents with distance <= 1.0 (good to fair matches)
             k_value = 12  # Get more results to ensure comprehensive coverage
 
             # First try filtered search
@@ -358,12 +371,12 @@ class UnifiedRetriever:
                 query, k=k_value, filter_content_types=content_type_hints, score_threshold=initial_threshold
             )
 
-            # If not enough results, broaden the search further
+            # If not enough results, broaden the search with even higher threshold
             if len(results) < 6:
                 additional_results = self.semantic_search(query, k=12 - len(results), score_threshold=1.2)
                 results.extend(additional_results)
         else:
-            # No specific type detected, do general search with generous threshold
+            # No specific type detected, do general search with generous distance threshold
             results = self.semantic_search(query, k=12, score_threshold=1.0)
 
         return results

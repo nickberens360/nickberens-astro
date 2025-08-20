@@ -64,7 +64,7 @@ class SmartIllustrationService:
                 query="illustration art design creative",
                 k=200,  # High enough to get all illustrations
                 filter_content_types=["creative"],
-                score_threshold=0.0,  # Get all results (corrected for similarity scores where higher=better)
+                score_threshold=0.0,  # Get all results (no distance filtering)
             )
 
             logger.debug(f"Semantic search returned {len(docs)} documents")
@@ -134,7 +134,7 @@ class SmartIllustrationService:
                 query=f"{cleaned_term} illustration art creative character",
                 k=top_k * 3,  # Get more docs to allow better filtering
                 filter_content_types=["creative"],
-                score_threshold=0.0,  # Get all results (corrected for similarity scores where higher=better)
+                score_threshold=0.0,  # Get all results (no distance filtering)
             )
 
             illustrations: List[Dict[str, str]] = []
