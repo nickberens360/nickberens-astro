@@ -108,11 +108,10 @@ class GeolocationService {
 
       if (!locLine) throw new Error('No location data');
 
-      const parts = locLine.split('=');
-      if (parts.length < 2 || !parts[1]) {
+      const countryCode = locLine.split('=', 2)[1]?.trim().toUpperCase();
+      if (!countryCode || countryCode.length !== 2) {
         throw new Error('Malformed location data from Cloudflare');
       }
-      const countryCode = parts[1];
 
       return {
         countryCode: countryCode,

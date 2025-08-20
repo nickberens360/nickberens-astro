@@ -102,7 +102,14 @@ class AppConfig:
 
     @classmethod
     def get_retrieval_score_threshold(cls) -> float:
-        """Threshold for retrieval relevance scoring (0..1)."""
+        """
+        Threshold for retrieval relevance scoring (0..1).
+
+        IMPORTANT: This is a SIMILARITY score threshold where HIGHER values = BETTER matches.
+        - 0.3 = keep documents with similarity >= 30% (loose matching)
+        - 0.7 = keep documents with similarity >= 70% (strict matching)
+        - Documents with scores ABOVE this threshold are kept
+        """
         try:
             val = float(os.getenv("RETRIEVAL_SCORE_THRESHOLD", "0.3"))
             if 0.0 <= val <= 1.0:

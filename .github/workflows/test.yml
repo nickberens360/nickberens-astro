@@ -103,13 +103,8 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # Run only unit tests first (they should be fast and reliable)
-          pytest tests/ -m unit -v --tb=short || \
-            pytest tests/ -v --tb=short || \
-            echo "::warning::Tests failed - Please fix failing tests"
-
-          # If unit tests pass, you can uncomment this to run all tests:
-          # pytest tests/ -v --tb=short
+          # Run only unit tests first (they should be fast and reliable); fall back to all tests if no unit marker or selection fails
+          pytest tests/ -m unit -v --tb=short || pytest tests/ -v --tb=short
 
   # Summary job - Always runs, provides clear status
   summary:

@@ -77,7 +77,6 @@ class QueryRouter:
         ]
 
         self.ignore_words = {
-            "nick's",
             "show",
             "me",
             "tell",
@@ -149,7 +148,6 @@ class QueryRouter:
 
         self.all_image_phrases = [
             "show me all illustrations",
-            "show me nick's illustrations",
             "show all illustrations",
             "show me your illustrations",
             "show me all your art",

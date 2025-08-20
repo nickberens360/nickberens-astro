@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
 
 from ..middleware.security import add_security_headers
 from .config import AppConfig
@@ -22,7 +23,7 @@ from .config import AppConfig
 
 # Initialize the limiter - centralized application-wide rate limiting
 # Use a test-safe key function that gracefully handles missing client info.
-def _safe_key_func(request):
+def _safe_key_func(request: Request) -> str:
     try:
         # Prefer Starlette client host if available
         client = getattr(request, "client", None)

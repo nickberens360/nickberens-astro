@@ -64,7 +64,7 @@ class SmartIllustrationService:
                 query="illustration art design creative",
                 k=200,  # High enough to get all illustrations
                 filter_content_types=["creative"],
-                score_threshold=2.0,  # Generous threshold to include all illustrations
+                score_threshold=0.0,  # Get all results (corrected for similarity scores where higher=better)
             )
 
             logger.debug(f"Semantic search returned {len(docs)} documents")
@@ -125,12 +125,16 @@ class SmartIllustrationService:
         logger.info(f"Smart illustration search for: '{cleaned_term}' (original: '{search_term}')")
 
         try:
+            # Special case: if asking for "all", use get_all method
+            if cleaned_term.lower() == "all":
+                return self.get_all()
+
             # Use semantic search with creative content type filter and search term
             docs = self.unified_retriever.semantic_search(
                 query=f"{cleaned_term} illustration art creative character",
                 k=top_k * 3,  # Get more docs to allow better filtering
                 filter_content_types=["creative"],
-                score_threshold=2.0,  # Same generous threshold as get_all()
+                score_threshold=0.0,  # Get all results (corrected for similarity scores where higher=better)
             )
 
             illustrations: List[Dict[str, str]] = []
@@ -242,6 +246,12 @@ class SmartIllustrationService:
                 tokens.append(tok_norm)
 
         cleaned = " ".join(tokens) if tokens else s
+
+        # Special case: if we're left with just possessive forms like "nick's", "nicks", etc.
+        # treat it as a request for all illustrations
+        if cleaned.lower() in ["nick's", "nicks", "nick", "my", "his", "her"]:
+            cleaned = "all"
+
         return " ".join(cleaned.split())
 
     def _is_fuzzy_match(self, search: str, content: str, threshold: float = 0.7) -> bool:

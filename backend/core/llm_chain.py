@@ -532,11 +532,11 @@ async def stream_with_fallback(
             # Create true progressive streaming with background caching
             logger.debug(f"Starting progressive streaming for cache key: {cache_key}")
 
-            async def progressive_streaming_with_caching():
+            async def progressive_streaming_with_caching(qa=qa_chain, model_name=llm_name):
                 full_response_chunks = []
                 try:
                     # Stream LLM response in real-time while collecting for cache
-                    async for chunk in qa_chain.astream({"input": user_input, "input_documents": unique_docs}):
+                    async for chunk in qa.astream({"input": user_input, "context": unique_docs}):
                         # Coerce various chunk types to text for streaming and caching
                         if hasattr(chunk, "content"):
                             text_piece = getattr(chunk, "content", "")

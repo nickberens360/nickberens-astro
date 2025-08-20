@@ -83,8 +83,15 @@ async def run_simple_benchmark():
             # Check content type matching
             found_types = set()
             for doc in docs:
-                if "content_types" in doc.metadata:
-                    found_types.update(doc.metadata["content_types"].split(","))
+                # Support both "content_types" (CSV string) and "content_type" (list or str)
+                if "content_types" in doc.metadata and isinstance(doc.metadata["content_types"], str):
+                    found_types.update(t.strip() for t in doc.metadata["content_types"].split(",") if t.strip())
+                elif "content_type" in doc.metadata:
+                    ct = doc.metadata["content_type"]
+                    if isinstance(ct, list):
+                        found_types.update(ct)
+                    elif isinstance(ct, str):
+                        found_types.add(ct)
 
             expected_types = set(query["expected_types"])
             type_match_ratio = len(found_types.intersection(expected_types)) / len(expected_types)

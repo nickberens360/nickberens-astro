@@ -8,26 +8,26 @@ This module provides a single, intelligent retriever that automatically:
 - Maintains performance through smart caching
 """
 
-import asyncio
 import hashlib
-import heapq
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.docstore.document import Document
-
-# Use the newer langchain_chroma package
-from langchain_chroma import Chroma
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.retrievers import BaseRetriever
 
+# Prefer the newer Chroma package
+try:
+    from langchain_chroma import Chroma
+except ImportError:
+    # Fallback to community version if new package not available
+    from langchain_community.vectorstores import Chroma
+
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
-from .config import AppConfig
-from .llm_utils import extract_topics_with_llm, generate_document_context
+from .llm_utils import extract_topics_with_llm
 
 logger = logging.getLogger(__name__)
 
@@ -40,14 +40,6 @@ class UnifiedRetriever:
         self.llm = llm
         self.persist_dir = persist_dir
         self.vector_store: Optional[Chroma] = None
-        self._document_contexts: Dict[str, str] = {}  # Cache for document contexts
-
-        # Enhanced caching system
-        self._retrieval_cache: Dict[str, Dict[str, Any]] = {}  # Cache for retrieval results
-        self._embedding_cache: Dict[str, List[float]] = {}  # Cache for embeddings
-        self._cache_ttl = AppConfig.CACHE_TTL  # Configurable cache TTL
-        self._max_cache_size = AppConfig.MAX_CACHE_SIZE  # Configurable max cache entries
-
         self._initialize_store()
 
     def _initialize_store(self):
@@ -147,185 +139,6 @@ class UnifiedRetriever:
 
         return metadata
 
-    def _generate_document_context(self, docs: List[Document], file_path: Path) -> str:
-        """
-        Generate or retrieve cached document context for contextual retrieval.
-
-        This creates a brief summary of the document that will be prepended to each chunk
-        to provide better context during retrieval.
-        """
-        file_key = str(file_path)
-
-        # Check cache first
-        if file_key in self._document_contexts:
-            return self._document_contexts[file_key]
-
-        # Combine all document content for context generation
-        full_content = "\n\n".join([doc.page_content for doc in docs])
-
-        # Generate context using LLM
-        context = generate_document_context(self.llm, full_content, file_path.name, file_path.suffix)
-
-        # Cache the context
-        self._document_contexts[file_key] = context
-        logger.info(f"Generated document context for {file_path.name}: {context[:100]}...")
-
-        return context
-
-    def _enhance_chunk_with_context(self, chunk: Document, document_context: str) -> Document:
-        """
-        Enhance a chunk by prepending document context for better retrieval.
-
-        This is a key part of contextual retrieval - each chunk gets the document's
-        context prepended so it can be found more accurately during search.
-        """
-        # Create enhanced content with document context
-        enhanced_content = f"DOCUMENT CONTEXT: {document_context}\n\nCONTENT: {chunk.page_content}"
-
-        # Create new document with enhanced content but preserve all metadata
-        enhanced_chunk = Document(
-            page_content=enhanced_content,
-            metadata={
-                **chunk.metadata,
-                "has_document_context": True,
-                "original_content_length": len(chunk.page_content),
-                "document_context": document_context,
-            },
-        )
-
-        return enhanced_chunk
-
-    def _generate_cache_key(
-        self, query: str, k: int, filter_content_types: Optional[List[str]], score_threshold: float
-    ) -> str:
-        """Generate a cache key for retrieval results."""
-        filter_str = ",".join(sorted(filter_content_types)) if filter_content_types else ""
-        cache_input = f"{query}:{k}:{filter_str}:{score_threshold}"
-        return hashlib.sha256(cache_input.encode()).hexdigest()[:32]
-
-    def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
-        """Check if a cache entry is still valid."""
-        return bool(time.time() - cache_entry["timestamp"] < self._cache_ttl)
-
-    def _cleanup_cache(self, cache_dict: Dict[str, Any]) -> None:
-        """Remove expired entries and enforce size limits."""
-        current_time = time.time()
-
-        # Remove expired entries
-        expired_keys = [key for key, value in cache_dict.items() if current_time - value["timestamp"] > self._cache_ttl]
-        for key in expired_keys:
-            del cache_dict[key]
-
-        # Enforce size limits (LRU eviction)
-        if len(cache_dict) > self._max_cache_size:
-            # Use heapq for more efficient eviction (O(N log k) vs O(N log N))
-            # Remove extra entries for breathing room to avoid frequent eviction
-            EVICTION_BUFFER = 10
-            items_to_remove = len(cache_dict) - self._max_cache_size + EVICTION_BUFFER
-
-            # Find the oldest items efficiently
-            keys_to_evict = heapq.nsmallest(items_to_remove, cache_dict, key=lambda k: cache_dict[k]["timestamp"])
-
-            for key in keys_to_evict:
-                del cache_dict[key]
-
-    async def _get_embedding_async(self, text: str) -> List[float]:
-        """Get embedding for text with caching and async support."""
-        # Check embedding cache first
-        cache_key = hashlib.sha256(text.encode()).hexdigest()[:32]
-
-        if cache_key in self._embedding_cache:
-            logger.debug(f"Embedding cache hit for key: {cache_key}")
-            return self._embedding_cache[cache_key]
-
-        # Generate embedding asynchronously if possible
-        try:
-            if hasattr(self.embeddings, "aembed_query"):
-                # Use async embedding if available
-                embedding = await self.embeddings.aembed_query(text)
-                logger.debug("Generated embedding using async method")
-            elif hasattr(self.embeddings, "embed_query"):
-                # Fallback to sync embedding in executor to avoid blocking
-                embedding = await asyncio.to_thread(self.embeddings.embed_query, text)
-                logger.debug("Generated embedding using sync method in executor")
-            else:
-                raise ValueError("Embeddings object has no embed_query method")
-
-            # Cache the result
-            self._cleanup_cache(self._embedding_cache)
-            self._embedding_cache[cache_key] = embedding
-            logger.debug(f"Cached embedding for key: {cache_key}")
-
-            return list(embedding) if embedding else []
-
-        except Exception as e:
-            logger.error(f"Error generating embedding: {e}")
-            raise
-
-    async def semantic_search_async(
-        self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None, score_threshold: float = 0.5
-    ) -> List[Document]:
-        """
-        Async version of semantic search with enhanced caching.
-        """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        # Generate cache key for retrieval results
-        cache_key = self._generate_cache_key(query, k, filter_content_types, score_threshold)
-
-        # Check retrieval cache first
-        if cache_key in self._retrieval_cache and self._is_cache_valid(self._retrieval_cache[cache_key]):
-            logger.info(f"Retrieval cache hit for key: {cache_key}")
-            cached_docs = self._retrieval_cache[cache_key]["documents"]
-            return list(cached_docs) if isinstance(cached_docs, list) else []
-
-        logger.debug(f"Retrieval cache miss for key: {cache_key}")
-
-        # Get more results than needed for filtering and reranking
-        search_k = k * 3
-
-        if self.vector_store is None:
-            raise ValueError("Vector store not initialized")
-
-        # Perform the search asynchronously using executor
-        # This prevents blocking the event loop with the synchronous ChromaDB call
-        docs_and_scores = await asyncio.to_thread(self.vector_store.similarity_search_with_score, query, search_k)
-
-        logger.info(f"Async raw search returned {len(docs_and_scores)} documents for query: '{query[:50]}...'")
-        if docs_and_scores:
-            score_min = min(score for _, score in docs_and_scores)
-            score_max = max(score for _, score in docs_and_scores)
-            logger.info(f"Async score range: {score_min:.3f} - {score_max:.3f} (threshold: {score_threshold})")
-
-        # Filter by similarity score threshold
-        filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
-        logger.info(
-            f"Async: After score threshold ({score_threshold}): {len(filtered_docs)} documents from {len(docs_and_scores)} raw results"
-        )
-
-        # Apply content type filtering if specified
-        if filter_content_types:
-            content_filtered_docs = []
-            for doc in filtered_docs:
-                if "content_types" in doc.metadata:
-                    doc_content_types = doc.metadata["content_types"].split(",")
-                    if any(content_type.strip() in filter_content_types for content_type in doc_content_types):
-                        content_filtered_docs.append(doc)
-            filtered_docs = content_filtered_docs
-            logger.debug(f"After content type filtering: {len(filtered_docs)} documents")
-
-        # Return top k results
-        final_docs = filtered_docs[:k]
-
-        # Cache the results
-        self._cleanup_cache(self._retrieval_cache)
-        self._retrieval_cache[cache_key] = {"documents": final_docs, "timestamp": time.time()}
-        logger.debug(f"Cached {len(final_docs)} documents for key: {cache_key}")
-
-        return final_docs
-
     def _should_index_file(self, file_path: Path) -> bool:
         """Check if a file should be indexed based on its name and type."""
         # Skip system/config files that aren't content
@@ -387,31 +200,22 @@ class UnifiedRetriever:
                         logger.info(f"No documents loaded from {file_path}")
                         continue
 
-                    # Generate document context for contextual retrieval
-                    document_context = self._generate_document_context(docs, file_path)
-
                     # Use appropriate splitter based on file type
                     splitter = splitter_for_ext(file_path.suffix)
                     chunks = splitter.split_documents(docs)
 
-                    # Enhanced chunks with document context and metadata
-                    enhanced_chunks = []
+                    # Add rich metadata to each chunk
                     for chunk in chunks:
-                        # Add rich metadata to each chunk
                         base_metadata = self._extract_content_metadata(chunk, file_path)
                         chunk.metadata.update(base_metadata)
 
-                        # Enhance chunk with document context for better retrieval
-                        enhanced_chunk = self._enhance_chunk_with_context(chunk, document_context)
-                        enhanced_chunks.append(enhanced_chunk)
-
                     # Add to vector store
-                    if enhanced_chunks and self.vector_store is not None:
-                        self.vector_store.add_documents(enhanced_chunks)
+                    if chunks and self.vector_store is not None:
+                        self.vector_store.add_documents(chunks)
                         files_indexed += 1
-                        total_chunks += len(enhanced_chunks)
+                        total_chunks += len(chunks)
                         indexed_files[str(file_path)] = file_hash
-                        logger.info(f"Indexed {file_path.name}: {len(enhanced_chunks)} contextual chunks")
+                        logger.info(f"Indexed {file_path.name}: {len(chunks)} chunks")
 
                 except Exception as e:
                     logger.error(f"Failed to index {file_path}: {e}")
@@ -440,7 +244,7 @@ class UnifiedRetriever:
 
         if self.vector_store is None:
             raise ValueError("Vector store not initialized")
-        return self.vector_store.as_retriever(search_kwargs=search_kwargs)
+        return self.vector_store.as_retriever(search_kwargs=search_kwargs)  # type: ignore[no-any-return]
 
     def get_relevant_documents(
         self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None
@@ -476,9 +280,11 @@ class UnifiedRetriever:
                 f"Score range: {min(score for _, score in docs_and_scores):.3f} - {max(score for _, score in docs_and_scores):.3f}"
             )
 
-        # Filter by similarity score threshold (lower score = more similar in distance-based metrics)
-        # Using <= because ChromaDB returns distance scores where lower values mean higher similarity
-        filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
+        # Filter by similarity score threshold
+        # IMPORTANT: ChromaDB returns SIMILARITY scores (0.0-1.0 where HIGHER=BETTER)
+        # This is NOT distance scores where lower=better
+        # Example: score 0.8 > threshold 0.3 means "keep this document"
+        filtered_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
         logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
         # Apply content type filtering if specified
@@ -543,55 +349,5 @@ class UnifiedRetriever:
         else:
             # No specific type detected, do general search
             results = self.semantic_search(query, score_threshold=0.5)
-
-        return results
-
-    async def auto_route_query_async(self, query: str) -> List[Document]:
-        """
-        Async version of auto_route_query with enhanced performance.
-        """
-        query_lower = query.lower()
-
-        # Intelligent content type detection based on query
-        content_type_hints = []
-
-        if any(term in query_lower for term in ["experience", "work", "job", "role", "company", "resume", "cv"]):
-            content_type_hints.append("experience")
-
-        if any(term in query_lower for term in ["skill", "technology", "expertise", "know"]):
-            content_type_hints.append("skills")
-
-        if any(term in query_lower for term in ["about", "who", "background", "interest"]):
-            content_type_hints.append("about")
-
-        # Creative/inspiration queries
-        if any(
-            term in query_lower for term in ["illustration", "art", "design", "creative", "inspiration", "artistic"]
-        ):
-            content_type_hints.append("creative")
-        if "inspiration" in query_lower or "artistic" in query_lower:
-            # Inspiration often overlaps with bio/about content
-            content_type_hints.append("about")
-
-        if any(term in query_lower for term in ["project", "built", "created", "developed"]):
-            content_type_hints.append("project")
-
-        # Perform async search with intelligent filtering
-        # Using a more lenient threshold for async to match typical ChromaDB scores
-        if content_type_hints:
-            # First try filtered search with appropriate threshold
-            results = await self.semantic_search_async(
-                query, filter_content_types=content_type_hints, score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD
-            )
-
-            # If not enough results, broaden the search
-            if len(results) < 4:
-                additional_results = await self.semantic_search_async(
-                    query, k=8 - len(results), score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD
-                )
-                results.extend(additional_results)
-        else:
-            # No specific type detected, do general search
-            results = await self.semantic_search_async(query, score_threshold=AppConfig.RETRIEVAL_SCORE_THRESHOLD)
 
         return results

@@ -45,3 +45,16 @@ exclude = [
     "build",
     "dist",
 ]
+
+[tool.mypy]
+python_version = "3.11"
+# Relaxed settings for faster development
+ignore_missing_imports = true
+follow_imports = "silent"
+show_error_codes = true
+warn_unused_configs = true
+# Don't be too strict about types
+no_implicit_optional = false
+strict_optional = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
