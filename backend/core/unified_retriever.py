@@ -275,9 +275,6 @@ class UnifiedRetriever:
         Returns:
             List of Document objects ranked by similarity (best matches first)
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
 
         # Get more results than needed for filtering and reranking
         search_k = k * 3
