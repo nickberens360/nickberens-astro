@@ -27,7 +27,8 @@ class TestContextualRetrieval:
         self.retriever = UnifiedRetriever(embeddings=self.mock_embeddings, llm=self.mock_llm, persist_dir="test_chroma")
 
         # Mock the vector store to avoid actual Chroma operations
-        self.retriever.vector_store = Mock()
+        # In the new architecture, we need to mock the semantic_searcher's vector_store
+        self.retriever.semantic_searcher.vector_store = Mock()
 
     def test_generate_document_context_fallback_behavior(self):
         """Test document context generation with simple mock that triggers fallback."""
@@ -71,7 +72,7 @@ class TestContextualRetrieval:
 
         document_context = "This document describes Nick's technical skills and experience."
 
-        enhanced_chunk = self.retriever._enhance_chunk_with_context(original_chunk, document_context)
+        enhanced_chunk = self.retriever.enhance_chunk_with_context(original_chunk, document_context)
 
         expected_content = (
             "DOCUMENT CONTEXT: This document describes Nick's technical skills and experience.\n\n"
@@ -91,13 +92,13 @@ class TestContextualRetrieval:
 
         # Directly set a cached context to test caching mechanism
         expected_context = "Cached test document context"
-        self.retriever._document_contexts[str(file_path)] = expected_context
+        self.retriever.content_indexer._document_contexts[str(file_path)] = expected_context
 
         # This call should use the cached context
-        context = self.retriever._generate_document_context(docs, file_path)
+        context = self.retriever.generate_document_context(docs, file_path)
 
         assert context == expected_context
-        assert str(file_path) in self.retriever._document_contexts
+        assert str(file_path) in self.retriever.content_indexer._document_contexts
 
     @pytest.mark.unit
     def test_contextual_retrieval_integration(self):
@@ -112,13 +113,13 @@ class TestContextualRetrieval:
         # Test with pre-cached context to avoid LLM complexity
         file_path = Path("skills.md")
         expected_context = "This document lists Nick's programming language proficiencies."
-        self.retriever._document_contexts[str(file_path)] = expected_context
+        self.retriever.content_indexer._document_contexts[str(file_path)] = expected_context
 
-        context = self.retriever._generate_document_context([test_doc], file_path)
+        context = self.retriever.generate_document_context([test_doc], file_path)
         assert context == expected_context
 
         # Test chunk enhancement
-        enhanced_doc = self.retriever._enhance_chunk_with_context(test_doc, context)
+        enhanced_doc = self.retriever.enhance_chunk_with_context(test_doc, context)
 
         assert "DOCUMENT CONTEXT:" in enhanced_doc.page_content
         assert "This document lists Nick's programming language proficiencies." in enhanced_doc.page_content
