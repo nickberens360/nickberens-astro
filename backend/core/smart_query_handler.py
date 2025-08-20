@@ -41,8 +41,8 @@ class SmartQueryHandler:
             logger.info("Using cached results for query")
             return self._query_cache[cache_key]
 
-        # Use unified retriever's async smart routing
-        docs = await self.unified_retriever.auto_route_query_async(query)
+        # Use unified retriever's smart routing (sync - no async version available)
+        docs = self.unified_retriever.auto_route_query(query)
 
         # Post-process documents for quality
         processed_docs = self._post_process_documents(docs, query, max_context_length)

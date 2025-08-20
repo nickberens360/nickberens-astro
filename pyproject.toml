@@ -7,6 +7,7 @@ target-version = ['py311']
 [tool.pytest.ini_options]
 minversion = "6.0"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["."]
 # Simple test runner - no coverage by default (add --cov manually when needed)

@@ -36,7 +36,7 @@ class PreGeneratedFollowUpService:
         # Load pre-generated questions
         self._load_pregenerated_questions()
 
-        # Context keywords for smart selection
+        # Context keywords for smart selection - updated with more comprehensive coverage
         self.context_keywords = {
             "technical": [
                 "vue",
@@ -47,22 +47,76 @@ class PreGeneratedFollowUpService:
                 "development",
                 "programming",
                 "framework",
+                "css",
+                "html",
+                "web",
+                "responsive",
+                "ui",
             ],
-            "experience": ["experience", "work", "career", "job", "wisnet", "hillman", "role", "position"],
-            "creative": ["illustration", "art", "drawing", "design", "creative", "artistic", "visual"],
-            "projects": ["project", "built", "created", "developed", "portfolio", "work", "application"],
-            "philosophy": ["philosophy", "approach", "process", "methodology", "thinking", "belief"],
-            "skills": ["skill", "technology", "tool", "proficient", "expert", "knowledge"],
-            "contact": ["contact", "email", "reach", "hire", "connect", "get in touch"],
+            "experience": [
+                "experience",
+                "work",
+                "career",
+                "job",
+                "role",
+                "position",
+                "background",
+                "years",
+                "professional",
+                "employment",
+                "history",
+            ],
+            "creative": [
+                "illustration",
+                "art",
+                "drawing",
+                "design",
+                "creative",
+                "artistic",
+                "visual",
+                "character",
+                "style",
+                "portfolio",
+                "graphics",
+                "images",
+            ],
+            "projects": [
+                "project",
+                "built",
+                "created",
+                "developed",
+                "portfolio",
+                "application",
+                "website",
+                "system",
+                "rag",
+                "chat",
+                "framework",
+            ],
+            "skills": [
+                "skill",
+                "technology",
+                "tool",
+                "proficient",
+                "expert",
+                "knowledge",
+                "specializ",
+                "frameworks",
+                "libraries",
+                "languages",
+                "technologies",
+                "stack",
+            ],
+            "contact": ["contact", "email", "reach", "hire", "connect", "get in touch", "resume", "cv", "information"],
         }
 
-        # Fallback questions if no pre-generated ones available
+        # Fallback questions if no pre-generated ones available - all guaranteed answerable
         self.fallback_questions = [
             "Show me Nick's illustrations",
-            "Tell me about Nick's experience",
+            "Tell me about Nick's frontend experience",
             "What technologies does Nick work with?",
-            "Show me Nick's recent projects",
-            "What's Nick's development philosophy?",
+            "What projects has Nick built?",
+            "Show me Nick's resume",
             "How can I contact Nick?",
         ]
 
@@ -204,10 +258,10 @@ class PreGeneratedFollowUpService:
         if not candidates:
             candidates = self.fallback_questions.copy()
 
-        # Filter out similar questions
+        # Filter out similar questions and unanswerable questions
         filtered_candidates = []
         for question in candidates:
-            if not self._is_similar_to_asked(question, asked_questions):
+            if not self._is_similar_to_asked(question, asked_questions) and self._is_question_answerable(question):
                 filtered_candidates.append(question)
 
         # Remove duplicates while preserving order
@@ -217,6 +271,15 @@ class PreGeneratedFollowUpService:
             if q not in seen:
                 unique_candidates.append(q)
                 seen.add(q)
+
+        # Ensure we have at least some questions - safety fallback
+        if not unique_candidates:
+            logger.warning("All questions were filtered out, using guaranteed safe fallback questions")
+            unique_candidates = [
+                "Tell me about Nick's frontend experience",
+                "What technologies does Nick work with?",
+                "Show me Nick's illustrations",
+            ]
 
         # Select 3 questions
         if len(unique_candidates) <= 3:
@@ -251,44 +314,141 @@ class PreGeneratedFollowUpService:
 
         return False
 
+    def _is_question_answerable(self, question: str) -> bool:
+        """
+        Check if a question is likely to be answerable based on known content patterns.
+
+        This method filters out questions that commonly result in "I don't have that information" responses.
+        """
+        question_lower = question.lower()
+
+        # Patterns that typically result in poor responses (future/opinion/speculation/methodology)
+        problematic_patterns = [
+            "where do you see",
+            "where will you",
+            "what would you",
+            "if you could",
+            "what do you think will happen",
+            "what's your prediction",
+            "what's your opinion on",
+            "what would happen if",
+            "do you believe",
+            "what's your take on",
+            "how do you feel about",
+            "what's your favorite",
+            "what would be your advice",
+            "what should someone",
+            "what's the best way to",
+            "what's your recommendation",
+            "how does nick approach",
+            "what's nick's approach to",
+            "how does nick ensure",
+            "what's nick's methodology",
+            "how does nick handle",
+            "what's nick's process for",
+            "how does nick solve",
+            "what's nick's strategy for",
+        ]
+
+        # Check for problematic patterns
+        for pattern in problematic_patterns:
+            if pattern in question_lower:
+                return False
+
+        # Patterns that indicate answerable questions (factual, based on available content)
+        good_patterns = [
+            "show me",
+            "tell me about",
+            "what's nick's experience",
+            "what technologies",
+            "what skills",
+            "what projects",
+            "what's in nick's",
+            "what frameworks",
+            "what libraries",
+            "how can i contact",
+            "what makes nick",
+            "what's nick's background",
+            "what does nick work with",
+            "what has nick built",
+            "what's nick worked on",
+        ]
+
+        # If it matches a known good pattern, it's likely answerable
+        for pattern in good_patterns:
+            if pattern in question_lower:
+                return True
+
+        # Default to true if no clear problematic patterns detected
+        return True
+
     def _get_default_questions(self) -> Dict[str, List[str]]:
-        """Get default questions when pre-generated ones aren't available."""
+        """
+        Get default questions when pre-generated ones aren't available.
+
+        All questions are carefully crafted to be answerable based on Nick's knowledge base content:
+        - Technical skills and experience
+        - Completed projects and work
+        - Available illustrations and creative work
+        - Contact and resume information
+        """
 
         return {
             "general": [
                 "Show me Nick's illustrations",
-                "Tell me about Nick's experience",
+                "Tell me about Nick's frontend experience",
                 "What technologies does Nick work with?",
-                "Show me Nick's recent projects",
-                "What's Nick's development philosophy?",
+                "What projects has Nick built?",
+                "Show me Nick's resume",
                 "How can I contact Nick?",
             ],
             "topic_technical": [
-                "What Vue.js projects has Nick worked on?",
-                "Tell me about Nick's JavaScript expertise",
-                "How does Nick approach frontend architecture?",
-                "What's Nick's experience with modern frameworks?",
-                "Show me Nick's technical portfolio",
+                "What's Nick's experience with Vue.js?",
+                "Tell me about Nick's CSS framework work",
+                "What frontend technologies does Nick specialize in?",
+                "What Vue.js technologies does Nick know?",
+                "Tell me about Nick's JavaScript skills",
+                "What CSS technologies does Nick work with?",
             ],
             "topic_experience": [
-                "What did Nick accomplish at Wisnet?",
-                "What's Nick working on at Hillman Group?",
-                "Tell me about Nick's career progression",
-                "What's been Nick's biggest career achievement?",
-                "How has Nick's role evolved over time?",
+                "What's in Nick's work experience?",
+                "Tell me about Nick's frontend development background",
+                "What skills does Nick have?",
+                "How many years of experience does Nick have?",
+                "What's Nick's professional summary?",
+                "Tell me about Nick's career in web development",
             ],
             "topic_creative": [
-                "Show me Nick's creative illustrations",
-                "Tell me about Nick's artistic process",
-                "What inspires Nick's creative work?",
-                "Show me different art styles Nick has done",
-                "How does Nick balance technical and creative work?",
+                "Show me Nick's character illustrations",
+                "What art styles does Nick create?",
+                "Tell me about Nick's illustration work",
+                "Show me examples of Nick's creative designs",
+                "What characters has Nick illustrated?",
+                "How does Nick combine design and development?",
+            ],
+            "topic_projects": [
+                "What's Nick's portfolio website built with?",
+                "Tell me about Nick's RAG chat system",
+                "What technologies does Nick use in his projects?",
+                "Show me Nick's recent development work",
+                "What features are in Nick's current projects?",
+                "Tell me about Nick's CSS framework project",
+            ],
+            "topic_skills": [
+                "What Vue.js technologies does Nick know?",
+                "Tell me about Nick's CSS and Sass skills",
+                "What state management tools does Nick use?",
+                "What UI libraries has Nick worked with?",
+                "Tell me about Nick's design system experience",
+                "What frontend skills does Nick have?",
             ],
             "content_based": [
-                "What makes Nick unique as a developer?",
-                "How does Nick approach problem-solving?",
-                "What's Nick's learning philosophy?",
-                "Tell me about Nick's collaboration style",
+                "What technologies does Nick use in his projects?",
+                "Tell me about Nick's frontend development experience",
+                "What's Nick's experience with design systems?",
+                "What's Nick's experience with modern web technologies?",
+                "Tell me about Nick's CSS framework project",
+                "What makes Nick's development work unique?",
             ],
         }
 
