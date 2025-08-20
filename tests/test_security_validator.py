@@ -248,7 +248,7 @@ class TestSecurityValidator:
     @pytest.mark.unit
     def test_allowed_models_list(self):
         """Test that allowed models list contains expected values."""
-        expected_models = ["claude", "gemini", None]
+        expected_models = ["claude", "claude_haiku", "gemini", None]
 
         assert SecurityValidator.ALLOWED_MODELS == expected_models
 

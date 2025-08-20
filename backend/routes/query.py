@@ -78,6 +78,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
     # Handle image queries
     if query_type != QueryType.AI_TEXT_RESPONSE:
         illustration_service = services.get("illustration_service")
+        fell_back_to_all = False
         if illustration_service is None:
             found_images = []
             logger.warning("Illustration service not available - returning empty results")
@@ -86,16 +87,28 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 found_images = illustration_service.get_all()
             else:
                 found_images = illustration_service.search(search_term)
+                # Fallback to showing all illustrations if search returns no results
+                if not found_images:
+                    logger.info(
+                        f"No specific illustrations found for '{search_term}', falling back to all illustrations"
+                    )
+                    found_images = illustration_service.get_all()
+                    fell_back_to_all = True
 
-        ai_response = (
-            f"Here are illustrations for '{search_term}'."
-            if found_images
-            else f"Sorry, no illustrations found for '{search_term}'."
-        )
+        # Update the response message based on whether we found specific results or fell back to all
+        if found_images:
+            if query_type == QueryType.ALL_IMAGES or fell_back_to_all:
+                success_message_template = "Here are some of my illustrations:"
+            else:
+                success_message_template = "Here are the illustrations I found for '{}':"
+        else:
+            success_message_template = "Sorry, no illustrations found for '{}'."
 
         followup_service = services.get("followup_service")
         followup_questions = (
-            followup_service.generate_followups(sanitized_question, ai_response, sanitized_history)
+            followup_service.generate_followups(
+                sanitized_question, success_message_template.format(search_term), sanitized_history
+            )
             if followup_service
             else []
         )
@@ -105,7 +118,9 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             logger.error("Response service not available - cannot build image response")
             raise HTTPException(status_code=503, detail="Image service temporarily unavailable")
 
-        response_data = response_service.build_image_response(search_term, found_images, start_time, followup_questions)
+        response_data = response_service.build_image_response(
+            search_term, found_images, start_time, followup_questions, success_message_template
+        )
 
         # Add rate limit status to image responses too
         rate_limits = get_rate_limit_status()
@@ -117,7 +132,11 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         query_logger.log_query(
             client_ip=client_ip,
             question=sanitized_question,
-            response=ai_response,
+            response=(
+                success_message_template.format(search_term)
+                if "{}" in success_message_template
+                else success_message_template
+            ),
             model_used="image_search",
             query_type="image",
             response_time=response_time,
@@ -125,6 +144,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 "search_term": search_term,
                 "images_found": len(found_images),
                 "query_type_enum": query_type.value,
+                "fell_back_to_all": fell_back_to_all,
             },
         )
 

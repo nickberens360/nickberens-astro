@@ -40,6 +40,7 @@ class UnifiedRetriever:
         self.llm = llm
         self.persist_dir = persist_dir
         self.vector_store: Optional[Chroma] = None
+        self._document_contexts: Dict[str, str] = {}  # Cache for document contexts
         self._initialize_store()
 
     def _initialize_store(self):
@@ -351,3 +352,36 @@ class UnifiedRetriever:
             results = self.semantic_search(query, score_threshold=0.5)
 
         return results
+
+    def _enhance_chunk_with_context(self, chunk: Document, document_context: str) -> Document:
+        """Enhance a document chunk with contextual information."""
+        enhanced_content = f"DOCUMENT CONTEXT: {document_context}\n\nCONTENT: {chunk.page_content}"
+
+        # Create new metadata with context info
+        enhanced_metadata = chunk.metadata.copy()
+        enhanced_metadata.update(
+            {
+                "has_document_context": True,
+                "original_content_length": len(chunk.page_content),
+                "document_context": document_context,
+            }
+        )
+
+        return Document(page_content=enhanced_content, metadata=enhanced_metadata)
+
+    def _generate_document_context(self, documents: List[Document], file_path: Path) -> str:
+        """Generate or retrieve cached document context."""
+        file_key = str(file_path)
+
+        # Return cached context if available
+        if file_key in self._document_contexts:
+            return self._document_contexts[file_key]
+
+        # Generate new context (simplified for testing)
+        # In practice, this would use the LLM to generate context
+        context = f"This is content from {file_path.name}, a {file_path.suffix} document."
+
+        # Cache the context
+        self._document_contexts[file_key] = context
+
+        return context

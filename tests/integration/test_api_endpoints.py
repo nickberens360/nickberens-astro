@@ -27,6 +27,24 @@ from backend.models.request_models import Message
 pytestmark = pytest.mark.asyncio
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reset rate limiter state between tests."""
+    import limits
+
+    from backend.core.app_factory import limiter
+
+    # Reset the rate limiter's storage by creating a fresh storage instance
+    if hasattr(limiter, "_storage"):
+        # Create a new in-memory storage to ensure clean state
+        limiter._storage = limits.storage.MemoryStorage()
+    yield
+
+    # Also reset after the test to ensure clean state for next test
+    if hasattr(limiter, "_storage"):
+        limiter._storage = limits.storage.MemoryStorage()
+
+
 @pytest.fixture
 async def client():
     """
