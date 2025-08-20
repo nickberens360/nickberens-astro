@@ -133,9 +133,18 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
     Claude Haiku: Fast, cheap, good for simple factual queries
     Claude Sonnet: Slower, expensive, better for complex reasoning
     """
-    # If user explicitly prefers a model, respect that
-    if preferred_model and preferred_model in [p["name"] for p in LLM_PROVIDERS]:
-        return preferred_model
+    from ..security.validator import SecurityValidator
+
+    # If user explicitly prefers a model, validate and respect that
+    if preferred_model:
+        if (
+            preferred_model in [p["name"] for p in LLM_PROVIDERS]
+            and preferred_model in SecurityValidator.ALLOWED_MODELS
+        ):
+            return preferred_model
+        else:
+            logger.warning(f"Preferred model '{preferred_model}' not allowed, falling back to default")
+            # Fall through to default selection logic
 
     # Check if smart model selection is enabled
     if not AppConfig.ENABLE_SMART_MODEL_SELECTION:
@@ -183,14 +192,21 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
     # Decision logic
     if is_simple and not is_complex and is_short:
         logger.debug(f"Using Claude Haiku for simple query: '{query[:50]}...'")
-        return FAST_MODEL
+        selected_model = FAST_MODEL
     elif is_complex:
         logger.debug(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
-        return QUALITY_MODEL
+        selected_model = QUALITY_MODEL
     else:
         # Default to Haiku for moderate queries (speed over perfection)
         logger.debug(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
-        return FAST_MODEL
+        selected_model = FAST_MODEL
+
+    # Final validation to ensure selected model is allowed
+    if selected_model not in SecurityValidator.ALLOWED_MODELS:
+        logger.warning(f"Selected model '{selected_model}' not in allowed models, falling back to primary")
+        return PRIMARY_LLM
+
+    return selected_model
 
 
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
