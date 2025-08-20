@@ -30,11 +30,15 @@ class SmartQueryHandler:
         self._query_cache: Dict[str, List[Document]] = {}  # Simple cache for repeated queries
 
     async def get_relevant_context_async(
-        self, query: str, chat_history: Optional[List[Dict]] = None, max_context_length: int = 2000
+        self, query: str, chat_history: Optional[List[Dict]] = None, max_context_length: int = None
     ) -> List[Document]:
         """
         Async version of get_relevant_context with enhanced performance.
         """
+        # Apply default from config
+        if max_context_length is None:
+            max_context_length = AppConfig.DEFAULT_MAX_CONTEXT_LENGTH
+
         # Check cache first
         cache_key = f"{query}:{len(chat_history) if chat_history else 0}"
         if cache_key in self._query_cache:
@@ -59,7 +63,7 @@ class SmartQueryHandler:
         return processed_docs
 
     def get_relevant_context(
-        self, query: str, chat_history: Optional[List[Dict]] = None, max_context_length: int = 2000
+        self, query: str, chat_history: Optional[List[Dict]] = None, max_context_length: int = None
     ) -> List[Document]:
         """
         Get the most relevant context for a query.
@@ -70,6 +74,10 @@ class SmartQueryHandler:
         3. Ranks and filters for quality
         4. Ensures context fits within token limits
         """
+        # Apply default from config
+        if max_context_length is None:
+            max_context_length = AppConfig.DEFAULT_MAX_CONTEXT_LENGTH
+
         # Check cache first
         cache_key = f"{query}:{len(chat_history) if chat_history else 0}"
         if cache_key in self._query_cache:
@@ -107,7 +115,7 @@ class SmartQueryHandler:
 
         for doc in docs:
             # Create a content fingerprint
-            content_fingerprint = doc.page_content[:100].lower().strip()
+            content_fingerprint = doc.page_content[: AppConfig.CONTENT_FINGERPRINT_LENGTH].lower().strip()
             if content_fingerprint not in seen_content:
                 unique_docs.append(doc)
                 seen_content.add(content_fingerprint)
@@ -123,7 +131,7 @@ class SmartQueryHandler:
             overlap_score = len(query_words.intersection(doc_words))
 
             # Boost score for shorter, more focused documents
-            length_penalty = len(doc.page_content) / 1000  # Penalty for very long docs
+            length_penalty = len(doc.page_content) / AppConfig.LENGTH_PENALTY_DIVISOR  # Penalty for very long docs
             relevance_score = overlap_score - (length_penalty * 0.1)
 
             scored_docs.append((relevance_score, doc))
@@ -135,7 +143,7 @@ class SmartQueryHandler:
         # Smart context selection - prioritize quality over quantity
         selected_docs = []
         current_length = 0
-        target_docs = min(3, len(reranked_docs))  # Limit to top 3 most relevant docs
+        target_docs = min(AppConfig.MAX_CONTEXT_DOCUMENTS, len(reranked_docs))  # Limit to top N most relevant docs
 
         for doc in reranked_docs[:target_docs]:
             doc_length = len(doc.page_content)
@@ -143,7 +151,9 @@ class SmartQueryHandler:
             if current_length + doc_length <= max_context_length:
                 selected_docs.append(doc)
                 current_length += doc_length
-            elif current_length < max_context_length * 0.7:  # If we have less than 70% filled
+            elif (
+                current_length < max_context_length * AppConfig.CONTEXT_FILL_RATIO
+            ):  # If we have less than configured ratio filled
                 # Intelligently truncate the document to essential parts
                 remaining_space = max_context_length - current_length
 

@@ -27,6 +27,7 @@ except ImportError:
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
+from .config import AppConfig
 from .llm_utils import extract_topics_with_llm
 
 logger = logging.getLogger(__name__)
@@ -238,7 +239,7 @@ class UnifiedRetriever:
             filter_content_types: Filter by content types (e.g., ['technical', 'experience'])
         """
         if search_kwargs is None:
-            search_kwargs = {"k": 8}
+            search_kwargs = {"k": AppConfig.DEFAULT_SEARCH_K}
 
         # Note: We'll do filtering at retrieval time instead of at the vector store level
         # This is more compatible across different Chroma versions
@@ -258,16 +259,16 @@ class UnifiedRetriever:
         return self.semantic_search(query, k, filter_content_types)
 
     def semantic_search(
-        self, query: str, k: int = 8, filter_content_types: Optional[List[str]] = None, score_threshold: float = 0.5
+        self, query: str, k: int = None, filter_content_types: Optional[List[str]] = None, score_threshold: float = None
     ) -> List[Document]:
         """
         Perform semantic search with optional filtering and scoring.
 
         Args:
             query: Search query text
-            k: Number of results to return
+            k: Number of results to return (defaults to AppConfig.DEFAULT_SEARCH_K)
             filter_content_types: Optional list of content types to filter by
-            score_threshold: Distance threshold for filtering results
+            score_threshold: Distance threshold for filtering results (defaults to AppConfig.DEFAULT_DISTANCE_THRESHOLD)
                            - ChromaDB returns DISTANCE scores (lower = better similarity)
                            - Typical range: 0.0-2.0 with L2 distance
                            - Use 0.0 for no filtering, 0.5-1.0 for good matches, 1.0+ for broader results
@@ -275,9 +276,14 @@ class UnifiedRetriever:
         Returns:
             List of Document objects ranked by similarity (best matches first)
         """
+        # Apply defaults from config
+        if k is None:
+            k = AppConfig.DEFAULT_SEARCH_K
+        if score_threshold is None:
+            score_threshold = AppConfig.DEFAULT_DISTANCE_THRESHOLD
 
         # Get more results than needed for filtering and reranking
-        search_k = k * 3
+        search_k = k * AppConfig.SEARCH_EXPANSION_MULTIPLIER
 
         # Get documents with scores
         if self.vector_store is None:
@@ -360,8 +366,8 @@ class UnifiedRetriever:
         if content_type_hints:
             # Use generous distance thresholds to ensure good coverage
             # Since ChromaDB returns distance scores (lower=better), higher threshold = more inclusive
-            initial_threshold = 1.0  # Include documents with distance <= 1.0 (good to fair matches)
-            k_value = 12  # Get more results to ensure comprehensive coverage
+            initial_threshold = AppConfig.INCLUSIVE_DISTANCE_THRESHOLD  # Include good to fair matches
+            k_value = AppConfig.EXPANDED_SEARCH_K  # Get more results to ensure comprehensive coverage
 
             # First try filtered search
             results = self.semantic_search(
@@ -369,12 +375,18 @@ class UnifiedRetriever:
             )
 
             # If not enough results, broaden the search with even higher threshold
-            if len(results) < 6:
-                additional_results = self.semantic_search(query, k=12 - len(results), score_threshold=1.2)
+            if len(results) < (AppConfig.EXPANDED_SEARCH_K // 2):
+                additional_results = self.semantic_search(
+                    query,
+                    k=AppConfig.EXPANDED_SEARCH_K - len(results),
+                    score_threshold=AppConfig.BROAD_DISTANCE_THRESHOLD,
+                )
                 results.extend(additional_results)
         else:
             # No specific type detected, do general search with generous distance threshold
-            results = self.semantic_search(query, k=12, score_threshold=1.0)
+            results = self.semantic_search(
+                query, k=AppConfig.EXPANDED_SEARCH_K, score_threshold=AppConfig.INCLUSIVE_DISTANCE_THRESHOLD
+            )
 
         return results
 
