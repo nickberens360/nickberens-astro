@@ -1,8 +1,8 @@
 # Contextual Retrieval vs Non-Contextual Retrieval Benchmark Report
 
-**Date:** August 19, 2025  
-**System:** Nick Berens AI Assistant RAG System  
-**Enhancement:** Document Context Addition to Chunks  
+**Date:** August 19, 2025
+**System:** Nick Berens AI Assistant RAG System
+**Enhancement:** Document Context Addition to Chunks
 
 ---
 
@@ -12,7 +12,7 @@ We implemented and benchmarked **contextual retrieval** - a RAG best practice th
 
 **Key Results:**
 - **+18.0% overall improvement** in relevance scores
-- **+31.8% improvement** on hard/complex queries  
+- **+31.8% improvement** on hard/complex queries
 - **Best performance gains** on creative and philosophical queries
 - **Context bonus mechanism** contributes measurably to accuracy
 
@@ -25,7 +25,7 @@ We implemented and benchmarked **contextual retrieval** - a RAG best practice th
 Chunk: "Nick has experience with React and TypeScript..."
 ```
 
-### Enhanced Approach (Contextual)  
+### Enhanced Approach (Contextual)
 ```
 DOCUMENT CONTEXT: This document details technical skills and programming expertise.
 
@@ -45,14 +45,14 @@ Each chunk is prepended with a 1-2 sentence summary of its source document, prov
 ### Test Setup
 - **Documents**: 10 realistic knowledge base documents
 - **Test Queries**: 8 queries across difficulty levels (easy/medium/hard)
-- **Evaluation Metrics**: 
+- **Evaluation Metrics**:
   - Relevance scoring (keyword + content type + query overlap + context bonus)
   - Content type accuracy
   - Query difficulty analysis
 
 ### Scoring Algorithm
 - **40%** Keyword matching
-- **30%** Content type relevance  
+- **30%** Content type relevance
 - **20%** Query term overlap
 - **10%** Context enhancement bonus
 
@@ -80,11 +80,11 @@ Each chunk is prepended with a 1-2 sentence summary of its source document, prov
 #### 🏆 Best Improvement: Creative Philosophy Query
 **Query**: "What inspires Nick's creative work and artistic philosophy?"
 - Non-contextual: 0.369
-- Contextual: 0.520  
+- Contextual: 0.520
 - **Improvement: +40.9%**
 
 #### 🏆 Second Best: Work Experience Query
-**Query**: "What work experience does Nick have?"  
+**Query**: "What work experience does Nick have?"
 - Non-contextual: 0.281
 - Contextual: 0.382
 - **Improvement: +35.8%**
@@ -102,7 +102,7 @@ Each chunk is prepended with a 1-2 sentence summary of its source document, prov
 The contextual system introduces a **context bonus** mechanism that scores how well document context aligns with query keywords:
 
 - **Contextual system context bonus**: 0.089
-- **Non-contextual system context bonus**: 0.000  
+- **Non-contextual system context bonus**: 0.000
 - **Context contribution**: +0.089
 
 This bonus is most effective for queries that benefit from understanding the document's purpose and domain.
@@ -114,7 +114,7 @@ This bonus is most effective for queries that benefit from understanding the doc
 ### ✅ **Consistent Improvements**
 Contextual retrieval shows improvements across **all query types**, with no degradation in any test case.
 
-### ✅ **Complex Query Advantage**  
+### ✅ **Complex Query Advantage**
 The biggest improvements (30-40%) occur on complex queries that require understanding relationships between different content domains.
 
 ### ✅ **Context Understanding**
@@ -126,7 +126,7 @@ The improvement comes with minimal performance overhead and integrates seamlessl
 ### ✅ **Real-World Impact**
 Queries about:
 - **Creative inspiration** → 40.9% improvement
-- **Cross-domain skills** → 30.0% improvement  
+- **Cross-domain skills** → 30.0% improvement
 - **Professional philosophy** → 22.9% improvement
 
 ---
@@ -152,12 +152,12 @@ Queries about:
 ### Generated Files
 - `advanced_benchmark.py` - Comprehensive benchmark implementation
 - `comprehensive_benchmark_20250819_085856.json` - Detailed results data
-- `simple_benchmark.py` - Simple comparison demonstration  
+- `simple_benchmark.py` - Simple comparison demonstration
 - `benchmark_contextual_retrieval.py` - Full framework (for real embedding systems)
 
 ### Test Queries Used
 1. **Easy**: "What programming languages does Nick know?"
-2. **Easy**: "What work experience does Nick have?"  
+2. **Easy**: "What work experience does Nick have?"
 3. **Medium**: "What databases does Nick prefer for different use cases?"
 4. **Medium**: "Describe Nick's project building a RAG system"
 5. **Medium**: "How does Nick manage and lead development teams?"
@@ -175,13 +175,13 @@ Queries about:
 
 The implementation:
 - ✅ Shows consistent improvements across all query types
-- ✅ Has zero risk of breaking existing functionality  
+- ✅ Has zero risk of breaking existing functionality
 - ✅ Provides measurable business value through better user experience
 - ✅ Follows RAG best practices from leading research
 
 ### Next Steps
 1. **Monitor performance** in production with real user queries
-2. **A/B test** with actual users to measure satisfaction improvements  
+2. **A/B test** with actual users to measure satisfaction improvements
 3. **Consider additional RAG enhancements** like hybrid search or query expansion
 4. **Optimize context generation** with query-specific context tailoring
 

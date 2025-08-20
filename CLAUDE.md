@@ -27,7 +27,7 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 
 **Manual linting commands (as needed):**
 - `black backend/` - Format Python code (line length: 120)
-- `isort backend/` - Sort Python imports  
+- `isort backend/` - Sort Python imports
 - `autoflake --remove-all-unused-imports --recursive --in-place backend/` - Remove unused imports
 - `flake8 backend/` - Check Python style (relaxed rules, focuses on real issues)
 - `mypy backend/` - Optional type checking (relaxed settings for faster development)
@@ -72,7 +72,7 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 The system now uses a **unified smart retriever** that:
 - ✅ **Automatically discovers** all content from directories
 - ✅ **Intelligently detects** content types (technical, experience, creative, etc.)
-- ✅ **Smart query routing** based on intent analysis  
+- ✅ **Smart query routing** based on intent analysis
 - ✅ **No YAML configuration** required - just drop files in directories
 - ✅ **Zero manual setup** for new content sources
 
@@ -101,7 +101,7 @@ backend/
 │   └── ...
 ├── knowledge/      # Auto-indexed knowledge base
 │   ├── *.md        # Markdown documentation
-│   ├── *.pdf       # PDF documents  
+│   ├── *.pdf       # PDF documents
 │   ├── *.json      # Structured data including illustrations.json
 │   └── ...         # Any content - automatically indexed!
 ├── routes/         # API routes
@@ -114,7 +114,7 @@ backend/
 
 public/            # Static data files (also auto-indexed)
 ├── resume.json
-├── about.json  
+├── about.json
 └── ...             # All files automatically discovered
 
 scripts/           # Utility scripts
@@ -158,7 +158,7 @@ tests/             # Comprehensive test suite
 2. **Illustrations**: Add to `backend/knowledge/illustrations.json` with format:
    ```json
    {
-     "file": "filename.jpg", 
+     "file": "filename.jpg",
      "title": "Title",
      "tags": ["tag1", "tag2"]
    }
@@ -166,10 +166,10 @@ tests/             # Comprehensive test suite
 
 3. **Restart Backend**: New content is automatically discovered on startup
 
-### Python Code Standards  
+### Python Code Standards
 1. **Always format with Black before committing**
 2. **Sort imports with isort**
-3. **Fix all flake8 violations** 
+3. **Fix all flake8 violations**
 4. **Address mypy type checking warnings**
 5. **Use type hints for function parameters and return values**
 6. **Follow the existing patterns in the codebase**
@@ -180,7 +180,7 @@ tests/             # Comprehensive test suite
 #### Automatic Content Type Detection
 The system automatically detects and categorizes content:
 - **Technical**: Code, APIs, implementation details
-- **Experience**: Work history, roles, companies  
+- **Experience**: Work history, roles, companies
 - **Skills**: Technologies, expertise, proficiencies
 - **About**: Personal information, philosophy, interests
 - **Creative**: Illustrations, art, design work
@@ -196,7 +196,7 @@ Queries are automatically analyzed for:
 #### Smart Context Selection
 - **Semantic similarity** matching
 - **Content type filtering** based on query
-- **Duplicate removal** and quality scoring  
+- **Duplicate removal** and quality scoring
 - **Context length optimization** for token limits
 - **Relevance ranking** with metadata boosting
 
@@ -214,7 +214,7 @@ curl -X POST http://localhost:8000/query \
 # Check system status
 curl http://localhost:8000/api/smart-query/status
 
-# Analyze query intent  
+# Analyze query intent
 curl -X POST http://localhost:8000/api/smart-query/analyze \
   -H "Content-Type: application/json" \
   -d '{"question": "What CSS frameworks does Nick use?", "chat_history": []}'
@@ -319,7 +319,7 @@ pre-commit install
 
 ### What Changed (Major Improvements!)
 - ✅ **Eliminated unified_data.json dependency** - no more manual data compilation
-- ✅ **Eliminated manual YAML configuration** - no more retriever definitions needed  
+- ✅ **Eliminated manual YAML configuration** - no more retriever definitions needed
 - ✅ **Automatic content discovery** - just drop files in directories
 - ✅ **Smart query routing** - understands intent automatically
 - ✅ **Better search accuracy** - semantic similarity + metadata filtering
@@ -334,7 +334,7 @@ pre-commit install
 
 ### Performance Improvements
 - ✅ **Built-in caching** - faster repeated queries
-- ✅ **Single vector store** - more efficient than multiple stores  
+- ✅ **Single vector store** - more efficient than multiple stores
 - ✅ **Smart filtering** - better relevance without over-processing
 - ✅ **File hash tracking** - only re-index changed files
 

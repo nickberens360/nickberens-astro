@@ -1,6 +1,6 @@
 <template>
   <!-- Loading indicator while checking location -->
-  <div 
+  <div
     v-if="isCheckingLocation"
     class="consent-banner loading"
     role="banner"

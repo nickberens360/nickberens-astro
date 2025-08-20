@@ -1,6 +1,6 @@
 // EEA countries (EU + Iceland, Liechtenstein, Norway)
 const EEA_COUNTRIES = new Set([
-  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 
+  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV',
   'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO'
 ]);
 
@@ -76,7 +76,7 @@ class GeolocationService {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
+
       const data = await response.json();
       if (data.error) throw new Error(data.reason || 'API error');
 
@@ -101,19 +101,19 @@ class GeolocationService {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
+
       const text = await response.text();
       const lines = text.split('\n');
       const locLine = lines.find(line => line.startsWith('loc='));
-      
+
       if (!locLine) throw new Error('No location data');
-      
+
       const parts = locLine.split('=');
       if (parts.length < 2 || !parts[1]) {
         throw new Error('Malformed location data from Cloudflare');
       }
       const countryCode = parts[1];
-      
+
       return {
         countryCode: countryCode,
         isEEA: EEA_COUNTRIES.has(countryCode),
@@ -127,14 +127,14 @@ class GeolocationService {
   async detectViaTimezone() {
     // Fallback: rough estimation based on timezone
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
+
     // Common European timezones that might indicate EEA location
     const europeanTimezones = [
       'Europe/', 'Atlantic/Reykjavik', 'Atlantic/Faroe'
     ];
-    
+
     const isLikelyEurope = europeanTimezones.some(tz => timezone.startsWith(tz));
-    
+
     return {
       countryCode: 'ESTIMATED',
       timezone: timezone,
@@ -149,7 +149,7 @@ class GeolocationService {
       if (!cached) return null;
 
       const { data, timestamp } = JSON.parse(cached);
-      
+
       // Check if cache is expired
       if (Date.now() - timestamp > this.cacheExpiry) {
         localStorage.removeItem('user-location');

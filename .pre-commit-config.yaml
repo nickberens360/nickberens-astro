@@ -8,7 +8,9 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: trailing-whitespace
+        exclude: '\.md$'
       - id: end-of-file-fixer
+        exclude: '\.md$'
 
   # Auto-formatting only - Never fails, just fixes
   - repo: https://github.com/psf/black

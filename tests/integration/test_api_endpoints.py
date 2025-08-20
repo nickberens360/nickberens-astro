@@ -17,10 +17,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from backend.core.query_router import QueryType
+
 # Import the FastAPI app instance
 from backend.main import app
 from backend.models.request_models import Message
-from backend.core.query_router import QueryType
 
 # Mark the entire module to be run with asyncio
 pytestmark = pytest.mark.asyncio
@@ -570,7 +571,7 @@ async def test_image_query_includes_rate_limit_status(client: AsyncClient):
     mock_response_service.build_image_response.return_value.model_dump.return_value = {
         "images": ["/illustrations/test_image.webp"],
         "answer": "Here are illustrations.",
-        "rate_limits": {"claude": False, "gemini": False}
+        "rate_limits": {"claude": False, "gemini": False},
     }
     mock_followup_service = MagicMock()
     mock_followup_service.generate_followups.return_value = ["What other art would you like to see?"]
