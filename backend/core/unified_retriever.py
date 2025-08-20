@@ -10,6 +10,7 @@ This module provides a single, intelligent retriever that automatically:
 
 import asyncio
 import hashlib
+import heapq
 import json
 import logging
 import time
@@ -217,12 +218,16 @@ class UnifiedRetriever:
 
         # Enforce size limits (LRU eviction)
         if len(cache_dict) > self._max_cache_size:
-            # Sort by timestamp and remove oldest entries
-            sorted_items = sorted(cache_dict.items(), key=lambda x: x[1]["timestamp"])
-            items_to_remove = len(cache_dict) - self._max_cache_size + 10  # Remove extra for breathing room
+            # Use heapq for more efficient eviction (O(N log k) vs O(N log N))
+            # Remove extra entries for breathing room to avoid frequent eviction
+            EVICTION_BUFFER = 10
+            items_to_remove = len(cache_dict) - self._max_cache_size + EVICTION_BUFFER
 
-            for i in range(items_to_remove):
-                del cache_dict[sorted_items[i][0]]
+            # Find the oldest items efficiently
+            keys_to_evict = heapq.nsmallest(items_to_remove, cache_dict, key=lambda k: cache_dict[k]["timestamp"])
+
+            for key in keys_to_evict:
+                del cache_dict[key]
 
     async def _get_embedding_async(self, text: str) -> List[float]:
         """Get embedding for text with caching and async support."""

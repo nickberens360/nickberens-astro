@@ -463,13 +463,14 @@ async def stream_with_fallback(
         try:
             all_docs = await async_retrieve_documents(user_input, retrievers)
             logger.debug(f"Async retrieval successful, got {len(all_docs)} documents")
-
-            # Ensure we have documents before proceeding
-            if not all_docs:
-                logger.warning("Async retrieval returned no documents, falling back to sync")
-                raise ValueError("Empty async results")
         except Exception as async_error:
             logger.warning(f"Async retrieval failed: {async_error}. Falling back to standard retrieval...")
+            all_docs = []
+
+        # Check if async retrieval returned documents
+        if not all_docs:
+            if "async_error" not in locals():
+                logger.warning("Async retrieval returned no documents, falling back to sync")
 
             # Fallback to standard retrieval method
             selected_retrievers = route_query_to_retrievers(user_input, retrievers)
