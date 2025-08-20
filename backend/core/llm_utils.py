@@ -145,14 +145,16 @@ def rerank_documents_with_llm(llm: BaseLanguageModel, query: str, documents: Lis
 
     document_snippets = "\n".join(
         [
-            f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}{'...' if len(doc.page_content) > _MAX_SNIPPET_LENGTH_FOR_RERANKING else ''}"
+            f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}"
+            f"{'...' if len(doc.page_content) > _MAX_SNIPPET_LENGTH_FOR_RERANKING else ''}"
             for i, doc in enumerate(documents)
         ]
     )
 
     prompt = PromptTemplate(
         template="""
-You are an expert relevance ranker. I will provide you with a user query and a list of document snippets, each with an index.
+You are an expert relevance ranker. I will provide you with a user query and a list of document
+snippets, each with an index.
 Your task is to return a comma-separated list of the indices, ordered from most relevant to least relevant.
 Only return the indices that are relevant to the query.
 

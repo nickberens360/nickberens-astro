@@ -278,14 +278,22 @@ class UnifiedRetriever:
         logger.debug(f"Raw search returned {len(docs_and_scores)} documents")
         if docs_and_scores:
             logger.debug(
-                f"Score range: {min(score for _, score in docs_and_scores):.3f} - {max(score for _, score in docs_and_scores):.3f}"
+                f"Score range: {min(score for _, score in docs_and_scores):.3f} - "
+                f"{max(score for _, score in docs_and_scores):.3f}"
             )
 
         # Filter by similarity score threshold
-        # IMPORTANT: ChromaDB returns SIMILARITY scores (0.0-1.0 where HIGHER=BETTER)
-        # This is NOT distance scores where lower=better
-        # Example: score 0.8 > threshold 0.3 means "keep this document"
-        filtered_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
+        # IMPORTANT: ChromaDB's similarity_search_with_score returns DISTANCE scores (lower = better)
+        # We need to handle two cases:
+        # 1. Illustration search uses threshold=0.0 expecting to get ALL results
+        # 2. Regular content search uses thresholds like 0.4-0.5 for filtering
+
+        if score_threshold == 0.0:
+            # Special case for illustration search: threshold=0.0 means "get all results"
+            filtered_docs = [doc for doc, score in docs_and_scores]
+        else:
+            # Normal case: filter by distance (lower scores = better matches)
+            filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
         logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
         # Apply content type filtering if specified
@@ -340,16 +348,23 @@ class UnifiedRetriever:
 
         # Perform search with intelligent filtering
         if content_type_hints:
-            # First try filtered search
-            results = self.semantic_search(query, filter_content_types=content_type_hints, score_threshold=0.4)
+            # Use more generous thresholds to ensure good coverage
+            # For distance scores, higher threshold = more inclusive
+            initial_threshold = 1.0  # Very inclusive threshold for primary search
+            k_value = 12  # Get more results to ensure comprehensive coverage
 
-            # If not enough results, broaden the search
-            if len(results) < 4:
-                additional_results = self.semantic_search(query, k=8 - len(results), score_threshold=0.5)
+            # First try filtered search
+            results = self.semantic_search(
+                query, k=k_value, filter_content_types=content_type_hints, score_threshold=initial_threshold
+            )
+
+            # If not enough results, broaden the search further
+            if len(results) < 6:
+                additional_results = self.semantic_search(query, k=12 - len(results), score_threshold=1.2)
                 results.extend(additional_results)
         else:
-            # No specific type detected, do general search
-            results = self.semantic_search(query, score_threshold=0.5)
+            # No specific type detected, do general search with generous threshold
+            results = self.semantic_search(query, k=12, score_threshold=1.0)
 
         return results
 

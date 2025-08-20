@@ -172,7 +172,8 @@ class SmartIllustrationService:
                     extra = self._fuzzy_fallback(cleaned_term, fuzzy_needed, seen_files)
                     illustrations.extend(extra)
                     logger.debug(
-                        f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for '{cleaned_term}'"
+                        f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for "
+                        f"'{cleaned_term}'"
                     )
                 except Exception:
                     logger.warning("Fuzzy fallback failed", exc_info=True)

@@ -45,7 +45,8 @@ class LLMFollowUpService:
 
         # Create the prompt template for follow-up generation
         self.prompt = PromptTemplate(
-            template="""You are an AI assistant helping to generate relevant follow-up questions for Nick Berens' portfolio chatbot.
+            template="""You are an AI assistant helping to generate relevant follow-up questions for
+Nick Berens' portfolio chatbot.
 
 Based on the conversation so far and the available content in the knowledge base, suggest 3-4 follow-up questions that:
 1. Are directly answerable from the indexed content

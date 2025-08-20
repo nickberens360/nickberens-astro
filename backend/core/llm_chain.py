@@ -33,12 +33,17 @@ QUALITY_MODEL = "claude"
 
 # Default configuration values (replacing legacy data_source_config)
 DEFAULT_PROMPTS = {
-    "system_template": """You are Nick Berens' AI assistant. You help visitors learn about Nick's professional background, skills, experience, and interests. Use the following pieces of context to answer the question. If you don't know the answer based on the context provided, just say you don't have that information.
+    "system_template": """You are Nick Berens' AI assistant. You help visitors learn about Nick's
+professional background, skills, experience, and interests. Use the following pieces of context to
+answer the question. If you don't know the answer based on the context provided, just say you don't
+have that information.
 
 Context: {context}
 
 Answer as Nick would, in a friendly and professional tone. Keep responses concise but informative.""",
-    "history_aware": """Given a chat history and the latest user question which might reference the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is.""",
+    "history_aware": """Given a chat history and the latest user question which might reference the
+chat history, formulate a standalone question which can be understood without the chat history. Do NOT
+answer the question, just reformulate it if needed and otherwise return it as is.""",
 }
 
 
@@ -311,17 +316,26 @@ def create_qa_chain(llm):
     system_prompt = DEFAULT_PROMPTS.get(
         "system_template",
         (
-            "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
+            "You are Nick Berens' expert digital assistant. Your role is to answer questions about his "
+            "skills, experience, and work based *only* on the provided context. Speak in a helpful and "
+            "professional tone."
             "\n\n"
             "**CRITICAL INSTRUCTIONS:**"
             "\n"
-            "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience is...')."
+            "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your "
+            "experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience "
+            "is...')."
             "\n"
-            "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the provided resume context into a clear, professional summary. **NEVER** state that you are an AI or do not have a resume. The user is asking for Nick's resume, and the context provided is the source for it."
+            "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the "
+            "provided resume context into a clear, professional summary. **NEVER** state that you are an AI "
+            "or do not have a resume. The user is asking for Nick's resume, and the context provided is the "
+            "source for it."
             "\n"
-            "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers."
+            "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that "
+            "the information is not available. Do not make up answers."
             "\n"
-            "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work experience or skills for readability."
+            "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work "
+            "experience or skills for readability."
             "\n\n"
             "**Provided Context:**\n{context}"
         ),
@@ -576,7 +590,8 @@ async def stream_with_fallback(
                     # Background caching after streaming completes
                     if cache_key and full_response_chunks:
                         logger.debug(
-                            f"Background caching for key: {cache_key} ({len(full_response_chunks)} chunks, total length: {len(''.join(full_response_chunks))})"
+                            f"Background caching for key: {cache_key} ({len(full_response_chunks)} chunks, "
+                            f"total length: {len(''.join(full_response_chunks))})"
                         )
                         CacheManager.cache_response(cache_key, full_response_chunks)
 

@@ -185,7 +185,8 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 smart_handler = SmartQueryHandler(unified_retriever, llm)
                 intent_analysis = smart_handler.analyze_query_with_llm(sanitized_question)
                 logger.info(
-                    f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
+                    f"Smart routing: Query '{sanitized_question}' -> Topics: "
+                    f"{intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
                 )
 
         text_stream, actual_model_used, metadata = await stream_with_fallback(

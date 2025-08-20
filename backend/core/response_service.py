@@ -68,7 +68,8 @@ class ResponseService:
         else:
             processing_time = time.time() - start_time
             return QueryResponse(
-                answer=f"Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to see all of my art.",
+                answer=f"Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to "
+                f"see all of my art.",
                 followup_questions=followup_questions,
                 processing_time=processing_time,
                 llm_used="image_search",
