@@ -15,6 +15,6 @@ flake8-pyproject==1.2.3  # Allows flake8 config in pyproject.toml
 
 # Optional: Add these back gradually as needed
 # pytest-cov>=4.0.0        # For coverage reports
-# pytest-xdist>=3.0.0      # For parallel test execution  
+# pytest-xdist>=3.0.0      # For parallel test execution
 # mypy>=1.0.0              # For type checking
 # pre-commit>=3.0.0        # For git hooks

@@ -20,26 +20,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      
+
       - name: Install formatters
         run: |
           pip install black==24.10.0 isort==5.13.2
-      
+
       - name: Check formatting
         run: |
           echo "::group::Checking Black formatting"
           black --check --diff backend/ || echo "⚠️ Would reformat files with Black"
           echo "::endgroup::"
-          
+
           echo "::group::Checking import sorting"
           isort --check-only --diff backend/ || echo "⚠️ Would reorder imports with isort"
           echo "::endgroup::"
-          
+
           echo "ℹ️ Run 'black backend/' and 'isort backend/' locally to fix formatting"
 
   # Basic linting - Reports issues but doesn't fail
@@ -48,16 +48,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      
+
       - name: Install linter
         run: |
           pip install flake8==7.1.1 flake8-pyproject
-      
+
       - name: Run flake8
         continue-on-error: true
         run: |
@@ -74,15 +74,15 @@ jobs:
       matrix:
         python-version: ["3.11"]  # Start with one version, expand later
       fail-fast: false
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -90,12 +90,12 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-      
+
       - name: Run unit tests only
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -107,7 +107,7 @@ jobs:
           pytest tests/ -m unit -v --tb=short || \
             pytest tests/ -v --tb=short || \
             echo "::warning::Tests failed - Please fix failing tests"
-          
+
           # If unit tests pass, you can uncomment this to run all tests:
           # pytest tests/ -v --tb=short
 
