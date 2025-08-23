@@ -21,57 +21,8 @@ class AppConfig:
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
 
     # Follow-up generation configuration
-    @classmethod
-    def get_followup_mode(cls) -> str:
-        """Return follow-up mode: pre_generated | optimized | static."""
-        mode = os.getenv("FOLLOWUP_MODE", "pre_generated").strip().lower()
-        if mode not in {"pre_generated", "optimized", "static"}:
-            logger.warning(f"Invalid FOLLOWUP_MODE '{mode}', defaulting to 'pre_generated'")
-            return "pre_generated"
-        return mode
-
-    @classmethod
-    def is_followup_pregeneration_enabled(cls) -> bool:
-        """Toggle pre-generation during startup to control cold-start costs."""
-        return os.getenv("ENABLE_FOLLOWUP_PREGENERATION", "true").lower() == "true"
-
-    @classmethod
-    def get_followup_validation_score_threshold(cls) -> float:
-        """Threshold for validating follow-up relevance (0..1)."""
-        try:
-            val = float(os.getenv("FOLLOWUP_VALIDATION_SCORE_THRESHOLD", "0.5"))
-            if 0.0 <= val <= 1.0:
-                return val
-        except ValueError:
-            pass
-        logger.warning("Invalid FOLLOWUP_VALIDATION_SCORE_THRESHOLD; defaulting to 0.5")
-        return 0.5
-
-    @classmethod
-    def is_followup_llm_enhancement_enabled(cls) -> bool:
-        """Enable LLM enhancement for follow-up generation (may cause timeouts)."""
-        return os.getenv("FOLLOWUP_USE_LLM_ENHANCEMENT", "false").lower() == "true"
-
-    # Backward-compatible class-level properties
-    class classproperty(property):
-        def __get__(self, obj, owner):  # type: ignore[override]
-            return self.fget(owner)  # type: ignore[misc]
-
-    @classproperty
-    def FOLLOWUP_MODE(cls) -> str:
-        return cls.get_followup_mode()
-
-    @classproperty
-    def ENABLE_FOLLOWUP_PREGENERATION(cls) -> bool:
-        return cls.is_followup_pregeneration_enabled()
-
-    @classproperty
-    def FOLLOWUP_VALIDATION_SCORE_THRESHOLD(cls) -> float:
-        return cls.get_followup_validation_score_threshold()
-
-    @classproperty
-    def FOLLOWUP_USE_LLM_ENHANCEMENT(cls) -> bool:
-        return cls.is_followup_llm_enhancement_enabled()
+    # Simplified - now only using static follow-up service
+    CACHE_FOLLOWUP_RESPONSES = os.getenv("CACHE_FOLLOWUP_RESPONSES", "true").lower() == "true"
 
     # Search Configuration with basic validation
     try:
@@ -143,21 +94,11 @@ class AppConfig:
         logger.warning("Invalid MAX_CACHE_SIZE; defaulting to 1000")
         return 1000
 
-    @classproperty
-    def ENABLE_SMART_MODEL_SELECTION(cls) -> bool:
-        return cls.is_smart_model_selection_enabled()
-
-    @classproperty
-    def RETRIEVAL_SCORE_THRESHOLD(cls) -> float:
-        return cls.get_retrieval_score_threshold()
-
-    @classproperty
-    def CACHE_TTL(cls) -> int:
-        return cls.get_cache_ttl()
-
-    @classproperty
-    def MAX_CACHE_SIZE(cls) -> int:
-        return cls.get_max_cache_size()
+    # Simplified direct properties - compute values at module load time
+    ENABLE_SMART_MODEL_SELECTION = os.getenv("ENABLE_SMART_MODEL_SELECTION", "true").lower() == "true"
+    RETRIEVAL_SCORE_THRESHOLD = float(os.getenv("RETRIEVAL_SCORE_THRESHOLD", "0.3"))
+    CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
+    MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "1000"))
 
     # Search & Retrieval Configuration
     DEFAULT_SEARCH_K = int(os.getenv("DEFAULT_SEARCH_K", "8"))  # Default number of search results
@@ -336,10 +277,6 @@ class AppConfig:
 
         return excluded_ips
 
-    @classproperty
-    def EXCLUDED_IPS(cls):
-        return cls.get_excluded_ips()
-
     # Query Log Authentication
     @classmethod
     def get_query_log_auth_token(cls) -> Optional[str]:
@@ -354,10 +291,6 @@ class AppConfig:
             )
 
         return token if token else None
-
-    @classproperty
-    def QUERY_LOG_AUTH_TOKEN(cls) -> Optional[str]:
-        return cls.get_query_log_auth_token()
 
     # IP Anonymization Settings (GDPR/CCPA compliance)
     ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default
@@ -384,10 +317,6 @@ class AppConfig:
 
         return salt
 
-    @classproperty
-    def IP_HASH_SALT(cls) -> str:
-        return cls.get_ip_hash_salt()
-
     # Query Log storage
     @classmethod
     def get_query_log_file(cls) -> str:
@@ -407,11 +336,14 @@ class AppConfig:
         logger.info(f"Query log file path: {log_file_path}")
         return log_file_path
 
-    @classproperty
-    def QUERY_LOG_FILE(cls) -> str:
-        return cls.get_query_log_file()
-
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
     APP_DESCRIPTION = "API for AI-powered responses and illustration search with Claude as primary LLM"
     APP_VERSION = "2.1.0"
+
+
+# Compute complex properties at module load time
+AppConfig.EXCLUDED_IPS = AppConfig.get_excluded_ips()
+AppConfig.QUERY_LOG_AUTH_TOKEN = AppConfig.get_query_log_auth_token()
+AppConfig.IP_HASH_SALT = AppConfig.get_ip_hash_salt()
+AppConfig.QUERY_LOG_FILE = AppConfig.get_query_log_file()
