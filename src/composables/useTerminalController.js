@@ -74,7 +74,7 @@ export function useTerminalController(props) {
   // === BODY SCROLL MANAGEMENT ===
   let wheelEventListener = null;
   let touchMoveListener = null;
-  
+
   const preventScroll = (e) => {
     // Check if the scroll event is coming from within the terminal
     const terminalOutput = terminalContent.value?.getTerminalOutput?.();
@@ -84,21 +84,21 @@ export function useTerminalController(props) {
     }
     e.preventDefault();
   };
-  
+
   const blockBodyScroll = () => {
     // Prevent wheel events
     wheelEventListener = (e) => preventScroll(e);
     document.addEventListener('wheel', wheelEventListener, { passive: false });
-    
+
     // Prevent touch move events for mobile
     touchMoveListener = (e) => preventScroll(e);
     document.addEventListener('touchmove', touchMoveListener, { passive: false });
-    
+
     // Add overflow hidden as backup
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
   };
-  
+
   const unblockBodyScroll = () => {
     // Remove event listeners
     if (wheelEventListener) {
@@ -109,12 +109,12 @@ export function useTerminalController(props) {
       document.removeEventListener('touchmove', touchMoveListener);
       touchMoveListener = null;
     }
-    
+
     // Remove overflow hidden
     document.body.style.overflow = '';
     document.documentElement.style.overflow = '';
   };
-  
+
   const manageBodyScroll = () => {
     if (shouldBlockScroll.value) {
       blockBodyScroll();

@@ -80,6 +80,7 @@ query_logs.json
 backend/.chroma/
 backend/.rag_cache/
 backend/.unified_chroma/
+test_chroma/
 
 # Local downloaded logs directory
 query-logs/

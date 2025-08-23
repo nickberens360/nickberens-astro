@@ -212,7 +212,9 @@ HTML_TEMPLATE = """
                 docDiv.className = 'document';
                 docDiv.innerHTML = `
                     <div class="document-id">ID: ${doc.id}</div>
-                    ${distance !== null ? `<div class="distance">Similarity Score: ${(1 - distance).toFixed(4)}</div>` : ''}
+                    ${distance !== null ?
+                        `<div class="distance">Similarity Score: ${(1 - distance).toFixed(4)}</div>` :
+                        ''}
                     <div class="metadata">Metadata: ${JSON.stringify(doc.metadata)}</div>
                     <div class="document-text">${doc.document}</div>
                 `;

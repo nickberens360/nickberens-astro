@@ -1,7 +1,9 @@
 """Tests for smart illustration service fuzzy matching."""
 
-import pytest
 from typing import Dict, cast
+
+import pytest
+
 from backend.core.smart_illustration_service import SmartIllustrationService
 from backend.core.unified_retriever import UnifiedRetriever
 

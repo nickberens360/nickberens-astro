@@ -459,18 +459,14 @@ export default {
 
 .followup-buttons {
   position: relative;
-  display: flex;
-  width: 100%;
-  overflow-x: auto;
-  gap: .5rem;
   padding-bottom: .7rem;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
 }
 
 .followup-button {
+  display: block;
   background-color: #222222;
   color: #f9fafb;
+  width: 100%;
   border: none;
   border-radius: 8px;
   padding: 1rem;
@@ -478,7 +474,6 @@ export default {
   cursor: pointer;
   transition: background-color .2s;
   text-align: left;
-  min-width: 200px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

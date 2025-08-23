@@ -49,7 +49,7 @@ describe('AnnoyingEyelash', () => {
     const eyelashElement = wrapper.find('.annoying-eyelash');
     expect(eyelashElement.element.style.left).toBe('100px');
     expect(eyelashElement.element.style.top).toBe('200px');
-    
+
     // After mount, should switch to stored position
     await wrapper.vm.$nextTick();
     expect(eyelashElement.element.style.left).toBe('300px');
@@ -58,7 +58,7 @@ describe('AnnoyingEyelash', () => {
 
   it('should update drag attempts in store', async () => {
     const wrapper = mount(AnnoyingEyelash);
-    
+
     // Simulate drag start
     const eyelashElement = wrapper.find('.annoying-eyelash');
     await eyelashElement.trigger('pointerdown', {

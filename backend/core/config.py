@@ -21,57 +21,8 @@ class AppConfig:
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
 
     # Follow-up generation configuration
-    @classmethod
-    def get_followup_mode(cls) -> str:
-        """Return follow-up mode: pre_generated | optimized | static."""
-        mode = os.getenv("FOLLOWUP_MODE", "pre_generated").strip().lower()
-        if mode not in {"pre_generated", "optimized", "static"}:
-            logger.warning(f"Invalid FOLLOWUP_MODE '{mode}', defaulting to 'pre_generated'")
-            return "pre_generated"
-        return mode
-
-    @classmethod
-    def is_followup_pregeneration_enabled(cls) -> bool:
-        """Toggle pre-generation during startup to control cold-start costs."""
-        return os.getenv("ENABLE_FOLLOWUP_PREGENERATION", "true").lower() == "true"
-
-    @classmethod
-    def get_followup_validation_score_threshold(cls) -> float:
-        """Threshold for validating follow-up relevance (0..1)."""
-        try:
-            val = float(os.getenv("FOLLOWUP_VALIDATION_SCORE_THRESHOLD", "0.5"))
-            if 0.0 <= val <= 1.0:
-                return val
-        except ValueError:
-            pass
-        logger.warning("Invalid FOLLOWUP_VALIDATION_SCORE_THRESHOLD; defaulting to 0.5")
-        return 0.5
-
-    @classmethod
-    def is_followup_llm_enhancement_enabled(cls) -> bool:
-        """Enable LLM enhancement for follow-up generation (may cause timeouts)."""
-        return os.getenv("FOLLOWUP_USE_LLM_ENHANCEMENT", "false").lower() == "true"
-
-    # Backward-compatible class-level properties
-    class classproperty(property):
-        def __get__(self, obj, owner):  # type: ignore[override]
-            return self.fget(owner)  # type: ignore[misc]
-
-    @classproperty
-    def FOLLOWUP_MODE(cls) -> str:
-        return cls.get_followup_mode()
-
-    @classproperty
-    def ENABLE_FOLLOWUP_PREGENERATION(cls) -> bool:
-        return cls.is_followup_pregeneration_enabled()
-
-    @classproperty
-    def FOLLOWUP_VALIDATION_SCORE_THRESHOLD(cls) -> float:
-        return cls.get_followup_validation_score_threshold()
-
-    @classproperty
-    def FOLLOWUP_USE_LLM_ENHANCEMENT(cls) -> bool:
-        return cls.is_followup_llm_enhancement_enabled()
+    # Simplified - now only using static follow-up service
+    CACHE_FOLLOWUP_RESPONSES = os.getenv("CACHE_FOLLOWUP_RESPONSES", "true").lower() == "true"
 
     # Search Configuration with basic validation
     try:
@@ -93,6 +44,90 @@ class AppConfig:
         MAX_RESULTS = 15
 
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
+
+    # Smart Model Selection Configuration
+    @classmethod
+    def is_smart_model_selection_enabled(cls) -> bool:
+        """Toggle smart model selection based on query complexity."""
+        return os.getenv("ENABLE_SMART_MODEL_SELECTION", "true").lower() == "true"
+
+    @classmethod
+    def get_retrieval_score_threshold(cls) -> float:
+        """
+        Threshold for retrieval relevance scoring (0..1).
+
+        IMPORTANT: This is a SIMILARITY score threshold where HIGHER values = BETTER matches.
+        - 0.3 = keep documents with similarity >= 30% (loose matching)
+        - 0.7 = keep documents with similarity >= 70% (strict matching)
+        - Documents with scores ABOVE this threshold are kept
+        """
+        try:
+            val = float(os.getenv("RETRIEVAL_SCORE_THRESHOLD", "0.3"))
+            if 0.0 <= val <= 1.0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid RETRIEVAL_SCORE_THRESHOLD; defaulting to 0.3")
+        return 0.3
+
+    @classmethod
+    def get_cache_ttl(cls) -> int:
+        """Cache TTL in seconds."""
+        try:
+            val = int(os.getenv("CACHE_TTL", "3600"))
+            if val > 0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid CACHE_TTL; defaulting to 3600")
+        return 3600
+
+    @classmethod
+    def get_max_cache_size(cls) -> int:
+        """Maximum cache entries."""
+        try:
+            val = int(os.getenv("MAX_CACHE_SIZE", "1000"))
+            if val > 0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid MAX_CACHE_SIZE; defaulting to 1000")
+        return 1000
+
+    # These will be computed at module load time using validated classmethods
+
+    # Search & Retrieval Configuration
+    DEFAULT_SEARCH_K = int(os.getenv("DEFAULT_SEARCH_K", "8"))  # Default number of search results
+    EXPANDED_SEARCH_K = int(os.getenv("EXPANDED_SEARCH_K", "12"))  # Expanded search for comprehensive results
+    SEARCH_EXPANSION_MULTIPLIER = int(os.getenv("SEARCH_EXPANSION_MULTIPLIER", "3"))  # Multiply k for initial search
+
+    # Distance Threshold Configuration
+    DEFAULT_DISTANCE_THRESHOLD = float(os.getenv("DEFAULT_DISTANCE_THRESHOLD", "0.5"))  # Default similarity threshold
+    INCLUSIVE_DISTANCE_THRESHOLD = float(os.getenv("INCLUSIVE_DISTANCE_THRESHOLD", "1.0"))  # More inclusive threshold
+    BROAD_DISTANCE_THRESHOLD = float(os.getenv("BROAD_DISTANCE_THRESHOLD", "1.2"))  # Very broad threshold
+
+    # Query Processing Configuration
+    DEFAULT_MAX_CONTEXT_LENGTH = int(os.getenv("DEFAULT_MAX_CONTEXT_LENGTH", "2000"))  # Token limit for context
+    MAX_CONTEXT_DOCUMENTS = int(os.getenv("MAX_CONTEXT_DOCUMENTS", "3"))  # Max docs in context
+    CONTEXT_FILL_RATIO = float(os.getenv("CONTEXT_FILL_RATIO", "0.7"))  # Fill ratio before truncation
+    CONTENT_FINGERPRINT_LENGTH = int(os.getenv("CONTENT_FINGERPRINT_LENGTH", "100"))  # Length for deduplication
+    LENGTH_PENALTY_DIVISOR = int(os.getenv("LENGTH_PENALTY_DIVISOR", "1000"))  # For document length penalty
+
+    # Illustration Search Configuration
+    DEFAULT_ILLUSTRATION_COUNT = int(os.getenv("DEFAULT_ILLUSTRATION_COUNT", "10"))  # Default illustrations returned
+    MAX_ILLUSTRATION_SEARCH = int(os.getenv("MAX_ILLUSTRATION_SEARCH", "200"))  # Max illustrations to search
+
+    # Fuzzy Matching Configuration
+    SHORT_TERM_LENGTH = int(os.getenv("FUZZY_SHORT_TERM_LENGTH", "6"))  # Character threshold for short terms
+    MEDIUM_TERM_LENGTH = int(os.getenv("FUZZY_MEDIUM_TERM_LENGTH", "10"))  # Character threshold for medium terms
+    SHORT_TERM_FUZZY_THRESHOLD = float(
+        os.getenv("SHORT_TERM_FUZZY_THRESHOLD", "0.45")
+    )  # Fuzzy threshold for short terms
+    MEDIUM_TERM_FUZZY_THRESHOLD = float(
+        os.getenv("MEDIUM_TERM_FUZZY_THRESHOLD", "0.5")
+    )  # Fuzzy threshold for medium terms
+    LONG_TERM_FUZZY_THRESHOLD = float(os.getenv("LONG_TERM_FUZZY_THRESHOLD", "0.55"))  # Fuzzy threshold for long terms
+    DEFAULT_FUZZY_THRESHOLD = float(os.getenv("DEFAULT_FUZZY_THRESHOLD", "0.7"))  # Default fuzzy matching threshold
 
     # Server Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -238,10 +273,6 @@ class AppConfig:
 
         return excluded_ips
 
-    @classproperty
-    def EXCLUDED_IPS(cls):
-        return cls.get_excluded_ips()
-
     # Query Log Authentication
     @classmethod
     def get_query_log_auth_token(cls) -> Optional[str]:
@@ -256,10 +287,6 @@ class AppConfig:
             )
 
         return token if token else None
-
-    @classproperty
-    def QUERY_LOG_AUTH_TOKEN(cls) -> Optional[str]:
-        return cls.get_query_log_auth_token()
 
     # IP Anonymization Settings (GDPR/CCPA compliance)
     ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default
@@ -286,10 +313,6 @@ class AppConfig:
 
         return salt
 
-    @classproperty
-    def IP_HASH_SALT(cls) -> str:
-        return cls.get_ip_hash_salt()
-
     # Query Log storage
     @classmethod
     def get_query_log_file(cls) -> str:
@@ -309,11 +332,18 @@ class AppConfig:
         logger.info(f"Query log file path: {log_file_path}")
         return log_file_path
 
-    @classproperty
-    def QUERY_LOG_FILE(cls) -> str:
-        return cls.get_query_log_file()
-
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
     APP_DESCRIPTION = "API for AI-powered responses and illustration search with Claude as primary LLM"
     APP_VERSION = "2.1.0"
+
+
+# Compute complex properties at module load time using validated classmethods
+AppConfig.ENABLE_SMART_MODEL_SELECTION = AppConfig.is_smart_model_selection_enabled()
+AppConfig.RETRIEVAL_SCORE_THRESHOLD = AppConfig.get_retrieval_score_threshold()
+AppConfig.CACHE_TTL = AppConfig.get_cache_ttl()
+AppConfig.MAX_CACHE_SIZE = AppConfig.get_max_cache_size()
+AppConfig.EXCLUDED_IPS = AppConfig.get_excluded_ips()
+AppConfig.QUERY_LOG_AUTH_TOKEN = AppConfig.get_query_log_auth_token()
+AppConfig.IP_HASH_SALT = AppConfig.get_ip_hash_salt()
+AppConfig.QUERY_LOG_FILE = AppConfig.get_query_log_file()

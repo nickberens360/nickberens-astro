@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Constants for text processing limits
 _MAX_TEXT_LENGTH_FOR_TOPICS = 2000
 _MAX_SNIPPET_LENGTH_FOR_RERANKING = 500
+_MAX_DOCUMENT_LENGTH_FOR_CONTEXT = 3000
 
 
 # Define a Pydantic model for structured output
@@ -144,14 +145,16 @@ def rerank_documents_with_llm(llm: BaseLanguageModel, query: str, documents: Lis
 
     document_snippets = "\n".join(
         [
-            f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}{'...' if len(doc.page_content) > _MAX_SNIPPET_LENGTH_FOR_RERANKING else ''}"
+            f"Document {i}: {doc.page_content[:_MAX_SNIPPET_LENGTH_FOR_RERANKING]}"
+            f"{'...' if len(doc.page_content) > _MAX_SNIPPET_LENGTH_FOR_RERANKING else ''}"
             for i, doc in enumerate(documents)
         ]
     )
 
     prompt = PromptTemplate(
         template="""
-You are an expert relevance ranker. I will provide you with a user query and a list of document snippets, each with an index.
+You are an expert relevance ranker. I will provide you with a user query and a list of document
+snippets, each with an index.
 Your task is to return a comma-separated list of the indices, ordered from most relevant to least relevant.
 Only return the indices that are relevant to the query.
 
@@ -208,3 +211,54 @@ Re-ordered list of relevant indices (most relevant first):
         logger.error(f"Error re-ranking documents with LLM: {e}")
         # Fallback to original order if re-ranking fails
         return documents
+
+
+def generate_document_context(llm: BaseLanguageModel, content: str, file_name: str, file_type: str) -> str:
+    """
+    Generate a concise document context/summary that will be prepended to chunks.
+
+    This creates contextual information about the document that helps with retrieval.
+    """
+    prompt = PromptTemplate(
+        template="""
+You are analyzing a document to create a brief contextual summary.
+Create a 1-2 sentence summary that describes what this document is about and its main purpose.
+This summary will be used to provide context for search chunks.
+
+Document filename: {file_name}
+Document type: {file_type}
+Document content (first part):
+{content}
+
+Write a concise context summary (1-2 sentences):
+""",
+        input_variables=["content", "file_name", "file_type"],
+    )
+
+    chain = prompt | llm
+
+    try:
+        # Limit content size to avoid excessive token usage
+        truncated_content = content[:_MAX_DOCUMENT_LENGTH_FOR_CONTEXT]
+
+        response = chain.invoke({"content": truncated_content, "file_name": file_name, "file_type": file_type})
+
+        # Extract text from response
+        if hasattr(response, "content"):
+            context = str(response.content).strip()
+        elif isinstance(response, str):
+            context = response.strip()
+        else:
+            context = str(response).strip()
+
+        # Validate and clean the context
+        if context and len(context) > 10:  # Ensure we got a meaningful response
+            return context
+        else:
+            # Fallback to basic context if LLM response is poor
+            return f"This is content from {file_name}, a {file_type} document."
+
+    except Exception as e:
+        logger.error(f"Error generating document context with LLM: {e}")
+        # Fallback to basic context
+        return f"This is content from {file_name}, a {file_type} document."

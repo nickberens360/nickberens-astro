@@ -18,7 +18,6 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
-from .followup_pregeneration import FollowupPreGenerator
 from .smart_illustration_service import SmartIllustrationService
 from .unified_retriever import UnifiedRetriever
 
@@ -44,9 +43,9 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     logs_dir = backend_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
 
-    # Initialize LLMs - Claude Haiku for fast indexing, and a configurable Claude model (AppConfig.CLAUDE_MODEL) for user queries
-    indexing_llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1)
-    user_query_llm = ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1)
+    # Initialize LLMs - Claude Haiku for fast indexing, configurable Claude model for user queries
+    indexing_llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
+    user_query_llm = ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
@@ -76,16 +75,8 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
 
     logger.info(f"Total indexed: {total_files} files, {total_chunks} chunks")
 
-    # Pre-generate follow-up questions based on indexed content (configurable)
-    if AppConfig.ENABLE_FOLLOWUP_PREGENERATION:
-        logger.info("Pre-generating follow-up questions...")
-        followup_pregenerator = FollowupPreGenerator(indexing_llm)
-        pregenerated_questions = followup_pregenerator.analyze_and_generate(unified_retriever)
-
-        question_count = sum(len(qs) for qs in pregenerated_questions.values())
-        logger.info(f"Pre-generated {question_count} follow-up questions for instant responses")
-    else:
-        logger.info("Follow-up pregeneration disabled - skipping to reduce cold-start time")
+    # Follow-up pregeneration removed in simplification - using static questions only
+    logger.info("Using static follow-up questions for instant responses")
 
     # Create retriever dictionary with only the unified retriever
     all_retrievers = {

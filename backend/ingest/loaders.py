@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import List
+from typing import Any, List, cast
 
 from langchain.docstore.document import Document
 
@@ -16,14 +16,17 @@ from langchain_community.document_loaders import (
     UnstructuredMarkdownLoader,
 )
 
+UnstructuredLoader: Any
 try:
-    from langchain_unstructured import UnstructuredLoader
+    from langchain_unstructured import UnstructuredLoader as _UnstructuredLoader
 
+    UnstructuredLoader = _UnstructuredLoader
     _USE_NEW_UNSTRUCTURED = True
 except ImportError:
     # Fallback to deprecated version if new package not available
-    from langchain_community.document_loaders import UnstructuredFileLoader as UnstructuredLoader
+    from langchain_community.document_loaders import UnstructuredFileLoader as _UnstructuredFileLoader
 
+    UnstructuredLoader = _UnstructuredFileLoader
     _USE_NEW_UNSTRUCTURED = False
 
 logger = logging.getLogger(__name__)
@@ -104,9 +107,9 @@ def load_doc(path: Path) -> List[Document]:
         if ext in (".txt",):
             try:
                 if _USE_NEW_UNSTRUCTURED:
-                    return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
+                    return cast(List[Document], UnstructuredLoader(file_path=str(path)).load())
                 else:
-                    return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+                    return cast(List[Document], UnstructuredLoader(str(path)).load())
             except Exception:
                 return []
         if ext in (".csv",):
@@ -125,9 +128,9 @@ def load_doc(path: Path) -> List[Document]:
     # Fallback: treat as plain text
     try:
         if _USE_NEW_UNSTRUCTURED:
-            return UnstructuredLoader(file_path=str(path)).load()  # type: ignore[no-any-return]
+            return cast(List[Document], UnstructuredLoader(file_path=str(path)).load())
         else:
-            return UnstructuredLoader(str(path)).load()  # type: ignore[no-any-return]
+            return cast(List[Document], UnstructuredLoader(str(path)).load())
     except Exception:
         # If UnstructuredLoader fails, return empty list
         return []

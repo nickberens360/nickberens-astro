@@ -6,6 +6,11 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
+# Error message templates
+ERROR_NO_MATCHING_IMAGES = (
+    "Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to see all of my art."
+)
+
 
 class QueryResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
@@ -68,7 +73,7 @@ class ResponseService:
         else:
             processing_time = time.time() - start_time
             return QueryResponse(
-                answer=f"Sorry, I couldn't find any illustrations matching '{search_term}'. You can ask to see all of my art.",
+                answer=ERROR_NO_MATCHING_IMAGES.format(search_term=search_term),
                 followup_questions=followup_questions,
                 processing_time=processing_time,
                 llm_used="image_search",

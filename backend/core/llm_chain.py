@@ -27,14 +27,23 @@ logger = logging.getLogger(__name__)
 PRIMARY_LLM = AppConfig.PRIMARY_LLM
 GEMINI_MODEL = AppConfig.GEMINI_MODEL
 
+# Model name constants
+FAST_MODEL = "claude_haiku"
+QUALITY_MODEL = "claude"
+
 # Default configuration values (replacing legacy data_source_config)
 DEFAULT_PROMPTS = {
-    "system_template": """You are Nick Berens' AI assistant. You help visitors learn about Nick's professional background, skills, experience, and interests. Use the following pieces of context to answer the question. If you don't know the answer based on the context provided, just say you don't have that information.
+    "system_template": """You are Nick Berens' AI assistant. You help visitors learn about Nick's
+professional background, skills, experience, and interests. Use the following pieces of context to
+answer the question. If you don't know the answer based on the context provided, just say you don't
+have that information.
 
 Context: {context}
 
 Answer as Nick would, in a friendly and professional tone. Keep responses concise but informative.""",
-    "history_aware": """Given a chat history and the latest user question which might reference the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is.""",
+    "history_aware": """Given a chat history and the latest user question which might reference the
+chat history, formulate a standalone question which can be understood without the chat history. Do NOT
+answer the question, just reformulate it if needed and otherwise return it as is.""",
 }
 
 
@@ -52,6 +61,12 @@ LLM_PROVIDERS = [
         "class": ChatAnthropic,
         "model": CLAUDE_MODEL,
         "init_kwargs": {"model": CLAUDE_MODEL, "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
+    },
+    {
+        "name": "claude_haiku",
+        "class": ChatAnthropic,
+        "model": "claude-3-haiku-20240307",
+        "init_kwargs": {"model": "claude-3-haiku-20240307", "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
     },
     {
         "name": "gemini",
@@ -116,13 +131,136 @@ _response_cache: Dict[str, Dict[str, Any]] = {}
 _retrieval_cache: Dict[str, Dict[str, Any]] = {}
 
 
+def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = None) -> str:
+    """
+    Select the optimal LLM model based on query complexity.
+
+    Claude Haiku: Fast, cheap, good for simple factual queries
+    Claude Sonnet: Slower, expensive, better for complex reasoning
+    """
+    from ..security.validator import SecurityValidator
+
+    # If user explicitly prefers a model, validate and respect that
+    if preferred_model:
+        if (
+            preferred_model in [p["name"] for p in LLM_PROVIDERS]
+            and preferred_model in SecurityValidator.ALLOWED_MODELS
+        ):
+            return preferred_model
+        else:
+            logger.warning(f"Preferred model '{preferred_model}' not allowed, falling back to default")
+            # Fall through to default selection logic
+
+    # Check if smart model selection is enabled
+    if not AppConfig.ENABLE_SMART_MODEL_SELECTION:
+        logger.debug("Smart model selection disabled, using primary LLM")
+        return PRIMARY_LLM
+
+    # Analyze query complexity
+    query_lower = query.lower()
+
+    # Simple query indicators (good for Haiku - 30-60% faster)
+    simple_indicators = [
+        "what programming languages",
+        "what technologies",
+        "what skills",
+        "list",
+        "show me",
+        "tell me about",
+        "experience with",
+        "know about",
+        "background in",
+    ]
+
+    # Complex query indicators (need Sonnet for quality)
+    complex_indicators = [
+        "how does",
+        "why",
+        "explain",
+        "approach to",
+        "philosophy",
+        "compare",
+        "analyze",
+        "strategy",
+        "architecture",
+        "design pattern",
+        "best practices",
+    ]
+
+    # Check for simple queries
+    is_simple = any(indicator in query_lower for indicator in simple_indicators)
+    is_complex = any(indicator in query_lower for indicator in complex_indicators)
+
+    # Short queries are usually simple
+    is_short = len(query.split()) <= 10
+
+    # Decision logic
+    if is_simple and not is_complex and is_short:
+        logger.debug(f"Using Claude Haiku for simple query: '{query[:50]}...'")
+        selected_model = FAST_MODEL
+    elif is_complex:
+        logger.debug(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
+        selected_model = QUALITY_MODEL
+    else:
+        # Default to Haiku for moderate queries (speed over perfection)
+        logger.debug(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
+        selected_model = FAST_MODEL
+
+    # Final validation to ensure selected model is allowed
+    if selected_model not in SecurityValidator.ALLOWED_MODELS:
+        logger.warning(f"Selected model '{selected_model}' not in allowed models, falling back to primary")
+        return PRIMARY_LLM
+
+    return selected_model
+
+
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
     """Routes a user query to the unified retriever."""
-    if "unified" in retrievers:
-        logger.info(f"Using unified retriever for query: '{query}'")
+    # Check for both possible keys to handle both old and new conventions
+    if "_unified_retriever" in retrievers:
+        logger.debug(f"Using unified retriever for query: '{query}'")
+        return [retrievers["_unified_retriever"]]
+    elif "unified" in retrievers:
+        logger.debug(f"Using unified retriever for query: '{query}'")
         return [retrievers["unified"]]
     else:
         logger.error("Unified retriever not found in retrievers dictionary")
+        return []
+
+
+async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriever]) -> List[Document]:
+    """
+    Async document retrieval with enhanced performance optimizations.
+
+    This function tries to use async retrieval methods when available for better performance.
+    """
+    from .unified_retriever import UnifiedRetriever
+
+    # The actual UnifiedRetriever instance is stored under "_unified_retriever"
+    unified_retriever = retrievers.get("_unified_retriever")
+    if unified_retriever and isinstance(unified_retriever, UnifiedRetriever):
+        logger.debug("Using async unified retriever for enhanced performance")
+        try:
+            # Use async auto-routing for better performance
+            docs = await asyncio.to_thread(unified_retriever.auto_route_query, query)
+            logger.debug(f"Async retrieval successful, got {len(docs)} documents")
+            return docs
+        except Exception as e:
+            logger.warning(f"Async retrieval failed, falling back to sync: {e}")
+            # Fallback to sync method
+            return unified_retriever.auto_route_query(query)
+    else:
+        logger.warning("Unified retriever not available, falling back to route_query_to_retrievers")
+        # Fallback to route_query_to_retrievers instead of returning empty list
+        selected_retrievers = route_query_to_retrievers(query, retrievers)
+        if selected_retrievers:
+            # Use the first available retriever with async invoke
+            try:
+                docs = await selected_retrievers[0].ainvoke(query)
+                return docs if isinstance(docs, list) else [docs] if docs else []
+            except Exception as e:
+                logger.error(f"Fallback retrieval failed: {e}")
+                return []
         return []
 
 
@@ -178,17 +316,26 @@ def create_qa_chain(llm):
     system_prompt = DEFAULT_PROMPTS.get(
         "system_template",
         (
-            "You are Nick Berens' expert digital assistant. Your role is to answer questions about his skills, experience, and work based *only* on the provided context. Speak in a helpful and professional tone."
+            "You are Nick Berens' expert digital assistant. Your role is to answer questions about his "
+            "skills, experience, and work based *only* on the provided context. Speak in a helpful and "
+            "professional tone."
             "\n\n"
             "**CRITICAL INSTRUCTIONS:**"
             "\n"
-            "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience is...')."
+            "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your "
+            "experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience "
+            "is...')."
             "\n"
-            "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the provided resume context into a clear, professional summary. **NEVER** state that you are an AI or do not have a resume. The user is asking for Nick's resume, and the context provided is the source for it."
+            "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the "
+            "provided resume context into a clear, professional summary. **NEVER** state that you are an AI "
+            "or do not have a resume. The user is asking for Nick's resume, and the context provided is the "
+            "source for it."
             "\n"
-            "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that the information is not available. Do not make up answers."
+            "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that "
+            "the information is not available. Do not make up answers."
             "\n"
-            "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work experience or skills for readability."
+            "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work "
+            "experience or skills for readability."
             "\n\n"
             "**Provided Context:**\n{context}"
         ),
@@ -224,7 +371,7 @@ class CacheManager:
         if not ENABLE_CACHING or not isinstance(user_input, str):
             return None
         normalized_input = re.sub(r"[^\w\s]", "", user_input.lower()).strip()
-        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()[:16]
+        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()
 
     @staticmethod
     def get_cached_response(cache_key: str) -> Optional[str]:
@@ -317,11 +464,14 @@ async def stream_with_fallback(
 
     # 1) Cached FINAL response?
     if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
+        logger.debug(f"Cache hit: returning cached response for key: {cache_key}")
 
         async def cached_stream():
             yield cached_response
 
         return cached_stream(), "cached", metadata
+    else:
+        logger.debug(f"Cache miss for key: {cache_key}. Will generate new response.")
 
     # 2) Initialize LLMs
     try:
@@ -338,52 +488,70 @@ async def stream_with_fallback(
     unique_docs = CacheManager.get_cached_retrieval(cache_key) if cache_key else None
     if unique_docs is None:
         logger.info(f"Retrieval cache miss for key: {cache_key}. Performing vector search...")
-        selected_retrievers = route_query_to_retrievers(user_input, retrievers)
 
-        # History-aware?
-        if chat_history and (reformulation_llm := llms.get("claude") or llms.get("gemini")):
-            try:
-                history_prompt = create_history_aware_prompt()
-                history_aware_retrievers = [
-                    create_history_aware_retriever(reformulation_llm, r, history_prompt) for r in selected_retrievers
-                ]
-                tasks = [
-                    r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers
-                ]
-                logger.info("Using history-aware retrievers.")
-            except Exception as e:
-                logger.warning(f"Failed to create history-aware retrievers: {e}. Falling back to regular retrieval.")
+        # Try async retrieval first for better performance
+        try:
+            all_docs = await async_retrieve_documents(user_input, retrievers)
+            logger.debug(f"Async retrieval successful, got {len(all_docs)} documents")
+        except Exception as async_error:
+            logger.warning(f"Async retrieval failed: {async_error}. Falling back to standard retrieval...")
+            all_docs = []
+
+        # Check if async retrieval returned documents
+        if not all_docs:
+            if "async_error" not in locals():
+                logger.warning("Async retrieval returned no documents, falling back to sync")
+
+            # Fallback to standard retrieval method
+            selected_retrievers = route_query_to_retrievers(user_input, retrievers)
+
+            # History-aware?
+            if chat_history and (reformulation_llm := llms.get("claude") or llms.get("gemini")):
+                try:
+                    history_prompt = create_history_aware_prompt()
+                    history_aware_retrievers = [
+                        create_history_aware_retriever(reformulation_llm, r, history_prompt)
+                        for r in selected_retrievers
+                    ]
+                    tasks = [
+                        r.ainvoke({"input": user_input, "chat_history": chat_history}) for r in history_aware_retrievers
+                    ]
+                    logger.info("Using history-aware retrievers.")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to create history-aware retrievers: {e}. Falling back to regular retrieval."
+                    )
+                    tasks = [r.ainvoke(user_input) for r in selected_retrievers]
+            else:
                 tasks = [r.ainvoke(user_input) for r in selected_retrievers]
-        else:
-            tasks = [r.ainvoke(user_input) for r in selected_retrievers]
 
-        if tasks:
-            retrieval_results = await asyncio.gather(*tasks, return_exceptions=True)
-            all_docs: List[Document] = []
-            for result in retrieval_results:
-                if isinstance(result, Exception):
-                    logger.error(f"Error during document retrieval: {result}")
-                elif result:
-                    all_docs.extend(cast(List[Document], result))
+            if tasks:
+                retrieval_results = await asyncio.gather(*tasks, return_exceptions=True)
+                all_docs = []
+                for result in retrieval_results:
+                    if isinstance(result, Exception):
+                        logger.error(f"Error during document retrieval: {result}")
+                    elif result:
+                        all_docs.extend(cast(List[Document], result))
+            else:
+                all_docs = []
+                logger.warning("No retrievers were selected for the query, context will be empty.")
 
-            # Deduplicate by content + metadata
-            unique_docs = list(
-                {
-                    hashlib.sha256(
-                        f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
-                    ).hexdigest(): doc
-                    for doc in all_docs
-                }.values()
-            )
-        else:
-            unique_docs = []
-            logger.warning("No retrievers were selected for the query, context will be empty.")
+        # Deduplicate by content + metadata
+        unique_docs = list(
+            {
+                hashlib.sha256(
+                    f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True)}".encode("utf-8")
+                ).hexdigest(): doc
+                for doc in all_docs
+            }.values()
+        )
 
         if cache_key:
             CacheManager.cache_retrieval(cache_key, unique_docs)
 
-    # 4) Generation with fallback order
-    llm_order = _determine_llm_order(preferred_model, llms)
+    # 4) Generation with smart model selection and fallback order
+    llm_order = _determine_llm_order(preferred_model, llms, user_input)
     for llm_name, llm_instance in llm_order:
         if not llm_instance:
             continue
@@ -391,49 +559,62 @@ async def stream_with_fallback(
             logger.info(f"Attempting to stream response using {llm_name.title()}...")
             qa_chain = create_qa_chain(llm_instance)
 
-            async def llm_stream():
-                full_response_chunks: List[str] = []
-                async for chunk in qa_chain.astream({"input": user_input, "context": unique_docs}):
-                    # Coerce various chunk types to text for streaming and caching
-                    if hasattr(chunk, "content"):
-                        text_piece = getattr(chunk, "content", "")
-                    elif isinstance(chunk, str):
-                        text_piece = chunk
-                    elif isinstance(chunk, dict):
-                        text_piece = str(chunk.get("answer") or chunk.get("output") or chunk.get("content") or "")
-                    else:
-                        text_piece = str(chunk)
+            # Create true progressive streaming with background caching
+            logger.debug(f"Starting progressive streaming for cache key: {cache_key}")
 
-                    if not isinstance(text_piece, str):
-                        text_piece = str(text_piece)
+            async def progressive_streaming_with_caching(qa=qa_chain, model_name=llm_name):
+                full_response_chunks = []
+                try:
+                    # Stream LLM response in real-time while collecting for cache
+                    async for chunk in qa.astream({"input": user_input, "context": unique_docs}):
+                        # Coerce various chunk types to text for streaming and caching
+                        if hasattr(chunk, "content"):
+                            text_piece = getattr(chunk, "content", "")
+                        elif isinstance(chunk, str):
+                            text_piece = chunk
+                        elif isinstance(chunk, dict):
+                            text_piece = str(chunk.get("answer") or chunk.get("output") or chunk.get("content") or "")
+                        else:
+                            text_piece = str(chunk)
 
-                    if text_piece:
-                        yield text_piece
-                        full_response_chunks.append(text_piece)
+                        if not isinstance(text_piece, str):
+                            text_piece = str(text_piece)
 
-                if cache_key:
-                    CacheManager.cache_response(cache_key, full_response_chunks)
+                        if text_piece:
+                            # Yield immediately for progressive streaming
+                            yield text_piece
+                            # Collect for caching
+                            full_response_chunks.append(text_piece)
 
-                    # Update streaming response log with actual content
-                    if cache_key and client_ip and question and full_response_chunks:
-                        try:
-                            complete_response = "".join(full_response_chunks)
-                            query_logger = get_query_logger()
-                            query_logger.update_streaming_response(
-                                cache_key=cache_key,
-                                client_ip=client_ip,
-                                question=question,
-                                actual_response=complete_response,
-                                request_id=request_id,
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to update streaming response log: {e}")
+                finally:
+                    # Background caching after streaming completes
+                    if cache_key and full_response_chunks:
+                        logger.debug(
+                            f"Background caching for key: {cache_key} ({len(full_response_chunks)} chunks, "
+                            f"total length: {len(''.join(full_response_chunks))})"
+                        )
+                        CacheManager.cache_response(cache_key, full_response_chunks)
 
-            # Create and return the stream - validation logic removed to avoid duplicate API calls
-            stream = llm_stream()
-            logger.info(f"Successfully initialized streaming with {llm_name.title()}.")
+                        # Update streaming response log with actual content
+                        if client_ip and question:
+                            try:
+                                complete_response = "".join(full_response_chunks)
+                                query_logger = get_query_logger()
+                                query_logger.update_streaming_response(
+                                    cache_key=cache_key,
+                                    client_ip=client_ip,
+                                    question=question,
+                                    actual_response=complete_response,
+                                    request_id=request_id,
+                                )
+                            except Exception as e:
+                                logger.warning(f"Failed to update streaming response log: {e}")
+                    elif cache_key:
+                        logger.debug(f"Not caching response for key {cache_key} - no chunks collected")
+
+            logger.info(f"Successfully initialized progressive streaming with {llm_name.title()}.")
             metadata["rate_limit_status"] = rate_limit_tracker.get_status()
-            return stream, llm_name, metadata
+            return progressive_streaming_with_caching(), llm_name, metadata
 
         except Exception as e:
             logger.error(f"{llm_name.title()} streaming failed: {type(e).__name__} - {e}")
@@ -455,11 +636,21 @@ async def stream_with_fallback(
 def _determine_llm_order(
     preferred_model: Optional[str],
     llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]],
+    query: Optional[str] = None,
 ) -> List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
-    """Determine the order in which to try LLMs based on preference and availability."""
+    """Determine the order in which to try LLMs based on preference, query complexity, and availability."""
     provider_names = [str(p["name"]) for p in LLM_PROVIDERS]
-    if preferred_model and preferred_model in provider_names and llms.get(preferred_model):
+
+    # Smart model selection based on query complexity
+    if query and not preferred_model:
+        optimal_model = select_optimal_model_for_query(query)
+        if optimal_model in provider_names and llms.get(optimal_model):
+            # Put optimal model first
+            provider_names.insert(0, provider_names.pop(provider_names.index(optimal_model)))
+    elif preferred_model and preferred_model in provider_names and llms.get(preferred_model):
+        # User preference overrides smart selection
         provider_names.insert(0, provider_names.pop(provider_names.index(preferred_model)))
+
     llm_order: List[Tuple[str, Union[ChatGoogleGenerativeAI, ChatAnthropic]]] = []
     for name in provider_names:
         instance = llms.get(name)

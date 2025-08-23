@@ -8,18 +8,21 @@ This is the main entry point for the FastAPI application that:
 """
 
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
+from fastapi import FastAPI
 from langchain_core.language_models import BaseLanguageModel
 
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
 from .core.config import AppConfig
-from .core.followup_service_optimized import OptimizedFollowUpService
+from .core.followup_service import FollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
+from .core.response_cache_warmer import start_cache_warming
 from .core.response_service import ResponseService
 from .core.smart_illustration_service import SmartIllustrationService
 
@@ -51,68 +54,59 @@ query_router = QueryRouter()
 response_service = ResponseService()
 
 
-# Create follow-up service based on configuration
-def create_followup_service():
-    followup_mode = AppConfig.get_followup_mode()
-
-    if followup_mode == "static":
-        from .core.followup_service import FollowUpService
-
-        return FollowUpService()
-    elif followup_mode == "pre_generated":
-        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
-
-        return PreGeneratedFollowUpService()
-    elif followup_mode == "optimized":
-        if llm and retrievers:
-            from .core.app_initializer_v2 import get_unified_retriever
-
-            unified_retriever = get_unified_retriever(retrievers)
-            if unified_retriever:
-                return OptimizedFollowUpService(
-                    llm=llm,
-                    unified_retriever=unified_retriever,
-                    llm_timeout=3.0,  # Quick timeout to maintain responsiveness
-                    use_llm_enhancement=AppConfig.FOLLOWUP_USE_LLM_ENHANCEMENT,
-                )
-        # Fallback to pre-generated if initialization fails
-        logger.warning(
-            "Optimized followup mode requested but LLM/retrievers not available, falling back to pre-generated"
-        )
-        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
-
-        return PreGeneratedFollowUpService()
-    else:
-        logger.error(f"Unknown followup mode: {followup_mode}, defaulting to pre-generated")
-        from .core.followup_service_pregenerated import PreGeneratedFollowUpService
-
-        return PreGeneratedFollowUpService()
-
-
-followup_service = create_followup_service()
+# Create follow-up service - simplified to only use static service
+followup_service = FollowUpService()
 
 query_logger = get_query_logger()
 
-# Create the FastAPI app
-app = create_app()
 
-# Store state in app.state for dependency injection
-app.state.app_initialized = app_initialized
-app.state.retrievers = retrievers
-app.state.illustration_service = illustration_service
-app.state.llm = llm
-app.state.query_router = query_router
-app.state.response_service = response_service
-app.state.followup_service = followup_service
-app.state.query_logger = query_logger
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    logger = logging.getLogger(__name__)
+
+    # Startup: Store state in app.state for dependency injection
+    try:
+        logger.info("Starting application initialization...")
+        app.state.app_initialized = app_initialized
+        app.state.retrievers = retrievers
+        app.state.illustration_service = illustration_service
+        app.state.llm = llm
+        app.state.query_router = query_router
+        app.state.response_service = response_service
+        app.state.followup_service = followup_service
+        app.state.query_logger = query_logger
+
+        # Start cache warming in the background (non-blocking)
+        if app_initialized and retrievers:
+            await start_cache_warming(retrievers, app.state)
+
+        logger.info("Application startup completed successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
+
+    yield
+
+    # Shutdown: Clean shutdown
+    logger.info("Application shutdown completed successfully")
 
 
-# Ensure graceful shutdown of background resources (e.g., thread pools)
-@app.on_event("shutdown")
-async def _shutdown_cleanup():
-    svc = app.state.followup_service
-    if hasattr(svc, "close"):
-        try:
-            svc.close()
-        except Exception:
-            logger.exception("Failed to close follow-up service cleanly")
+# Create the FastAPI app with lifespan context manager
+app = create_app(lifespan=lifespan)
+
+# Ensure app.state has expected attributes for tests that patch them
+# These are set definitively during lifespan startup, but we predefine them here
+# so patch.object(app.state, ...) works even before startup runs.
+if not hasattr(app.state, "retrievers"):
+    app.state.retrievers = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "illustration_service"):
+    app.state.illustration_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "response_service"):
+    app.state.response_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "followup_service"):
+    app.state.followup_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "llm"):
+    app.state.llm = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "query_router"):
+    app.state.query_router = None  # type: ignore[attr-defined]

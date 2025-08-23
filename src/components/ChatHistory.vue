@@ -187,7 +187,7 @@ export default {
     const isProcessing = useStore(isChatProcessing);
     const mobileMenuOpen = useStore(isMobileMenuOpen);
     const isDrawerFullyVisible = ref(false);
-    
+
     // Constants
     const DRAWER_ANIMATION_DURATION = 300; // Match the CSS transition duration
     let fadeTimer;

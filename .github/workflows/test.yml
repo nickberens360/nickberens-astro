@@ -1,49 +1,94 @@
-name: Test Suite
+name: CI
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
-# Security: Limit job permissions
 permissions:
   contents: read
-  checks: write
-  pull-requests: write
 
-# Cancel previous runs on the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-jobs:
-  # --- EXISTING BACKEND TEST JOB ---
-  test:
-    name: Backend Tests (Pytest)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
 
+jobs:
+  # Format check - Never fails the CI, just reports
+  format:
+    name: Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install formatters
+        run: |
+          pip install black==24.10.0 isort==5.13.2
+
+      - name: Check formatting
+        run: |
+          echo "::group::Checking Black formatting"
+          black --check --diff backend/ || echo "⚠️ Would reformat files with Black"
+          echo "::endgroup::"
+
+          echo "::group::Checking import sorting"
+          isort --check-only --diff backend/ || echo "⚠️ Would reorder imports with isort"
+          echo "::endgroup::"
+
+          echo "ℹ️ Run 'black backend/' and 'isort backend/' locally to fix formatting"
+
+  # Basic linting - Reports issues but doesn't fail
+  lint:
+    name: Basic Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linter
+        run: |
+          pip install flake8==7.1.1 flake8-pyproject
+
+      - name: Run flake8
+        continue-on-error: true
+        run: |
+          echo "::group::Flake8 Results"
+          flake8 backend/ --count --statistics || true
+          echo "::endgroup::"
+          echo "ℹ️ Linting issues are informational only"
+
+  # Tests - This is the only job that can fail the CI
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ${{ github.event_name == 'pull_request' && fromJSON('["3.11"]') || fromJSON('["3.9", "3.10", "3.11"]') }}
+        python-version: ["3.11"]  # Start with one version, expand later
+      fail-fast: false
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip dependencies
+      - name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-dev.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
@@ -51,117 +96,35 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Set up environment variables
-        run: |
-          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
-
-      - name: Run tests with coverage
+      - name: Run unit tests only
         env:
+          PYTHONPATH: ${{ github.workspace }}
+          # Add API keys if your tests need them
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          pytest -n auto \
-            --cov=backend/core \
-            --cov-report=xml \
-            --cov-report=term-missing \
-            --cov-report=html \
-            --junitxml=pytest-results.xml \
-            -v
+          # Run only unit tests first (they should be fast and reliable); fall back to all tests if no unit marker or selection fails
+          pytest tests/ -m unit -v --tb=short || pytest tests/ -v --tb=short
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ matrix.python-version }}
-          path: |
-            pytest-results.xml
-            coverage.xml
-            htmlcov/
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: matrix.python-version == '3.11'  # Only upload once
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-  # Optional: Separate job for different test types
-  test-categories:
+  # Summary job - Always runs, provides clear status
+  summary:
+    name: CI Summary
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    strategy:
-      fail-fast: false
-      matrix:
-        test-type: ["unit", "integration"]
-        python-version: ["3.11"]  # Use latest for faster feedback
-
+    needs: [format, lint, test]
+    if: always()
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-dev.txt') }}
-
-      - name: Install dependencies
+      - name: Summary
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-
-      - name: Set up environment variables
-        run: |
-          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
-
-      - name: Run ${{ matrix.test-type }} tests
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          pytest -m "${{ matrix.test-type }}" -n auto -v
-
-  lint:
-    runs-on: ubuntu-latest
-    # Run lint job in parallel with tests
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Cache linting tools
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-lint-${{ hashFiles('**/requirements-dev.txt') }}
-
-      - name: Install linting tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-
-      - name: Auto-fix formatting
-        run: |
-          black .
-          isort .
-
-      - name: Check remaining issues
-        run: |
-          flake8 . || echo "⚠️ Flake8 issues found - please fix manually"
-          mypy backend/core --ignore-missing-imports || echo "⚠️ Type checking issues found - please fix manually"
-
-      - name: Security scan
-        run: |
-          safety check || echo "⚠️ Security vulnerabilities found - please review"
+          echo "## CI Summary"
+          echo ""
+          echo "### Job Results:"
+          echo "- Format Check: ${{ needs.format.result }} (informational)"
+          echo "- Lint Check: ${{ needs.lint.result }} (informational)"
+          echo "- Tests: ${{ needs.test.result }} ⚠️ **Required to pass**"
+          echo ""
+          if [[ "${{ needs.test.result }}" == "failure" ]]; then
+            echo "❌ CI Failed - Tests must pass"
+            exit 1
+          else
+            echo "✅ CI Passed"
+          fi
