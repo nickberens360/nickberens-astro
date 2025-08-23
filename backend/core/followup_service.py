@@ -106,8 +106,8 @@ class FollowUpService:
         self.general_suggestions = [
             "Show me your illustrations",
             "Tell me about your experience",
+            "What inspires your illustrations?",
             "What technologies do you work with?",
-            "Show me your recent projects",
             "What's your development philosophy?",
             "How can I contact Nick?",
         ]

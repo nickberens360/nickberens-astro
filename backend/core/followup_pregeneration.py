@@ -279,12 +279,9 @@ Response:""",
                 "Show me Nick's illustrations",
                 "Tell me about Nick's experience",
                 "What technologies does Nick work with?",
-                "Show me Nick's recent projects",
-                "What's Nick's development philosophy?",
                 "How can I contact Nick?",
             ],
             "technical": [
-                "What Vue.js projects has Nick worked on?",
                 "Tell me about Nick's JavaScript expertise",
                 "How does Nick approach frontend architecture?",
                 "What's Nick's experience with modern frameworks?",
@@ -292,14 +289,12 @@ Response:""",
             "experience": [
                 "What did Nick accomplish at Wisnet?",
                 "What's Nick working on at Hillman Group?",
-                "Tell me about Nick's career progression",
-                "What's been Nick's biggest career achievement?",
+                "Tell me about Nick's resume",
             ],
             "creative": [
                 "Show me Nick's creative illustrations",
                 "Tell me about Nick's artistic process",
                 "What inspires Nick's creative work?",
-                "Show me different art styles Nick has done",
             ],
         }
 
