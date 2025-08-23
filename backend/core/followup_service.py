@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -9,7 +10,7 @@ class FollowUpService:
 
     def __init__(self):
         # Simple static follow-up questions - always the same 6 questions
-        self.questions = [
+        self.questions: List[str] = [
             "Show me your illustrations",
             "Tell me about your experience",
             "What inspires your artwork?",
@@ -18,7 +19,9 @@ class FollowUpService:
             "How can I contact Nick?",
         ]
         # Track current position for sequential ordering
-        self.current_index = 0
+        self.current_index: int = 0
+        # Thread lock for concurrent access protection
+        self._lock = threading.Lock()
 
     def generate_followups(
         self,
@@ -37,7 +40,8 @@ class FollowUpService:
         Returns:
             List with 1 follow-up question suggestion
         """
-        # Return current question and advance to next position
-        current_question = self.questions[self.current_index]
-        self.current_index = (self.current_index + 1) % len(self.questions)
+        # Return current question and advance to next position (thread-safe)
+        with self._lock:
+            current_question = self.questions[self.current_index]
+            self.current_index = (self.current_index + 1) % len(self.questions)
         return [current_question]
