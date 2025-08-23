@@ -1,5 +1,4 @@
 import logging
-import random
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -18,6 +17,8 @@ class FollowUpService:
             "What's your development philosophy?",
             "How can I contact Nick?",
         ]
+        # Track current position for sequential ordering
+        self.current_index = 0
 
     def generate_followups(
         self,
@@ -26,7 +27,7 @@ class FollowUpService:
         conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> List[str]:
         """
-        Generate follow-up questions - always returns 1 random question.
+        Generate follow-up questions - returns 1 question in sequential order.
 
         Args:
             user_question: The user's original question (unused in simplified version)
@@ -36,5 +37,7 @@ class FollowUpService:
         Returns:
             List with 1 follow-up question suggestion
         """
-        # Ultra-simple: just return 1 random question from our 6 static questions
-        return random.sample(self.questions, 1)
+        # Return current question and advance to next position
+        current_question = self.questions[self.current_index]
+        self.current_index = (self.current_index + 1) % len(self.questions)
+        return [current_question]
