@@ -94,11 +94,7 @@ class AppConfig:
         logger.warning("Invalid MAX_CACHE_SIZE; defaulting to 1000")
         return 1000
 
-    # Simplified direct properties - compute values at module load time
-    ENABLE_SMART_MODEL_SELECTION = os.getenv("ENABLE_SMART_MODEL_SELECTION", "true").lower() == "true"
-    RETRIEVAL_SCORE_THRESHOLD = float(os.getenv("RETRIEVAL_SCORE_THRESHOLD", "0.3"))
-    CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
-    MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "1000"))
+    # These will be computed at module load time using validated classmethods
 
     # Search & Retrieval Configuration
     DEFAULT_SEARCH_K = int(os.getenv("DEFAULT_SEARCH_K", "8"))  # Default number of search results
@@ -342,7 +338,11 @@ class AppConfig:
     APP_VERSION = "2.1.0"
 
 
-# Compute complex properties at module load time
+# Compute complex properties at module load time using validated classmethods
+AppConfig.ENABLE_SMART_MODEL_SELECTION = AppConfig.is_smart_model_selection_enabled()
+AppConfig.RETRIEVAL_SCORE_THRESHOLD = AppConfig.get_retrieval_score_threshold()
+AppConfig.CACHE_TTL = AppConfig.get_cache_ttl()
+AppConfig.MAX_CACHE_SIZE = AppConfig.get_max_cache_size()
 AppConfig.EXCLUDED_IPS = AppConfig.get_excluded_ips()
 AppConfig.QUERY_LOG_AUTH_TOKEN = AppConfig.get_query_log_auth_token()
 AppConfig.IP_HASH_SALT = AppConfig.get_ip_hash_salt()
