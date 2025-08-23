@@ -60,21 +60,21 @@ export default {
     const isDragging = ref(false);
     const initialMouseX = ref(0);
     const initialMouseY = ref(0);
-    
+
     // Get state from store
     const $easterEggsStore = useStore(easterEggsStore);
     const eyelashState = computed(() => $easterEggsStore.value.annoyingEyelash || {});
-    
+
     // Always initialize with props to avoid hydration mismatch
     const currentX = ref(props.initialX);
     const currentY = ref(props.initialY);
     const dragAttempts = ref(0);
     const isAnimating = ref(false);
     const isComponentVisible = ref(true);
-    
+
     // Track if we've loaded stored position
     const hasLoadedStoredPosition = ref(false);
-    
+
     // Watch for store changes and update local refs
     watch(() => eyelashState.value, (newState) => {
       currentX.value = newState.currentX ?? currentX.value;
@@ -131,11 +131,11 @@ export default {
 
       currentX.value = Math.max(0, Math.min(currentX.value, maxX));
       currentY.value = Math.max(0, Math.min(currentY.value, maxY));
-      
+
       // Update store with new position
-      updateAnnoyingEyelash({ 
-        currentX: currentX.value, 
-        currentY: currentY.value 
+      updateAnnoyingEyelash({
+        currentX: currentX.value,
+        currentY: currentY.value
       });
     };
 
@@ -183,10 +183,10 @@ export default {
       const defaultY = 150;
       const storedX = eyelashState.value.currentX;
       const storedY = eyelashState.value.currentY;
-      
+
       // Check if we have a stored position
       const hasStoredPosition = storedX !== undefined && storedY !== undefined;
-      
+
       if (hasStoredPosition) {
         // Use stored position
         currentX.value = storedX;
@@ -197,14 +197,14 @@ export default {
         hasLoadedStoredPosition.value = true;
       } else {
         // Save initial props position to store
-        updateAnnoyingEyelash({ 
-          currentX: currentX.value, 
+        updateAnnoyingEyelash({
+          currentX: currentX.value,
           currentY: currentY.value,
           isComponentVisible: true
         });
       }
     });
-    
+
     onUnmounted(() => {
       cleanup();
     });

@@ -20,13 +20,6 @@ logger = logging.getLogger(__name__)
 class SmartIllustrationService:
     """Smart illustration service that uses unified retriever for image search."""
 
-    # Adaptive threshold constants for search term length
-    SHORT_TERM_LENGTH = 6
-    MEDIUM_TERM_LENGTH = 10
-    SHORT_TERM_THRESHOLD = 0.45
-    MEDIUM_TERM_THRESHOLD = 0.5
-    LONG_TERM_THRESHOLD = 0.55
-
     def __init__(self, unified_retriever: UnifiedRetriever):
         self.unified_retriever = unified_retriever
         # Cache illustrations data to avoid repeated file I/O
@@ -62,9 +55,9 @@ class SmartIllustrationService:
             # Use semantic search with creative content type filter
             docs = self.unified_retriever.semantic_search(
                 query="illustration art design creative",
-                k=200,  # High enough to get all illustrations
+                k=AppConfig.MAX_ILLUSTRATION_SEARCH,  # High enough to get all illustrations
                 filter_content_types=["creative"],
-                score_threshold=2.0,  # Generous threshold to include all illustrations
+                score_threshold=0.0,  # Get all results (no distance filtering)
             )
 
             logger.debug(f"Semantic search returned {len(docs)} documents")
@@ -98,13 +91,13 @@ class SmartIllustrationService:
             logger.error("Failed to get all illustrations", exc_info=True)
             return []
 
-    def search(self, search_term: str, top_k: int = 10) -> List[Dict[str, str]]:
+    def search(self, search_term: str, top_k: int = None) -> List[Dict[str, str]]:
         """
         Search illustrations using smart retriever with caching and improved matching.
 
         Args:
             search_term: The user's search query
-            top_k: Maximum number of results
+            top_k: Maximum number of results (defaults to AppConfig.DEFAULT_ILLUSTRATION_COUNT)
 
         Returns:
             List of illustration file paths for frontend display
@@ -112,6 +105,10 @@ class SmartIllustrationService:
         if not search_term or not isinstance(search_term, str):
             logger.warning("Invalid search term provided to illustration search.")
             return []
+
+        # Apply default from config
+        if top_k is None:
+            top_k = AppConfig.DEFAULT_ILLUSTRATION_COUNT
 
         # Clean and normalize the search term
         cleaned_term = self._clean_search_term(search_term)
@@ -125,12 +122,16 @@ class SmartIllustrationService:
         logger.info(f"Smart illustration search for: '{cleaned_term}' (original: '{search_term}')")
 
         try:
+            # Special case: if asking for "all", use get_all method
+            if cleaned_term.lower() == "all":
+                return self.get_all()
+
             # Use semantic search with creative content type filter and search term
             docs = self.unified_retriever.semantic_search(
                 query=f"{cleaned_term} illustration art creative character",
                 k=top_k * 3,  # Get more docs to allow better filtering
                 filter_content_types=["creative"],
-                score_threshold=2.0,  # Same generous threshold as get_all()
+                score_threshold=0.0,  # Get all results (no distance filtering)
             )
 
             illustrations: List[Dict[str, str]] = []
@@ -168,7 +169,8 @@ class SmartIllustrationService:
                     extra = self._fuzzy_fallback(cleaned_term, fuzzy_needed, seen_files)
                     illustrations.extend(extra)
                     logger.debug(
-                        f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for '{cleaned_term}'"
+                        f"Fuzzy fallback added {len(extra)} results; total now {len(illustrations)} for "
+                        f"'{cleaned_term}'"
                     )
                 except Exception:
                     logger.warning("Fuzzy fallback failed", exc_info=True)
@@ -242,10 +244,19 @@ class SmartIllustrationService:
                 tokens.append(tok_norm)
 
         cleaned = " ".join(tokens) if tokens else s
+
+        # Special case: if we're left with just possessive forms like "nick's", "nicks", etc.
+        # treat it as a request for all illustrations
+        if cleaned.lower() in ["nick's", "nicks", "nick", "my", "his", "her"]:
+            cleaned = "all"
+
         return " ".join(cleaned.split())
 
-    def _is_fuzzy_match(self, search: str, content: str, threshold: float = 0.7) -> bool:
+    def _is_fuzzy_match(self, search: str, content: str, threshold: float = None) -> bool:
         """Check if search term is a fuzzy match for content."""
+        if threshold is None:
+            threshold = AppConfig.DEFAULT_FUZZY_THRESHOLD
+
         # Split into words for word-level matching
         search_words = search.split()
         content_words = content.split()
@@ -343,13 +354,13 @@ class SmartIllustrationService:
         for e in entries:
             score = self._score_entry(search_term, e)
             # Adaptive threshold: more forgiving for shorter terms and typos
-            # Use 0.45 for very short terms, 0.5 for medium, 0.55 for longer
-            if len(search_term) <= self.SHORT_TERM_LENGTH:
-                threshold = self.SHORT_TERM_THRESHOLD
-            elif len(search_term) <= self.MEDIUM_TERM_LENGTH:
-                threshold = self.MEDIUM_TERM_THRESHOLD
+            # Use different thresholds based on term length
+            if len(search_term) <= AppConfig.SHORT_TERM_LENGTH:
+                threshold = AppConfig.SHORT_TERM_FUZZY_THRESHOLD
+            elif len(search_term) <= AppConfig.MEDIUM_TERM_LENGTH:
+                threshold = AppConfig.MEDIUM_TERM_FUZZY_THRESHOLD
             else:
-                threshold = self.LONG_TERM_THRESHOLD
+                threshold = AppConfig.LONG_TERM_FUZZY_THRESHOLD
 
             if score >= threshold:
                 scored.append((score, e))

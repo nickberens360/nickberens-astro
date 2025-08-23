@@ -33,6 +33,17 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def get_success_message_template(found_images: bool, query_type: QueryType, fell_back_to_all: bool) -> str:
+    """Get appropriate success message template based on query results."""
+    if found_images:
+        if query_type == QueryType.ALL_IMAGES or fell_back_to_all:
+            return "Here are some of my illustrations:"
+        else:
+            return "Here are the illustrations I found for '{}':"
+    else:
+        return "Sorry, no illustrations found for '{}'."
+
+
 @router.post("/query")
 @limiter.limit(AppConfig.RATE_LIMIT)
 async def query_endpoint(request: Request, query: Query, services: dict = Depends(get_services)):
@@ -68,11 +79,17 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         {"sender": msg.sender, "text": SecurityValidator.sanitize_input(msg.text)} for msg in query.chat_history
     ]
 
-    query_type, search_term = services["query_router"].route_query(sanitized_question.lower().strip())
+    # Validate query router service is available
+    query_router = services.get("query_router")
+    if query_router is None:
+        raise HTTPException(status_code=500, detail="Query router service is not initialized")
+
+    query_type, search_term = query_router.route_query(sanitized_question.lower().strip())
 
     # Handle image queries
     if query_type != QueryType.AI_TEXT_RESPONSE:
         illustration_service = services.get("illustration_service")
+        fell_back_to_all = False
         if illustration_service is None:
             found_images = []
             logger.warning("Illustration service not available - returning empty results")
@@ -81,16 +98,22 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 found_images = illustration_service.get_all()
             else:
                 found_images = illustration_service.search(search_term)
+                # Fallback to showing all illustrations if search returns no results
+                if not found_images:
+                    logger.info(
+                        f"No specific illustrations found for '{search_term}', falling back to all illustrations"
+                    )
+                    found_images = illustration_service.get_all()
+                    fell_back_to_all = True
 
-        ai_response = (
-            f"Here are illustrations for '{search_term}'."
-            if found_images
-            else f"Sorry, no illustrations found for '{search_term}'."
-        )
+        # Update the response message based on whether we found specific results or fell back to all
+        success_message_template = get_success_message_template(bool(found_images), query_type, fell_back_to_all)
 
         followup_service = services.get("followup_service")
         followup_questions = (
-            followup_service.generate_followups(sanitized_question, ai_response, sanitized_history)
+            followup_service.generate_followups(
+                sanitized_question, success_message_template.format(search_term), sanitized_history
+            )
             if followup_service
             else []
         )
@@ -100,7 +123,9 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             logger.error("Response service not available - cannot build image response")
             raise HTTPException(status_code=503, detail="Image service temporarily unavailable")
 
-        response_data = response_service.build_image_response(search_term, found_images, start_time, followup_questions)
+        response_data = response_service.build_image_response(
+            search_term, found_images, start_time, followup_questions, success_message_template
+        )
 
         # Add rate limit status to image responses too
         rate_limits = get_rate_limit_status()
@@ -112,7 +137,11 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         query_logger.log_query(
             client_ip=client_ip,
             question=sanitized_question,
-            response=ai_response,
+            response=(
+                success_message_template.format(search_term)
+                if "{}" in success_message_template
+                else success_message_template
+            ),
             model_used="image_search",
             query_type="image",
             response_time=response_time,
@@ -120,6 +149,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 "search_term": search_term,
                 "images_found": len(found_images),
                 "query_type_enum": query_type.value,
+                "fell_back_to_all": fell_back_to_all,
             },
         )
 
@@ -155,7 +185,8 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                 smart_handler = SmartQueryHandler(unified_retriever, llm)
                 intent_analysis = smart_handler.analyze_query_with_llm(sanitized_question)
                 logger.info(
-                    f"Smart routing: Query '{sanitized_question}' -> Topics: {intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
+                    f"Smart routing: Query '{sanitized_question}' -> Topics: "
+                    f"{intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
                 )
 
         text_stream, actual_model_used, metadata = await stream_with_fallback(

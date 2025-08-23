@@ -351,24 +351,24 @@
         // Helper function to build exclude_ips parameter
         function buildExcludeIpsParam(hideMyIP) {
             if (!hideMyIP) return '';
-            
+
             const myIPHash = document.getElementById('myIPHash').value;
             const myLocalIPHash = document.getElementById('myLocalIPHash').value;
             const ipsToExclude = [myIPHash, myLocalIPHash].filter(ip => ip).join(',');
-            
+
             return ipsToExclude ? `exclude_ips=${ipsToExclude}` : '';
         }
 
         // Stats loading
         function loadStats() {
             if (!authToken) return;
-            
+
             let url = '/admin/query-logs/stats';
             const excludeParam = buildExcludeIpsParam(hideMyIP);
             if (excludeParam) {
                 url += `?${excludeParam}`;
             }
-            
+
             fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
@@ -387,7 +387,7 @@
 
         function displayStats(stats) {
             const statsGrid = document.getElementById('statsGrid');
-            
+
             // Add filter indicator
             const filterStatus = hideMyIP ? ' (excl. yours)' : ' (all)';
 
@@ -449,7 +449,7 @@
             if (startDate) url += `&start_date=${startDate}`;
             if (endDate) url += `&end_date=${endDate}`;
             if (queryType) url += `&query_type=${queryType}`;
-            
+
             const excludeParam = buildExcludeIpsParam(hideMyIP);
             if (excludeParam) {
                 url += `&${excludeParam}`;
@@ -542,12 +542,12 @@
             div.textContent = text;
             return div.innerHTML;
         }
-        
+
         function formatLocation(location) {
             if (!location) {
                 return '';
             }
-            
+
             // Handle error cases first
             if (location.error) {
                 if (location.error === 'Anonymized IP') {
@@ -555,31 +555,31 @@
                 }
                 return '<span class="location-unknown">📍 Location Unknown</span>';
             }
-            
+
             let parts = [];
-            
+
             // Add city if it exists and is not empty
             if (location.city && location.city.trim() !== '') {
                 parts.push(location.city);
             }
-            
+
             // Add region if it exists and is not empty
             if (location.region && location.region.trim() !== '') {
                 parts.push(location.region);
             }
-            
+
             // Add country information
             if (location.country_name && location.country_name.trim() !== '') {
                 parts.push(location.country_name);
             } else if (location.country_code && location.country_code.trim() !== '') {
                 parts.push(location.country_code);
             }
-            
+
             // Return formatted location if we have any parts
             if (parts.length > 0) {
                 return `<span class="location-known">📍 ${parts.join(', ')}</span>`;
             }
-            
+
             // Fallback to unknown
             return '<span class="location-unknown">📍 Location Unknown</span>';
         }

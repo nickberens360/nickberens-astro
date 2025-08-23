@@ -1,14 +1,33 @@
 """
-Test configuration and fixtures.
+Pytest configuration to streamline local and CI tests without extra env vars.
 
-This module sets up global test configuration including:
-- Environment variables for testing
-- Common fixtures
-- Test setup and teardown
+This file applies lightweight test-time patches only during pytest runs:
+- Disable SlowAPI rate limiting decorator to avoid ASGITransport issues
+  with streaming responses and to speed up tests.
 """
 
-import os
+from __future__ import annotations
 
-# Set environment variables at module level before any imports
-# This ensures they are available when the FastAPI app is created
-os.environ["RATE_LIMIT"] = "1000/minute"
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiting(monkeypatch: pytest.MonkeyPatch):
+    """Turn the SlowAPI limiter decorator into a no-op for tests.
+
+    Avoids middleware TaskGroup errors with ASGI test transport and
+    ensures tests focus on endpoint behavior rather than throttling.
+    """
+    try:
+        from backend.core import app_factory
+
+        def _noop_decorator(*args, **kwargs):
+            def _wrap(func):
+                return func
+
+            return _wrap
+
+        monkeypatch.setattr(app_factory.limiter, "limit", _noop_decorator, raising=False)
+    except Exception:
+        # If limiter import fails for any reason in certain environments, just continue.
+        pass

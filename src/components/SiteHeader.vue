@@ -135,7 +135,7 @@
         :style="headerStyles"
         role="dialog"
         aria-modal="true"
-        :aria-hidden="!isMobileMenuOpen"
+        :inert="!isMobileMenuOpen"
         @keydown.esc.stop.prevent="closeMobileMenu"
       >
         <button

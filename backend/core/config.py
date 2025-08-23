@@ -94,6 +94,104 @@ class AppConfig:
 
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
 
+    # Smart Model Selection Configuration
+    @classmethod
+    def is_smart_model_selection_enabled(cls) -> bool:
+        """Toggle smart model selection based on query complexity."""
+        return os.getenv("ENABLE_SMART_MODEL_SELECTION", "true").lower() == "true"
+
+    @classmethod
+    def get_retrieval_score_threshold(cls) -> float:
+        """
+        Threshold for retrieval relevance scoring (0..1).
+
+        IMPORTANT: This is a SIMILARITY score threshold where HIGHER values = BETTER matches.
+        - 0.3 = keep documents with similarity >= 30% (loose matching)
+        - 0.7 = keep documents with similarity >= 70% (strict matching)
+        - Documents with scores ABOVE this threshold are kept
+        """
+        try:
+            val = float(os.getenv("RETRIEVAL_SCORE_THRESHOLD", "0.3"))
+            if 0.0 <= val <= 1.0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid RETRIEVAL_SCORE_THRESHOLD; defaulting to 0.3")
+        return 0.3
+
+    @classmethod
+    def get_cache_ttl(cls) -> int:
+        """Cache TTL in seconds."""
+        try:
+            val = int(os.getenv("CACHE_TTL", "3600"))
+            if val > 0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid CACHE_TTL; defaulting to 3600")
+        return 3600
+
+    @classmethod
+    def get_max_cache_size(cls) -> int:
+        """Maximum cache entries."""
+        try:
+            val = int(os.getenv("MAX_CACHE_SIZE", "1000"))
+            if val > 0:
+                return val
+        except ValueError:
+            pass
+        logger.warning("Invalid MAX_CACHE_SIZE; defaulting to 1000")
+        return 1000
+
+    @classproperty
+    def ENABLE_SMART_MODEL_SELECTION(cls) -> bool:
+        return cls.is_smart_model_selection_enabled()
+
+    @classproperty
+    def RETRIEVAL_SCORE_THRESHOLD(cls) -> float:
+        return cls.get_retrieval_score_threshold()
+
+    @classproperty
+    def CACHE_TTL(cls) -> int:
+        return cls.get_cache_ttl()
+
+    @classproperty
+    def MAX_CACHE_SIZE(cls) -> int:
+        return cls.get_max_cache_size()
+
+    # Search & Retrieval Configuration
+    DEFAULT_SEARCH_K = int(os.getenv("DEFAULT_SEARCH_K", "8"))  # Default number of search results
+    EXPANDED_SEARCH_K = int(os.getenv("EXPANDED_SEARCH_K", "12"))  # Expanded search for comprehensive results
+    SEARCH_EXPANSION_MULTIPLIER = int(os.getenv("SEARCH_EXPANSION_MULTIPLIER", "3"))  # Multiply k for initial search
+
+    # Distance Threshold Configuration
+    DEFAULT_DISTANCE_THRESHOLD = float(os.getenv("DEFAULT_DISTANCE_THRESHOLD", "0.5"))  # Default similarity threshold
+    INCLUSIVE_DISTANCE_THRESHOLD = float(os.getenv("INCLUSIVE_DISTANCE_THRESHOLD", "1.0"))  # More inclusive threshold
+    BROAD_DISTANCE_THRESHOLD = float(os.getenv("BROAD_DISTANCE_THRESHOLD", "1.2"))  # Very broad threshold
+
+    # Query Processing Configuration
+    DEFAULT_MAX_CONTEXT_LENGTH = int(os.getenv("DEFAULT_MAX_CONTEXT_LENGTH", "2000"))  # Token limit for context
+    MAX_CONTEXT_DOCUMENTS = int(os.getenv("MAX_CONTEXT_DOCUMENTS", "3"))  # Max docs in context
+    CONTEXT_FILL_RATIO = float(os.getenv("CONTEXT_FILL_RATIO", "0.7"))  # Fill ratio before truncation
+    CONTENT_FINGERPRINT_LENGTH = int(os.getenv("CONTENT_FINGERPRINT_LENGTH", "100"))  # Length for deduplication
+    LENGTH_PENALTY_DIVISOR = int(os.getenv("LENGTH_PENALTY_DIVISOR", "1000"))  # For document length penalty
+
+    # Illustration Search Configuration
+    DEFAULT_ILLUSTRATION_COUNT = int(os.getenv("DEFAULT_ILLUSTRATION_COUNT", "10"))  # Default illustrations returned
+    MAX_ILLUSTRATION_SEARCH = int(os.getenv("MAX_ILLUSTRATION_SEARCH", "200"))  # Max illustrations to search
+
+    # Fuzzy Matching Configuration
+    SHORT_TERM_LENGTH = int(os.getenv("FUZZY_SHORT_TERM_LENGTH", "6"))  # Character threshold for short terms
+    MEDIUM_TERM_LENGTH = int(os.getenv("FUZZY_MEDIUM_TERM_LENGTH", "10"))  # Character threshold for medium terms
+    SHORT_TERM_FUZZY_THRESHOLD = float(
+        os.getenv("SHORT_TERM_FUZZY_THRESHOLD", "0.45")
+    )  # Fuzzy threshold for short terms
+    MEDIUM_TERM_FUZZY_THRESHOLD = float(
+        os.getenv("MEDIUM_TERM_FUZZY_THRESHOLD", "0.5")
+    )  # Fuzzy threshold for medium terms
+    LONG_TERM_FUZZY_THRESHOLD = float(os.getenv("LONG_TERM_FUZZY_THRESHOLD", "0.55"))  # Fuzzy threshold for long terms
+    DEFAULT_FUZZY_THRESHOLD = float(os.getenv("DEFAULT_FUZZY_THRESHOLD", "0.7"))  # Default fuzzy matching threshold
+
     # Server Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     HOST = os.getenv("HOST", "0.0.0.0")

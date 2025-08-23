@@ -8,10 +8,12 @@ This is the main entry point for the FastAPI application that:
 """
 
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
+from fastapi import FastAPI
 from langchain_core.language_models import BaseLanguageModel
 
 from .core.app_factory import create_app
@@ -93,26 +95,60 @@ followup_service = create_followup_service()
 
 query_logger = get_query_logger()
 
-# Create the FastAPI app
-app = create_app()
 
-# Store state in app.state for dependency injection
-app.state.app_initialized = app_initialized
-app.state.retrievers = retrievers
-app.state.illustration_service = illustration_service
-app.state.llm = llm
-app.state.query_router = query_router
-app.state.response_service = response_service
-app.state.followup_service = followup_service
-app.state.query_logger = query_logger
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    logger = logging.getLogger(__name__)
+
+    # Startup: Store state in app.state for dependency injection
+    try:
+        logger.info("Starting application initialization...")
+        app.state.app_initialized = app_initialized
+        app.state.retrievers = retrievers
+        app.state.illustration_service = illustration_service
+        app.state.llm = llm
+        app.state.query_router = query_router
+        app.state.response_service = response_service
+        app.state.followup_service = followup_service
+        app.state.query_logger = query_logger
+        logger.info("Application startup completed successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
+
+    yield
+
+    # Shutdown: Ensure graceful shutdown of background resources (e.g., thread pools)
+    try:
+        logger.info("Starting application shutdown...")
+        svc = app.state.followup_service
+        if hasattr(svc, "close"):
+            try:
+                svc.close()
+                logger.debug("Follow-up service closed successfully")
+            except Exception:
+                logger.exception("Failed to close follow-up service cleanly")
+        logger.info("Application shutdown completed successfully")
+    except Exception as e:
+        logger.error(f"Error during application shutdown: {e}")
 
 
-# Ensure graceful shutdown of background resources (e.g., thread pools)
-@app.on_event("shutdown")
-async def _shutdown_cleanup():
-    svc = app.state.followup_service
-    if hasattr(svc, "close"):
-        try:
-            svc.close()
-        except Exception:
-            logger.exception("Failed to close follow-up service cleanly")
+# Create the FastAPI app with lifespan context manager
+app = create_app(lifespan=lifespan)
+
+# Ensure app.state has expected attributes for tests that patch them
+# These are set definitively during lifespan startup, but we predefine them here
+# so patch.object(app.state, ...) works even before startup runs.
+if not hasattr(app.state, "retrievers"):
+    app.state.retrievers = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "illustration_service"):
+    app.state.illustration_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "response_service"):
+    app.state.response_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "followup_service"):
+    app.state.followup_service = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "llm"):
+    app.state.llm = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "query_router"):
+    app.state.query_router = None  # type: ignore[attr-defined]

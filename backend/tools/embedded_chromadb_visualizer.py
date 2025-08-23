@@ -172,7 +172,8 @@ HTML_TEMPLATE = """
 
         <div class="search-box" id="search-box" style="display:none;">
             <h3>Search Documents</h3>
-            <p><em>Note: Search functionality requires the same embedding model as your backend. Currently showing browse-only mode.</em></p>
+            <p><em>Note: Search functionality requires the same embedding model as your backend. Currently
+            showing browse-only mode.</em></p>
             <input type="text" id="search-input" placeholder="Search disabled - browse documents below" disabled>
             <button onclick="searchDocuments()" disabled>Search (Disabled)</button>
         </div>
@@ -192,7 +193,8 @@ HTML_TEMPLATE = """
                 buttonsDiv.innerHTML = '';
 
                 if (collections.length === 0) {
-                    buttonsDiv.innerHTML = '<p class="error">No collections found. Make sure your backend has created the ChromaDB database.</p>';
+                    buttonsDiv.innerHTML = '<p class="error">No collections found. Make sure your backend has ' +
+                        'created the ChromaDB database.</p>';
                     return;
                 }
 
@@ -267,7 +269,9 @@ HTML_TEMPLATE = """
                     docDiv.className = 'document';
                     docDiv.innerHTML = `
                         <div class="document-id">ID: ${doc.id}</div>
-                        ${distance !== null ? `<div class="distance">Similarity Score: ${(1 - distance).toFixed(4)}</div>` : ''}
+                        ${distance !== null ?
+                            `<div class="distance">Similarity Score: ${(1 - distance).toFixed(4)}</div>` :
+                            ''}
                         <div class="metadata">Metadata: ${JSON.stringify(doc.metadata)}</div>
                         <div class="document-text">${doc.document}</div>
                     `;
@@ -338,7 +342,8 @@ def get_documents(name):
             return jsonify(
                 {
                     "documents": [],
-                    "error": "Search functionality disabled due to embedding model requirements. Use your backend's /query endpoint for search.",
+                    "error": "Search functionality disabled due to embedding model requirements. Use your "
+                    "backend's /query endpoint for search.",
                 }
             )
         else:

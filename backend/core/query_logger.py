@@ -11,6 +11,7 @@ This module provides functionality to:
 import hashlib
 import json
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -22,7 +23,7 @@ from .geolocation_service import get_geolocation_service
 class QueryLogger:
     """Service for logging user queries and AI responses with IP filtering."""
 
-    def __init__(self, log_file_path: Optional[str] = None, excluded_ips: Optional[Set[str]] = None):
+    def __init__(self, log_file_path: Optional[str] = None, excluded_ips: Optional[Set[str]] = None) -> None:
         """
         Initialize the QueryLogger.
 
@@ -36,42 +37,44 @@ class QueryLogger:
         if log_file_path is None:
             # Use configured path (can be on a mounted volume in production)
             configured_path = AppConfig.QUERY_LOG_FILE
-            self.logger.info(f"Using configured log path: {configured_path}")
+            self.logger.info("Using configured log path: %s", configured_path)
             self.log_file_path = Path(configured_path)
         else:
-            self.logger.info(f"Using provided log path: {log_file_path}")
+            self.logger.info("Using provided log path: %s", log_file_path)
             self.log_file_path = Path(log_file_path)
 
         # Ensure parent directory exists (important for mounted volumes)
         try:
             self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
-            self.logger.info(f"Log directory ready: {self.log_file_path.parent}")
+            self.logger.info("Log directory ready: %s", self.log_file_path.parent)
         except OSError as e:
-            self.logger.warning(f"Failed to create log directory {self.log_file_path.parent}: {e}")
+            self.logger.warning("Failed to create log directory %s: %s", self.log_file_path.parent, e)
             # For Railway volumes, check if volume is mounted
             if "/data" in str(self.log_file_path):
                 self.logger.warning("Railway volume may not be mounted. Check volume configuration.")
 
-        # Ensure log file exists and test write permissions
+        # Ensure log file exists with restrictive permissions; use O_CREAT|O_APPEND to avoid race conditions
         try:
-            self.log_file_path.touch(exist_ok=True)
+            fd = os.open(self.log_file_path, os.O_CREAT | os.O_APPEND, 0o600)
+            os.close(fd)
             # Test write permissions
             with open(self.log_file_path, "a") as f:
                 f.write("")  # Test write without actually writing
-            self.logger.info(f"Query logger initialized successfully at: {self.log_file_path}")
+            self.logger.info("Query logger initialized successfully at: %s", self.log_file_path)
         except OSError as e:
-            self.logger.error(f"Failed to initialize log file {self.log_file_path}: {e}")
+            self.logger.error("Failed to initialize log file %s: %s", self.log_file_path, e)
             # Fallback to local logs if volume fails
             if "/data" in str(self.log_file_path):
                 fallback_path = Path("backend/logs/query_logs.json")
-                self.logger.warning(f"Falling back to local logs: {fallback_path}")
+                self.logger.warning("Falling back to local logs: %s", fallback_path)
                 self.log_file_path = fallback_path
                 try:
                     self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
-                    self.log_file_path.touch(exist_ok=True)
-                    self.logger.info(f"Fallback logging initialized at: {self.log_file_path}")
+                    fd = os.open(self.log_file_path, os.O_CREAT | os.O_APPEND, 0o600)
+                    os.close(fd)
+                    self.logger.info("Fallback logging initialized at: %s", self.log_file_path)
                 except OSError as fallback_error:
-                    self.logger.error(f"Fallback logging also failed: {fallback_error}")
+                    self.logger.error("Fallback logging also failed: %s", fallback_error)
                     raise
 
         # Set excluded IPs (can be loaded from config)
@@ -84,7 +87,7 @@ class QueryLogger:
             if excluded_ips_list:
                 self.excluded_ips.update(excluded_ips_list)
         except Exception as e:
-            self.logger.warning(f"Failed to load excluded IPs: {e}")
+            self.logger.warning("Failed to load excluded IPs: %s", e)
 
         # IP anonymization settings
         self.anonymize_ips = AppConfig.ANONYMIZE_IPS
@@ -93,7 +96,7 @@ class QueryLogger:
             self.ip_salt = config.IP_HASH_SALT
         except ValueError as e:
             # In production, this will raise if not set
-            self.logger.error(f"Failed to get IP hash salt: {e}")
+            self.logger.error("Failed to get IP hash salt: %s", e)
             raise
 
     def anonymize_ip(self, ip_address: str) -> str:
@@ -190,7 +193,7 @@ class QueryLogger:
             with open(self.log_file_path, "a") as f:
                 f.write(json.dumps(log_entry, default=str) + "\n")
         except (IOError, TypeError) as e:
-            self.logger.error(f"Failed to log query: {e}")
+            self.logger.error("Failed to log query: %s", e)
 
     def log_streaming_query(
         self,
@@ -261,7 +264,7 @@ class QueryLogger:
                                 # Keep malformed entries as-is
                                 log_entries.append(line.rstrip())
             except FileNotFoundError:
-                self.logger.warning(f"Log file not found: {self.log_file_path}")
+                self.logger.warning("Log file not found: %s", self.log_file_path)
                 return False
 
             # If request_id is provided, append a completion entry instead of rewriting the file
@@ -281,10 +284,10 @@ class QueryLogger:
                 try:
                     with open(self.log_file_path, "a") as f:
                         f.write(json.dumps(completion_entry, default=str) + "\n")
-                    self.logger.debug(f"Appended streaming completion for request_id: {request_id}")
+                    self.logger.debug("Appended streaming completion for request_id: %s", request_id)
                     return True
                 except (IOError, TypeError) as e:
-                    self.logger.error(f"Failed to append streaming completion: {e}")
+                    self.logger.error("Failed to append streaming completion: %s", e)
                     # Fall through to legacy rewrite method
 
             # Legacy rewrite path disabled to avoid race conditions
@@ -294,7 +297,7 @@ class QueryLogger:
             return False
 
         except (IOError, TypeError) as e:
-            self.logger.error(f"Failed to update streaming response: {e}")
+            self.logger.error("Failed to update streaming response: %s", e)
             return False
 
     def get_logs(
@@ -356,7 +359,7 @@ class QueryLogger:
             return sorted_logs
 
         except Exception as e:
-            self.logger.error(f"Failed to retrieve logs: {e}")
+            self.logger.error("Failed to retrieve logs: %s", e)
             return []
 
     def get_log_stats(self, exclude_ips: Optional[str] = None) -> Dict[str, Any]:
@@ -433,7 +436,7 @@ class QueryLogger:
             }
 
         except Exception as e:
-            self.logger.error(f"Failed to get log stats: {e}")
+            self.logger.error("Failed to get log stats: %s", e)
             return {"error": str(e)}
 
     def clear_logs(self) -> bool:
@@ -449,12 +452,12 @@ class QueryLogger:
                 pass  # Just create/truncate the file
             return True
         except Exception as e:
-            self.logger.error(f"Failed to clear logs: {e}")
+            self.logger.error("Failed to clear logs: %s", e)
             return False
 
 
 # Global instance
-_query_logger_instance = None
+_query_logger_instance: Optional[QueryLogger] = None
 
 
 def get_query_logger() -> QueryLogger:

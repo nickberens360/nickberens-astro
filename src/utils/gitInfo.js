@@ -35,7 +35,7 @@ const getGitHubCredentials = () => {
 
 export async function getGitBranch() {
   const cacheKey = 'git_branch_cache';
-  
+
   // Try localStorage first
   const cached = safeLocalStorage.getItem(cacheKey);
   if (cached) {
@@ -45,7 +45,7 @@ export async function getGitBranch() {
       return branch;
     }
   }
-  
+
   try {
     const { username, repo, token } = getGitHubCredentials();
 
@@ -53,12 +53,12 @@ export async function getGitBranch() {
     const headers = token ? { Authorization: `token ${token}` } : {};
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-    
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}`, { 
+
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}`, {
       headers,
-      signal: controller.signal 
+      signal: controller.signal
     });
-    
+
     clearTimeout(timeout);
 
     if (!response.ok) {
@@ -67,13 +67,13 @@ export async function getGitBranch() {
 
     const repoData = await response.json();
     const branch = repoData.default_branch;
-    
+
     // Cache in localStorage
     safeLocalStorage.setItem(cacheKey, JSON.stringify({
       branch,
       timestamp: Date.now()
     }));
-    
+
     return branch;
   } catch (error) {
     console.error('Error fetching branch:', error);
@@ -112,7 +112,7 @@ export function getGitHubRepoUrl() {
 // Shared function to fetch latest commit data
 export async function getLatestCommit() {
   const cacheKey = 'git_latest_commit_cache';
-  
+
   try {
     const { username, repo, token } = getGitHubCredentials();
 
@@ -121,7 +121,7 @@ export async function getLatestCommit() {
     if (latestCommitCache.data && (now - latestCommitCache.timestamp) < latestCommitCache.expiryTime) {
       return latestCommitCache.data;
     }
-    
+
     // Try localStorage cache
     const cached = safeLocalStorage.getItem(cacheKey);
     if (cached) {
@@ -134,12 +134,12 @@ export async function getLatestCommit() {
     const headers = token ? { Authorization: `token ${token}` } : {};
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-    
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, { 
+
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=1`, {
       headers,
-      signal: controller.signal 
+      signal: controller.signal
     });
-    
+
     clearTimeout(timeout);
 
     if (!response.ok) {
@@ -156,7 +156,7 @@ export async function getLatestCommit() {
     // Cache the successful result
     latestCommitCache.data = commitData;
     latestCommitCache.timestamp = now;
-    
+
     // Cache in localStorage
     safeLocalStorage.setItem(cacheKey, JSON.stringify({
       data: commitData,
@@ -166,14 +166,14 @@ export async function getLatestCommit() {
     return commitData;
   } catch (error) {
     console.error('Error fetching latest commit:', error);
-    
+
     // Try to return cached data even if expired
     const cached = safeLocalStorage.getItem(cacheKey);
     if (cached) {
       const { data } = JSON.parse(cached);
       return data;
     }
-    
+
     return {
       hash: 'unknown',
       message: 'Unable to fetch commit data',
@@ -216,12 +216,12 @@ export async function getCommitHistory(limit = 10) {
     const headers = token ? { Authorization: `token ${token}` } : {};
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-    
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=${limit}`, { 
+
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/commits?per_page=${limit}`, {
       headers,
-      signal: controller.signal 
+      signal: controller.signal
     });
-    
+
     clearTimeout(timeout);
 
     if (!response.ok) {
@@ -276,12 +276,12 @@ export async function getCodeFrequency(retryCount = 0, maxRetries = 3) {
     const headers = token ? { Authorization: `token ${token}` } : {};
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-    
-    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/stats/code_frequency`, { 
+
+    const response = await fetch(`https://api.github.com/repos/${username}/${repo}/stats/code_frequency`, {
       headers,
-      signal: controller.signal 
+      signal: controller.signal
     });
-    
+
     clearTimeout(timeout);
 
     // Handle 202 Accepted response with retry logic

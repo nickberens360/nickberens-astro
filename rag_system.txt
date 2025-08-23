@@ -6,7 +6,7 @@
 │   cwd: /Users/nickberens/Webstorm/nickberens      │
 ╰───────────────────────────────────────────────────╯
 
-> /clear 
+> /clear
   ⎿  (no content)
 
 > can you give me a diagram of how the rag system works?
@@ -157,4 +157,3 @@
 ⏺ Update Todos
   ⎿  ☒ Analyze the unified RAG system architecture
      ☒ Create a visual diagram of the RAG flow
-
