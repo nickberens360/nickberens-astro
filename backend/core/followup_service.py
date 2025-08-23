@@ -13,7 +13,7 @@ class FollowUpService:
         self.questions = [
             "Show me your illustrations",
             "Tell me about your experience",
-            "What inspires your illustrations?",
+            "What inspires your artwork?",
             "What technologies do you work with?",
             "What's your development philosophy?",
             "How can I contact Nick?",
