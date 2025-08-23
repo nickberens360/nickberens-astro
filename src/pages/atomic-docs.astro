@@ -1,8 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import PageSection from '../components/PageSection.vue';
-import vueAtomicDocs from '../assets/images/vue-atomic-docs.png';
-import { Image } from 'astro:assets';
 ---
 
 <Layout title="Atomic Docs" description="Atomic Docs Project - Nick Berens">
@@ -14,8 +12,9 @@ import { Image } from 'astro:assets';
 		full-height
 	>
 		<div class="container-fluid pt-24">
-			<div class="row align-center justify-center">
+			<div class="row align-center justify-center flex-column">
 				<div class="col-12 col-md-6">
+					<h1 class="text-fluid-xl mb-4">Vue Atomic Docs</h1>
 					<iframe src="https://vue-atomic-docs-demo.netlify.app/atomic-docs/ExampleBoxDemo?relativePath=BoxDemo.vue"
 						title="Vue Atomic Docs Demo"
 						width="100%"
@@ -23,16 +22,8 @@ import { Image } from 'astro:assets';
 						style="border:1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);"
 						loading="lazy"
 						></iframe>
-					<!--<Image
-						src={vueAtomicDocs}
-						alt="Vue Atomic Docs Project"
-						width="1200"
-						style="max-width: 100%; height: auto;"
-						class="rounded-lg shadow-xl"
-					/>-->
 				</div>
 				<div class="col-12 col-md-6 pt-6">
-					<h1 class="text-fluid-xl">Vue Atomic Docs</h1>
 					<p>Vue Atomic Docs transforms your Vue components into a living, interactive documentation library that runs alongside your application without bloating your production bundle. It automatically extracts component props and provides an intuitive interface for showcasing real-world usage examples—keeping your component documentation always in sync with your actual code while events and slots can be easily defined through a simple API.</p>
 					<ul class="features-list">
 						<li>⚡ <strong>Automatic Prop & Type Tables</strong> - Extracts and displays component props with types</li>

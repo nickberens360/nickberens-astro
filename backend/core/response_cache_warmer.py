@@ -8,9 +8,10 @@ when users click them.
 
 import asyncio
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import HumanMessage
+from langchain_core.retrievers import BaseRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,8 @@ class ResponseCacheWarmer:
     async def warm_cache(
         self,
         questions: List[str],
-        retrievers: Dict,
-        app_state,
+        retrievers: Dict[str, BaseRetriever],
+        app_state: Any,
     ) -> None:
         """
         Warm the cache with responses for the given questions.
@@ -56,7 +57,7 @@ class ResponseCacheWarmer:
                     chat_history = [HumanMessage(content=question)]
 
                     # Call stream_with_fallback which will automatically cache the response
-                    text_stream, model_used, metadata = await stream_with_fallback(
+                    text_stream, _, _ = await stream_with_fallback(
                         retrievers,
                         chat_history,
                         question,
@@ -115,7 +116,7 @@ def get_cache_warmer() -> ResponseCacheWarmer:
     return _cache_warmer
 
 
-async def start_cache_warming(retrievers: Dict, app_state) -> None:
+async def start_cache_warming(retrievers: Dict[str, BaseRetriever], app_state: Any) -> None:
     """
     Start cache warming in the background.
 
