@@ -216,15 +216,30 @@
     <v-overlay :model-value="loading && gaps.length > 0" contained>
       <v-progress-circular indeterminate />
     </v-overlay>
+
+    <!-- Snackbar for notifications -->
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="4000"
+      location="top right"
+    >
+      {{ snackbar.message }}
+      <template v-slot:actions>
+        <v-btn
+          variant="text"
+          @click="snackbar.show = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { useToast } from 'vue-toastification'
 import api from '@/services/api'
-
-const toast = useToast()
 
 // Define emits
 const emit = defineEmits(['stats-updated'])
@@ -242,7 +257,21 @@ const notesDialog = ref({
   saving: false
 })
 
+const snackbar = ref({
+  show: false,
+  message: '',
+  color: 'success'
+})
+
 // Methods
+const showSnackbar = (message, color = 'success') => {
+  snackbar.value = {
+    show: true,
+    message,
+    color
+  }
+}
+
 const fetchGaps = async () => {
   try {
     loading.value = true
@@ -253,7 +282,7 @@ const fetchGaps = async () => {
     gaps.value = response.data.gaps || []
   } catch (error) {
     console.error('Failed to fetch content gaps:', error)
-    toast.error('Failed to fetch content gaps')
+    showSnackbar('Failed to fetch content gaps', 'error')
   } finally {
     loading.value = false
   }
@@ -264,10 +293,10 @@ const markResolved = async (gap) => {
     resolvingIds.value.add(gap.id)
     await api.updateContentGap(gap.id, { resolved: true })
     gap.resolved = true
-    toast.success(`Content gap "${truncateText(gap.pattern, 30)}" marked as resolved`)
+    showSnackbar(`Content gap "${truncateText(gap.pattern, 30)}" marked as resolved`)
   } catch (error) {
     console.error('Failed to mark gap as resolved:', error)
-    toast.error('Failed to mark gap as resolved')
+    showSnackbar('Failed to mark gap as resolved', 'error')
   } finally {
     resolvingIds.value.delete(gap.id)
   }
@@ -278,10 +307,10 @@ const markUnresolved = async (gap) => {
     resolvingIds.value.add(gap.id)
     await api.updateContentGap(gap.id, { resolved: false })
     gap.resolved = false
-    toast.success(`Content gap "${truncateText(gap.pattern, 30)}" marked as unresolved`)
+    showSnackbar(`Content gap "${truncateText(gap.pattern, 30)}" marked as unresolved`)
   } catch (error) {
     console.error('Failed to mark gap as unresolved:', error)
-    toast.error('Failed to mark gap as unresolved')
+    showSnackbar('Failed to mark gap as unresolved', 'error')
   } finally {
     resolvingIds.value.delete(gap.id)
   }
@@ -307,10 +336,10 @@ const saveNotes = async () => {
     await api.updateContentGap(gap.id, { notes: notesDialog.value.notes })
     gap.notes = notesDialog.value.notes
     closeNotesDialog()
-    toast.success('Notes saved successfully')
+    showSnackbar('Notes saved successfully')
   } catch (error) {
     console.error('Failed to save notes:', error)
-    toast.error('Failed to save notes')
+    showSnackbar('Failed to save notes', 'error')
   } finally {
     notesDialog.value.saving = false
   }
