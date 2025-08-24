@@ -469,6 +469,20 @@ async def stream_with_fallback(
         async def cached_stream():
             yield cached_response
 
+            # Update streaming response log with cached content
+            if client_ip and question:
+                try:
+                    query_logger = get_query_logger()
+                    query_logger.update_streaming_response(
+                        cache_key=cache_key,
+                        client_ip=client_ip,
+                        question=question,
+                        actual_response=cached_response,
+                        request_id=request_id,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to update streaming response log for cached response: {e}")
+
         return cached_stream(), "cached", metadata
     else:
         logger.debug(f"Cache miss for key: {cache_key}. Will generate new response.")

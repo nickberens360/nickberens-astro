@@ -4,6 +4,7 @@ API routes for the RAG admin dashboard.
 
 import csv
 import io
+import logging
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -15,6 +16,8 @@ from fastapi.responses import StreamingResponse
 
 from .database import db_manager
 from .models import FeedbackUpdate, FileContentUpdate, OverviewStats, QueryResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/api", tags=["admin"])
 
@@ -619,15 +622,15 @@ async def get_knowledge_stats(_: None = Depends(verify_admin_token)):
 @router.post("/knowledge/refresh")
 async def refresh_knowledge_base(
     force_reindex: bool = Query(True, description="Force re-indexing of all files"),
-    _: None = Depends(verify_admin_token)
+    _: None = Depends(verify_admin_token),
 ):
     """Trigger a production-ready refresh of the knowledge base index."""
     from .knowledge_refresh_service_v2 import knowledge_refresh_service
-    
+
     try:
         result = await knowledge_refresh_service.refresh_knowledge_base(force_reindex=force_reindex)
         return result
-        
+
     except Exception as e:
         logger.error(f"Knowledge base refresh failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error refreshing knowledge base: {str(e)}")
@@ -637,10 +640,10 @@ async def refresh_knowledge_base(
 async def get_refresh_status(_: None = Depends(verify_admin_token)):
     """Get the current status of knowledge base refresh operation."""
     from .knowledge_refresh_service_v2 import knowledge_refresh_service
-    
+
     try:
         return knowledge_refresh_service.get_refresh_status()
-        
+
     except Exception as e:
         logger.error(f"Failed to get refresh status: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error getting refresh status: {str(e)}")
@@ -648,16 +651,15 @@ async def get_refresh_status(_: None = Depends(verify_admin_token)):
 
 @router.post("/knowledge/refresh/wait")
 async def wait_for_refresh_completion(
-    timeout: int = Query(300, ge=10, le=600, description="Timeout in seconds"),
-    _: None = Depends(verify_admin_token)
+    timeout: int = Query(300, ge=10, le=600, description="Timeout in seconds"), _: None = Depends(verify_admin_token)
 ):
     """Wait for the current refresh operation to complete."""
     from .knowledge_refresh_service_v2 import knowledge_refresh_service
-    
+
     try:
         result = await knowledge_refresh_service.wait_for_completion(timeout=timeout)
         return result
-        
+
     except Exception as e:
         logger.error(f"Error waiting for refresh completion: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error waiting for refresh: {str(e)}")
@@ -668,34 +670,34 @@ async def get_knowledge_file_content(filename: str, _: None = Depends(verify_adm
     """Get the content of a specific file from the knowledge base directory."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
     file_path = knowledge_dir / filename
-    
+
     # Security check - ensure file is in knowledge directory
     try:
         file_path.resolve().relative_to(knowledge_dir.resolve())
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid file path")
-    
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     if not file_path.is_file():
         raise HTTPException(status_code=400, detail="Path is not a file")
-    
+
     # Check if file type is editable
     editable_extensions = {".md", ".json", ".txt", ".html"}
     if file_path.suffix.lower() not in editable_extensions:
         raise HTTPException(status_code=400, detail="File type not editable")
-    
+
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
-        
+
         return {
             "filename": filename,
             "content": content,
             "size": file_path.stat().st_size,
             "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat(),
-            "type": file_path.suffix.lower()
+            "type": file_path.suffix.lower(),
         }
     except UnicodeDecodeError:
         raise HTTPException(status_code=400, detail="File is not a text file")
@@ -705,56 +707,55 @@ async def get_knowledge_file_content(filename: str, _: None = Depends(verify_adm
 
 @router.put("/knowledge/files/{filename}/content")
 async def update_knowledge_file_content(
-    filename: str, 
-    file_content: FileContentUpdate,
-    _: None = Depends(verify_admin_token)
+    filename: str, file_content: FileContentUpdate, _: None = Depends(verify_admin_token)
 ):
     """Update the content of a specific file in the knowledge base directory."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
     file_path = knowledge_dir / filename
-    
+
     # Security check - ensure file is in knowledge directory
     try:
         file_path.resolve().relative_to(knowledge_dir.resolve())
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid file path")
-    
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     if not file_path.is_file():
         raise HTTPException(status_code=400, detail="Path is not a file")
-    
+
     # Check if file type is editable
     editable_extensions = {".md", ".json", ".txt", ".html"}
     if file_path.suffix.lower() not in editable_extensions:
         raise HTTPException(status_code=400, detail="File type not editable")
-    
+
     # Validate JSON content if it's a JSON file
     if file_path.suffix.lower() == ".json":
         try:
             import json
+
             json.loads(file_content.content)
         except json.JSONDecodeError as e:
             raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
-    
+
     try:
         # Create backup of original file
         backup_path = file_path.with_suffix(file_path.suffix + ".backup")
         shutil.copy2(file_path, backup_path)
-        
+
         # Write new content
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(file_content.content)
-        
+
         # Remove backup after successful write
         backup_path.unlink()
-        
+
         return {
             "message": f"File '{filename}' updated successfully",
             "filename": filename,
             "size": file_path.stat().st_size,
-            "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat()
+            "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat(),
         }
     except Exception as e:
         # Restore from backup if write failed

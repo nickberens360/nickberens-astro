@@ -29,7 +29,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: dumbDoug,
         imgAlt: 'Kinda Dumb Doug Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         class: 'pt-16',
@@ -57,7 +57,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: hazHug,
         imgAlt: 'Haz Hug Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -68,7 +68,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: hideOut,
         imgAlt: 'Hideout Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -93,7 +93,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: carFlower,
         imgAlt: 'Friend With Flower Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -109,7 +109,7 @@ const illustrations = [
         floating: true,
         floatingBackground: true,
         imgAlt: 'Doug Fights Back Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
     },
@@ -119,7 +119,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: poolShark,
         imgAlt: 'Pool Shark Illustration',
-        imgStyle: 'width: 100%; height: auto;',
+        imgClass: 'illustration-image-full',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -130,7 +130,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: vulture,
         imgAlt: 'Vulture Illustration',
-        imgStyle: 'width: 100%; height: auto;',
+        imgClass: 'illustration-image-full',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -141,7 +141,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: dopeGoose,
         imgAlt: 'Dope Goose Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -152,7 +152,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: smalltime,
         imgAlt: 'Smalltime Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -163,7 +163,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: winger,
         imgAlt: 'Smalltime Wing Face Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -174,7 +174,7 @@ const illustrations = [
         dataSectionTheme: 'light',
         imgSrc: eatUsForFun,
         imgAlt: 'Eat Us For Fun Illustration',
-        imgStyle: 'width: 100%; height: auto;',
+        imgClass: 'illustration-image-full',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -186,7 +186,7 @@ const illustrations = [
         backgroundColor: '#baeeff',
         imgSrc: dont,
         imgAlt: "Don't Illustration",
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -198,7 +198,7 @@ const illustrations = [
         backgroundColor: '#baeeff',
         imgSrc: chair,
         imgAlt: 'Chair Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         hasParallax: false
@@ -210,7 +210,7 @@ const illustrations = [
         backgroundColor: '#baeeff',
         imgSrc: snakeHug,
         imgAlt: 'Snake Hug Illustration',
-        imgStyle: 'max-width: 100%; height: auto;',
+        imgClass: 'illustration-image',
         fullWidth: true,
         noPadding: true,
         class: 'pt-16',
@@ -258,7 +258,7 @@ const illustrations = [
               <Image
                   src={item.imgSrc}
                   alt={item.imgAlt}
-                  style={item.imgStyle}
+                  class={item.imgClass}
                   loading={index > 0 ? "lazy" : "eager"}
               />
             </PageSection>
@@ -270,5 +270,15 @@ const illustrations = [
     .page-section,
     .parallax-section {
         margin-bottom: -10px;
+    }
+    
+    .illustration-image {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    .illustration-image-full {
+        width: 100%;
+        height: auto;
     }
 </style>

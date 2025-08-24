@@ -4,6 +4,7 @@ Script to sync query logs from the main backend's JSON file to the admin SQLite 
 """
 import hashlib
 import json
+import os
 import sqlite3
 import sys
 import uuid
@@ -37,8 +38,8 @@ def generate_session_id(client_ip, timestamp):
 def sync_json_to_sqlite():
     """Sync JSON query logs to SQLite database."""
     # Paths
-    json_log_file = Path("/Users/nickberens/Webstorm/nickberens/backend/logs/query_logs.json")
-    sqlite_db_file = Path("/Users/nickberens/Webstorm/nickberens/admin/rag_monitoring.db")
+    json_log_file = Path(os.environ.get("QUERY_LOG_JSON_PATH", "backend/logs/query_logs.json"))
+    sqlite_db_file = Path(os.environ.get("RAG_MONITOR_DB_PATH", "admin/rag_monitoring.db"))
 
     if not json_log_file.exists():
         print(f"JSON log file not found: {json_log_file}")

@@ -81,12 +81,38 @@ class DualQueryLogger(QueryLogger):
             """
             )
 
+            # Migrate existing tables - add location columns if missing
+            self._migrate_schema(cursor)
+
             # Create indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_timestamp ON query_logs(timestamp DESC)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_errors ON query_logs(error_occurred)")
 
             conn.commit()
             self.logger.info("SQLite database initialized at %s", self.sqlite_db_path)
+
+    def _migrate_schema(self, cursor):
+        """Migrate database schema to add missing columns."""
+        try:
+            # Check if location columns exist
+            cursor.execute("PRAGMA table_info(query_logs)")
+            columns = [row[1] for row in cursor.fetchall()]
+
+            location_columns = [
+                "client_ip",
+                "location_city",
+                "location_region",
+                "location_country",
+                "location_country_code",
+            ]
+
+            for column in location_columns:
+                if column not in columns:
+                    cursor.execute(f"ALTER TABLE query_logs ADD COLUMN {column} TEXT")
+                    self.logger.info(f"Added missing column: {column}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to migrate schema: {e}")
 
     @contextmanager
     def _get_sqlite_connection(self):
@@ -288,36 +314,41 @@ class DualQueryLogger(QueryLogger):
             with self._get_sqlite_connection() as conn:
                 cursor = conn.cursor()
 
-                if request_id:
-                    # Update by request_id if available (most reliable)
+                # Update the most recent matching entry with [STREAMING RESPONSE]
+                # SQLite doesn't support ORDER BY in UPDATE, so we find the ID first
+                cursor.execute(
+                    """
+                    SELECT id FROM query_logs 
+                    WHERE user_query = ? AND system_response = '[STREAMING RESPONSE]'
+                    ORDER BY id DESC LIMIT 1
+                """,
+                    (question,),
+                )
+
+                row = cursor.fetchone()
+                if row:
+                    entry_id = row[0]
                     cursor.execute(
                         """
                         UPDATE query_logs 
                         SET system_response = ?
-                        WHERE user_query = ? AND system_response = '[STREAMING RESPONSE]'
-                        ORDER BY id DESC LIMIT 1
+                        WHERE id = ?
                     """,
-                        (actual_response, question),
-                    )
-                else:
-                    # Fallback: update most recent matching entry
-                    cursor.execute(
-                        """
-                        UPDATE query_logs 
-                        SET system_response = ?
-                        WHERE client_ip = ? AND user_query = ? AND system_response = '[STREAMING RESPONSE]'
-                        ORDER BY id DESC LIMIT 1  
-                    """,
-                        (actual_response, processed_ip, question),
+                        (actual_response, entry_id),
                     )
 
-                conn.commit()
+                    conn.commit()
 
-                if cursor.rowcount > 0:
-                    self.logger.debug("Updated streaming response in SQLite database")
-                    return True
+                    if cursor.rowcount > 0:
+                        self.logger.debug("Updated streaming response in SQLite database for ID %s", entry_id)
+                        return True
+                    else:
+                        self.logger.warning("Failed to update streaming entry with ID %s", entry_id)
+                        return False
                 else:
-                    self.logger.warning("No matching streaming entry found to update in SQLite")
+                    self.logger.warning(
+                        "No matching streaming entry found to update in SQLite for question: %s", question[:50]
+                    )
                     return False
 
         except Exception as e:

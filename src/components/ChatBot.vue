@@ -132,7 +132,7 @@ export default {
         const oldModel = currentModel;
         selectedModel.value = availableModels.value[0];
 
-        console.log(`Switched from ${oldModel} to ${selectedModel.value} due to rate limit`);
+        // Model switched due to rate limit
         showRateLimitNotification(`⚠️ Switched to ${selectedModel.value} - ${oldModel} rate limit reached`);
 
         return true; // Model was switched

@@ -24,8 +24,8 @@ def create_admin_app() -> FastAPI:
     # CORS middleware to allow frontend access
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # In production, specify your frontend domain
-        allow_credentials=True,
+        allow_origins=os.getenv("ADMIN_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3002").split(","),
+        allow_credentials=False,  # using Authorization header, not cookies
         allow_methods=["*"],
         allow_headers=["*"],
     )

@@ -13,7 +13,11 @@ from typing import Any, Dict, List, Optional
 class DatabaseManager:
     """Manages SQLite database connections and operations."""
 
-    def __init__(self, db_path: str = "backend/logs/rag_monitoring.db"):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # Use absolute path to the backend database
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            db_path = os.path.join(project_root, "backend", "logs", "rag_monitoring.db")
         self.db_path = db_path
         self._init_database()
 
@@ -42,7 +46,12 @@ class DatabaseManager:
                     error_occurred BOOLEAN DEFAULT 0,
                     error_message TEXT,
                     user_feedback TEXT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    client_ip TEXT,
+                    location_city TEXT,
+                    location_region TEXT,
+                    location_country TEXT,
+                    location_country_code TEXT
                 )
             """
             )
@@ -125,6 +134,11 @@ class DatabaseManager:
         cache_hit: bool = False,
         error_occurred: bool = False,
         error_message: Optional[str] = None,
+        client_ip: Optional[str] = None,
+        location_city: Optional[str] = None,
+        location_region: Optional[str] = None,
+        location_country: Optional[str] = None,
+        location_country_code: Optional[str] = None,
     ) -> int:
         """Log a query to the database and return the query ID."""
         with self.get_connection() as conn:
@@ -134,8 +148,9 @@ class DatabaseManager:
                 INSERT INTO query_logs (
                     session_id, user_query, system_response, response_time_ms,
                     llm_provider, llm_model, vector_search_score, sources_used,
-                    follow_up_questions, cache_hit, error_occurred, error_message
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    follow_up_questions, cache_hit, error_occurred, error_message,
+                    client_ip, location_city, location_region, location_country, location_country_code
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     session_id,
@@ -150,6 +165,11 @@ class DatabaseManager:
                     cache_hit,
                     error_occurred,
                     error_message,
+                    client_ip,
+                    location_city,
+                    location_region,
+                    location_country,
+                    location_country_code,
                 ),
             )
             conn.commit()
@@ -350,25 +370,68 @@ class DatabaseManager:
 
             result = dict(cursor.fetchone())
 
-            # Calculate percentiles for response times
+            # Calculate percentiles more efficiently using SQL
+            # Get count first to avoid loading all data
             cursor.execute(
                 """
-                SELECT response_time_ms 
+                SELECT COUNT(*) 
                 FROM query_logs 
                 WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
-                ORDER BY response_time_ms
             """.format(
                     time_clause
                 )
             )
 
-            response_times = [row[0] for row in cursor.fetchall()]
+            total_count = cursor.fetchone()[0]
 
-            if response_times:
-                n = len(response_times)
-                result["p50_response_time"] = response_times[int(n * 0.5)]
-                result["p95_response_time"] = response_times[int(n * 0.95)]
-                result["p99_response_time"] = response_times[int(n * 0.99)]
+            if total_count > 0:
+                # Calculate percentile positions
+                p50_pos = max(1, int(total_count * 0.5))
+                p95_pos = max(1, int(total_count * 0.95))
+                p99_pos = max(1, int(total_count * 0.99))
+
+                # Use LIMIT and OFFSET to get specific percentile values
+                cursor.execute(
+                    """
+                    SELECT response_time_ms 
+                    FROM query_logs 
+                    WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
+                    ORDER BY response_time_ms
+                    LIMIT 1 OFFSET {}
+                """.format(
+                        time_clause, p50_pos - 1
+                    )
+                )
+                p50_result = cursor.fetchone()
+                result["p50_response_time"] = p50_result[0] if p50_result else 0
+
+                cursor.execute(
+                    """
+                    SELECT response_time_ms 
+                    FROM query_logs 
+                    WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
+                    ORDER BY response_time_ms
+                    LIMIT 1 OFFSET {}
+                """.format(
+                        time_clause, p95_pos - 1
+                    )
+                )
+                p95_result = cursor.fetchone()
+                result["p95_response_time"] = p95_result[0] if p95_result else 0
+
+                cursor.execute(
+                    """
+                    SELECT response_time_ms 
+                    FROM query_logs 
+                    WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
+                    ORDER BY response_time_ms
+                    LIMIT 1 OFFSET {}
+                """.format(
+                        time_clause, p99_pos - 1
+                    )
+                )
+                p99_result = cursor.fetchone()
+                result["p99_response_time"] = p99_result[0] if p99_result else 0
             else:
                 result["p50_response_time"] = 0
                 result["p95_response_time"] = 0
@@ -411,27 +474,75 @@ class DatabaseManager:
 
             result = dict(cursor.fetchone())
 
-            # Calculate percentiles for response times
+            # Calculate percentiles more efficiently using SQL
             cursor.execute(
                 """
-                SELECT response_time_ms 
+                SELECT COUNT(*) 
                 FROM query_logs 
                 WHERE timestamp >= datetime('now', '-{}') 
                   AND timestamp < datetime('now', '-{}')
                   AND response_time_ms IS NOT NULL
-                ORDER BY response_time_ms
             """.format(
                     start_offset, end_offset
                 )
             )
 
-            response_times = [row[0] for row in cursor.fetchall()]
+            total_count = cursor.fetchone()[0]
 
-            if response_times:
-                n = len(response_times)
-                result["p50_response_time"] = response_times[int(n * 0.5)]
-                result["p95_response_time"] = response_times[int(n * 0.95)]
-                result["p99_response_time"] = response_times[int(n * 0.99)]
+            if total_count > 0:
+                # Calculate percentile positions
+                p50_pos = max(1, int(total_count * 0.5))
+                p95_pos = max(1, int(total_count * 0.95))
+                p99_pos = max(1, int(total_count * 0.99))
+
+                # Use LIMIT and OFFSET to get specific percentile values
+                cursor.execute(
+                    """
+                    SELECT response_time_ms 
+                    FROM query_logs 
+                    WHERE timestamp >= datetime('now', '-{}') 
+                      AND timestamp < datetime('now', '-{}')
+                      AND response_time_ms IS NOT NULL
+                    ORDER BY response_time_ms
+                    LIMIT 1 OFFSET {}
+                """.format(
+                        start_offset, end_offset, p50_pos - 1
+                    )
+                )
+                p50_result = cursor.fetchone()
+                result["p50_response_time"] = p50_result[0] if p50_result else 0
+
+                cursor.execute(
+                    """
+                    SELECT response_time_ms 
+                    FROM query_logs 
+                    WHERE timestamp >= datetime('now', '-{}') 
+                      AND timestamp < datetime('now', '-{}')
+                      AND response_time_ms IS NOT NULL
+                    ORDER BY response_time_ms
+                    LIMIT 1 OFFSET {}
+                """.format(
+                        start_offset, end_offset, p95_pos - 1
+                    )
+                )
+                p95_result = cursor.fetchone()
+                result["p95_response_time"] = p95_result[0] if p95_result else 0
+
+                cursor.execute(
+                    """
+                    SELECT response_time_ms 
+                    FROM query_logs 
+                    WHERE timestamp >= datetime('now', '-{}') 
+                      AND timestamp < datetime('now', '-{}')
+                      AND response_time_ms IS NOT NULL
+                    ORDER BY response_time_ms
+                    LIMIT 1 OFFSET {}
+                """.format(
+                        start_offset, end_offset, p99_pos - 1
+                    )
+                )
+                p99_result = cursor.fetchone()
+                result["p99_response_time"] = p99_result[0] if p99_result else 0
             else:
                 result["p50_response_time"] = 0
                 result["p95_response_time"] = 0

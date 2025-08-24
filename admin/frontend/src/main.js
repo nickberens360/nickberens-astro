@@ -10,6 +10,15 @@ import './monaco-env.js'
 // Global CSS
 import './styles/main.css'
 
+// Admin API setup
+import { adminAPI } from './services/api'
+
+// Initialize admin token at startup (for development/demo)
+// In production, this should be handled by a proper login flow
+if (import.meta.env.VITE_ADMIN_TOKEN) {
+  adminAPI.setAuthToken(import.meta.env.VITE_ADMIN_TOKEN)
+}
+
 const app = createApp(App)
 
 app.use(createPinia())

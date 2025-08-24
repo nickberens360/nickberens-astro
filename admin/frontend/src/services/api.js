@@ -5,16 +5,25 @@ class AdminAPI {
     this.client = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL,
       timeout: 10000,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_ADMIN_TOKEN}`
-      }
+      headers: { 'Content-Type': 'application/json' }
     })
+
+    // Runtime token container
+    this.authToken = null
 
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
-        console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`)
+        // Optional: minimal dev-only logging
+        if (import.meta.env.DEV) {
+          console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`)
+        }
+        // Attach token at runtime if available
+        const token = this.authToken || (typeof localStorage !== 'undefined' && localStorage.getItem('admin_token'))
+        if (token) {
+          config.headers = config.headers || {}
+          config.headers.Authorization = `Bearer ${token}`
+        }
         return config
       },
       (error) => {
@@ -226,6 +235,16 @@ class AdminAPI {
     } else {
       return 'An unknown error occurred'
     }
+  }
+
+  setAuthToken(token) {
+    this.authToken = token
+    if (typeof localStorage !== 'undefined') localStorage.setItem('admin_token', token)
+  }
+
+  clearAuthToken() {
+    this.authToken = null
+    if (typeof localStorage !== 'undefined') localStorage.removeItem('admin_token')
   }
 }
 

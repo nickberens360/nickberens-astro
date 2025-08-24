@@ -183,6 +183,7 @@ def patch_existing_query_logger():
         # Store original methods
         original_log_query = QueryLogger.log_query
         original_log_streaming_query = QueryLogger.log_streaming_query
+        original_update_streaming_response = QueryLogger.update_streaming_response
 
         def enhanced_log_query(self, **kwargs):
             """Enhanced log_query that also logs to admin database."""
@@ -204,15 +205,50 @@ def patch_existing_query_logger():
 
             # Also log to admin database
             try:
-                admin_query_logger.log_streaming_query(**kwargs)
+                query_id = admin_query_logger.log_streaming_query(**kwargs)
+                # Store the query_id for later update
+                kwargs["admin_query_id"] = query_id
             except Exception as e:
                 logging.getLogger(__name__).error(f"Failed to log streaming query to admin database: {e}")
+
+            return result
+
+        def enhanced_update_streaming_response(self, cache_key, client_ip, question, actual_response, request_id=None):
+            """Enhanced update_streaming_response that also updates admin database."""
+            # Call original update
+            result = original_update_streaming_response(
+                self, cache_key, client_ip, question, actual_response, request_id
+            )
+
+            # Also update admin database - find the most recent streaming entry for this question
+            try:
+                with db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        SELECT id FROM query_logs 
+                        WHERE user_query = ? AND system_response = '[STREAMING RESPONSE]'
+                        ORDER BY timestamp DESC 
+                        LIMIT 1
+                        """,
+                        (question,),
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        admin_query_logger.update_streaming_response(row[0], actual_response)
+                    else:
+                        logging.getLogger(__name__).warning(
+                            f"Could not find admin streaming entry to update for question: {question[:50]}"
+                        )
+            except Exception as e:
+                logging.getLogger(__name__).error(f"Failed to update streaming response in admin database: {e}")
 
             return result
 
         # Apply patches
         QueryLogger.log_query = enhanced_log_query
         QueryLogger.log_streaming_query = enhanced_log_streaming_query
+        QueryLogger.update_streaming_response = enhanced_update_streaming_response
 
         logging.getLogger(__name__).info("Successfully patched existing query logger with admin database integration")
 
