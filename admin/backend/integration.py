@@ -2,8 +2,11 @@
 Integration module to connect existing RAG system with admin dashboard logging.
 """
 
+import hashlib
+import hmac
 import json
 import logging
+import os
 import time
 import uuid
 from datetime import datetime
@@ -45,9 +48,23 @@ class AdminQueryLogger:
             follow_up_questions = metadata.get("followup_questions", [])
             cache_hit = metadata.get("cache_hit", False)
 
-            # Generate session ID if not provided
+            # Generate anonymized session ID if not provided
             if not session_id and client_ip:
-                session_id = f"session_{hash(client_ip)}_{int(time.time() / 3600)}"  # Hourly sessions
+                # Use HMAC with a server-side secret for deterministic, opaque IDs per hour
+                secret = os.environ.get("ADMIN_ANONYMIZATION_KEY")
+                if secret:
+                    digest = hmac.new(
+                        secret.encode("utf-8"),
+                        f"{client_ip}_{int(time.time() / 3600)}".encode("utf-8"),
+                        digestmod=hashlib.sha256,
+                    ).hexdigest()[
+                        :16
+                    ]  # Truncate for brevity
+                else:
+                    # Fallback to a random UUID4 if no salt configured
+                    digest = uuid.uuid4().hex[:16]
+
+                session_id = f"anon_{digest}_{int(time.time() / 3600)}"
 
             # Log the query to the backend database
             query_id = query_data_manager.log_query(
@@ -185,29 +202,69 @@ def patch_existing_query_logger():
         original_log_streaming_query = QueryLogger.log_streaming_query
         original_update_streaming_response = QueryLogger.update_streaming_response
 
-        def enhanced_log_query(self, **kwargs):
+        def enhanced_log_query(
+            self,
+            client_ip: str,
+            question: str,
+            response: str,
+            model_used: str,
+            query_type: str,
+            response_time: float,
+            metadata: Optional[Dict[str, Any]] = None,
+            request_id: Optional[str] = None,
+        ):
             """Enhanced log_query that also logs to admin database."""
             # Call original logging
-            result = original_log_query(self, **kwargs)
+            result = original_log_query(
+                self, client_ip, question, response, model_used, query_type, response_time, metadata, request_id
+            )
 
             # Also log to admin database
             try:
-                admin_query_logger.log_query(**kwargs)
+                admin_query_logger.log_query(
+                    client_ip=client_ip,
+                    question=question,
+                    response=response,
+                    model_used=model_used,
+                    query_type=query_type,
+                    response_time=response_time,
+                    metadata=metadata,
+                    request_id=request_id,
+                )
             except Exception as e:
                 logging.getLogger(__name__).error(f"Failed to log to admin database: {e}")
 
             return result
 
-        def enhanced_log_streaming_query(self, **kwargs):
+        def enhanced_log_streaming_query(
+            self,
+            client_ip: str,
+            question: str,
+            model_used: str,
+            response_time: float,
+            metadata: Optional[Dict[str, Any]] = None,
+            request_id: Optional[str] = None,
+        ):
             """Enhanced log_streaming_query that also logs to admin database."""
             # Call original logging
-            result = original_log_streaming_query(self, **kwargs)
+            result = original_log_streaming_query(
+                self, client_ip, question, model_used, response_time, metadata, request_id
+            )
 
             # Also log to admin database
             try:
-                query_id = admin_query_logger.log_streaming_query(**kwargs)
-                # Store the query_id for later update
-                kwargs["admin_query_id"] = query_id
+                query_id = admin_query_logger.log_streaming_query(
+                    client_ip=client_ip,
+                    question=question,
+                    model_used=model_used,
+                    response_time=response_time,
+                    metadata=metadata,
+                    request_id=request_id,
+                )
+                # Store the query_id for later update (though this isn't currently used)
+                if metadata is None:
+                    metadata = {}
+                metadata["admin_query_id"] = query_id
             except Exception as e:
                 logging.getLogger(__name__).error(f"Failed to log streaming query to admin database: {e}")
 

@@ -41,8 +41,12 @@ class DualQueryLogger(QueryLogger):
         # Initialize parent JSON logger
         super().__init__(log_file_path, excluded_ips)
 
-        # Set up SQLite database path - use backend/logs for container compatibility
-        self.sqlite_db_path = sqlite_db_path or "backend/logs/rag_monitoring.db"
+        # Set up SQLite database path - use absolute path for consistency with admin
+        if sqlite_db_path is None:
+            # Compute absolute path relative to project root (same logic as admin QueryDataManager)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            sqlite_db_path = os.path.join(project_root, "backend", "logs", "rag_monitoring.db")
+        self.sqlite_db_path = sqlite_db_path
         self._init_sqlite_database()
 
     def _init_sqlite_database(self):
