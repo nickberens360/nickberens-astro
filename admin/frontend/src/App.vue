@@ -10,9 +10,13 @@ import { useAdminStore } from '@/stores/admin'
 
 const adminStore = useAdminStore()
 
-onMounted(() => {
-  // Initialize the admin store on app mount
-  adminStore.initialize()
+onMounted(async () => {
+  // Initialize the admin store on app mount, but let router handle auth redirects
+  try {
+    await adminStore.initialize()
+  } catch (error) {
+    console.log('Admin store initialization failed, likely due to authentication:', error)
+  }
 })
 </script>
 

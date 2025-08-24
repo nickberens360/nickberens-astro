@@ -7,6 +7,9 @@ import {
   mdiChartLine, 
   mdiFileDocument,
   mdiAccountGroup,
+  mdiAccount,
+  mdiLock,
+  mdiLogout,
   mdiMenu,
   mdiClose,
   mdiRefresh,
@@ -35,7 +38,9 @@ import {
   mdiFileDocumentOutline,
   mdiTextBox,
   mdiWeb,
-  mdiPencil
+  mdiPencil,
+  mdiWeatherNight,
+  mdiWhiteBalanceSunny
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -105,7 +110,12 @@ export default createVuetify({
       'language': mdiWeb,
       'article': mdiFileDocumentOutline,
       'insert_drive_file': mdiFileDocumentOutline,
-      edit: mdiPencil
+      edit: mdiPencil,
+      account: mdiAccount,
+      lock: mdiLock,
+      logout: mdiLogout,
+      'weather-night': mdiWeatherNight,
+      'light-mode': mdiWhiteBalanceSunny
     },
     sets: {
       mdi

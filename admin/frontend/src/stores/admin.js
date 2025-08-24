@@ -28,6 +28,10 @@ export const useAdminStore = defineStore('admin', () => {
   const lastUpdate = ref(null)
   const error = ref(null)
   const isConnected = ref(false)
+  
+  // Authentication state
+  const user = ref(null)
+  const isAuthenticated = ref(false)
 
   // Getters
   const formattedStats = computed(() => ({
@@ -49,10 +53,21 @@ export const useAdminStore = defineStore('admin', () => {
   const isHealthy = computed(() => {
     return systemHealth.value.status === 'healthy' && stats.value.errorRate < 10
   })
+  
+  const userRole = computed(() => user.value?.role || 'viewer')
 
   // Actions
   const initialize = async () => {
     console.log('Initializing admin store...')
+    
+    // First check if user is authenticated
+    const authenticated = await checkAuth()
+    
+    if (!authenticated) {
+      console.log('User not authenticated, skipping data initialization')
+      return false
+    }
+    
     await testConnection()
     if (isConnected.value) {
       await Promise.all([
@@ -61,6 +76,8 @@ export const useAdminStore = defineStore('admin', () => {
       ])
       startAutoRefresh()
     }
+    
+    return true
   }
 
   const testConnection = async () => {
@@ -191,6 +208,50 @@ export const useAdminStore = defineStore('admin', () => {
     error.value = null
   }
 
+  // Authentication actions
+  const login = async (username, password) => {
+    try {
+      const response = await adminAPI.login(username, password)
+      if (response.success && response.user) {
+        user.value = response.user
+        isAuthenticated.value = true
+        return response
+      } else {
+        throw new Error(response.message || 'Login failed')
+      }
+    } catch (err) {
+      console.error('Login failed:', err)
+      throw err
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await adminAPI.logout()
+    } catch (err) {
+      console.error('Logout failed:', err)
+    } finally {
+      user.value = null
+      isAuthenticated.value = false
+    }
+  }
+
+  const checkAuth = async () => {
+    try {
+      const response = await adminAPI.getCurrentUser()
+      if (response.user) {
+        user.value = response.user
+        isAuthenticated.value = true
+        return true
+      }
+    } catch (err) {
+      console.log('Not authenticated or session expired')
+      user.value = null
+      isAuthenticated.value = false
+    }
+    return false
+  }
+
   // Cleanup function for when store is no longer used
   const cleanup = () => {
     stopAutoRefresh()
@@ -205,11 +266,14 @@ export const useAdminStore = defineStore('admin', () => {
     lastUpdate,
     error,
     isConnected,
+    user,
+    isAuthenticated,
 
     // Getters
     formattedStats,
     needsRefresh,
     isHealthy,
+    userRole,
 
     // Actions
     initialize,
@@ -221,6 +285,9 @@ export const useAdminStore = defineStore('admin', () => {
     startAutoRefresh,
     stopAutoRefresh,
     resetError,
+    login,
+    logout,
+    checkAuth,
     cleanup
   }
 })

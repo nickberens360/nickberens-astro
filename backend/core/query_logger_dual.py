@@ -84,9 +84,29 @@ class DualQueryLogger(QueryLogger):
             # Migrate existing tables - add location columns if missing
             self._migrate_schema(cursor)
 
+            # Create content_gaps table for automatic content gap detection
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS content_gaps (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query_pattern TEXT NOT NULL,
+                    occurrence_count INTEGER DEFAULT 1,
+                    avg_similarity_score REAL,
+                    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    resolved BOOLEAN DEFAULT 0,
+                    notes TEXT,
+                    sample_query_id INTEGER,
+                    FOREIGN KEY (sample_query_id) REFERENCES query_logs (id)
+                )
+            """
+            )
+
             # Create indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_timestamp ON query_logs(timestamp DESC)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_errors ON query_logs(error_occurred)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved ON content_gaps(resolved)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_score ON content_gaps(avg_similarity_score)")
 
             conn.commit()
             self.logger.info("SQLite database initialized at %s", self.sqlite_db_path)
@@ -234,7 +254,12 @@ class DualQueryLogger(QueryLogger):
                     ),
                 )
                 conn.commit()
+                query_id = cursor.lastrowid
 
+                # Check for potential content gaps and log them automatically
+                self._detect_content_gap(cursor, query_id, question, vector_search_score, error_occurred)
+
+                conn.commit()  # Commit content gap detection too
                 self.logger.debug("Query logged to SQLite database")
 
         except Exception as e:
@@ -371,6 +396,88 @@ class DualQueryLogger(QueryLogger):
             return "meta"
         else:
             return "unknown"
+
+    def _detect_content_gap(
+        self, cursor, query_id: int, question: str, similarity_score: Optional[float], error_occurred: bool
+    ):
+        """Detect and record potential content gaps based on query quality indicators."""
+        try:
+            # Define thresholds for content gap detection
+            LOW_SIMILARITY_THRESHOLD = 0.7  # Configurable threshold
+            is_content_gap = False
+
+            # Check for content gaps based on various indicators
+            if similarity_score is not None and similarity_score < LOW_SIMILARITY_THRESHOLD:
+                is_content_gap = True
+            elif error_occurred:
+                is_content_gap = True
+            elif not question.strip():  # Empty or whitespace-only queries
+                return  # Skip empty queries
+
+            if is_content_gap:
+                # Normalize the query pattern (remove common variations)
+                query_pattern = self._normalize_query_pattern(question)
+
+                # Check if this pattern already exists
+                cursor.execute(
+                    "SELECT id, occurrence_count, avg_similarity_score FROM content_gaps WHERE query_pattern = ?",
+                    (query_pattern,),
+                )
+                existing_gap = cursor.fetchone()
+
+                if existing_gap:
+                    # Update existing content gap
+                    gap_id, count, avg_score = existing_gap
+                    new_count = count + 1
+                    new_avg_score = avg_score
+
+                    if similarity_score is not None:
+                        # Update running average
+                        new_avg_score = ((avg_score * count) + similarity_score) / new_count
+
+                    cursor.execute(
+                        """
+                        UPDATE content_gaps 
+                        SET occurrence_count = ?, avg_similarity_score = ?, last_seen = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """,
+                        (new_count, new_avg_score, gap_id),
+                    )
+                else:
+                    # Create new content gap entry
+                    cursor.execute(
+                        """
+                        INSERT INTO content_gaps (
+                            query_pattern, occurrence_count, avg_similarity_score, sample_query_id
+                        ) VALUES (?, 1, ?, ?)
+                        """,
+                        (query_pattern, similarity_score or 0.0, query_id),
+                    )
+
+                self.logger.debug(f"Content gap detected: {query_pattern[:50]}...")
+
+        except Exception as e:
+            self.logger.error(f"Failed to detect content gap: {e}")
+            # Don't raise - this is secondary functionality
+
+    def _normalize_query_pattern(self, question: str) -> str:
+        """Normalize a query to identify similar patterns."""
+        import re
+
+        # Basic normalization - can be enhanced
+        pattern = question.lower().strip()
+
+        # Remove common question words and patterns
+        pattern = re.sub(r"^(what|how|when|where|why|who|can|could|would|should|is|are|do|does)\s+", "", pattern)
+
+        # Remove specific names and numbers (basic approach)
+        pattern = re.sub(r"\b\d+\b", "[NUMBER]", pattern)
+
+        # Limit length for storage
+        if len(pattern) > 200:
+            pattern = pattern[:200] + "..."
+
+        return pattern
 
     def _process_ip_for_logging(self, ip_address: str) -> Optional[str]:
         """Process IP address for logging, handling exclusion and anonymization."""

@@ -125,9 +125,18 @@
           <v-list-item @click="toggleTheme">
             <v-list-item-title>
               <v-icon start>
-                {{ isDark ? 'mdi-white-balance-sunny' : 'mdi-weather-night' }}
+                {{ isDark ? '$light-mode' : '$weather-night' }}
               </v-icon>
               {{ isDark ? 'Light' : 'Dark' }} Mode
+            </v-list-item-title>
+          </v-list-item>
+          
+          <v-divider/>
+          
+          <v-list-item @click="handleLogout">
+            <v-list-item-title>
+              <v-icon start>$logout</v-icon>
+              Logout
             </v-list-item-title>
           </v-list-item>
         </v-list>
@@ -315,6 +324,15 @@ const toggleTheme = () => {
 const exportData = () => {
   // TODO: Implement export functionality
   console.log('Export data functionality to be implemented');
+};
+
+const handleLogout = async () => {
+  try {
+    await adminStore.logout();
+    router.push({ name: 'login' });
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
 };
 
 // Lifecycle

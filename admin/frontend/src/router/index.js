@@ -1,12 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/components/AdminLayout.vue'
+import { useAdminStore } from '@/stores/admin'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      meta: {
+        title: 'Login',
+        public: true
+      }
+    },
+    {
       path: '/admin',
       component: AdminLayout,
+      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -76,9 +87,30 @@ const router = createRouter({
 })
 
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   // Update document title
   document.title = to.meta.title ? `${to.meta.title} - RAG Admin` : 'RAG Admin Dashboard'
+  
+  const adminStore = useAdminStore()
+  
+  // Check if route requires authentication
+  if (to.meta.requiresAuth) {
+    // Check authentication status
+    const isAuthenticated = adminStore.isAuthenticated || await adminStore.checkAuth()
+    
+    if (!isAuthenticated) {
+      // Redirect to login
+      next({ name: 'login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+  
+  // If going to login but already authenticated, redirect to dashboard
+  if (to.name === 'login' && adminStore.isAuthenticated) {
+    next({ name: 'dashboard' })
+    return
+  }
+  
   next()
 })
 

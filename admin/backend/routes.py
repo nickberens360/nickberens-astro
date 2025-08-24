@@ -12,35 +12,117 @@ from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
+from .auth import auth_manager, get_current_user, require_admin_role, require_auth
 from .database import db_manager, query_data_manager
-from .models import FeedbackUpdate, FileContentUpdate, OverviewStats, QueryResponse
+from .models import (
+    CreateUserRequest,
+    FeedbackUpdate,
+    FileContentUpdate,
+    LoginRequest,
+    LoginResponse,
+    OverviewStats,
+    QueryResponse,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/api", tags=["admin"])
 
 
-def verify_admin_token(request: Request):
-    """Verify admin authentication token."""
-    admin_token = os.getenv("ADMIN_TOKEN")
-    if not admin_token:
-        raise HTTPException(status_code=500, detail="Admin token not configured")
+# Authentication endpoints
+@router.post("/auth/login", response_model=LoginResponse)
+async def login(login_data: LoginRequest, request: Request, response: Response):
+    """Authenticate user and create session."""
+    try:
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("User-Agent")
 
-    # Check token in query params or Authorization header
-    token = request.query_params.get("token")
-    if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
+        auth_result = auth_manager.authenticate_user(
+            login_data.username, login_data.password, ip_address=client_ip, user_agent=user_agent
+        )
 
-    if not token or token != admin_token:
-        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+        if not auth_result:
+            return LoginResponse(success=False, message="Invalid username or password")
+
+        user_data = auth_result["user"].copy()
+        user_data.pop("password_hash", None)  # Remove password hash from response
+
+        # Set session cookie
+        response.set_cookie(
+            key="admin_session",
+            value=auth_result["session_id"],
+            max_age=24 * 60 * 60,  # 24 hours
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+        )
+
+        return LoginResponse(
+            success=True, message="Login successful", user=user_data, session_id=auth_result["session_id"]
+        )
+
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Login failed")
+
+
+@router.post("/auth/logout")
+async def logout(request: Request, response: Response, session: dict = Depends(require_auth)):
+    """Logout user and expire session."""
+    try:
+        session_id = request.cookies.get("admin_session")
+        if session_id:
+            auth_manager.expire_session(session_id)
+
+        # Clear session cookie
+        response.delete_cookie(key="admin_session")
+
+        return {"success": True, "message": "Logout successful"}
+
+    except Exception as e:
+        logger.error(f"Logout error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Logout failed")
+
+
+@router.get("/auth/me")
+async def get_current_user_info(session: dict = Depends(require_auth)):
+    """Get current authenticated user information."""
+    user_data = {
+        "id": session["user_id"],
+        "username": session["username"],
+        "email": session["email"],
+        "role": session["role"],
+        "last_login_at": session.get("last_login_at"),
+    }
+    return {"user": user_data}
+
+
+@router.post("/auth/create-user")
+async def create_user(user_data: CreateUserRequest, session: dict = Depends(require_admin_role)):
+    """Create a new admin user (admin only)."""
+    try:
+        # Check if username already exists
+        existing_user = db_manager.get_admin_user(user_data.username)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        user_id = auth_manager.create_admin_user(
+            username=user_data.username, password=user_data.password, email=user_data.email, role=user_data.role
+        )
+
+        return {"success": True, "message": f"User '{user_data.username}' created successfully", "user_id": user_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create user error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create user")
 
 
 @router.get("/stats/overview", response_model=OverviewStats)
-async def get_overview_stats(days: int = Query(7, ge=1, le=90), _: None = Depends(verify_admin_token)):
+async def get_overview_stats(days: int = Query(7, ge=1, le=90), session: dict = Depends(require_auth)):
     """Get overview statistics for the specified number of days."""
     try:
         stats = query_data_manager.get_overview_stats(days)
@@ -66,7 +148,7 @@ async def get_queries(
     errors_only: bool = Query(False),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
-    _: None = Depends(verify_admin_token),
+    session: dict = Depends(require_auth),
 ):
     """Get paginated list of queries with optional filters."""
     try:
@@ -84,7 +166,7 @@ async def get_queries(
 
 
 @router.get("/queries/{query_id}")
-async def get_query_detail(query_id: int, _: None = Depends(verify_admin_token)):
+async def get_query_detail(query_id: int, session: dict = Depends(require_auth)):
     """Get detailed information about a specific query."""
     try:
         result = query_data_manager.get_queries(limit=1, offset=0)
@@ -116,7 +198,7 @@ async def get_query_detail(query_id: int, _: None = Depends(verify_admin_token))
 
 
 @router.post("/queries/{query_id}/feedback")
-async def update_query_feedback(query_id: int, feedback: FeedbackUpdate, _: None = Depends(verify_admin_token)):
+async def update_query_feedback(query_id: int, feedback: FeedbackUpdate, session: dict = Depends(require_auth)):
     """Update user feedback for a query."""
     if feedback.feedback not in ["helpful", "not_helpful"]:
         raise HTTPException(status_code=400, detail="Feedback must be 'helpful' or 'not_helpful'")
@@ -134,7 +216,7 @@ async def update_query_feedback(query_id: int, feedback: FeedbackUpdate, _: None
 
 @router.get("/performance/metrics")
 async def get_performance_metrics(
-    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), _: None = Depends(verify_admin_token)
+    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), session: dict = Depends(require_auth)
 ):
     """Get performance metrics for the specified time range with comparison to previous period."""
     try:
@@ -196,7 +278,7 @@ async def get_performance_metrics(
 async def get_performance_timeline(
     days: int = Query(7, ge=1, le=90),
     interval: str = Query("hour", regex="^(hour|day)$"),
-    _: None = Depends(verify_admin_token),
+    session: dict = Depends(require_auth),
 ):
     """Get time series data for performance charts."""
     try:
@@ -249,7 +331,7 @@ async def get_performance_timeline(
 
 @router.get("/performance/percentiles")
 async def get_response_time_percentiles(
-    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), _: None = Depends(verify_admin_token)
+    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), session: dict = Depends(require_auth)
 ):
     """Get response time percentiles for the specified time range."""
     try:
@@ -264,47 +346,106 @@ async def get_response_time_percentiles(
 
 
 @router.get("/content/gaps")
-async def get_content_gaps(_: None = Depends(verify_admin_token)):
-    """Get queries with low relevance scores or poor results."""
+async def get_content_gaps(
+    resolved: bool = Query(False, description="Include resolved content gaps"),
+    limit: int = Query(50, ge=1, le=200),
+    session: dict = Depends(require_auth),
+):
+    """Get content gaps detected automatically by the query logger."""
     try:
         with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
+
+            # Get content gaps from the dedicated table
+            where_clause = "WHERE resolved = 0" if not resolved else ""
+
             cursor.execute(
-                """
+                f"""
                 SELECT 
-                    user_query,
-                    vector_search_score,
-                    COUNT(*) as occurrence_count,
-                    AVG(vector_search_score) as avg_score,
-                    MAX(timestamp) as last_seen
-                FROM query_logs 
-                WHERE vector_search_score < 0.7 OR error_occurred = 1
-                GROUP BY user_query
-                HAVING occurrence_count > 1
-                ORDER BY occurrence_count DESC, avg_score ASC
-                LIMIT 50
-            """
+                    cg.id,
+                    cg.query_pattern,
+                    cg.occurrence_count,
+                    cg.avg_similarity_score,
+                    cg.first_seen,
+                    cg.last_seen,
+                    cg.resolved,
+                    cg.notes,
+                    ql.user_query as sample_query
+                FROM content_gaps cg
+                LEFT JOIN query_logs ql ON cg.sample_query_id = ql.id
+                {where_clause}
+                ORDER BY cg.occurrence_count DESC, cg.avg_similarity_score ASC
+                LIMIT ?
+                """,
+                (limit,),
             )
 
             gaps = []
             for row in cursor.fetchall():
                 gaps.append(
                     {
-                        "query": row[0],
-                        "avg_similarity_score": row[1] or 0,
-                        "occurrence_count": row[2],
-                        "avg_score": row[3] or 0,
-                        "last_seen": row[4],
+                        "id": row[0],
+                        "pattern": row[1],
+                        "count": row[2],
+                        "avg_score": round(row[3] or 0, 2),
+                        "first_seen": row[4],
+                        "last_seen": row[5],
+                        "resolved": bool(row[6]),
+                        "notes": row[7],
+                        "sample_query": row[8],
                     }
                 )
 
-            return gaps
+            return {"gaps": gaps, "total": len(gaps)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching content gaps: {str(e)}")
 
 
+@router.patch("/content/gaps/{gap_id}")
+async def update_content_gap(
+    gap_id: int,
+    resolved: bool = Query(None, description="Mark as resolved/unresolved"),
+    notes: str = Query(None, description="Add notes about the content gap"),
+    session: dict = Depends(require_auth),
+):
+    """Update a content gap (mark as resolved, add notes)."""
+    try:
+        with query_data_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Build update query
+            updates = []
+            params = []
+
+            if resolved is not None:
+                updates.append("resolved = ?")
+                params.append(resolved)
+
+            if notes is not None:
+                updates.append("notes = ?")
+                params.append(notes)
+
+            if not updates:
+                raise HTTPException(status_code=400, detail="No updates provided")
+
+            params.append(gap_id)
+
+            cursor.execute(f"UPDATE content_gaps SET {', '.join(updates)} WHERE id = ?", params)
+
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Content gap not found")
+
+            conn.commit()
+            return {"message": "Content gap updated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating content gap: {str(e)}")
+
+
 @router.get("/content/popular-topics")
-async def get_popular_topics(_: None = Depends(verify_admin_token)):
+async def get_popular_topics(session: dict = Depends(require_auth)):
     """Get most queried topics/themes."""
     try:
         with query_data_manager.get_connection() as conn:
@@ -338,7 +479,7 @@ async def get_popular_topics(_: None = Depends(verify_admin_token)):
 
 @router.get("/sessions")
 async def get_sessions(
-    active_only: bool = Query(False), limit: int = Query(50, ge=1, le=1000), _: None = Depends(verify_admin_token)
+    active_only: bool = Query(False), limit: int = Query(50, ge=1, le=1000), session: dict = Depends(require_auth)
 ):
     """Get user session information."""
     try:
@@ -370,7 +511,7 @@ async def export_csv(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     export_type: str = Query("queries", regex="^(queries|metrics)$"),
-    _: None = Depends(verify_admin_token),
+    session: dict = Depends(require_auth),
 ):
     """Export data as CSV file."""
     try:
@@ -488,7 +629,7 @@ async def health_check():
 
 # Knowledge base management endpoints
 @router.post("/knowledge/upload")
-async def upload_knowledge_files(files: List[UploadFile] = File(...), _: None = Depends(verify_admin_token)):
+async def upload_knowledge_files(files: List[UploadFile] = File(...), session: dict = Depends(require_auth)):
     """Upload files to the knowledge base directory."""
     # Get the knowledge base directory path
     # Assuming the admin backend is in /admin/backend and knowledge is in /backend/knowledge
@@ -545,7 +686,7 @@ async def upload_knowledge_files(files: List[UploadFile] = File(...), _: None = 
 
 
 @router.get("/knowledge/files")
-async def get_knowledge_files(_: None = Depends(verify_admin_token)):
+async def get_knowledge_files(session: dict = Depends(require_auth)):
     """Get list of files in the knowledge base directory."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
 
@@ -576,7 +717,7 @@ async def get_knowledge_files(_: None = Depends(verify_admin_token)):
 
 
 @router.delete("/knowledge/files/{filename}")
-async def delete_knowledge_file(filename: str, _: None = Depends(verify_admin_token)):
+async def delete_knowledge_file(filename: str, session: dict = Depends(require_auth)):
     """Delete a file from the knowledge base directory."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
     file_path = knowledge_dir / filename
@@ -601,7 +742,7 @@ async def delete_knowledge_file(filename: str, _: None = Depends(verify_admin_to
 
 
 @router.get("/knowledge/stats")
-async def get_knowledge_stats(_: None = Depends(verify_admin_token)):
+async def get_knowledge_stats(session: dict = Depends(require_auth)):
     """Get statistics about the knowledge base."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
 
@@ -632,7 +773,7 @@ async def get_knowledge_stats(_: None = Depends(verify_admin_token)):
 @router.post("/knowledge/refresh")
 async def refresh_knowledge_base(
     force_reindex: bool = Query(True, description="Force re-indexing of all files"),
-    _: None = Depends(verify_admin_token),
+    session: dict = Depends(require_auth),
 ):
     """Trigger a production-ready refresh of the knowledge base index."""
     from .knowledge_refresh_service_v2 import knowledge_refresh_service
@@ -647,7 +788,7 @@ async def refresh_knowledge_base(
 
 
 @router.get("/knowledge/refresh/status")
-async def get_refresh_status(_: None = Depends(verify_admin_token)):
+async def get_refresh_status(session: dict = Depends(require_auth)):
     """Get the current status of knowledge base refresh operation."""
     from .knowledge_refresh_service_v2 import knowledge_refresh_service
 
@@ -661,7 +802,7 @@ async def get_refresh_status(_: None = Depends(verify_admin_token)):
 
 @router.post("/knowledge/refresh/wait")
 async def wait_for_refresh_completion(
-    timeout: int = Query(300, ge=10, le=600, description="Timeout in seconds"), _: None = Depends(verify_admin_token)
+    timeout: int = Query(300, ge=10, le=600, description="Timeout in seconds"), session: dict = Depends(require_auth)
 ):
     """Wait for the current refresh operation to complete."""
     from .knowledge_refresh_service_v2 import knowledge_refresh_service
@@ -676,7 +817,7 @@ async def wait_for_refresh_completion(
 
 
 @router.get("/knowledge/files/{filename}/content")
-async def get_knowledge_file_content(filename: str, _: None = Depends(verify_admin_token)):
+async def get_knowledge_file_content(filename: str, session: dict = Depends(require_auth)):
     """Get the content of a specific file from the knowledge base directory."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
     file_path = knowledge_dir / filename
@@ -717,7 +858,7 @@ async def get_knowledge_file_content(filename: str, _: None = Depends(verify_adm
 
 @router.put("/knowledge/files/{filename}/content")
 async def update_knowledge_file_content(
-    filename: str, file_content: FileContentUpdate, _: None = Depends(verify_admin_token)
+    filename: str, file_content: FileContentUpdate, session: dict = Depends(require_auth)
 ):
     """Update the content of a specific file in the knowledge base directory."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"

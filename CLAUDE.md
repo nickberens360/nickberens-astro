@@ -244,6 +244,66 @@ The project is currently on the `illustration-updates` branch with enhanced back
 - **Query Log Download**: Automated scripts for downloading and analyzing query logs
 - **Protected Endpoints**: Security validation for admin interfaces
 
+### Admin Dashboard Icon Usage
+The admin dashboard uses Vuetify with Material Design Icons (MDI). To maintain consistency and avoid console errors:
+
+#### Icon Configuration (admin/frontend/src/plugins/vuetify.js)
+- Icons are configured with aliases in the Vuetify plugin
+- MDI icons are imported from `@mdi/js` and mapped to aliases
+- **ALWAYS use icon aliases** with the `$` prefix in components
+
+#### How to Add New Icons
+1. **Import the MDI icon** in `vuetify.js`:
+   ```javascript
+   import { mdiNewIcon } from '@mdi/js'
+   ```
+
+2. **Add to aliases** in the Vuetify configuration:
+   ```javascript
+   aliases: {
+     'new-icon': mdiNewIcon,
+   }
+   ```
+
+3. **Use in components** with the `$` prefix:
+   ```vue
+   <v-icon>$new-icon</v-icon>
+   <!-- OR -->
+   <v-btn icon="$new-icon">Button</v-btn>
+   ```
+
+#### Available Icon Aliases
+Common icons already configured:
+- `$dashboard` - Dashboard/home icon
+- `$search` - Search/magnify icon  
+- `$chart` - Chart/analytics icon
+- `$document` - Document/file icon
+- `$users` - Users/people icon
+- `$knowledge` - Knowledge base icon
+- `$menu` - Menu/hamburger icon
+- `$refresh` - Refresh/reload icon
+- `$export` - Export/download icon
+- `$logout` - Logout icon
+- `$weather-night` - Dark mode icon
+- `$light-mode` - Light mode icon
+
+#### Common Mistakes to Avoid
+❌ **DON'T** use raw MDI strings:
+```vue
+<v-icon>mdi-weather-night</v-icon> <!-- WRONG - causes SVG errors -->
+```
+
+✅ **DO** use configured aliases:
+```vue
+<v-icon>$weather-night</v-icon> <!-- CORRECT -->
+```
+
+#### Building Admin Frontend
+After icon changes, rebuild the admin frontend:
+```bash
+cd admin/frontend && npm run build
+```
+
 ### New Services & Modules
 - `query_logger.py` - Comprehensive query logging and analytics
 - `response_service.py` - Enhanced response processing pipeline

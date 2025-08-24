@@ -24,8 +24,11 @@ def create_admin_app() -> FastAPI:
     # CORS middleware to allow frontend access
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=os.getenv("ADMIN_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3002").split(","),
-        allow_credentials=False,  # using Authorization header, not cookies
+        allow_origins=os.getenv(
+            "ADMIN_ALLOWED_ORIGINS",
+            "http://localhost:3000,http://localhost:3002,http://localhost:4321,http://localhost:4323",
+        ).split(","),
+        allow_credentials=True,  # now using session cookies
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -65,6 +68,11 @@ def create_admin_app() -> FastAPI:
         @app.get("/admin")
         async def serve_admin_root():
             """Serve the admin dashboard root."""
+            return FileResponse(os.path.join(frontend_build_path, "index.html"))
+
+        @app.get("/login")
+        async def serve_login():
+            """Serve the login page."""
             return FileResponse(os.path.join(frontend_build_path, "index.html"))
 
     return app

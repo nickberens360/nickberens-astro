@@ -126,3 +126,53 @@ class FileContentUpdate(BaseModel):
     """File content update model."""
 
     content: str
+
+
+class AdminUser(BaseModel):
+    """Admin user model."""
+
+    id: Optional[int] = None
+    username: str
+    email: Optional[str] = None
+    password_hash: Optional[str] = None
+    role: str = "viewer"
+    is_active: bool = True
+    created_at: Optional[datetime] = None
+    last_login_at: Optional[datetime] = None
+
+
+class AdminSession(BaseModel):
+    """Admin session model."""
+
+    id: str
+    user_id: int
+    started_at: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    is_active: bool = True
+
+
+class LoginRequest(BaseModel):
+    """Login request model."""
+
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    """Login response model."""
+
+    success: bool
+    message: str
+    user: Optional[AdminUser] = None
+    session_id: Optional[str] = None
+
+
+class CreateUserRequest(BaseModel):
+    """Create user request model."""
+
+    username: str
+    email: Optional[str] = None
+    password: str
+    role: str = "viewer"

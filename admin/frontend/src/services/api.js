@@ -5,7 +5,8 @@ class AdminAPI {
     this.client = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL,
       timeout: 10000,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      withCredentials: true  // Enable cookies for session management
     })
 
     // Runtime token container
@@ -18,12 +19,7 @@ class AdminAPI {
         if (import.meta.env.DEV) {
           console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`)
         }
-        // Attach token at runtime if available
-        const token = this.authToken || (typeof localStorage !== 'undefined' && localStorage.getItem('admin_token'))
-        if (token) {
-          config.headers = config.headers || {}
-          config.headers.Authorization = `Bearer ${token}`
-        }
+        // Session-based authentication - cookies are automatically sent with withCredentials: true
         return config
       },
       (error) => {
@@ -43,7 +39,7 @@ class AdminAPI {
         // Handle common error cases
         if (error.response?.status === 401) {
           // Handle unauthorized access
-          console.error('Unauthorized access - check admin token')
+          console.error('Unauthorized access - authentication required')
         } else if (error.response?.status === 404) {
           console.error('API endpoint not found')
         } else if (error.response?.status >= 500) {
@@ -213,6 +209,55 @@ class AdminAPI {
     return await this.client.put(`/knowledge/files/${encodeURIComponent(filename)}/content`, {
       content: content
     })
+  }
+
+  // Authentication endpoints
+  async login(username, password) {
+    try {
+      const response = await this.client.post('/auth/login', {
+        username,
+        password
+      })
+      
+      if (response.success && response.session_id) {
+        this.setAuthToken(response.session_id)
+      }
+      
+      return response
+    } catch (error) {
+      console.error('Login failed:', error)
+      throw error
+    }
+  }
+
+  async logout() {
+    try {
+      const response = await this.client.post('/auth/logout')
+      this.clearAuthToken()
+      return response
+    } catch (error) {
+      console.error('Logout failed:', error)
+      this.clearAuthToken() // Clear token even if logout fails
+      throw error
+    }
+  }
+
+  async getCurrentUser() {
+    try {
+      return await this.client.get('/auth/me')
+    } catch (error) {
+      console.error('Failed to get current user:', error)
+      throw error
+    }
+  }
+
+  async createUser(userData) {
+    try {
+      return await this.client.post('/auth/create-user', userData)
+    } catch (error) {
+      console.error('Failed to create user:', error)
+      throw error
+    }
   }
 
   // Utility methods

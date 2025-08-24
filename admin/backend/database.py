@@ -68,21 +68,7 @@ class DatabaseManager:
             """
             )
 
-            # Content gaps tracking (admin analytics)
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS content_gaps (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_pattern TEXT,
-                    occurrence_count INTEGER DEFAULT 1,
-                    avg_similarity_score REAL,
-                    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    resolved BOOLEAN DEFAULT 0,
-                    notes TEXT
-                )
-            """
-            )
+            # Note: content_gaps table moved to backend database for real-time detection
 
             # Admin settings/configuration
             cursor.execute(
@@ -103,7 +89,6 @@ class DatabaseManager:
                 "CREATE INDEX IF NOT EXISTS idx_admin_sessions_active ON admin_sessions(last_active_at DESC)"
             )
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user ON admin_sessions(user_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved ON content_gaps(resolved)")
 
             conn.commit()
 
