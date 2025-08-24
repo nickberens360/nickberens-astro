@@ -26,7 +26,7 @@
         <v-btn
           color="primary"
           variant="outlined"
-          prepend-icon="mdi-refresh"
+          prepend-icon="$refresh"
           @click="fetchGaps"
           :loading="loading"
         >
@@ -44,7 +44,7 @@
     <!-- Empty State -->
     <v-card v-else-if="!loading && gaps.length === 0" variant="outlined">
       <v-card-text class="text-center py-8">
-        <v-icon size="64" color="success" class="mb-4">mdi-check-circle</v-icon>
+        <v-icon size="64" color="success" class="mb-4">$check-circle</v-icon>
         <h3 class="text-h6 mb-2">No Content Gaps Found</h3>
         <p class="text-body-2 text-medium-emphasis">
           {{ showResolved ? 'No content gaps have been detected.' : 'All content gaps have been resolved!' }}
@@ -136,11 +136,11 @@
                   color="success"
                   variant="text"
                   size="small"
-                  icon="mdi-check"
+                  icon="$check"
                   @click="markResolved(gap)"
                   :loading="resolvingIds.has(gap.id)"
                 >
-                  <v-icon>mdi-check</v-icon>
+                  <v-icon>$check</v-icon>
                   <v-tooltip activator="parent">Mark as Resolved</v-tooltip>
                 </v-btn>
                 
@@ -149,11 +149,11 @@
                   color="warning"
                   variant="text"
                   size="small"
-                  icon="mdi-undo"
+                  icon="$undo"
                   @click="markUnresolved(gap)"
                   :loading="resolvingIds.has(gap.id)"
                 >
-                  <v-icon>mdi-undo</v-icon>
+                  <v-icon>$undo</v-icon>
                   <v-tooltip activator="parent">Mark as Unresolved</v-tooltip>
                 </v-btn>
 
@@ -161,10 +161,10 @@
                   color="primary"
                   variant="text"
                   size="small"
-                  icon="mdi-note-edit"
+                  icon="$note-edit"
                   @click="openNotesDialog(gap)"
                 >
-                  <v-icon>mdi-note-edit</v-icon>
+                  <v-icon>$note-edit</v-icon>
                   <v-tooltip activator="parent">Edit Notes</v-tooltip>
                 </v-btn>
               </div>
@@ -178,7 +178,7 @@
     <v-dialog v-model="notesDialog.show" max-width="600px">
       <v-card>
         <v-card-title class="d-flex align-center gap-2">
-          <v-icon>mdi-note-edit</v-icon>
+          <v-icon>$note-edit</v-icon>
           Edit Notes
         </v-card-title>
         
@@ -279,7 +279,7 @@ const fetchGaps = async () => {
       resolved: showResolved.value, 
       limit: 100 
     })
-    gaps.value = response.data.gaps || []
+    gaps.value = response.gaps || []
   } catch (error) {
     console.error('Failed to fetch content gaps:', error)
     showSnackbar('Failed to fetch content gaps', 'error')

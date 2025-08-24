@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from .database import db_manager
+from .database import db_manager, query_data_manager
 
 
 class AdminQueryLogger:
@@ -49,8 +49,8 @@ class AdminQueryLogger:
             if not session_id and client_ip:
                 session_id = f"session_{hash(client_ip)}_{int(time.time() / 3600)}"  # Hourly sessions
 
-            # Log the query
-            query_id = db_manager.log_query(
+            # Log the query to the backend database
+            query_id = query_data_manager.log_query(
                 session_id=session_id,
                 user_query=question,
                 system_response=response,
@@ -105,7 +105,7 @@ class AdminQueryLogger:
     def update_streaming_response(self, query_id: int, full_response: str):
         """Update a streaming query with the complete response."""
         try:
-            with db_manager.get_connection() as conn:
+            with query_data_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -222,7 +222,7 @@ def patch_existing_query_logger():
 
             # Also update admin database - find the most recent streaming entry for this question
             try:
-                with db_manager.get_connection() as conn:
+                with query_data_manager.get_connection() as conn:
                     cursor = conn.cursor()
                     cursor.execute(
                         """

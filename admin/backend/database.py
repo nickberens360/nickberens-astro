@@ -147,6 +147,45 @@ class DatabaseManager:
             row = cursor.fetchone()
             return row[0] if row else None
 
+    def log_query(
+        self,
+        session_id: Optional[str] = None,
+        user_query: str = "",
+        system_response: str = "",
+        response_time_ms: float = 0.0,
+        llm_provider: Optional[str] = None,
+        llm_model: Optional[str] = None,
+        vector_search_score: Optional[float] = None,
+        sources_used: Optional[List[str]] = None,
+        follow_up_questions: Optional[List[str]] = None,
+        cache_hit: bool = False,
+        error_occurred: bool = False,
+        error_message: Optional[str] = None,
+    ) -> int:
+        """Log a query to the admin database. This method delegates to the backend database."""
+        # This should actually write to the backend database, not the admin database
+        # For now, we'll return a dummy ID since the real logging happens in the backend
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "log_query called on DatabaseManager - this should use QueryDataManager instead"
+        )
+        return -1
+
+    def update_session(self, session_id: str, user_agent: Optional[str] = None, ip_address: Optional[str] = None):
+        """Update session information."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT OR REPLACE INTO admin_sessions 
+                (id, user_agent, ip_address, last_active_at, is_active)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, 1)
+                """,
+                (session_id, user_agent, ip_address),
+            )
+            conn.commit()
+
 
 class QueryDataManager:
     """Manages read-only access to query data from the backend database."""
@@ -373,10 +412,10 @@ class QueryDataManager:
                 total_count = cursor.fetchone()[0]
 
                 if total_count > 0:
-                    # Calculate percentile positions
-                    p50_pos = max(1, int(total_count * 0.5))
-                    p95_pos = max(1, int(total_count * 0.95))
-                    p99_pos = max(1, int(total_count * 0.99))
+                    # Calculate percentile positions using proper percentile formula
+                    p50_pos = max(0, int(0.5 * (total_count - 1)))
+                    p95_pos = max(0, int(0.95 * (total_count - 1)))
+                    p99_pos = max(0, int(0.99 * (total_count - 1)))
 
                     # Use LIMIT and OFFSET to get specific percentile values
                     for percentile, pos in [("p50", p50_pos), ("p95", p95_pos), ("p99", p99_pos)]:
@@ -388,7 +427,7 @@ class QueryDataManager:
                             ORDER BY response_time_ms
                             LIMIT 1 OFFSET ?
                         """,
-                            (time_clause, pos - 1),
+                            (time_clause, pos),
                         )
                         result_row = cursor.fetchone()
                         result[f"{percentile}_response_time"] = result_row[0] if result_row else 0
@@ -444,6 +483,89 @@ class QueryDataManager:
         except Exception as e:
             print(f"Database error in get_timeline_data: {e}")
             return []
+
+    def log_query(
+        self,
+        session_id: Optional[str] = None,
+        user_query: str = "",
+        system_response: str = "",
+        response_time_ms: float = 0.0,
+        llm_provider: Optional[str] = None,
+        llm_model: Optional[str] = None,
+        vector_search_score: Optional[float] = None,
+        sources_used: Optional[List[str]] = None,
+        follow_up_questions: Optional[List[str]] = None,
+        cache_hit: bool = False,
+        error_occurred: bool = False,
+        error_message: Optional[str] = None,
+    ) -> int:
+        """Log a query to the backend database."""
+        try:
+            # Ensure the backend database directory exists
+            os.makedirs(os.path.dirname(self.backend_db_path), exist_ok=True)
+
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Create the query_logs table if it doesn't exist
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS query_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT,
+                        user_query TEXT NOT NULL,
+                        system_response TEXT,
+                        response_time_ms REAL,
+                        llm_provider TEXT,
+                        llm_model TEXT,
+                        vector_search_score REAL,
+                        sources_used TEXT,  -- JSON array
+                        follow_up_questions TEXT,  -- JSON array  
+                        cache_hit BOOLEAN DEFAULT 0,
+                        error_occurred BOOLEAN DEFAULT 0,
+                        error_message TEXT,
+                        user_feedback TEXT,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """
+                )
+
+                # Create indexes
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_timestamp ON query_logs(timestamp DESC)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_session ON query_logs(session_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_error ON query_logs(error_occurred)")
+
+                # Insert the query log
+                cursor.execute(
+                    """
+                    INSERT INTO query_logs 
+                    (session_id, user_query, system_response, response_time_ms, llm_provider, 
+                     llm_model, vector_search_score, sources_used, follow_up_questions, 
+                     cache_hit, error_occurred, error_message)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        session_id,
+                        user_query,
+                        system_response,
+                        response_time_ms,
+                        llm_provider,
+                        llm_model,
+                        vector_search_score,
+                        json.dumps(sources_used) if sources_used else None,
+                        json.dumps(follow_up_questions) if follow_up_questions else None,
+                        cache_hit,
+                        error_occurred,
+                        error_message,
+                    ),
+                )
+
+                conn.commit()
+                return cursor.lastrowid
+
+        except Exception as e:
+            print(f"Database error in log_query: {e}")
+            return -1
 
 
 # Global instances

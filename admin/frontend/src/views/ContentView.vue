@@ -12,7 +12,7 @@
       <v-btn
         color="primary"
         variant="outlined"
-        prepend-icon="mdi-chart-line"
+        prepend-icon="$chart"
         @click="showAnalytics = !showAnalytics"
       >
         {{ showAnalytics ? 'Hide' : 'Show' }} Analytics
@@ -67,7 +67,7 @@
     <v-card class="mt-6" variant="tonal" color="info">
       <v-card-text>
         <div class="d-flex align-start gap-3">
-          <v-icon color="info">mdi-information</v-icon>
+          <v-icon color="info">$info</v-icon>
           <div>
             <h3 class="text-body-1 font-weight-bold mb-2">About Content Gaps</h3>
             <p class="text-body-2 mb-2">

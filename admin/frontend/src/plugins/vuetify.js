@@ -19,6 +19,7 @@ import {
   mdiDownload,
   mdiAlert,
   mdiCheck,
+  mdiCheckCircle,
   mdiClockOutline,
   mdiTrendingUp,
   mdiTrendingDown,
@@ -39,6 +40,8 @@ import {
   mdiTextBox,
   mdiWeb,
   mdiPencil,
+  mdiNoteEdit,
+  mdiUndo,
   mdiWeatherNight,
   mdiWhiteBalanceSunny
 } from '@mdi/js'
@@ -98,6 +101,7 @@ export default createVuetify({
       download: mdiDownload,
       alert: mdiAlert,
       check: mdiCheck,
+      'check-circle': mdiCheckCircle,
       clock: mdiClockOutline,
       trendUp: mdiTrendingUp,
       trendDown: mdiTrendingDown,
@@ -111,6 +115,8 @@ export default createVuetify({
       'article': mdiFileDocumentOutline,
       'insert_drive_file': mdiFileDocumentOutline,
       edit: mdiPencil,
+      'note-edit': mdiNoteEdit,
+      undo: mdiUndo,
       account: mdiAccount,
       lock: mdiLock,
       logout: mdiLogout,
