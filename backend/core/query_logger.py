@@ -464,5 +464,8 @@ def get_query_logger() -> QueryLogger:
     """Get the global QueryLogger instance."""
     global _query_logger_instance
     if _query_logger_instance is None:
-        _query_logger_instance = QueryLogger()
+        # Import here to avoid circular imports
+        from .query_logger_dual import DualQueryLogger
+
+        _query_logger_instance = DualQueryLogger()
     return _query_logger_instance

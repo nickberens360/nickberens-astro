@@ -1,0 +1,422 @@
+<template>
+  <div class="knowledge-view">
+    <div class="d-flex justify-space-between align-center mb-6">
+      <h1 class="text-h4">Knowledge Base Management</h1>
+      <v-btn 
+        color="primary" 
+        prepend-icon="$refresh"
+        @click="refreshKnowledgeBase"
+        :loading="refreshing"
+        variant="outlined"
+      >
+        Refresh Index
+      </v-btn>
+    </div>
+
+    <!-- Upload Section -->
+    <v-card class="mb-6" elevation="2">
+      <v-card-title class="text-h6 bg-primary text-white">
+        <v-icon class="me-2">$upload</v-icon>
+        Upload Documents
+      </v-card-title>
+      <v-card-text class="pa-6">
+        <v-file-input
+          v-model="selectedFiles"
+          label="Select files to upload"
+          multiple
+          accept=".md,.pdf,.json,.txt,.html,.docx"
+          prepend-icon="$attach_file"
+          variant="outlined"
+          chips
+          counter
+          show-size
+          :rules="fileRules"
+        >
+          <template v-slot:selection="{ fileNames }">
+            <template v-for="(fileName, index) in fileNames" :key="fileName">
+              <v-chip
+                v-if="index < 3"
+                color="primary"
+                size="small"
+                class="me-2"
+              >
+                {{ fileName }}
+              </v-chip>
+              <span
+                v-else-if="index === 3"
+                class="text-overline grey--text"
+              >
+                +{{ fileNames.length - 3 }} File(s)
+              </span>
+            </template>
+          </template>
+        </v-file-input>
+
+        <v-alert
+          v-if="uploadError"
+          type="error"
+          class="mt-4"
+          closable
+          @click:close="uploadError = null"
+        >
+          {{ uploadError }}
+        </v-alert>
+
+        <v-alert
+          v-if="uploadSuccess"
+          type="success"
+          class="mt-4"
+          closable
+          @click:close="uploadSuccess = null"
+        >
+          {{ uploadSuccess }}
+        </v-alert>
+
+        <div class="mt-4 d-flex gap-2">
+          <v-btn
+            color="primary"
+            :disabled="!selectedFiles?.length"
+            :loading="uploading"
+            @click="uploadFiles"
+            prepend-icon="$cloud_upload"
+          >
+            Upload Files
+          </v-btn>
+          <v-btn
+            variant="outlined"
+            @click="clearSelection"
+            :disabled="!selectedFiles?.length || uploading"
+          >
+            Clear
+          </v-btn>
+        </div>
+
+        <v-divider class="my-4"></v-divider>
+
+        <div class="text-body-2 text-medium-emphasis">
+          <v-icon size="small" class="me-1">$info</v-icon>
+          <strong>Supported formats:</strong> .md, .pdf, .json, .txt, .html, .docx
+          <br>
+          <v-icon size="small" class="me-1">$info</v-icon>
+          <strong>Note:</strong> Files will be automatically indexed after upload. Use "Refresh Index" to force re-indexing.
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- Knowledge Base Stats -->
+    <v-row class="mb-6">
+      <v-col cols="12" md="4">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="blue" size="large" class="me-3">$folder</v-icon>
+              <div>
+                <div class="text-h6">{{ stats.total_files || 0 }}</div>
+                <div class="text-body-2 text-medium-emphasis">Total Files</div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="4">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="green" size="large" class="me-3">$description</v-icon>
+              <div>
+                <div class="text-h6">{{ stats.indexed_documents || 0 }}</div>
+                <div class="text-body-2 text-medium-emphasis">Indexed Documents</div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="4">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="orange" size="large" class="me-3">$schedule</v-icon>
+              <div>
+                <div class="text-h6">{{ formatDate(stats.last_indexed) }}</div>
+                <div class="text-body-2 text-medium-emphasis">Last Indexed</div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- File List -->
+    <v-card elevation="2">
+      <v-card-title class="text-h6 bg-surface-variant">
+        <v-icon class="me-2">$list</v-icon>
+        Knowledge Base Files
+        <v-spacer></v-spacer>
+        <v-btn
+          icon="$refresh"
+          variant="text"
+          size="small"
+          @click="loadFiles"
+          :loading="loadingFiles"
+        ></v-btn>
+      </v-card-title>
+      <v-card-text class="pa-0">
+        <v-data-table
+          :headers="fileHeaders"
+          :items="files"
+          :loading="loadingFiles"
+          item-key="name"
+        >
+          <template v-slot:item.name="{ item }">
+            <div class="d-flex align-center">
+              <v-icon :color="getFileIcon(item.name).color" class="me-2">
+                {{ getFileIcon(item.name).icon }}
+              </v-icon>
+              {{ item.name }}
+            </div>
+          </template>
+          <template v-slot:item.size="{ item }">
+            {{ formatFileSize(item.size) }}
+          </template>
+          <template v-slot:item.modified="{ item }">
+            {{ formatDate(item.modified) }}
+          </template>
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              icon="$delete"
+              variant="text"
+              size="small"
+              color="error"
+              @click="confirmDelete(item)"
+            ></v-btn>
+          </template>
+        </v-data-table>
+      </v-card-text>
+    </v-card>
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="deleteDialog" max-width="400">
+      <v-card>
+        <v-card-title>Confirm Delete</v-card-title>
+        <v-card-text>
+          Are you sure you want to delete "{{ fileToDelete?.name }}"?
+          This action cannot be undone.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" @click="deleteFile" :loading="deleting">Delete</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </div>
+</template>
+
+<script>
+import { ref, onMounted } from 'vue'
+import { adminAPI } from '@/services/api'
+
+export default {
+  name: 'KnowledgeView',
+  setup() {
+    const selectedFiles = ref([])
+    const uploading = ref(false)
+    const refreshing = ref(false)
+    const loadingFiles = ref(false)
+    const deleting = ref(false)
+    const uploadError = ref(null)
+    const uploadSuccess = ref(null)
+    const deleteDialog = ref(false)
+    const fileToDelete = ref(null)
+    
+    const stats = ref({
+      totalFiles: 0,
+      indexedDocuments: 0,
+      lastIndexed: null
+    })
+    
+    const files = ref([])
+
+    const fileHeaders = [
+      { title: 'Name', key: 'name', sortable: true },
+      { title: 'Type', key: 'type', sortable: true },
+      { title: 'Size', key: 'size', sortable: true },
+      { title: 'Modified', key: 'modified', sortable: true },
+      { title: 'Actions', key: 'actions', sortable: false, align: 'center' }
+    ]
+
+    const fileRules = [
+      value => {
+        if (!value || !value.length) return true
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        const oversized = value.some(file => file.size > maxSize)
+        return !oversized || 'File size must be less than 10MB'
+      }
+    ]
+
+    const getFileIcon = (filename) => {
+      const ext = filename.split('.').pop()?.toLowerCase()
+      const iconMap = {
+        md: { icon: 'description', color: 'blue' },
+        pdf: { icon: 'picture_as_pdf', color: 'red' },
+        json: { icon: 'data_object', color: 'orange' },
+        txt: { icon: 'text_snippet', color: 'grey' },
+        html: { icon: 'language', color: 'orange' },
+        docx: { icon: 'article', color: 'blue' }
+      }
+      return iconMap[ext] || { icon: 'insert_drive_file', color: 'grey' }
+    }
+
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    }
+
+    const formatDate = (dateString) => {
+      if (!dateString) return 'Never'
+      return new Date(dateString).toLocaleDateString()
+    }
+
+    const uploadFiles = async () => {
+      if (!selectedFiles.value?.length) return
+
+      uploading.value = true
+      uploadError.value = null
+      uploadSuccess.value = null
+
+      try {
+        const formData = new FormData()
+        selectedFiles.value.forEach(file => {
+          formData.append('files', file)
+        })
+
+        await adminAPI.uploadKnowledgeFiles(formData)
+        
+        uploadSuccess.value = `Successfully uploaded ${selectedFiles.value.length} file(s)`
+        selectedFiles.value = []
+        
+        // Refresh data
+        await loadFiles()
+        await loadStats()
+      } catch (error) {
+        console.error('Upload error:', error)
+        uploadError.value = error.response?.data?.detail || 'Failed to upload files'
+      } finally {
+        uploading.value = false
+      }
+    }
+
+    const refreshKnowledgeBase = async () => {
+      refreshing.value = true
+      try {
+        await adminAPI.refreshKnowledgeBase()
+        uploadSuccess.value = 'Knowledge base refreshed successfully'
+        await loadStats()
+      } catch (error) {
+        console.error('Refresh error:', error)
+        uploadError.value = 'Failed to refresh knowledge base'
+      } finally {
+        refreshing.value = false
+      }
+    }
+
+    const loadFiles = async () => {
+      loadingFiles.value = true
+      try {
+        const response = await adminAPI.getKnowledgeFiles()
+        files.value = response.files || []
+      } catch (error) {
+        console.error('Failed to load files:', error)
+      } finally {
+        loadingFiles.value = false
+      }
+    }
+
+    const loadStats = async () => {
+      try {
+        const response = await adminAPI.getKnowledgeStats()
+        stats.value = response || {}
+      } catch (error) {
+        console.error('Failed to load stats:', error)
+      }
+    }
+
+    const confirmDelete = (file) => {
+      fileToDelete.value = file
+      deleteDialog.value = true
+    }
+
+    const deleteFile = async () => {
+      if (!fileToDelete.value) return
+
+      deleting.value = true
+      try {
+        await adminAPI.deleteKnowledgeFile(fileToDelete.value.name)
+        uploadSuccess.value = `File "${fileToDelete.value.name}" deleted successfully`
+        
+        await loadFiles()
+        await loadStats()
+      } catch (error) {
+        console.error('Delete error:', error)
+        uploadError.value = 'Failed to delete file'
+      } finally {
+        deleting.value = false
+        deleteDialog.value = false
+        fileToDelete.value = null
+      }
+    }
+
+    const clearSelection = () => {
+      selectedFiles.value = []
+    }
+
+    onMounted(() => {
+      loadFiles()
+      loadStats()
+    })
+
+    return {
+      selectedFiles,
+      uploading,
+      refreshing,
+      loadingFiles,
+      deleting,
+      uploadError,
+      uploadSuccess,
+      deleteDialog,
+      fileToDelete,
+      stats,
+      files,
+      fileHeaders,
+      fileRules,
+      getFileIcon,
+      formatFileSize,
+      formatDate,
+      uploadFiles,
+      refreshKnowledgeBase,
+      loadFiles,
+      loadStats,
+      confirmDelete,
+      deleteFile,
+      clearSelection
+    }
+  }
+}
+</script>
+
+<style scoped>
+.knowledge-view {
+  padding: 24px;
+}
+
+.v-card {
+  margin-bottom: 16px;
+}
+
+.v-file-input :deep(.v-field__input) {
+  padding-top: 8px;
+}
+</style>

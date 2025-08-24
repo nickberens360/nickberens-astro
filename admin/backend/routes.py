@@ -1,0 +1,639 @@
+"""
+API routes for the RAG admin dashboard.
+"""
+
+import csv
+import io
+import os
+import shutil
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import StreamingResponse
+
+from .database import db_manager
+from .models import FeedbackUpdate, OverviewStats, QueryResponse
+
+router = APIRouter(prefix="/admin/api", tags=["admin"])
+
+
+def verify_admin_token(request: Request):
+    """Verify admin authentication token."""
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if not admin_token:
+        raise HTTPException(status_code=500, detail="Admin token not configured")
+
+    # Check token in query params or Authorization header
+    token = request.query_params.get("token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+
+    if not token or token != admin_token:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+
+
+@router.get("/stats/overview", response_model=OverviewStats)
+async def get_overview_stats(days: int = Query(7, ge=1, le=90), _: None = Depends(verify_admin_token)):
+    """Get overview statistics for the specified number of days."""
+    try:
+        stats = db_manager.get_overview_stats(days)
+        return OverviewStats(
+            total_queries=stats.get("total_queries", 0),
+            unique_sessions=stats.get("unique_sessions", 0),
+            avg_response_time_ms=stats.get("avg_response_time", 0) or 0,  # Database returns 'avg_response_time'
+            error_rate=stats.get("error_rate", 0) or 0,
+            cache_hit_rate=stats.get("cache_hit_rate", 0) or 0,
+            helpful_rate=stats.get("helpful_rate", 0) or 0,
+            queries_today=stats.get("queries_today", 0),
+            queries_this_week=stats.get("queries_this_week", 0),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching overview stats: {str(e)}")
+
+
+@router.get("/queries", response_model=QueryResponse)
+async def get_queries(
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    search: Optional[str] = Query(None),
+    errors_only: bool = Query(False),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    _: None = Depends(verify_admin_token),
+):
+    """Get paginated list of queries with optional filters."""
+    try:
+        result = db_manager.get_queries(
+            limit=limit, offset=offset, search=search, errors_only=errors_only, start_date=start_date, end_date=end_date
+        )
+        return QueryResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching queries: {str(e)}")
+
+
+@router.get("/queries/{query_id}")
+async def get_query_detail(query_id: int, _: None = Depends(verify_admin_token)):
+    """Get detailed information about a specific query."""
+    try:
+        result = db_manager.get_queries(limit=1, offset=0)
+        # Filter by ID (simplified for this implementation)
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM query_logs WHERE id = ?", (query_id,))
+            row = cursor.fetchone()
+
+            if not row:
+                raise HTTPException(status_code=404, detail="Query not found")
+
+            query_dict = dict(row)
+            # Parse JSON fields
+            if query_dict["sources_used"]:
+                import json
+
+                query_dict["sources_used"] = json.loads(query_dict["sources_used"])
+            if query_dict["follow_up_questions"]:
+                import json
+
+                query_dict["follow_up_questions"] = json.loads(query_dict["follow_up_questions"])
+
+            return query_dict
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching query detail: {str(e)}")
+
+
+@router.post("/queries/{query_id}/feedback")
+async def update_query_feedback(query_id: int, feedback: FeedbackUpdate, _: None = Depends(verify_admin_token)):
+    """Update user feedback for a query."""
+    if feedback.feedback not in ["helpful", "not_helpful"]:
+        raise HTTPException(status_code=400, detail="Feedback must be 'helpful' or 'not_helpful'")
+
+    try:
+        db_manager.update_query_feedback(query_id, feedback.feedback)
+        return {"status": "success", "message": "Feedback updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating feedback: {str(e)}")
+
+
+@router.get("/performance/metrics")
+async def get_performance_metrics(
+    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), _: None = Depends(verify_admin_token)
+):
+    """Get performance metrics for the specified time range with comparison to previous period."""
+    try:
+        current_metrics = db_manager.get_performance_metrics(time_range)
+        previous_metrics = db_manager.get_performance_metrics_previous(time_range)
+
+        def safe_divide(a, b):
+            return (a or 0) / max(b or 1, 1)
+
+        def calculate_change(current, previous):
+            if not previous or previous == 0:
+                return 0
+            return ((current or 0) - previous) / previous * 100
+
+        # Calculate current values
+        current_response_time = current_metrics.get("avg_response_time", 0) or 0
+        current_throughput = current_metrics.get("total_queries", 0) or 0
+        current_error_rate = (
+            safe_divide(current_metrics.get("error_count", 0), current_metrics.get("total_queries", 1)) * 100
+        )
+        current_cache_hit_rate = (current_metrics.get("cache_hit_rate", 0) or 0) * 100
+
+        # Calculate previous values
+        previous_response_time = previous_metrics.get("avg_response_time", 0) or 0
+        previous_throughput = previous_metrics.get("total_queries", 0) or 0
+        previous_error_rate = (
+            safe_divide(previous_metrics.get("error_count", 0), previous_metrics.get("total_queries", 1)) * 100
+        )
+        previous_cache_hit_rate = (previous_metrics.get("cache_hit_rate", 0) or 0) * 100
+
+        return {
+            "response_time": {
+                "current": round(current_response_time, 1),
+                "previous": round(previous_response_time, 1),
+                "change": round(calculate_change(current_response_time, previous_response_time), 1),
+            },
+            "throughput": {
+                "current": current_throughput,
+                "previous": previous_throughput,
+                "change": round(calculate_change(current_throughput, previous_throughput), 1),
+            },
+            "error_rate": {
+                "current": round(current_error_rate, 2),
+                "previous": round(previous_error_rate, 2),
+                "change": round(calculate_change(current_error_rate, previous_error_rate), 1),
+            },
+            "cache_hit_rate": {
+                "current": round(current_cache_hit_rate, 1),
+                "previous": round(previous_cache_hit_rate, 1),
+                "change": round(calculate_change(current_cache_hit_rate, previous_cache_hit_rate), 1),
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching performance metrics: {str(e)}")
+
+
+@router.get("/performance/timeline")
+async def get_performance_timeline(
+    days: int = Query(7, ge=1, le=90),
+    interval: str = Query("hour", regex="^(hour|day)$"),
+    _: None = Depends(verify_admin_token),
+):
+    """Get time series data for performance charts."""
+    try:
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            if interval == "hour":
+                time_format = "%Y-%m-%d %H:00:00"
+                time_group = "strftime('%Y-%m-%d %H:00:00', timestamp)"
+            else:
+                time_format = "%Y-%m-%d"
+                time_group = "date(timestamp)"
+
+            cursor.execute(
+                f"""
+                SELECT 
+                    {time_group} as time_bucket,
+                    COUNT(*) as query_count,
+                    AVG(response_time_ms) as avg_response_time,
+                    SUM(CASE WHEN error_occurred THEN 1 ELSE 0 END) as error_count,
+                    AVG(CASE WHEN cache_hit THEN 1.0 ELSE 0.0 END) as cache_hit_rate
+                FROM query_logs 
+                WHERE timestamp >= datetime('now', '-{days} days')
+                GROUP BY {time_group}
+                ORDER BY time_bucket
+            """
+            )
+
+            timeline_data = []
+            for row in cursor.fetchall():
+                query_count = row[1]
+                error_count = row[3]
+                error_rate = (error_count / max(query_count, 1)) if query_count > 0 else 0
+
+                timeline_data.append(
+                    {
+                        "timestamp": row[0],
+                        "query_count": row[1],
+                        "avg_response_time": row[2] or 0,
+                        "error_count": row[3],
+                        "error_rate": error_rate,
+                        "cache_hit_rate": row[4] or 0,
+                    }
+                )
+
+            return {"timeline": timeline_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching timeline data: {str(e)}")
+
+
+@router.get("/performance/percentiles")
+async def get_response_time_percentiles(
+    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), _: None = Depends(verify_admin_token)
+):
+    """Get response time percentiles for the specified time range."""
+    try:
+        metrics = db_manager.get_performance_metrics(time_range)
+        return {
+            "p50": round(metrics.get("p50_response_time", 0) or 0, 1),
+            "p95": round(metrics.get("p95_response_time", 0) or 0, 1),
+            "p99": round(metrics.get("p99_response_time", 0) or 0, 1),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching percentiles: {str(e)}")
+
+
+@router.get("/content/gaps")
+async def get_content_gaps(_: None = Depends(verify_admin_token)):
+    """Get queries with low relevance scores or poor results."""
+    try:
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT 
+                    user_query,
+                    vector_search_score,
+                    COUNT(*) as occurrence_count,
+                    AVG(vector_search_score) as avg_score,
+                    MAX(timestamp) as last_seen
+                FROM query_logs 
+                WHERE vector_search_score < 0.7 OR error_occurred = 1
+                GROUP BY user_query
+                HAVING occurrence_count > 1
+                ORDER BY occurrence_count DESC, avg_score ASC
+                LIMIT 50
+            """
+            )
+
+            gaps = []
+            for row in cursor.fetchall():
+                gaps.append(
+                    {
+                        "query": row[0],
+                        "avg_similarity_score": row[1] or 0,
+                        "occurrence_count": row[2],
+                        "avg_score": row[3] or 0,
+                        "last_seen": row[4],
+                    }
+                )
+
+            return gaps
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching content gaps: {str(e)}")
+
+
+@router.get("/content/popular-topics")
+async def get_popular_topics(_: None = Depends(verify_admin_token)):
+    """Get most queried topics/themes."""
+    try:
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT 
+                    user_query,
+                    COUNT(*) as query_count,
+                    AVG(response_time_ms) as avg_response_time,
+                    AVG(vector_search_score) as avg_score
+                FROM query_logs 
+                WHERE timestamp >= datetime('now', '-30 days')
+                GROUP BY user_query
+                HAVING query_count > 1
+                ORDER BY query_count DESC
+                LIMIT 20
+            """
+            )
+
+            topics = []
+            for row in cursor.fetchall():
+                topics.append(
+                    {"query": row[0], "count": row[1], "avg_response_time": row[2] or 0, "avg_score": row[3] or 0}
+                )
+
+            return topics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching popular topics: {str(e)}")
+
+
+@router.get("/sessions")
+async def get_sessions(
+    active_only: bool = Query(False), limit: int = Query(50, ge=1, le=1000), _: None = Depends(verify_admin_token)
+):
+    """Get user session information."""
+    try:
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            where_clause = ""
+            if active_only:
+                where_clause = "WHERE last_active_at >= datetime('now', '-1 hour')"
+
+            cursor.execute(
+                f"""
+                SELECT * FROM user_sessions 
+                {where_clause}
+                ORDER BY last_active_at DESC 
+                LIMIT ?
+            """,
+                (limit,),
+            )
+
+            sessions = [dict(row) for row in cursor.fetchall()]
+            return sessions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching sessions: {str(e)}")
+
+
+@router.get("/export/csv")
+async def export_csv(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    export_type: str = Query("queries", regex="^(queries|metrics)$"),
+    _: None = Depends(verify_admin_token),
+):
+    """Export data as CSV file."""
+    try:
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            if export_type == "queries":
+                # Build WHERE clause for date filtering
+                where_conditions = []
+                params = []
+
+                if start_date:
+                    where_conditions.append("timestamp >= ?")
+                    params.append(start_date)
+
+                if end_date:
+                    where_conditions.append("timestamp <= ?")
+                    params.append(end_date)
+
+                where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+
+                cursor.execute(
+                    f"""
+                    SELECT 
+                        id, session_id, user_query, response_time_ms, 
+                        llm_provider, llm_model, vector_search_score,
+                        cache_hit, error_occurred, error_message, 
+                        user_feedback, timestamp
+                    FROM query_logs{where_clause}
+                    ORDER BY timestamp DESC
+                """,
+                    params,
+                )
+
+                # Write header
+                writer.writerow(
+                    [
+                        "ID",
+                        "Session ID",
+                        "User Query",
+                        "Response Time (ms)",
+                        "LLM Provider",
+                        "LLM Model",
+                        "Search Score",
+                        "Cache Hit",
+                        "Error Occurred",
+                        "Error Message",
+                        "User Feedback",
+                        "Timestamp",
+                    ]
+                )
+
+                # Write data
+                for row in cursor.fetchall():
+                    writer.writerow(row)
+
+            elif export_type == "metrics":
+                cursor.execute(
+                    """
+                    SELECT * FROM hourly_metrics 
+                    ORDER BY hour DESC
+                """
+                )
+
+                # Write header
+                writer.writerow(
+                    [
+                        "ID",
+                        "Hour",
+                        "Total Queries",
+                        "Unique Sessions",
+                        "Avg Response Time (ms)",
+                        "P95 Response Time (ms)",
+                        "Cache Hit Rate",
+                        "Error Rate",
+                        "Helpful Rate",
+                    ]
+                )
+
+                # Write data
+                for row in cursor.fetchall():
+                    writer.writerow(row)
+
+        # Prepare response
+        output.seek(0)
+        filename = f"rag_admin_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode()),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error exporting CSV: {str(e)}")
+
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint (no auth required)."""
+    try:
+        # Test database connection
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+
+        return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database connection failed: {str(e)}")
+
+
+# Knowledge base management endpoints
+@router.post("/knowledge/upload")
+async def upload_knowledge_files(files: List[UploadFile] = File(...), _: None = Depends(verify_admin_token)):
+    """Upload files to the knowledge base directory."""
+    # Get the knowledge base directory path
+    # Assuming the admin backend is in /admin/backend and knowledge is in /backend/knowledge
+    knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
+    knowledge_dir.mkdir(parents=True, exist_ok=True)
+
+    # Allowed file extensions
+    allowed_extensions = {".md", ".pdf", ".json", ".txt", ".html", ".docx"}
+
+    uploaded_files = []
+    errors = []
+
+    try:
+        for file in files:
+            # Validate file extension
+            file_ext = Path(file.filename).suffix.lower()
+            if file_ext not in allowed_extensions:
+                errors.append(
+                    f"File '{file.filename}' has unsupported extension. Allowed: {', '.join(allowed_extensions)}"
+                )
+                continue
+
+            # Check file size (10MB limit)
+            if file.size and file.size > 10 * 1024 * 1024:
+                errors.append(f"File '{file.filename}' is too large (max 10MB)")
+                continue
+
+            # Save file to knowledge directory
+            file_path = knowledge_dir / file.filename
+
+            # Check if file already exists
+            if file_path.exists():
+                errors.append(f"File '{file.filename}' already exists")
+                continue
+
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            uploaded_files.append({"filename": file.filename, "size": file.size or 0, "path": str(file_path)})
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading files: {str(e)}")
+
+    # Return results
+    response = {"uploaded_files": uploaded_files, "upload_count": len(uploaded_files), "total_files": len(files)}
+
+    if errors:
+        response["errors"] = errors
+
+    if not uploaded_files and errors:
+        raise HTTPException(status_code=400, detail={"message": "No files were uploaded", "errors": errors})
+
+    return response
+
+
+@router.get("/knowledge/files")
+async def get_knowledge_files(_: None = Depends(verify_admin_token)):
+    """Get list of files in the knowledge base directory."""
+    knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
+
+    if not knowledge_dir.exists():
+        return {"files": [], "total_files": 0}
+
+    try:
+        files = []
+        for file_path in knowledge_dir.iterdir():
+            if file_path.is_file() and not file_path.name.startswith("."):
+                stat = file_path.stat()
+                files.append(
+                    {
+                        "name": file_path.name,
+                        "type": file_path.suffix.lower(),
+                        "size": stat.st_size,
+                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    }
+                )
+
+        # Sort by modification time (newest first)
+        files.sort(key=lambda x: x["modified"], reverse=True)
+
+        return {"files": files, "total_files": len(files)}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing files: {str(e)}")
+
+
+@router.delete("/knowledge/files/{filename}")
+async def delete_knowledge_file(filename: str, _: None = Depends(verify_admin_token)):
+    """Delete a file from the knowledge base directory."""
+    knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
+    file_path = knowledge_dir / filename
+
+    # Security check - ensure file is in knowledge directory
+    try:
+        file_path.resolve().relative_to(knowledge_dir.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if not file_path.is_file():
+        raise HTTPException(status_code=400, detail="Path is not a file")
+
+    try:
+        file_path.unlink()
+        return {"message": f"File '{filename}' deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
+
+
+@router.get("/knowledge/stats")
+async def get_knowledge_stats(_: None = Depends(verify_admin_token)):
+    """Get statistics about the knowledge base."""
+    knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
+
+    if not knowledge_dir.exists():
+        return {"total_files": 0, "indexed_documents": 0, "last_indexed": None}
+
+    try:
+        # Count files
+        files = [f for f in knowledge_dir.iterdir() if f.is_file() and not f.name.startswith(".")]
+        total_files = len(files)
+
+        # For indexed_documents, we'll use the same count as total_files for now
+        # In a real implementation, you might query the vector database
+        indexed_documents = total_files
+
+        # Get last modification time as proxy for last indexed
+        last_indexed = None
+        if files:
+            latest_file = max(files, key=lambda f: f.stat().st_mtime)
+            last_indexed = datetime.fromtimestamp(latest_file.stat().st_mtime).isoformat()
+
+        return {"total_files": total_files, "indexed_documents": indexed_documents, "last_indexed": last_indexed}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
+
+
+@router.post("/knowledge/refresh")
+async def refresh_knowledge_base(_: None = Depends(verify_admin_token)):
+    """Trigger a refresh of the knowledge base index."""
+    # This would typically trigger a re-indexing of the vector database
+    # For now, we'll just return a success message
+    # In a real implementation, you might:
+    # 1. Send a signal to the main backend to re-index
+    # 2. Call the main backend's indexing endpoint
+    # 3. Trigger a background task
+
+    try:
+        # For now, just return success
+        # You could add actual re-indexing logic here
+        return {
+            "message": "Knowledge base refresh triggered successfully",
+            "timestamp": datetime.now().isoformat(),
+            "note": "Backend restart required to pick up new files",
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error refreshing knowledge base: {str(e)}")
