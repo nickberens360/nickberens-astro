@@ -213,7 +213,7 @@
     </v-dialog>
 
     <!-- Loading overlay for actions -->
-    <v-overlay v-model="loading && gaps.length > 0" contained>
+    <v-overlay :model-value="loading && gaps.length > 0" contained>
       <v-progress-circular indeterminate />
     </v-overlay>
   </div>
