@@ -29,7 +29,13 @@ import {
   mdiInformation,
   mdiFolder,
   mdiFormatListBulleted,
-  mdiDelete
+  mdiDelete,
+  mdiCodeBraces,
+  mdiFilePdfBox,
+  mdiFileDocumentOutline,
+  mdiTextBox,
+  mdiWeb,
+  mdiPencil
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -92,7 +98,14 @@ export default createVuetify({
       trendDown: mdiTrendingDown,
       'thumb-up-outline': mdiThumbUpOutline,
       'thumb-up': mdiThumbUp,
-      'thumb-down': mdiThumbDown
+      'thumb-down': mdiThumbDown,
+      'data_object': mdiCodeBraces,
+      'picture_as_pdf': mdiFilePdfBox,
+      'text_snippet': mdiTextBox,
+      'language': mdiWeb,
+      'article': mdiFileDocumentOutline,
+      'insert_drive_file': mdiFileDocumentOutline,
+      edit: mdiPencil
     },
     sets: {
       mdi

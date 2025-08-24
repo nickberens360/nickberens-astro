@@ -4,6 +4,9 @@ import App from './App.vue'
 import router from './router'
 import vuetify from './plugins/vuetify'
 
+// Monaco Editor Web Worker setup
+import './monaco-env.js'
+
 // Global CSS
 import './styles/main.css'
 

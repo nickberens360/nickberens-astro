@@ -13,6 +13,9 @@ export default defineConfig({
       }
     })
   ],
+  worker: {
+    format: 'es'
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -32,5 +35,12 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: true
+  },
+  optimizeDeps: {
+    include: ['monaco-editor']
+  },
+  define: {
+    // Monaco Editor needs these global variables
+    global: 'globalThis'
   }
 })

@@ -75,10 +75,11 @@
         <div class="mt-4 d-flex gap-2">
           <v-btn
             color="primary"
-            :disabled="!selectedFiles?.length"
+            :disabled="!selectedFiles?.length || uploading"
             :loading="uploading"
             @click="uploadFiles"
             prepend-icon="$cloud_upload"
+            class="mr-4"
           >
             Upload Files
           </v-btn>
@@ -183,6 +184,15 @@
           </template>
           <template v-slot:item.actions="{ item }">
             <v-btn
+              v-if="canEdit(item.name)"
+              icon="$edit"
+              variant="text"
+              size="small"
+              color="primary"
+              @click="openFileEditor(item)"
+              class="me-1"
+            ></v-btn>
+            <v-btn
               icon="$delete"
               variant="text"
               size="small"
@@ -209,15 +219,26 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- File Editor Modal -->
+    <FileEditorModal
+      v-model="editorDialog"
+      :filename="selectedFilename"
+      @file-saved="onFileSaved"
+    />
   </div>
 </template>
 
 <script>
 import { ref, onMounted } from 'vue'
 import { adminAPI } from '@/services/api'
+import FileEditorModal from '@/components/FileEditorModal.vue'
 
 export default {
   name: 'KnowledgeView',
+  components: {
+    FileEditorModal
+  },
   setup() {
     const selectedFiles = ref([])
     const uploading = ref(false)
@@ -228,6 +249,8 @@ export default {
     const uploadSuccess = ref(null)
     const deleteDialog = ref(false)
     const fileToDelete = ref(null)
+    const editorDialog = ref(false)
+    const selectedFilename = ref('')
     
     const stats = ref({
       totalFiles: 0,
@@ -257,14 +280,14 @@ export default {
     const getFileIcon = (filename) => {
       const ext = filename.split('.').pop()?.toLowerCase()
       const iconMap = {
-        md: { icon: 'description', color: 'blue' },
-        pdf: { icon: 'picture_as_pdf', color: 'red' },
-        json: { icon: 'data_object', color: 'orange' },
-        txt: { icon: 'text_snippet', color: 'grey' },
-        html: { icon: 'language', color: 'orange' },
-        docx: { icon: 'article', color: 'blue' }
+        md: { icon: '$description', color: 'blue' },
+        pdf: { icon: '$picture_as_pdf', color: 'red' },
+        json: { icon: '$data_object', color: 'orange' },
+        txt: { icon: '$text_snippet', color: 'grey' },
+        html: { icon: '$language', color: 'orange' },
+        docx: { icon: '$article', color: 'blue' }
       }
-      return iconMap[ext] || { icon: 'insert_drive_file', color: 'grey' }
+      return iconMap[ext] || { icon: '$insert_drive_file', color: 'grey' }
     }
 
     const formatFileSize = (bytes) => {
@@ -311,15 +334,64 @@ export default {
 
     const refreshKnowledgeBase = async () => {
       refreshing.value = true
+      uploadError.value = null
+      uploadSuccess.value = null
+      
       try {
-        await adminAPI.refreshKnowledgeBase()
-        uploadSuccess.value = 'Knowledge base refreshed successfully'
-        await loadStats()
+        // Start the refresh
+        const startResult = await adminAPI.refreshKnowledgeBase(true)
+        
+        if (startResult.status === 'running') {
+          uploadSuccess.value = 'Knowledge base refresh started...'
+          
+          // Poll for status updates
+          const pollInterval = setInterval(async () => {
+            try {
+              const status = await adminAPI.getRefreshStatus()
+              
+              if (status.progress?.current_file) {
+                uploadSuccess.value = `Refreshing: ${status.progress.current_file}`
+              }
+              
+              if (status.status === 'completed') {
+                clearInterval(pollInterval)
+                uploadSuccess.value = `Knowledge base refreshed successfully! Processed ${status.progress?.files_processed || 0} files.`
+                await loadStats()
+                refreshing.value = false
+              } else if (status.status === 'failed') {
+                clearInterval(pollInterval)
+                uploadError.value = `Refresh failed: ${status.progress?.current_file || 'Unknown error'}`
+                refreshing.value = false
+              }
+            } catch (pollError) {
+              console.error('Status polling error:', pollError)
+              clearInterval(pollInterval)
+              uploadError.value = 'Lost connection to refresh process'
+              refreshing.value = false
+            }
+          }, 2000) // Poll every 2 seconds
+          
+          // Set a timeout for the entire process
+          setTimeout(() => {
+            if (refreshing.value) {
+              clearInterval(pollInterval)
+              uploadError.value = 'Refresh operation timed out'
+              refreshing.value = false
+            }
+          }, 300000) // 5 minutes timeout
+        } else {
+          uploadSuccess.value = startResult.message || 'Knowledge base refresh completed'
+          await loadStats()
+        }
+        
       } catch (error) {
         console.error('Refresh error:', error)
-        uploadError.value = 'Failed to refresh knowledge base'
+        uploadError.value = error.response?.data?.detail || 'Failed to refresh knowledge base'
       } finally {
-        refreshing.value = false
+        if (!refreshing.value) {
+          // Only set to false if not already set by polling
+          refreshing.value = false
+        }
       }
     }
 
@@ -373,6 +445,22 @@ export default {
       selectedFiles.value = []
     }
 
+    const canEdit = (filename) => {
+      const ext = filename.split('.').pop()?.toLowerCase()
+      return ['json', 'md', 'txt', 'html'].includes(ext)
+    }
+
+    const openFileEditor = (file) => {
+      selectedFilename.value = file.name
+      editorDialog.value = true
+    }
+
+    const onFileSaved = (filename) => {
+      uploadSuccess.value = `File "${filename}" saved successfully`
+      // Optionally refresh the file list to update modified time
+      loadFiles()
+    }
+
     onMounted(() => {
       loadFiles()
       loadStats()
@@ -401,7 +489,12 @@ export default {
       loadStats,
       confirmDelete,
       deleteFile,
-      clearSelection
+      clearSelection,
+      canEdit,
+      openFileEditor,
+      onFileSaved,
+      editorDialog,
+      selectedFilename
     }
   }
 }

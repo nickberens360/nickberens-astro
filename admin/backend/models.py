@@ -120,3 +120,9 @@ class FeedbackUpdate(BaseModel):
     """User feedback update model."""
 
     feedback: str  # 'helpful' or 'not_helpful'
+
+
+class FileContentUpdate(BaseModel):
+    """File content update model."""
+
+    content: str

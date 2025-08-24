@@ -4,7 +4,7 @@
       v-model="drawer"
       :permanent="!mobile"
       :temporary="mobile"
-      app
+      style="position: fixed;"
       color="surface"
     >
       <v-list>
@@ -65,7 +65,7 @@
     </v-navigation-drawer>
 
     <v-app-bar
-      app
+      style="position: fixed;"
       color="surface"
       elevation="1"
     >

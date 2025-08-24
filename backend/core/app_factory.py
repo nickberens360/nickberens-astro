@@ -78,11 +78,12 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     )
 
     # Register routers - import here to avoid circular imports
-    from ..routes import health, query, query_logs, smart_query
+    from ..routes import admin_refresh, health, query, query_logs, smart_query
 
     app.include_router(health.router)
     app.include_router(query.router)
     app.include_router(query_logs.router, prefix="/admin")
     app.include_router(smart_query.router, prefix="/api")
+    app.include_router(admin_refresh.router)
 
     return app
