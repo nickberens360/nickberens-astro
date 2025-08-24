@@ -107,20 +107,29 @@ class AdminAPI {
   }
 
   // Content endpoints
-  async getContentGaps() {
-    return await this.client.get('/content/gaps')
+  async getContentGaps(params = {}) {
+    const { resolved = false, limit = 50 } = params
+    return await this.client.get(`/content/gaps?resolved=${resolved}&limit=${limit}`)
+  }
+
+  async updateContentGap(gapId, data) {
+    const params = new URLSearchParams()
+    if (data.resolved !== undefined) params.append('resolved', data.resolved)
+    if (data.notes !== undefined) params.append('notes', data.notes)
+    return await this.client.patch(`/content/gaps/${gapId}?${params}`)
   }
 
   async getPopularTopics(timeRange = '7d') {
-    return await this.client.get(`/content/topics?time_range=${timeRange}`)
+    return await this.client.get(`/content/popular-topics?time_range=${timeRange}`)
   }
 
   async getSourceUsage() {
     return await this.client.get('/content/sources')
   }
 
+  // Legacy method for backward compatibility
   async markGapResolved(gapId) {
-    return await this.client.post(`/content/gaps/${gapId}/resolve`)
+    return this.updateContentGap(gapId, { resolved: true })
   }
 
   // Session endpoints

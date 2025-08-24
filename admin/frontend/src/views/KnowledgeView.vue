@@ -2,8 +2,8 @@
   <div class="knowledge-view">
     <div class="d-flex justify-space-between align-center mb-6">
       <h1 class="text-h4">Knowledge Base Management</h1>
-      <v-btn 
-        color="primary" 
+      <v-btn
+        color="primary"
         prepend-icon="$refresh"
         @click="refreshKnowledgeBase"
         :loading="refreshing"
@@ -149,7 +149,7 @@
 
     <!-- File List -->
     <v-card elevation="2">
-      <v-card-title class="text-h6 bg-surface-variant">
+      <v-card-title class="text-h6 bg-surface-variant d-flex align-center">
         <v-icon class="me-2">$list</v-icon>
         Knowledge Base Files
         <v-spacer></v-spacer>
@@ -251,13 +251,13 @@ export default {
     const fileToDelete = ref(null)
     const editorDialog = ref(false)
     const selectedFilename = ref('')
-    
+
     const stats = ref({
       totalFiles: 0,
       indexedDocuments: 0,
       lastIndexed: null
     })
-    
+
     const files = ref([])
 
     const fileHeaders = [
@@ -317,10 +317,10 @@ export default {
         })
 
         await adminAPI.uploadKnowledgeFiles(formData)
-        
+
         uploadSuccess.value = `Successfully uploaded ${selectedFiles.value.length} file(s)`
         selectedFiles.value = []
-        
+
         // Refresh data
         await loadFiles()
         await loadStats()
@@ -336,23 +336,23 @@ export default {
       refreshing.value = true
       uploadError.value = null
       uploadSuccess.value = null
-      
+
       try {
         // Start the refresh
         const startResult = await adminAPI.refreshKnowledgeBase(true)
-        
+
         if (startResult.status === 'running') {
           uploadSuccess.value = 'Knowledge base refresh started...'
-          
+
           // Poll for status updates
           const pollInterval = setInterval(async () => {
             try {
               const status = await adminAPI.getRefreshStatus()
-              
+
               if (status.progress?.current_file) {
                 uploadSuccess.value = `Refreshing: ${status.progress.current_file}`
               }
-              
+
               if (status.status === 'completed') {
                 clearInterval(pollInterval)
                 uploadSuccess.value = `Knowledge base refreshed successfully! Processed ${status.progress?.files_processed || 0} files.`
@@ -370,7 +370,7 @@ export default {
               refreshing.value = false
             }
           }, 2000) // Poll every 2 seconds
-          
+
           // Set a timeout for the entire process
           setTimeout(() => {
             if (refreshing.value) {
@@ -383,7 +383,7 @@ export default {
           uploadSuccess.value = startResult.message || 'Knowledge base refresh completed'
           await loadStats()
         }
-        
+
       } catch (error) {
         console.error('Refresh error:', error)
         uploadError.value = error.response?.data?.detail || 'Failed to refresh knowledge base'
@@ -428,7 +428,7 @@ export default {
       try {
         await adminAPI.deleteKnowledgeFile(fileToDelete.value.name)
         uploadSuccess.value = `File "${fileToDelete.value.name}" deleted successfully`
-        
+
         await loadFiles()
         await loadStats()
       } catch (error) {
