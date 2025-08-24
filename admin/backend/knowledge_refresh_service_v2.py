@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-import requests
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +92,10 @@ class KnowledgeRefreshService:
             await asyncio.sleep(0.1)
 
             try:
-                response = requests.get(f"{self._main_backend_url}/health", timeout=5)
-                if response.status_code != 200:
-                    raise Exception(f"Main backend not healthy: {response.status_code}")
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    response = await client.get(f"{self._main_backend_url}/health")
+                    if response.status_code != 200:
+                        raise Exception(f"Main backend not healthy: {response.status_code}")
             except Exception as e:
                 logger.warning(f"Main backend not accessible: {e}")
                 # Continue anyway - we'll trigger refresh via file system change
@@ -131,14 +132,15 @@ class KnowledgeRefreshService:
             await asyncio.sleep(0.1)
 
             try:
-                # Try to call the main backend refresh endpoint
-                response = requests.post(
-                    f"{self._main_backend_url}/admin/refresh", json={"force_reindex": force_reindex}, timeout=10
-                )
-                if response.status_code == 200:
-                    logger.info("Successfully notified main backend of refresh request")
-                else:
-                    logger.warning(f"Main backend refresh endpoint returned {response.status_code}")
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.post(
+                        f"{self._main_backend_url}/admin/refresh",
+                        json={"force_reindex": force_reindex},
+                    )
+                    if response.status_code == 200:
+                        logger.info("Successfully notified main backend of refresh request")
+                    else:
+                        logger.warning(f"Main backend refresh endpoint returned {response.status_code}")
             except Exception as e:
                 logger.info(f"Could not notify main backend directly: {e}")
                 logger.info("Refresh will take effect on next backend restart")

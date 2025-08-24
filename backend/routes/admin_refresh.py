@@ -3,23 +3,46 @@ Admin refresh endpoint for the main backend.
 """
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+
+def verify_admin_token(request: Request):
+    """Verify admin authentication token."""
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if not admin_token:
+        raise HTTPException(status_code=500, detail="Admin token not configured")
+
+    # Check token in query params or Authorization header
+    token = request.query_params.get("token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+
+    if not token or token != admin_token:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+
+
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(verify_admin_token)],
+)
 
 
 class RefreshRequest(BaseModel):
     force_reindex: bool = True
 
 
-@router.post("/admin/refresh")
+@router.post("/refresh")
 async def trigger_refresh(request: RefreshRequest) -> Dict:
     """
     Trigger a knowledge base refresh.
@@ -53,7 +76,7 @@ requested_by=admin_interface
         raise HTTPException(status_code=500, detail=f"Failed to set refresh flag: {str(e)}")
 
 
-@router.get("/admin/refresh/status")
+@router.get("/refresh/status")
 async def get_refresh_status() -> Dict:
     """Get the current refresh status."""
     try:

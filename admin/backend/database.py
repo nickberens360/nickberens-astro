@@ -1,5 +1,9 @@
 """
 SQLite database setup and connection management for the RAG admin dashboard.
+
+This module provides two database managers:
+1. DatabaseManager - Admin-specific database for user management, settings, etc.
+2. QueryDataManager - Read-only access to query data from the backend database.
 """
 
 import json
@@ -11,83 +15,60 @@ from typing import Any, Dict, List, Optional
 
 
 class DatabaseManager:
-    """Manages SQLite database connections and operations."""
+    """Manages admin-specific SQLite database for user management and settings."""
 
     def __init__(self, db_path: str = None):
         if db_path is None:
-            # Use absolute path to the backend database
+            # Use admin-specific database for admin features
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            db_path = os.path.join(project_root, "backend", "logs", "rag_monitoring.db")
+            db_path = os.path.join(project_root, "admin", "admin", "admin_monitoring.db")
         self.db_path = db_path
         self._init_database()
 
     def _init_database(self):
-        """Initialize the database with required tables."""
+        """Initialize the admin database with admin-specific tables only.
+
+        Note: Query data is now read from the backend database.
+        This database handles admin-specific features like user management.
+        """
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # Main query logging table
+            # Admin users table (for future admin user management)
             cursor.execute(
                 """
-                CREATE TABLE IF NOT EXISTS query_logs (
+                CREATE TABLE IF NOT EXISTS admin_users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT,
-                    user_query TEXT NOT NULL,
-                    system_response TEXT,
-                    response_time_ms REAL,
-                    llm_provider TEXT,
-                    llm_model TEXT,
-                    vector_search_score REAL,
-                    sources_used TEXT,
-                    follow_up_questions TEXT,
-                    cache_hit BOOLEAN DEFAULT 0,
-                    error_occurred BOOLEAN DEFAULT 0,
-                    error_message TEXT,
-                    user_feedback TEXT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    client_ip TEXT,
-                    location_city TEXT,
-                    location_region TEXT,
-                    location_country TEXT,
-                    location_country_code TEXT
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    role TEXT DEFAULT 'viewer',
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_login_at DATETIME
                 )
             """
             )
 
-            # User sessions
+            # User sessions (for admin session management)
             cursor.execute(
                 """
-                CREATE TABLE IF NOT EXISTS user_sessions (
+                CREATE TABLE IF NOT EXISTS admin_sessions (
                     id TEXT PRIMARY KEY,
+                    user_id INTEGER,
                     started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    total_queries INTEGER DEFAULT 0,
+                    ip_address TEXT,
                     user_agent TEXT,
-                    ip_address TEXT
+                    is_active BOOLEAN DEFAULT 1,
+                    FOREIGN KEY (user_id) REFERENCES admin_users (id)
                 )
             """
             )
 
-            # Aggregated metrics (calculated every hour)
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS hourly_metrics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    hour DATETIME,
-                    total_queries INTEGER,
-                    unique_sessions INTEGER,
-                    avg_response_time_ms REAL,
-                    p95_response_time_ms REAL,
-                    cache_hit_rate REAL,
-                    error_rate REAL,
-                    helpful_rate REAL
-                )
-            """
-            )
-
-            # Content gaps tracking
+            # Content gaps tracking (admin analytics)
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS content_gaps (
@@ -97,16 +78,32 @@ class DatabaseManager:
                     avg_similarity_score REAL,
                     first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
                     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    resolved BOOLEAN DEFAULT 0
+                    resolved BOOLEAN DEFAULT 0,
+                    notes TEXT
                 )
             """
             )
 
-            # Create indexes
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_timestamp ON query_logs(timestamp DESC)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_session ON query_logs(session_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_errors ON query_logs(error_occurred)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_active ON user_sessions(last_active_at DESC)")
+            # Admin settings/configuration
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS admin_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    description TEXT,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_by INTEGER,
+                    FOREIGN KEY (updated_by) REFERENCES admin_users (id)
+                )
+            """
+            )
+
+            # Create indexes for admin tables
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_admin_sessions_active ON admin_sessions(last_active_at DESC)"
+            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user ON admin_sessions(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved ON content_gaps(resolved)")
 
             conn.commit()
 
@@ -114,176 +111,178 @@ class DatabaseManager:
     def get_connection(self):
         """Get a database connection with automatic cleanup."""
         conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # Enable dict-like access to rows
+        conn.row_factory = sqlite3.Row
         try:
             yield conn
         finally:
             conn.close()
 
-    def log_query(
-        self,
-        session_id: Optional[str],
-        user_query: str,
-        system_response: Optional[str] = None,
-        response_time_ms: Optional[float] = None,
-        llm_provider: Optional[str] = None,
-        llm_model: Optional[str] = None,
-        vector_search_score: Optional[float] = None,
-        sources_used: Optional[List[str]] = None,
-        follow_up_questions: Optional[List[str]] = None,
-        cache_hit: bool = False,
-        error_occurred: bool = False,
-        error_message: Optional[str] = None,
-        client_ip: Optional[str] = None,
-        location_city: Optional[str] = None,
-        location_region: Optional[str] = None,
-        location_country: Optional[str] = None,
-        location_country_code: Optional[str] = None,
-    ) -> int:
-        """Log a query to the database and return the query ID."""
+    # Admin-specific methods for user management, settings, etc.
+
+    def create_admin_user(self, username: str, email: str, password_hash: str, role: str = "viewer") -> int:
+        """Create a new admin user."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO query_logs (
-                    session_id, user_query, system_response, response_time_ms,
-                    llm_provider, llm_model, vector_search_score, sources_used,
-                    follow_up_questions, cache_hit, error_occurred, error_message,
-                    client_ip, location_city, location_region, location_country, location_country_code
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                (
-                    session_id,
-                    user_query,
-                    system_response,
-                    response_time_ms,
-                    llm_provider,
-                    llm_model,
-                    vector_search_score,
-                    json.dumps(sources_used) if sources_used else None,
-                    json.dumps(follow_up_questions) if follow_up_questions else None,
-                    cache_hit,
-                    error_occurred,
-                    error_message,
-                    client_ip,
-                    location_city,
-                    location_region,
-                    location_country,
-                    location_country_code,
-                ),
+                INSERT INTO admin_users (username, email, password_hash, role)
+                VALUES (?, ?, ?, ?)
+                """,
+                (username, email, password_hash, role),
             )
             conn.commit()
             return cursor.lastrowid
 
-    def update_session(self, session_id: str, user_agent: Optional[str] = None, ip_address: Optional[str] = None):
-        """Update or create a user session."""
+    def get_admin_user(self, username: str) -> Optional[Dict[str, Any]]:
+        """Get admin user by username."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute("SELECT * FROM admin_users WHERE username = ? AND is_active = 1", (username,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
 
-            # Try to update existing session
+    def update_setting(self, key: str, value: str, description: str = None, updated_by: int = None):
+        """Update or create an admin setting."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
             cursor.execute(
                 """
-                UPDATE user_sessions 
-                SET last_active_at = CURRENT_TIMESTAMP, total_queries = total_queries + 1
-                WHERE id = ?
-            """,
-                (session_id,),
-            )
-
-            # If no rows affected, create new session
-            if cursor.rowcount == 0:
-                cursor.execute(
-                    """
-                    INSERT INTO user_sessions (id, user_agent, ip_address, total_queries)
-                    VALUES (?, ?, ?, 1)
+                INSERT OR REPLACE INTO admin_settings (key, value, description, updated_by)
+                VALUES (?, ?, ?, ?)
                 """,
-                    (session_id, user_agent, ip_address),
-                )
-
+                (key, value, description, updated_by),
+            )
             conn.commit()
+
+    def get_setting(self, key: str) -> Optional[str]:
+        """Get an admin setting value."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM admin_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row[0] if row else None
+
+
+class QueryDataManager:
+    """Manages read-only access to query data from the backend database."""
+
+    def __init__(self, backend_db_path: str = None):
+        if backend_db_path is None:
+            # Point to the backend database where actual query data is stored
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            backend_db_path = os.path.join(project_root, "backend", "logs", "rag_monitoring.db")
+        self.backend_db_path = backend_db_path
+
+    @contextmanager
+    def get_connection(self):
+        """Get a connection to the backend database."""
+        conn = sqlite3.connect(self.backend_db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def get_queries(
         self,
         limit: int = 50,
         offset: int = 0,
-        search: Optional[str] = None,
-        errors_only: bool = False,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        sort_by: str = "timestamp",
+        sort_order: str = "desc",
+        session_id: Optional[str] = None,
+        error_filter: Optional[bool] = None,
+        search_query: Optional[str] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Get paginated query logs with optional filters."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        """Get queries with filtering and pagination from backend database."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
 
-            # Build WHERE clause
-            where_conditions = []
-            params = []
+                # Build WHERE clause
+                where_conditions = []
+                params = []
 
-            if search:
-                where_conditions.append("(user_query LIKE ? OR system_response LIKE ?)")
-                params.extend([f"%{search}%", f"%{search}%"])
+                if session_id:
+                    where_conditions.append("session_id = ?")
+                    params.append(session_id)
 
-            if errors_only:
-                where_conditions.append("error_occurred = 1")
+                if error_filter is not None:
+                    where_conditions.append("error_occurred = ?")
+                    params.append(error_filter)
 
-            if start_date:
-                where_conditions.append("timestamp >= ?")
-                params.append(start_date)
+                if search_query:
+                    where_conditions.append("(user_query LIKE ? OR system_response LIKE ?)")
+                    params.extend([f"%{search_query}%", f"%{search_query}%"])
 
-            if end_date:
-                where_conditions.append("timestamp <= ?")
-                params.append(end_date)
+                if date_from:
+                    where_conditions.append("timestamp >= ?")
+                    params.append(date_from)
 
-            where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+                if date_to:
+                    where_conditions.append("timestamp <= ?")
+                    params.append(date_to)
 
-            # Get total count
-            cursor.execute(f"SELECT COUNT(*) FROM query_logs{where_clause}", params)
-            total = cursor.fetchone()[0]
+                where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
 
-            # Get paginated results
-            cursor.execute(
-                f"""
-                SELECT * FROM query_logs{where_clause}
-                ORDER BY timestamp DESC
-                LIMIT ? OFFSET ?
-            """,
-                params + [limit, offset],
-            )
+                # Get total count
+                count_query = f"SELECT COUNT(*) FROM query_logs WHERE {where_clause}"
+                cursor.execute(count_query, params)
+                total_count = cursor.fetchone()[0]
 
-            queries = []
-            for row in cursor.fetchall():
-                query_dict = dict(row)
+                # Build main query
+                valid_sort_columns = ["timestamp", "response_time_ms", "llm_model", "error_occurred"]
+                sort_column = sort_by if sort_by in valid_sort_columns else "timestamp"
+                sort_direction = "DESC" if sort_order.upper() == "DESC" else "ASC"
 
-                # Parse JSON fields
-                if query_dict.get("sources_used"):
-                    query_dict["sources_used"] = json.loads(query_dict["sources_used"])
-                if query_dict.get("follow_up_questions"):
-                    query_dict["follow_up_questions"] = json.loads(query_dict["follow_up_questions"])
+                main_query = f"""
+                    SELECT * FROM query_logs 
+                    WHERE {where_clause}
+                    ORDER BY {sort_column} {sort_direction}
+                    LIMIT ? OFFSET ?
+                """
+                params.extend([limit, offset])
 
-                # Ensure location fields are included (in case they're missing from older records)
-                location_fields = [
-                    "client_ip",
-                    "location_city",
-                    "location_region",
-                    "location_country",
-                    "location_country_code",
-                ]
-                for field in location_fields:
-                    if field not in query_dict:
-                        query_dict[field] = None
+                cursor.execute(main_query, params)
+                queries = [dict(row) for row in cursor.fetchall()]
 
-                queries.append(query_dict)
+                # Process the results
+                for query in queries:
+                    # Parse JSON fields
+                    if query.get("sources_used"):
+                        try:
+                            query["sources_used"] = json.loads(query["sources_used"])
+                        except json.JSONDecodeError:
+                            query["sources_used"] = []
 
-            return {"queries": queries, "total": total, "page": offset // limit + 1, "per_page": limit}
+                    if query.get("follow_up_questions"):
+                        try:
+                            query["follow_up_questions"] = json.loads(query["follow_up_questions"])
+                        except json.JSONDecodeError:
+                            query["follow_up_questions"] = []
+
+                return {
+                    "queries": queries,
+                    "total": total_count,
+                    "page": (offset // limit) + 1,
+                    "per_page": limit,
+                    "has_more": offset + limit < total_count,
+                }
+
+        except Exception as e:
+            print(f"Database error in get_queries: {e}")
+            return {"queries": [], "total": 0, "page": 1, "per_page": limit, "has_more": False}
 
     def get_overview_stats(self, days: int = 7) -> Dict[str, Any]:
-        """Get overview statistics for the dashboard."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
+        """Get overview statistics for the dashboard from backend database."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
 
-            # Total queries and basic stats
-            cursor.execute(
-                """
+                # Main stats
+                cursor.execute(
+                    """
                 SELECT 
                     COUNT(*) as total_queries,
                     AVG(response_time_ms) as avg_response_time,
@@ -293,267 +292,175 @@ class DatabaseManager:
                              WHEN user_feedback = 'not_helpful' THEN 0.0 
                              ELSE NULL END) as helpful_rate
                 FROM query_logs 
-                WHERE timestamp >= datetime('now', '-{} days')
-            """.format(
-                    days
+                WHERE timestamp >= datetime('now', '-' || ? || ' days')
+            """,
+                    (days,),
                 )
-            )
 
-            stats = dict(cursor.fetchone())
+                stats = dict(cursor.fetchone())
 
-            # Unique sessions
-            cursor.execute(
-                """
+                # Unique sessions
+                cursor.execute(
+                    """
                 SELECT COUNT(DISTINCT session_id) as unique_sessions
                 FROM query_logs 
-                WHERE timestamp >= datetime('now', '-{} days') AND session_id IS NOT NULL
-            """.format(
-                    days
+                WHERE timestamp >= datetime('now', '-' || ? || ' days') AND session_id IS NOT NULL
+            """,
+                    (days,),
                 )
-            )
 
-            stats["unique_sessions"] = cursor.fetchone()[0]
+                stats["unique_sessions"] = cursor.fetchone()[0]
 
-            # Queries today
-            cursor.execute(
-                """
+                # Queries today
+                cursor.execute(
+                    """
                 SELECT COUNT(*) FROM query_logs 
                 WHERE date(timestamp) = date('now')
             """
-            )
-            stats["queries_today"] = cursor.fetchone()[0]
+                )
 
-            # Queries this week
-            cursor.execute(
-                """
-                SELECT COUNT(*) FROM query_logs 
-                WHERE timestamp >= datetime('now', '-7 days')
-            """
-            )
-            stats["queries_this_week"] = cursor.fetchone()[0]
+                stats["queries_today"] = cursor.fetchone()[0]
 
-            return stats
-
-    def update_query_feedback(self, query_id: int, feedback: str):
-        """Update user feedback for a query."""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                UPDATE query_logs SET user_feedback = ? WHERE id = ?
+                # Popular models
+                cursor.execute(
+                    """
+                SELECT llm_model, COUNT(*) as count 
+                FROM query_logs 
+                WHERE timestamp >= datetime('now', '-' || ? || ' days')
+                  AND llm_model IS NOT NULL
+                GROUP BY llm_model 
+                ORDER BY count DESC 
+                LIMIT 5
             """,
-                (feedback, query_id),
-            )
-            conn.commit()
+                    (days,),
+                )
 
-    def get_performance_metrics(self, time_range: str = "24h") -> Dict[str, Any]:
-        """Get performance metrics for the specified time range."""
-        time_mapping = {"1h": "1 hours", "6h": "6 hours", "24h": "24 hours", "7d": "7 days", "30d": "30 days"}
+                stats["popular_models"] = [{"model": row[0], "count": row[1]} for row in cursor.fetchall()]
 
-        time_clause = time_mapping.get(time_range, "24 hours")
+                return stats
 
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
+        except Exception as e:
+            print(f"Database error in get_overview_stats: {e}")
+            return {}
+
+    def get_performance_metrics(self, time_range: str = "7d") -> Dict[str, Any]:
+        """Get performance metrics for a given time range from backend database."""
+        try:
+            # Convert time range to SQL clause
+            if time_range == "24h":
+                time_clause = "1 day"
+            elif time_range == "7d":
+                time_clause = "7 days"
+            elif time_range == "30d":
+                time_clause = "30 days"
+            else:
+                time_clause = "7 days"
+
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Get basic metrics
+                cursor.execute(
+                    """
                 SELECT 
                     AVG(response_time_ms) as avg_response_time,
                     COUNT(*) as total_queries,
                     SUM(CASE WHEN error_occurred THEN 1 ELSE 0 END) as error_count,
                     SUM(CASE WHEN cache_hit THEN 1 ELSE 0 END) as cache_hits
                 FROM query_logs 
-                WHERE timestamp >= datetime('now', '-{}')
-            """.format(
-                    time_clause
+                WHERE timestamp >= datetime('now', '-' || ?)
+            """,
+                    (time_clause,),
                 )
-            )
 
-            result = dict(cursor.fetchone())
+                result = dict(cursor.fetchone())
 
-            # Calculate percentiles more efficiently using SQL
-            # Get count first to avoid loading all data
-            cursor.execute(
-                """
-                SELECT COUNT(*) 
-                FROM query_logs 
-                WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
-            """.format(
-                    time_clause
-                )
-            )
-
-            total_count = cursor.fetchone()[0]
-
-            if total_count > 0:
-                # Calculate percentile positions
-                p50_pos = max(1, int(total_count * 0.5))
-                p95_pos = max(1, int(total_count * 0.95))
-                p99_pos = max(1, int(total_count * 0.99))
-
-                # Use LIMIT and OFFSET to get specific percentile values
+                # Calculate percentiles more efficiently using SQL
                 cursor.execute(
                     """
-                    SELECT response_time_ms 
+                    SELECT COUNT(*) 
                     FROM query_logs 
-                    WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
-                    ORDER BY response_time_ms
-                    LIMIT 1 OFFSET {}
-                """.format(
-                        time_clause, p50_pos - 1
-                    )
+                    WHERE timestamp >= datetime('now', '-' || ?) AND response_time_ms IS NOT NULL
+                """,
+                    (time_clause,),
                 )
-                p50_result = cursor.fetchone()
-                result["p50_response_time"] = p50_result[0] if p50_result else 0
 
-                cursor.execute(
-                    """
-                    SELECT response_time_ms 
-                    FROM query_logs 
-                    WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
-                    ORDER BY response_time_ms
-                    LIMIT 1 OFFSET {}
-                """.format(
-                        time_clause, p95_pos - 1
-                    )
+                total_count = cursor.fetchone()[0]
+
+                if total_count > 0:
+                    # Calculate percentile positions
+                    p50_pos = max(1, int(total_count * 0.5))
+                    p95_pos = max(1, int(total_count * 0.95))
+                    p99_pos = max(1, int(total_count * 0.99))
+
+                    # Use LIMIT and OFFSET to get specific percentile values
+                    for percentile, pos in [("p50", p50_pos), ("p95", p95_pos), ("p99", p99_pos)]:
+                        cursor.execute(
+                            """
+                            SELECT response_time_ms 
+                            FROM query_logs 
+                            WHERE timestamp >= datetime('now', '-' || ?) AND response_time_ms IS NOT NULL
+                            ORDER BY response_time_ms
+                            LIMIT 1 OFFSET ?
+                        """,
+                            (time_clause, pos - 1),
+                        )
+                        result_row = cursor.fetchone()
+                        result[f"{percentile}_response_time"] = result_row[0] if result_row else 0
+                else:
+                    result["p50_response_time"] = 0
+                    result["p95_response_time"] = 0
+                    result["p99_response_time"] = 0
+
+                # Calculate rates
+                result["error_rate"] = (
+                    result["error_count"] / max(result["total_queries"], 1) if result["total_queries"] > 0 else 0
                 )
-                p95_result = cursor.fetchone()
-                result["p95_response_time"] = p95_result[0] if p95_result else 0
-
-                cursor.execute(
-                    """
-                    SELECT response_time_ms 
-                    FROM query_logs 
-                    WHERE timestamp >= datetime('now', '-{}') AND response_time_ms IS NOT NULL
-                    ORDER BY response_time_ms
-                    LIMIT 1 OFFSET {}
-                """.format(
-                        time_clause, p99_pos - 1
-                    )
+                result["cache_hit_rate"] = (
+                    result["cache_hits"] / max(result["total_queries"], 1) if result["total_queries"] > 0 else 0
                 )
-                p99_result = cursor.fetchone()
-                result["p99_response_time"] = p99_result[0] if p99_result else 0
-            else:
-                result["p50_response_time"] = 0
-                result["p95_response_time"] = 0
-                result["p99_response_time"] = 0
 
-            result["cache_hit_rate"] = result["cache_hits"] / max(result["total_queries"], 1)
+                return result
 
-            return result
+        except Exception as e:
+            print(f"Database error in get_performance_metrics: {e}")
+            return {}
 
-    def get_performance_metrics_previous(self, time_range: str = "24h") -> Dict[str, Any]:
-        """Get performance metrics for the previous period (used for comparison)."""
-        time_mapping = {
-            "1h": ("2 hours", "1 hours"),
-            "6h": ("12 hours", "6 hours"),
-            "24h": ("2 days", "1 days"),
-            "7d": ("14 days", "7 days"),
-            "30d": ("60 days", "30 days"),
-        }
+    def get_timeline_data(self, days: int = 7, interval: str = "day") -> List[Dict[str, Any]]:
+        """Get timeline data for charts from backend database."""
+        try:
+            # Determine the date format based on interval
+            if interval == "hour":
+                sql_format = "strftime('%Y-%m-%d %H', timestamp)"
+                time_range = f"{days * 24} hours"
+            else:  # day
+                sql_format = "date(timestamp)"
+                time_range = f"{days} days"
 
-        time_info = time_mapping.get(time_range, ("2 days", "1 days"))
-        start_offset = time_info[0]
-        end_offset = time_info[1]
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
 
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
+                query = f"""
                 SELECT 
+                    {sql_format} as period,
+                    COUNT(*) as queries,
                     AVG(response_time_ms) as avg_response_time,
-                    COUNT(*) as total_queries,
-                    SUM(CASE WHEN error_occurred THEN 1 ELSE 0 END) as error_count,
+                    SUM(CASE WHEN error_occurred THEN 1 ELSE 0 END) as errors,
                     SUM(CASE WHEN cache_hit THEN 1 ELSE 0 END) as cache_hits
                 FROM query_logs 
-                WHERE timestamp >= datetime('now', '-{}') 
-                  AND timestamp < datetime('now', '-{}')
-            """.format(
-                    start_offset, end_offset
-                )
-            )
-
-            result = dict(cursor.fetchone())
-
-            # Calculate percentiles more efficiently using SQL
-            cursor.execute(
+                WHERE timestamp >= datetime('now', '-{time_range}')
+                GROUP BY {sql_format}
+                ORDER BY period ASC
                 """
-                SELECT COUNT(*) 
-                FROM query_logs 
-                WHERE timestamp >= datetime('now', '-{}') 
-                  AND timestamp < datetime('now', '-{}')
-                  AND response_time_ms IS NOT NULL
-            """.format(
-                    start_offset, end_offset
-                )
-            )
 
-            total_count = cursor.fetchone()[0]
+                cursor.execute(query)
+                return [dict(row) for row in cursor.fetchall()]
 
-            if total_count > 0:
-                # Calculate percentile positions
-                p50_pos = max(1, int(total_count * 0.5))
-                p95_pos = max(1, int(total_count * 0.95))
-                p99_pos = max(1, int(total_count * 0.99))
-
-                # Use LIMIT and OFFSET to get specific percentile values
-                cursor.execute(
-                    """
-                    SELECT response_time_ms 
-                    FROM query_logs 
-                    WHERE timestamp >= datetime('now', '-{}') 
-                      AND timestamp < datetime('now', '-{}')
-                      AND response_time_ms IS NOT NULL
-                    ORDER BY response_time_ms
-                    LIMIT 1 OFFSET {}
-                """.format(
-                        start_offset, end_offset, p50_pos - 1
-                    )
-                )
-                p50_result = cursor.fetchone()
-                result["p50_response_time"] = p50_result[0] if p50_result else 0
-
-                cursor.execute(
-                    """
-                    SELECT response_time_ms 
-                    FROM query_logs 
-                    WHERE timestamp >= datetime('now', '-{}') 
-                      AND timestamp < datetime('now', '-{}')
-                      AND response_time_ms IS NOT NULL
-                    ORDER BY response_time_ms
-                    LIMIT 1 OFFSET {}
-                """.format(
-                        start_offset, end_offset, p95_pos - 1
-                    )
-                )
-                p95_result = cursor.fetchone()
-                result["p95_response_time"] = p95_result[0] if p95_result else 0
-
-                cursor.execute(
-                    """
-                    SELECT response_time_ms 
-                    FROM query_logs 
-                    WHERE timestamp >= datetime('now', '-{}') 
-                      AND timestamp < datetime('now', '-{}')
-                      AND response_time_ms IS NOT NULL
-                    ORDER BY response_time_ms
-                    LIMIT 1 OFFSET {}
-                """.format(
-                        start_offset, end_offset, p99_pos - 1
-                    )
-                )
-                p99_result = cursor.fetchone()
-                result["p99_response_time"] = p99_result[0] if p99_result else 0
-            else:
-                result["p50_response_time"] = 0
-                result["p95_response_time"] = 0
-                result["p99_response_time"] = 0
-
-            result["cache_hit_rate"] = (
-                result["cache_hits"] / max(result["total_queries"], 1) if result["total_queries"] > 0 else 0
-            )
-
-            return result
+        except Exception as e:
+            print(f"Database error in get_timeline_data: {e}")
+            return []
 
 
-# Global database manager instance
+# Global instances
 db_manager = DatabaseManager()
+query_data_manager = QueryDataManager()

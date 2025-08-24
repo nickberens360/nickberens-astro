@@ -82,13 +82,23 @@ def sync_json_to_sqlite():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
-    # Get the latest timestamp from SQLite to avoid duplicates
-    cursor.execute("SELECT MAX(timestamp) FROM query_logs")
-    result = cursor.fetchone()
-    last_sync_time = None
-    if result[0]:
-        last_sync_time = datetime.fromisoformat(result[0])
-        print(f"Last synced entry: {last_sync_time}")
+    # Add query_hash column for better deduplication
+    try:
+        cursor.execute("ALTER TABLE query_logs ADD COLUMN query_hash TEXT UNIQUE")
+        print("Added query_hash column")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Create index on query_hash
+    try:
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_query_logs_hash ON query_logs(query_hash)")
+    except sqlite3.OperationalError:
+        pass
+
+    # Get existing hashes to avoid duplicates
+    cursor.execute("SELECT query_hash FROM query_logs WHERE query_hash IS NOT NULL")
+    existing_hashes = {row[0] for row in cursor.fetchall()}
+    print(f"Found {len(existing_hashes)} existing entries with hashes")
 
     # Process JSON log entries
     processed_count = 0
@@ -103,8 +113,12 @@ def sync_json_to_sqlite():
                 entry = json.loads(line.strip())
                 timestamp = parse_timestamp(entry.get("timestamp", ""))
 
-                # Skip if already processed
-                if last_sync_time and timestamp <= last_sync_time:
+                # Generate query hash for deduplication
+                hash_content = f"{entry['timestamp']}:{entry.get('user_query', '')}:{entry.get('llm_model', '')}"
+                query_hash = hashlib.sha256(hash_content.encode()).hexdigest()[:32]
+
+                # Skip if already processed (based on hash)
+                if query_hash in existing_hashes:
                     skipped_count += 1
                     continue
 
@@ -139,16 +153,16 @@ def sync_json_to_sqlite():
                 error_occurred = entry.get("error") is not None
                 error_message = str(entry.get("error", "")) if error_occurred else None
 
-                # Insert into SQLite
+                # Insert into SQLite with hash-based deduplication
                 cursor.execute(
                     """
-                    INSERT INTO query_logs (
+                    INSERT OR IGNORE INTO query_logs (
                         session_id, user_query, system_response, response_time_ms,
                         llm_provider, llm_model, vector_search_score, sources_used,
                         follow_up_questions, cache_hit, error_occurred, error_message,
                         client_ip, location_city, location_region, location_country, location_country_code,
-                        timestamp
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        timestamp, query_hash
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
                         session_id,
@@ -169,8 +183,12 @@ def sync_json_to_sqlite():
                         location_country,
                         location_country_code,
                         timestamp.isoformat(),
+                        query_hash,
                     ),
                 )
+
+                # Track the new hash
+                existing_hashes.add(query_hash)
 
                 processed_count += 1
 

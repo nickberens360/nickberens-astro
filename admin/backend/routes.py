@@ -14,7 +14,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-from .database import db_manager
+from .database import db_manager, query_data_manager
 from .models import FeedbackUpdate, FileContentUpdate, OverviewStats, QueryResponse
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def verify_admin_token(request: Request):
 async def get_overview_stats(days: int = Query(7, ge=1, le=90), _: None = Depends(verify_admin_token)):
     """Get overview statistics for the specified number of days."""
     try:
-        stats = db_manager.get_overview_stats(days)
+        stats = query_data_manager.get_overview_stats(days)
         return OverviewStats(
             total_queries=stats.get("total_queries", 0),
             unique_sessions=stats.get("unique_sessions", 0),
@@ -70,8 +70,13 @@ async def get_queries(
 ):
     """Get paginated list of queries with optional filters."""
     try:
-        result = db_manager.get_queries(
-            limit=limit, offset=offset, search=search, errors_only=errors_only, start_date=start_date, end_date=end_date
+        result = query_data_manager.get_queries(
+            limit=limit,
+            offset=offset,
+            search_query=search,
+            error_filter=errors_only,
+            date_from=start_date,
+            date_to=end_date,
         )
         return QueryResponse(**result)
     except Exception as e:
@@ -82,9 +87,9 @@ async def get_queries(
 async def get_query_detail(query_id: int, _: None = Depends(verify_admin_token)):
     """Get detailed information about a specific query."""
     try:
-        result = db_manager.get_queries(limit=1, offset=0)
+        result = query_data_manager.get_queries(limit=1, offset=0)
         # Filter by ID (simplified for this implementation)
-        with db_manager.get_connection() as conn:
+        with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM query_logs WHERE id = ?", (query_id,))
             row = cursor.fetchone()
@@ -117,7 +122,11 @@ async def update_query_feedback(query_id: int, feedback: FeedbackUpdate, _: None
         raise HTTPException(status_code=400, detail="Feedback must be 'helpful' or 'not_helpful'")
 
     try:
-        db_manager.update_query_feedback(query_id, feedback.feedback)
+        # Update feedback directly in the backend database
+        with query_data_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE query_logs SET user_feedback = ? WHERE id = ?", (feedback.feedback, query_id))
+            conn.commit()
         return {"status": "success", "message": "Feedback updated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating feedback: {str(e)}")
@@ -129,8 +138,9 @@ async def get_performance_metrics(
 ):
     """Get performance metrics for the specified time range with comparison to previous period."""
     try:
-        current_metrics = db_manager.get_performance_metrics(time_range)
-        previous_metrics = db_manager.get_performance_metrics_previous(time_range)
+        current_metrics = query_data_manager.get_performance_metrics(time_range)
+        # TODO: Implement previous period calculation
+        previous_metrics = query_data_manager.get_performance_metrics(time_range)
 
         def safe_divide(a, b):
             return (a or 0) / max(b or 1, 1)
@@ -190,7 +200,7 @@ async def get_performance_timeline(
 ):
     """Get time series data for performance charts."""
     try:
-        with db_manager.get_connection() as conn:
+        with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
 
             if interval == "hour":
@@ -243,7 +253,7 @@ async def get_response_time_percentiles(
 ):
     """Get response time percentiles for the specified time range."""
     try:
-        metrics = db_manager.get_performance_metrics(time_range)
+        metrics = query_data_manager.get_performance_metrics(time_range)
         return {
             "p50": round(metrics.get("p50_response_time", 0) or 0, 1),
             "p95": round(metrics.get("p95_response_time", 0) or 0, 1),
@@ -257,7 +267,7 @@ async def get_response_time_percentiles(
 async def get_content_gaps(_: None = Depends(verify_admin_token)):
     """Get queries with low relevance scores or poor results."""
     try:
-        with db_manager.get_connection() as conn:
+        with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -297,7 +307,7 @@ async def get_content_gaps(_: None = Depends(verify_admin_token)):
 async def get_popular_topics(_: None = Depends(verify_admin_token)):
     """Get most queried topics/themes."""
     try:
-        with db_manager.get_connection() as conn:
+        with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -332,7 +342,7 @@ async def get_sessions(
 ):
     """Get user session information."""
     try:
-        with db_manager.get_connection() as conn:
+        with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
 
             where_clause = ""
@@ -367,7 +377,7 @@ async def export_csv(
         output = io.StringIO()
         writer = csv.writer(output)
 
-        with db_manager.get_connection() as conn:
+        with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
 
             if export_type == "queries":

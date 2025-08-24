@@ -177,7 +177,7 @@ class DualQueryLogger(QueryLogger):
             location_data = {}
             if geolocation_service and not self.anonymize_ips:
                 try:
-                    location_info = geolocation_service.get_location_info(client_ip)
+                    location_info = geolocation_service.get_location(client_ip)
                     if location_info:
                         location_data = {
                             "location_city": location_info.get("city"),
@@ -218,7 +218,7 @@ class DualQueryLogger(QueryLogger):
                         question,
                         response,
                         response_time_ms,
-                        "anthropic" if "claude" in model_used.lower() else "google",  # Infer provider
+                        self._infer_llm_provider(model_used),
                         model_used,
                         vector_search_score,
                         json.dumps(sources_used) if sources_used else None,
@@ -354,6 +354,23 @@ class DualQueryLogger(QueryLogger):
         except Exception as e:
             self.logger.error("Failed to update streaming response in SQLite: %s", e)
             return False
+
+    def _infer_llm_provider(self, model_name: Optional[str]) -> str:
+        """Infer LLM provider from model name."""
+        if not model_name:
+            return "unknown"
+
+        model_lower = model_name.lower()
+        if "claude" in model_lower or "anthropic" in model_lower:
+            return "anthropic"
+        elif "gpt" in model_lower or "openai" in model_lower:
+            return "openai"
+        elif "gemini" in model_lower or "google" in model_lower:
+            return "google"
+        elif "llama" in model_lower:
+            return "meta"
+        else:
+            return "unknown"
 
     def _process_ip_for_logging(self, ip_address: str) -> Optional[str]:
         """Process IP address for logging, handling exclusion and anonymization."""
