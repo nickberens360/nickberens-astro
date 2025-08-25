@@ -17,6 +17,7 @@ from fastapi.responses import Response, StreamingResponse
 from .auth import auth_manager, get_current_user, require_admin_role, require_auth
 from .database import db_manager, query_data_manager
 from .models import (
+    ChangePasswordRequest,
     CreateUserRequest,
     FeedbackUpdate,
     FileContentUpdate,
@@ -97,6 +98,51 @@ async def get_current_user_info(session: dict = Depends(require_auth)):
         "last_login_at": session.get("last_login_at"),
     }
     return {"user": user_data}
+
+
+@router.post("/auth/change-password")
+async def change_password(password_data: ChangePasswordRequest, session: dict = Depends(require_auth)):
+    """Change the current user's password."""
+    try:
+        # Get the current user
+        user = db_manager.get_admin_user(session["username"])
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Verify current password
+        if not auth_manager.verify_password(password_data.current_password, user["password_hash"]):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+        # Validate new password
+        if len(password_data.new_password) < 8:
+            raise HTTPException(status_code=400, detail="New password must be at least 8 characters long")
+
+        if password_data.current_password == password_data.new_password:
+            raise HTTPException(status_code=400, detail="New password must be different from current password")
+
+        # Hash and update the new password
+        new_password_hash = auth_manager.hash_password(password_data.new_password)
+
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE admin_users SET password_hash = ? WHERE id = ?", (new_password_hash, user["id"]))
+            conn.commit()
+
+        # Expire all sessions for this user (except current one)
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE admin_sessions SET is_active = 0 WHERE user_id = ? AND id != ?", (user["id"], session.get("id"))
+            )
+            conn.commit()
+
+        return {"success": True, "message": "Password changed successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Password change error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to change password")
 
 
 @router.post("/auth/create-user")

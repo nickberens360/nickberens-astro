@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from starlette.requests import Request
 
 from ..core.config import AppConfig
+from ..core.unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -49,6 +50,26 @@ class ContentGapsResponse(BaseModel):
 
     gaps: List[ContentGap]
     total_count: int
+
+
+class IndexedDocument(BaseModel):
+    """Model for indexed document data."""
+
+    id: str
+    source: str
+    content_preview: str
+    content_type: str
+    metadata: dict
+    word_count: int
+
+
+class IndexedDocumentsResponse(BaseModel):
+    """Response model for indexed documents listing."""
+
+    documents: List[IndexedDocument]
+    total_count: int
+    collection_name: str
+    embedding_model: str
 
 
 def get_db_connection():

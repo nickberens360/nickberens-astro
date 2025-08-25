@@ -189,7 +189,7 @@ export default {
         
         originalContent.value = response.content || ''
         currentContent.value = originalContent.value
-        fileType.value = response.type || ''
+        fileType.value = '.' + (props.filename.split('.').pop() || 'txt')
         fileSize.value = response.size || 0
         hasUnsavedChanges.value = false
         

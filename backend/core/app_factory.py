@@ -72,19 +72,40 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
         CORSMiddleware,
         allow_origins=AppConfig.get_cors_origins(),
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         expose_headers=["X-Model-Used", "X-Followup-Questions"],
     )
 
     # Register routers - import here to avoid circular imports
-    from ..routes import admin_refresh, content, health, query, query_logs, smart_query
+    from ..routes import (
+        admin_refresh,
+        auth,
+        content,
+        health,
+        knowledge,
+        performance,
+        queries,
+        query,
+        query_logs,
+        smart_query,
+        stats,
+    )
 
     app.include_router(health.router)
     app.include_router(query.router)
     app.include_router(query_logs.router, prefix="/admin")
     app.include_router(smart_query.router, prefix="/api")
     app.include_router(content.router, prefix="/api")
+    app.include_router(knowledge.router)
+    app.include_router(knowledge.router, prefix="/admin")  # Also include under /admin for admin dashboard
     app.include_router(admin_refresh.router)
+    app.include_router(auth.router, prefix="/admin/api")  # Authentication for admin dashboard
+
+    # Add missing admin API endpoints that the frontend expects
+    app.include_router(health.router, prefix="/admin/api")  # For /admin/api/health
+    app.include_router(queries.router, prefix="/admin/api")  # For /admin/api/queries
+    app.include_router(stats.router, prefix="/admin/api")  # For /admin/api/stats/overview
+    app.include_router(performance.router, prefix="/admin/api")  # For /admin/api/performance endpoints
 
     return app

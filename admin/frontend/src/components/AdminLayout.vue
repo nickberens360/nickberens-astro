@@ -19,17 +19,50 @@
 
         <v-divider class="mb-2"/>
 
-        <v-list-item
-          v-for="item in navigationItems"
-          :key="item.name"
-          :to="item.to"
-          :active="$route.name === item.name"
-          rounded="xl"
-          class="mx-2 mb-1"
-          :prepend-icon="item.icon"
-        >
-          <v-list-item-title>{{ item.title }}</v-list-item-title>
-        </v-list-item>
+        <template v-for="item in navigationItems" :key="item.name">
+          <!-- Main navigation item -->
+          <v-list-item
+            v-if="!item.children"
+            :to="item.to"
+            :active="$route.name === item.name"
+            rounded="xl"
+            class="mx-2 mb-1"
+            :prepend-icon="item.icon"
+          >
+            <v-list-item-title>{{ item.title }}</v-list-item-title>
+          </v-list-item>
+
+          <!-- Navigation item with children -->
+          <v-list-group
+            v-else
+            :key="item.name"
+            :value="item.name"
+            class="mx-2 mb-1"
+          >
+            <template v-slot:activator="{ props }">
+              <v-list-item
+                v-bind="props"
+                :prepend-icon="item.icon"
+                rounded="xl"
+                :active="$route.name === item.name || item.children.some(child => $route.name === child.name)"
+                @click="navigateToParent(item)"
+              >
+                <v-list-item-title>{{ item.title }}</v-list-item-title>
+              </v-list-item>
+            </template>
+
+            <v-list-item
+              v-for="child in item.children"
+              :key="child.name"
+              :to="child.to"
+              :active="$route.name === child.name"
+              rounded="xl"
+              class="ms-4"
+            >
+              <v-list-item-title>{{ child.title }}</v-list-item-title>
+            </v-list-item>
+          </v-list-group>
+        </template>
       </v-list>
 
       <template #append>
@@ -130,9 +163,18 @@
               {{ isDark ? 'Light' : 'Dark' }} Mode
             </v-list-item-title>
           </v-list-item>
-          
+
           <v-divider/>
-          
+
+          <v-list-item to="/admin/change-password">
+            <v-list-item-title>
+              <v-icon start>$lock</v-icon>
+              Change Password
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-divider/>
+
           <v-list-item @click="handleLogout">
             <v-list-item-title>
               <v-icon start>$logout</v-icon>
@@ -264,14 +306,42 @@ const navigationItems = computed(() => [
   {
     name: 'knowledge',
     title: 'Knowledge Base',
-    to: '/admin/knowledge',
-    icon: '$knowledge'
+    to: '/admin/knowledge/sources',
+    icon: '$knowledge',
+    /*children: [
+      {
+        name: 'knowledge-sources',
+        title: 'Knowledge Sources',
+        to: '/admin/knowledge/sources'
+      },
+      {
+        name: 'knowledge-documents',
+        title: 'Indexed Documents',
+        to: '/admin/knowledge/documents'
+      },
+      {
+        name: 'knowledge-stats',
+        title: 'Knowledge Statistics',
+        to: '/admin/knowledge/stats'
+      }
+    ]*/
   }
 ]);
 
 const currentPageTitle = computed(() => {
-  const item = navigationItems.value.find(item => item.name === route.name);
-  return item?.title || 'Admin Dashboard';
+  // Check main navigation items
+  let item = navigationItems.value.find(item => item.name === route.name);
+  if (item) return item.title;
+
+  // Check nested children
+  for (const navItem of navigationItems.value) {
+    if (navItem.children) {
+      const childItem = navItem.children.find(child => child.name === route.name);
+      if (childItem) return childItem.title;
+    }
+  }
+
+  return 'Admin Dashboard';
 });
 
 const showTimeRangeSelector = computed(() => {
@@ -324,6 +394,13 @@ const toggleTheme = () => {
 const exportData = () => {
   // TODO: Implement export functionality
   console.log('Export data functionality to be implemented');
+};
+
+const navigateToParent = (item) => {
+  // Navigate to the parent route which will redirect to the default child
+  if (item.to) {
+    router.push(item.to);
+  }
 };
 
 const handleLogout = async () => {

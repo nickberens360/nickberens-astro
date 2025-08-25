@@ -9,6 +9,8 @@ import {
   mdiAccountGroup,
   mdiAccount,
   mdiLock,
+  mdiLockOutline,
+  mdiLockCheck,
   mdiLogout,
   mdiMenu,
   mdiClose,
@@ -43,7 +45,8 @@ import {
   mdiNoteEdit,
   mdiUndo,
   mdiWeatherNight,
-  mdiWhiteBalanceSunny
+  mdiWhiteBalanceSunny,
+  mdiMemory
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -119,9 +122,12 @@ export default createVuetify({
       undo: mdiUndo,
       account: mdiAccount,
       lock: mdiLock,
+      'lock-outline': mdiLockOutline,
+      'lock-check': mdiLockCheck,
       logout: mdiLogout,
       'weather-night': mdiWeatherNight,
-      'light-mode': mdiWhiteBalanceSunny
+      'light-mode': mdiWhiteBalanceSunny,
+      memory: mdiMemory
     },
     sets: {
       mdi

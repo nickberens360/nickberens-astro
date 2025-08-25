@@ -198,6 +198,18 @@ class AdminAPI {
     return await this.client.get('/knowledge/stats')
   }
 
+  async getKnowledgeDocuments(limit = 100, offset = 0) {
+    return await this.client.get(`/knowledge/documents?limit=${limit}&offset=${offset}`)
+  }
+
+  async getKnowledgeSources() {
+    return await this.client.get('/knowledge/sources')
+  }
+
+  async getDocumentContent(documentId) {
+    return await this.client.get(`/knowledge/documents/${documentId}`)
+  }
+
   async refreshKnowledgeBase(forceReindex = true) {
     return await this.client.post(`/knowledge/refresh?force_reindex=${forceReindex}`)
   }
@@ -217,7 +229,17 @@ class AdminAPI {
   async updateKnowledgeFileContent(filename, content) {
     return await this.client.put(`/knowledge/files/${encodeURIComponent(filename)}/content`, {
       content: content
+    }, {
+      timeout: 30000  // 30 second timeout for file saves with re-indexing
     })
+  }
+
+  async updateKnowledgeSource(sourcePath, updateData) {
+    return await this.client.put(`/knowledge/sources/${encodeURIComponent(sourcePath)}`, updateData)
+  }
+
+  async deleteKnowledgeSource(sourcePath) {
+    return await this.client.delete(`/knowledge/sources/${encodeURIComponent(sourcePath)}`)
   }
 
   // Authentication endpoints
@@ -265,6 +287,18 @@ class AdminAPI {
       return await this.client.post('/auth/create-user', userData)
     } catch (error) {
       console.error('Failed to create user:', error)
+      throw error
+    }
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    try {
+      return await this.client.post('/auth/change-password', {
+        current_password: currentPassword,
+        new_password: newPassword
+      })
+    } catch (error) {
+      console.error('Failed to change password:', error)
       throw error
     }
   }

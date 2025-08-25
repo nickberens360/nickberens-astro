@@ -176,3 +176,10 @@ class CreateUserRequest(BaseModel):
     email: Optional[str] = None
     password: str
     role: str = "viewer"
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change password request model."""
+
+    current_password: str
+    new_password: str

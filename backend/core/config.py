@@ -83,6 +83,12 @@ class AppConfig:
         return 3600
 
     @classmethod
+    def get_cors_origins(cls) -> List[str]:
+        """Get allowed CORS origins."""
+        origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:4321,http://localhost:4323")
+        return [origin.strip() for origin in origins.split(",") if origin.strip()]
+
+    @classmethod
     def get_max_cache_size(cls) -> int:
         """Maximum cache entries."""
         try:

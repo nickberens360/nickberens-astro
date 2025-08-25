@@ -77,6 +77,12 @@ async def lifespan(app: FastAPI):
         app.state.followup_service = followup_service
         app.state.query_logger = query_logger
 
+        # Add unified retriever to app state for knowledge route
+        if retrievers and "_unified_retriever" in retrievers:
+            app.state.unified_retriever = retrievers["_unified_retriever"]
+        else:
+            app.state.unified_retriever = None
+
         # Start cache warming in the background (non-blocking)
         if app_initialized and retrievers:
             await start_cache_warming(retrievers, app.state)
@@ -110,3 +116,5 @@ if not hasattr(app.state, "llm"):
     app.state.llm = None  # type: ignore[attr-defined]
 if not hasattr(app.state, "query_router"):
     app.state.query_router = None  # type: ignore[attr-defined]
+if not hasattr(app.state, "unified_retriever"):
+    app.state.unified_retriever = None  # type: ignore[attr-defined]

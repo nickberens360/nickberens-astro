@@ -71,6 +71,46 @@ const router = createRouter({
           meta: {
             title: 'Knowledge Base',
             icon: 'library_books'
+          },
+          children: [
+            {
+              path: '',
+              name: 'knowledge-overview',
+              redirect: 'sources'
+            },
+            {
+              path: 'documents',
+              name: 'knowledge-documents',
+              component: () => import('@/views/knowledge/DocumentsView.vue'),
+              meta: {
+                title: 'Indexed Documents'
+              }
+            },
+            {
+              path: 'sources',
+              name: 'knowledge-sources',
+              component: () => import('@/views/knowledge/SourcesView.vue'),
+              meta: {
+                title: 'Knowledge Sources'
+              }
+            },
+            {
+              path: 'stats',
+              name: 'knowledge-stats',
+              component: () => import('@/views/knowledge/StatsView.vue'),
+              meta: {
+                title: 'Knowledge Statistics'
+              }
+            }
+          ]
+        },
+        {
+          path: 'change-password',
+          name: 'change-password',
+          component: () => import('@/views/ChangePassword.vue'),
+          meta: {
+            title: 'Change Password',
+            icon: 'lock'
           }
         }
       ]

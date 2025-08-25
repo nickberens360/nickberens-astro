@@ -141,9 +141,9 @@
         </div>
       </template>
 
-      <template #item.system_response="{ item }">
+      <template #item.response="{ item }">
         <div class="response-preview">
-          {{ truncateText(item.system_response, 80) }}
+          {{ truncateText(item.response, 80) }}
         </div>
       </template>
 
@@ -166,23 +166,23 @@
       <template #item.relevance_score="{ item }">
         <div class="d-flex align-center">
           <v-progress-linear
-            :model-value="item.vector_search_score * 100"
-            :color="getRelevanceColor(item.vector_search_score * 100)"
+            :model-value="item.vector_search_score ? item.vector_search_score * 100 : 0"
+            :color="getRelevanceColor(item.vector_search_score ? item.vector_search_score * 100 : 0)"
             height="6"
             class="mr-2"
             style="width: 60px;"
           />
-          <span class="text-caption">{{ Math.round(item.vector_search_score * 100) }}%</span>
+          <span class="text-caption">{{ item.vector_search_score ? Math.round(item.vector_search_score * 100) + '%' : 'N/A' }}</span>
         </div>
       </template>
 
       <template #item.location="{ item }">
         <div class="text-no-wrap">
           <div class="text-caption">
-            {{ item.location_city || 'Unknown' }}
+            {{ item.location_city || 'N/A' }}
           </div>
           <div class="text-caption text-medium-emphasis">
-            {{ item.location_country || 'Unknown' }}
+            {{ item.location_country || 'N/A' }}
           </div>
         </div>
       </template>
@@ -248,7 +248,7 @@
 
             <div class="mb-4">
               <v-label class="mb-2 font-weight-bold">Response:</v-label>
-              <div class="text-body-2">{{ item.system_response }}</div>
+              <div class="text-body-2">{{ item.response }}</div>
             </div>
 
             <div v-if="item.sources_used && item.sources_used.length" class="mb-4">
@@ -323,7 +323,7 @@
           <div class="mb-4">
             <v-label class="mb-2 font-weight-bold">Response:</v-label>
             <v-card variant="outlined" class="pa-3">
-              <div class="text-body-2">{{ selectedQuery.system_response }}</div>
+              <div class="text-body-2">{{ selectedQuery.response }}</div>
             </v-card>
           </div>
 
@@ -411,7 +411,7 @@ const headers = computed(() => [
   },
   {
     title: 'Response',
-    key: 'system_response',
+    key: 'response',
     width: '20%',
     sortable: false
   },
