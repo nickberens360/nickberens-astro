@@ -74,7 +74,7 @@
               System Status
             </v-list-item-title>
             <v-chip
-              :color="isHealthy ? 'success' : 'error'"
+              :color="getStatusColor(systemHealth.status)"
               size="x-small"
               variant="flat"
             >
@@ -367,6 +367,27 @@ const formatLastUpdate = computed(() => {
 });
 
 // Methods
+const getStatusColor = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'healthy':
+    case 'ok':
+    case 'running':
+      return 'success';
+    case 'error':
+    case 'failed':
+    case 'down':
+      return 'error';
+    case 'warning':
+    case 'degraded':
+      return 'warning';
+    case 'unknown':
+    case 'loading':
+      return 'info';
+    default:
+      return 'grey';
+  }
+};
+
 const refreshData = async () => {
   await adminStore.refreshData();
 };

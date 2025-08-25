@@ -107,7 +107,7 @@ class ContentIndexer:
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(merged_types),
+            "content_type": ",".join(merged_types),
             "content_length": len(content),
             "has_code": "```" in doc.page_content or "function" in text_lc,
             "is_illustration_data": is_illustration_data,

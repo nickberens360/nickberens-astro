@@ -284,11 +284,15 @@ export default {
     }
 
     const getContentTypes = (metadata) => {
-      if (!metadata || !metadata.content_types) return []
-      const types = metadata.content_types.split(',')
+      if (!metadata) return []
+      // Check both content_type (singular) and content_types (plural) for backward compatibility
+      const contentTypeStr = metadata.content_type || metadata.content_types
+      if (!contentTypeStr || contentTypeStr === 'unknown') return ['unknown']
+      
+      const types = contentTypeStr.split(',')
         .map(t => t.trim())
         .filter(t => t && t !== 'unknown' && !t.includes('based on'))
-        .slice(0, 3)  // Show max 3 types
+        .slice(0, 4)  // Show max 4 types
       return [...new Set(types)]  // Remove duplicates
     }
 

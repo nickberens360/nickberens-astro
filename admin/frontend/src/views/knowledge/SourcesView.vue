@@ -54,12 +54,16 @@
             </div>
           </template>
           <template v-slot:item.content_type="{ item }">
-            <v-chip
-              :color="getContentTypeColor(item.content_type)"
-              size="small"
-            >
-              {{ item.content_type || 'unknown' }}
-            </v-chip>
+            <div class="d-flex flex-wrap gap-1">
+              <v-chip
+                v-for="type in getContentTypes(item.content_type)"
+                :key="type"
+                :color="getContentTypeColor(type)"
+                size="small"
+              >
+                {{ type }}
+              </v-chip>
+            </div>
           </template>
           <template v-slot:item.chunk_count="{ item }">
             <span class="text-body-2">{{ item.chunk_count }} chunks</span>
@@ -221,6 +225,13 @@ const getFileIcon = (filename) => {
   return iconMap[ext] || { icon: '$insert_drive_file', color: 'grey' }
 }
 
+const getContentTypes = (contentTypeStr) => {
+  if (!contentTypeStr || contentTypeStr === 'unknown') {
+    return ['unknown']
+  }
+  return contentTypeStr.split(',').map(type => type.trim()).filter(type => type.length > 0)
+}
+
 const getContentTypeColor = (type) => {
   const colorMap = {
     'technical': 'blue',
@@ -230,7 +241,9 @@ const getContentTypeColor = (type) => {
     'creative': 'pink',
     'project': 'teal',
     'code': 'indigo',
-    'documentation': 'cyan'
+    'documentation': 'cyan',
+    'general': 'grey',
+    'unknown': 'grey'
   }
   return colorMap[type?.toLowerCase()] || 'grey'
 }
@@ -354,5 +367,10 @@ onMounted(() => {
 <style scoped>
 .sources-view {
   padding: 24px;
+}
+
+/* Ensure proper spacing for content type chips */
+.gap-1 > .v-chip {
+  margin: 2px;
 }
 </style>

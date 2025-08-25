@@ -70,6 +70,14 @@
 
         <div>
           <v-btn
+            v-if="fileType === '.json'"
+            text="Format JSON"
+            variant="outlined"
+            @click="formatJson"
+            :disabled="saving"
+            class="me-2"
+          ></v-btn>
+          <v-btn
             text="Cancel"
             @click="handleCancel"
             :disabled="saving"
@@ -187,9 +195,23 @@ export default {
       try {
         const response = await adminAPI.getKnowledgeFileContent(props.filename)
         
-        originalContent.value = response.content || ''
-        currentContent.value = originalContent.value
-        fileType.value = '.' + (props.filename.split('.').pop() || 'txt')
+        let content = response.content || ''
+        
+        // Auto-format JSON content for better readability
+        const ext = props.filename.split('.').pop()?.toLowerCase()
+        if (ext === 'json' && content.trim()) {
+          try {
+            const parsed = JSON.parse(content)
+            content = JSON.stringify(parsed, null, 2) // Pretty print with 2 spaces
+          } catch (jsonError) {
+            // If JSON parsing fails, keep original content
+            console.warn('Failed to parse JSON for formatting:', jsonError)
+          }
+        }
+        
+        originalContent.value = content
+        currentContent.value = content
+        fileType.value = '.' + (ext || 'txt')
         fileSize.value = response.size || 0
         hasUnsavedChanges.value = false
         
@@ -295,6 +317,35 @@ export default {
       }
     }
 
+    const formatJson = () => {
+      if (!editor || fileType.value !== '.json') return
+      
+      try {
+        const content = editor.getValue()
+        const parsed = JSON.parse(content)
+        const formatted = JSON.stringify(parsed, null, 2)
+        
+        // Update editor content
+        editor.setValue(formatted)
+        
+        // Update our refs
+        currentContent.value = formatted
+        hasUnsavedChanges.value = formatted !== originalContent.value
+        lineCount.value = editor.getModel().getLineCount()
+        
+        success.value = 'JSON formatted successfully!'
+        setTimeout(() => {
+          success.value = null
+        }, 2000)
+        
+      } catch (err) {
+        error.value = 'Invalid JSON format. Cannot format the content.'
+        setTimeout(() => {
+          error.value = null
+        }, 3000)
+      }
+    }
+
     const handleCancel = () => {
       if (hasUnsavedChanges.value) {
         if (confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
@@ -341,6 +392,7 @@ export default {
       getFileTypeColor,
       formatFileSize,
       saveFile,
+      formatJson,
       handleCancel
     }
   }
