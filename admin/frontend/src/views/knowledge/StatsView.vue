@@ -15,7 +15,7 @@
 
     <!-- Content Type Distribution -->
     <v-card elevation="2" class="mb-6">
-      <v-card-title class="text-h6 bg-surface-variant">
+      <v-card-title class="text-h6">
         <v-icon class="me-2">$chart</v-icon>
         Content Type Distribution
       </v-card-title>
@@ -58,7 +58,7 @@
 
     <!-- Additional Information -->
     <v-card elevation="2">
-      <v-card-title class="text-h6 bg-surface-variant">
+      <v-card-title class="text-h6">
         <v-icon class="me-2">$info</v-icon>
         Additional Information
       </v-card-title>

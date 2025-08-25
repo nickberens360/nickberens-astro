@@ -2,7 +2,7 @@
   <div>
     <!-- Upload Section -->
     <v-card class="mb-6" elevation="2">
-      <v-card-title class="text-h6 bg-primary text-white">
+      <v-card-title class="text-h6">
         <v-icon class="me-2">$upload</v-icon>
         Upload Documents
       </v-card-title>
@@ -102,7 +102,7 @@
 
     <!-- File List -->
     <v-card elevation="2">
-      <v-card-title class="text-h6 bg-surface-variant d-flex align-center">
+      <v-card-title class="text-h6 d-flex align-center">
         <v-icon class="me-2">$list</v-icon>
         Knowledge Base Files
         <v-spacer></v-spacer>
