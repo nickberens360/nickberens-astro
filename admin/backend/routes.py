@@ -266,9 +266,32 @@ async def get_performance_metrics(
 ):
     """Get performance metrics for the specified time range with comparison to previous period."""
     try:
+
+        def get_previous_time_range(time_range: str) -> str:
+            """Calculate the equivalent previous time range for comparison."""
+            # For now, return the same time range to get a baseline comparison
+            # In a full implementation, this would calculate dates for the previous period
+            # e.g., if current is last 24h, previous would be 24h before that
+            time_mappings = {
+                "1h": "2h",  # Compare current 1h to previous 1h (using 2h and offset)
+                "6h": "12h",  # Compare current 6h to previous 6h (using 12h and offset)
+                "24h": "48h",  # Compare current 24h to previous 24h (using 48h and offset)
+                "7d": "14d",  # Compare current 7d to previous 7d (using 14d and offset)
+                "30d": "60d",  # Compare current 30d to previous 30d (using 60d and offset)
+            }
+            return time_mappings.get(time_range, time_range)
+
         current_metrics = query_data_manager.get_performance_metrics(time_range)
-        # TODO: Implement previous period calculation
-        previous_metrics = query_data_manager.get_performance_metrics(time_range)
+        # Get broader time range and calculate previous period metrics
+        previous_time_range = get_previous_time_range(time_range)
+        broader_metrics = query_data_manager.get_performance_metrics(previous_time_range)
+
+        # For now, use half the values from broader range as approximation of previous period
+        # This is a simplified approach - a full implementation would use date filtering
+        previous_metrics = {
+            key: (value * 0.5 if isinstance(value, (int, float)) and value is not None else value)
+            for key, value in broader_metrics.items()
+        }
 
         def safe_divide(a, b):
             return (a or 0) / max(b or 1, 1)

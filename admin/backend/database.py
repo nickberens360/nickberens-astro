@@ -21,7 +21,7 @@ class DatabaseManager:
         if db_path is None:
             # Use admin-specific database for admin features
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            db_path = os.path.join(project_root, "admin", "admin", "admin_monitoring.db")
+            db_path = os.path.join(project_root, "admin", "admin_monitoring.db")
         self.db_path = db_path
         self._init_database()
 

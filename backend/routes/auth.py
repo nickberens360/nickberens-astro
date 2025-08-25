@@ -1,29 +1,65 @@
 """
 Authentication routes for the admin dashboard.
 
-Provides session-based authentication using secure cookies with simple admin user management.
+Provides session-based authentication using secure cookies with proper admin user management.
 """
 
-import hashlib
-import hmac
 import os
-import secrets
-from datetime import datetime, timedelta
+
+# Import the proper admin authentication system
+import sys
 from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-# Simple in-memory session store (in production, use Redis or database)
-active_sessions: Dict[str, Dict] = {}
-SESSION_TIMEOUT_HOURS = 24
+admin_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "admin", "backend")
+if admin_path not in sys.path:
+    sys.path.insert(0, admin_path)
 
-# Default admin credentials (should be configured via environment variables)
-DEFAULT_ADMIN_USERNAME = "admin"
-DEFAULT_ADMIN_PASSWORD = "admin123"
+try:
+    from auth import auth_manager
+except ImportError:
+    # Fallback for when admin auth is not available
+    import secrets
+    import sqlite3
+    from datetime import datetime, timedelta
 
-security = HTTPBearer(auto_error=False)
+    from passlib.context import CryptContext
+
+    # Simple fallback auth manager
+    class FallbackAuthManager:
+        def __init__(self):
+            self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            self.sessions = {}
+
+        def authenticate_user(self, username: str, password: str, ip_address: str = None, user_agent: str = None):
+            # Simple fallback - use environment variables with proper bcrypt
+            admin_username = os.getenv("ADMIN_USERNAME", "admin")
+            admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+
+            if username != admin_username:
+                return None
+
+            # For fallback, hash the env password and compare
+            if not hasattr(self, "_hashed_admin_password"):
+                self._hashed_admin_password = self.pwd_context.hash(admin_password)
+
+            if not self.pwd_context.verify(password, self._hashed_admin_password):
+                return None
+
+            session_id = secrets.token_urlsafe(32)
+            self.sessions[session_id] = {"user": {"username": username, "id": 1}, "session_id": session_id}
+            return self.sessions[session_id]
+
+        def get_session_from_request(self, request: Request):
+            session_id = request.cookies.get("admin_session")
+            return self.sessions.get(session_id) if session_id else None
+
+        def expire_session(self, session_id: str):
+            self.sessions.pop(session_id, None)
+
+    auth_manager = FallbackAuthManager()
 
 
 class LoginRequest(BaseModel):
@@ -42,63 +78,11 @@ class CreateUserRequest(BaseModel):
     role: str = "admin"
 
 
-def get_admin_credentials() -> tuple[str, str]:
-    """Get admin credentials from environment or use defaults."""
-    username = os.getenv("ADMIN_USERNAME", DEFAULT_ADMIN_USERNAME)
-    password = os.getenv("ADMIN_PASSWORD", DEFAULT_ADMIN_PASSWORD)
-    return username, password
-
-
-def hash_password(password: str) -> str:
-    """Hash password using SHA-256 with a salt."""
-    salt = os.getenv("PASSWORD_SALT", "admin_dashboard_salt")
-    return hashlib.sha256((password + salt).encode()).hexdigest()
-
-
-def verify_password(password: str, expected_username: str) -> bool:
-    """Verify password for the given user."""
-    admin_username, admin_password = get_admin_credentials()
-
-    if expected_username != admin_username:
-        return False
-
-    return hmac.compare_digest(hash_password(password), hash_password(admin_password))
-
-
-def create_session(username: str) -> str:
-    """Create a new session and return session ID."""
-    session_id = secrets.token_urlsafe(32)
-    active_sessions[session_id] = {"username": username, "created_at": datetime.now(), "last_accessed": datetime.now()}
-    return session_id
-
-
-def get_session(session_id: str) -> Optional[Dict]:
-    """Get session data if valid and not expired."""
-    if session_id not in active_sessions:
-        return None
-
-    session = active_sessions[session_id]
-
-    # Check if session has expired
-    if datetime.now() - session["last_accessed"] > timedelta(hours=SESSION_TIMEOUT_HOURS):
-        del active_sessions[session_id]
-        return None
-
-    # Update last accessed time
-    session["last_accessed"] = datetime.now()
-    return session
-
-
 def get_current_user(request: Request) -> Dict:
-    """Get current user from session cookie."""
-    session_id = request.cookies.get("admin_session")
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    session = get_session(session_id)
+    """Get current user from session using the admin auth manager."""
+    session = auth_manager.get_session_from_request(request)
     if not session:
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
-
+        raise HTTPException(status_code=401, detail="Not authenticated")
     return session
 
 
@@ -109,48 +93,46 @@ router = APIRouter(
 
 
 @router.post("/login")
-async def login(request: LoginRequest, response: Response) -> Dict:
+async def login(login_request: LoginRequest, response: Response, request: Request) -> Dict:
     """
-    Authenticate user and create session.
+    Authenticate user and create session using the proper admin auth manager.
 
     Returns session information and sets secure HTTP-only cookie.
     """
     try:
-        # Debug logging
-        print(f"Login attempt - Username: '{request.username}', Password: '{request.password}'")
-        admin_username, admin_password = get_admin_credentials()
-        print(f"Expected - Username: '{admin_username}', Password: '{admin_password}'")
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("User-Agent")
 
-        if not verify_password(request.password, request.username):
-            print("Password verification failed")
+        auth_result = auth_manager.authenticate_user(
+            login_request.username, login_request.password, ip_address=client_ip, user_agent=user_agent
+        )
+
+        if not auth_result:
             raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        print("Password verification successful")
-
-        # Create session
-        session_id = create_session(request.username)
 
         # Set secure HTTP-only cookie
         response.set_cookie(
             key="admin_session",
-            value=session_id,
+            value=auth_result["session_id"],
             httponly=True,
             secure=os.getenv("ENVIRONMENT") == "production",
             samesite="lax",
-            max_age=SESSION_TIMEOUT_HOURS * 3600,
+            max_age=24 * 3600,  # 24 hours
         )
+
+        user_data = auth_result["user"].copy()
+        user_data.pop("password_hash", None)  # Remove password hash from response
 
         return {
             "success": True,
-            "session_id": session_id,
-            "user": {"username": request.username, "authenticated": True},
+            "session_id": auth_result["session_id"],
+            "user": {"username": user_data["username"], "authenticated": True},
             "message": "Login successful",
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Login exception: {e}")
         raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 
@@ -172,8 +154,8 @@ async def logout(request: Request, response: Response) -> Dict:
     """Logout user and invalidate session."""
     try:
         session_id = request.cookies.get("admin_session")
-        if session_id and session_id in active_sessions:
-            del active_sessions[session_id]
+        if session_id:
+            auth_manager.expire_session(session_id)
 
         # Clear cookie
         response.delete_cookie(key="admin_session")
@@ -205,7 +187,7 @@ async def auth_status() -> Dict:
     """Get authentication system status."""
     return {
         "auth_enabled": True,
-        "session_timeout_hours": SESSION_TIMEOUT_HOURS,
-        "active_sessions": len(active_sessions),
-        "auth_method": "session_based",
+        "session_timeout_hours": 24,
+        "auth_method": "bcrypt_session_based",
+        "secure_hashing": True,
     }
