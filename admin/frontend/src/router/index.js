@@ -47,15 +47,6 @@ const router = createRouter({
           }
         },
         {
-          path: 'content',
-          name: 'content',
-          component: () => import('@/views/ContentView.vue'),
-          meta: {
-            title: 'Content',
-            icon: 'document'
-          }
-        },
-        {
           path: 'sessions',
           name: 'sessions',
           component: () => import('@/views/SessionsView.vue'),
@@ -92,6 +83,14 @@ const router = createRouter({
               component: () => import('@/views/knowledge/SourcesView.vue'),
               meta: {
                 title: 'Knowledge Sources'
+              }
+            },
+            {
+              path: 'gaps',
+              name: 'knowledge-gaps',
+              component: () => import('@/views/knowledge/GapsView.vue'),
+              meta: {
+                title: 'Content Gaps'
               }
             },
             {

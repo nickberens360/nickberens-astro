@@ -10,10 +10,15 @@ Provides endpoints for:
 import logging
 import os
 import shutil
+from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+import aiofiles
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+from .auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -194,10 +199,29 @@ async def get_knowledge_stats(request: Request):
                 sources.add(source)
 
                 ct = metadata.get("content_type", "unknown")
-                content_types[ct] = content_types.get(ct, 0) + 1
+                if ct and ct != "unknown":
+                    # Split comma-separated content types and process individually
+                    individual_types = [
+                        t.strip()
+                        for t in ct.split(",")
+                        if t.strip()
+                        and not t.strip().startswith("based on")
+                        and not t.strip().startswith("the main topics")
+                    ]
+                    for content_type in individual_types:
+                        # Skip overly descriptive text, keep only core content type words
+                        if (
+                            len(content_type) > 50
+                            or "based on" in content_type.lower()
+                            or "main topics" in content_type.lower()
+                        ):
+                            continue
+                        content_types[content_type] = content_types.get(content_type, 0) + 1
+                else:
+                    content_types["unknown"] = content_types.get("unknown", 0) + 1
 
         return KnowledgeStats(
-            total_documents=len(sources),
+            total_documents=total_chunks,
             total_chunks=total_chunks,
             unique_sources=len(sources),
             content_types=content_types,
@@ -609,3 +633,113 @@ async def update_knowledge_file_content(file_path: str, request: Request):
     except Exception as e:
         logger.error(f"Failed to update file content: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to update file content: {str(e)}")
+
+
+@router.post("/api/knowledge/upload")
+async def upload_knowledge_files(
+    request: Request, files: List[UploadFile] = File(...), current_user: dict = Depends(get_current_user)
+):
+    """
+    Upload multiple files to the knowledge base.
+    Supports: MD, PDF, TXT, JSON, HTML, DOCX files.
+    """
+    try:
+        if not files:
+            raise HTTPException(status_code=400, detail="No files provided")
+
+        # Validate file count
+        if len(files) > 10:
+            raise HTTPException(status_code=400, detail="Maximum 10 files allowed per upload")
+
+        upload_results = []
+        successful_uploads = 0
+
+        for file in files:
+            try:
+                # Validate file size (50MB limit)
+                if file.size and file.size > 50 * 1024 * 1024:
+                    upload_results.append(
+                        {
+                            "filename": file.filename,
+                            "success": False,
+                            "error": f"File too large: {file.size / (1024*1024):.1f}MB (max 50MB)",
+                        }
+                    )
+                    continue
+
+                # Validate file extension
+                allowed_extensions = {".md", ".pdf", ".txt", ".json", ".html", ".docx", ".doc"}
+                file_ext = Path(file.filename).suffix.lower()
+                if file_ext not in allowed_extensions:
+                    upload_results.append(
+                        {"filename": file.filename, "success": False, "error": f"Unsupported file type: {file_ext}"}
+                    )
+                    continue
+
+                # Read file content
+                file_content = await file.read()
+                if not file_content:
+                    upload_results.append({"filename": file.filename, "success": False, "error": "Empty file"})
+                    continue
+
+                # Create target path in knowledge directory
+                knowledge_dir = Path("backend/knowledge")
+                knowledge_dir.mkdir(exist_ok=True)
+
+                # Generate unique filename if file already exists
+                target_path = knowledge_dir / file.filename
+                counter = 1
+                while target_path.exists():
+                    stem = Path(file.filename).stem
+                    suffix = Path(file.filename).suffix
+                    target_path = knowledge_dir / f"{stem}_{counter}{suffix}"
+                    counter += 1
+
+                # Write file
+                async with aiofiles.open(target_path, "wb") as f:
+                    await f.write(file_content)
+
+                # Reindex the file in the retriever
+                reindex_success = False
+                try:
+                    if hasattr(request.app.state, "unified_retriever") and request.app.state.unified_retriever:
+                        retriever = request.app.state.unified_retriever
+                        reindex_success = retriever.reindex_file(str(target_path))
+                    else:
+                        logger.warning("Unified retriever not available for re-indexing")
+                except Exception as e:
+                    logger.error(f"Failed to reindex uploaded file: {e}")
+                    reindex_success = False
+
+                if reindex_success:
+                    upload_results.append(
+                        {
+                            "filename": file.filename,
+                            "success": True,
+                            "size": len(file_content),
+                            "path": str(target_path),
+                        }
+                    )
+                    successful_uploads += 1
+                else:
+                    upload_results.append(
+                        {"filename": file.filename, "success": False, "error": "File saved but indexing failed"}
+                    )
+
+            except Exception as e:
+                logger.error(f"Failed to process file {file.filename}: {e}")
+                upload_results.append({"filename": file.filename, "success": False, "error": str(e)})
+
+        return {
+            "success": successful_uploads > 0,
+            "message": f"Processed {len(files)} files, {successful_uploads} successful",
+            "successful_uploads": successful_uploads,
+            "total_files": len(files),
+            "results": upload_results,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Upload failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")

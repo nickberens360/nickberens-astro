@@ -1,7 +1,7 @@
 <template>
   <div class="indexed-documents-view">
     <div class="d-flex justify-space-between align-center mb-6">
-      <h1 class="text-h4">Indexed Documents</h1>
+      <h2 class="text-h5">Indexed Documents</h2>
       <v-btn
         color="primary"
         prepend-icon="$refresh"
@@ -288,7 +288,7 @@ export default {
       // Check both content_type (singular) and content_types (plural) for backward compatibility
       const contentTypeStr = metadata.content_type || metadata.content_types
       if (!contentTypeStr || contentTypeStr === 'unknown') return ['unknown']
-      
+
       const types = contentTypeStr.split(',')
         .map(t => t.trim())
         .filter(t => t && t !== 'unknown' && !t.includes('based on'))
@@ -363,9 +363,6 @@ export default {
 </script>
 
 <style scoped>
-.indexed-documents-view {
-  padding: 24px;
-}
 
 .v-card {
   margin-bottom: 16px;

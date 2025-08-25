@@ -2,15 +2,25 @@
   <div class="sources-view">
     <div class="d-flex justify-space-between align-center mb-6">
       <h2 class="text-h5">Knowledge Sources</h2>
-      <v-btn
-        color="primary"
-        prepend-icon="$refresh"
-        @click="loadSources"
-        :loading="loading"
-        variant="outlined"
-      >
-        Refresh
-      </v-btn>
+      <div class="d-flex gap-2">
+        <v-btn
+          color="success"
+          prepend-icon="$upload"
+          @click="showUploadDialog = true"
+          variant="outlined"
+        >
+          Upload Files
+        </v-btn>
+        <v-btn
+          color="primary"
+          prepend-icon="$refresh"
+          @click="loadSources"
+          :loading="loading"
+          variant="outlined"
+        >
+          Refresh
+        </v-btn>
+      </div>
     </div>
 
     <v-card elevation="2">
@@ -181,6 +191,104 @@
       </v-card>
     </v-dialog>
 
+    <!-- Upload Dialog -->
+    <v-dialog v-model="showUploadDialog" max-width="600px">
+      <v-card>
+        <v-card-title class="text-h5 d-flex align-center">
+          <v-icon class="me-2">$upload</v-icon>
+          Upload Knowledge Files
+        </v-card-title>
+        
+        <v-card-text>
+          <div class="mb-4">
+            <p class="text-body-2 text-medium-emphasis mb-3">
+              Upload documents to add them to your knowledge base. Supported formats:
+              <strong>MD, PDF, TXT, JSON, HTML, DOCX</strong>
+            </p>
+            
+            <v-file-input
+              v-model="selectedFiles"
+              label="Select files to upload"
+              prepend-icon="$attach_file"
+              variant="outlined"
+              multiple
+              accept=".md,.pdf,.txt,.json,.html,.docx,.doc"
+              show-size
+              counter
+              :rules="fileRules"
+            />
+          </div>
+          
+          <!-- Upload Progress -->
+          <div v-if="uploadProgress.active" class="mb-4">
+            <v-card variant="outlined">
+              <v-card-text>
+                <div class="d-flex align-center justify-space-between mb-2">
+                  <span class="text-body-2">Uploading files...</span>
+                  <span class="text-body-2">{{ uploadProgress.completed }}/{{ uploadProgress.total }}</span>
+                </div>
+                <v-progress-linear
+                  :model-value="(uploadProgress.completed / uploadProgress.total) * 100"
+                  color="success"
+                  height="8"
+                  rounded
+                />
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- Upload Results -->
+          <div v-if="uploadResults.length > 0" class="mb-4">
+            <v-card variant="outlined">
+              <v-card-title class="text-subtitle-1">Upload Results</v-card-title>
+              <v-card-text>
+                <v-list density="compact">
+                  <v-list-item
+                    v-for="result in uploadResults"
+                    :key="result.filename"
+                  >
+                    <template v-slot:prepend>
+                      <v-icon 
+                        :color="result.success ? 'success' : 'error'"
+                        :icon="result.success ? '$check' : '$alert'"
+                      />
+                    </template>
+                    <v-list-item-title>{{ result.filename }}</v-list-item-title>
+                    <v-list-item-subtitle v-if="result.success">
+                      {{ formatFileSize(result.size) }}
+                    </v-list-item-subtitle>
+                    <v-list-item-subtitle v-else class="text-error">
+                      {{ result.error }}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-card-text>
+            </v-card>
+          </div>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn 
+            @click="cancelUpload" 
+            :disabled="uploadProgress.active"
+            variant="text"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            @click="uploadFiles"
+            color="success"
+            :loading="uploadProgress.active"
+            :disabled="!selectedFiles || selectedFiles.length === 0"
+            variant="elevated"
+          >
+            Upload {{ selectedFiles ? selectedFiles.length : 0 }} File{{ selectedFiles && selectedFiles.length !== 1 ? 's' : '' }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- File Editor Modal -->
     <FileEditorModal
       v-model="showFileEditorModal"
@@ -205,12 +313,95 @@ const selectedSource = ref(null)
 const editedContentType = ref('')
 const selectedFilename = ref('')
 
+// Upload dialog state
+const showUploadDialog = ref(false)
+const selectedFiles = ref(null)
+const uploadResults = ref([])
+const uploadProgress = ref({
+  active: false,
+  completed: 0,
+  total: 0
+})
+
 const sourceHeaders = [
   { title: 'Source Path', key: 'path', sortable: true },
   { title: 'Content Type', key: 'content_type', sortable: true },
   { title: 'Chunks', key: 'chunk_count', sortable: true },
   { title: 'Actions', key: 'actions', sortable: false, width: '150px' }
 ]
+
+// File validation rules
+const fileRules = [
+  files => !files || files.length <= 10 || 'Maximum 10 files at once',
+  files => !files || files.every(file => file.size <= 50 * 1024 * 1024) || 'Files must be smaller than 50MB'
+]
+
+// Upload methods
+const uploadFiles = async () => {
+  if (!selectedFiles.value || selectedFiles.value.length === 0) return
+
+  uploadProgress.value = {
+    active: true,
+    completed: 0,
+    total: selectedFiles.value.length
+  }
+  uploadResults.value = []
+
+  try {
+    const formData = new FormData()
+    for (const file of selectedFiles.value) {
+      formData.append('files', file)
+    }
+
+    const response = await adminAPI.uploadKnowledgeFiles(formData)
+    
+    uploadResults.value = response.results || []
+    uploadProgress.value.completed = selectedFiles.value.length
+    
+    // Show success message
+    if (response.successful_uploads > 0) {
+      setTimeout(() => {
+        // Refresh sources list to show new uploads
+        loadSources()
+        // Keep dialog open briefly to show results, then close
+        setTimeout(() => {
+          if (response.successful_uploads === selectedFiles.value.length) {
+            cancelUpload() // Close if all successful
+          }
+        }, 2000)
+      }, 1000)
+    }
+
+  } catch (error) {
+    console.error('Upload failed:', error)
+    uploadResults.value = selectedFiles.value.map(file => ({
+      filename: file.name,
+      success: false,
+      error: error.response?.data?.detail || 'Upload failed'
+    }))
+  } finally {
+    uploadProgress.value.active = false
+  }
+}
+
+const cancelUpload = () => {
+  showUploadDialog.value = false
+  selectedFiles.value = null
+  uploadResults.value = []
+  uploadProgress.value = {
+    active: false,
+    completed: 0,
+    total: 0
+  }
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 const getFileIcon = (filename) => {
   const ext = filename.split('.').pop()?.toLowerCase()
@@ -273,19 +464,19 @@ const confirmDelete = (source) => {
 
 const saveEdit = async () => {
   if (!selectedSource.value) return
-  
+
   try {
     loading.value = true
     await adminAPI.updateKnowledgeSource(selectedSource.value.path, {
       content_type: editedContentType.value
     })
-    
+
     // Update local data
     const index = sources.value.findIndex(s => s.path === selectedSource.value.path)
     if (index !== -1) {
       sources.value[index].content_type = editedContentType.value
     }
-    
+
     showEditDialog.value = false
   } catch (error) {
     console.error('Failed to update source:', error)
@@ -296,14 +487,14 @@ const saveEdit = async () => {
 
 const deleteSource = async () => {
   if (!selectedSource.value) return
-  
+
   try {
     loading.value = true
     await adminAPI.deleteKnowledgeSource(selectedSource.value.path)
-    
+
     // Remove from local data
     sources.value = sources.value.filter(s => s.path !== selectedSource.value.path)
-    
+
     showDeleteDialog.value = false
   } catch (error) {
     console.error('Failed to delete source:', error)
@@ -325,16 +516,16 @@ const cancelDelete = () => {
 
 const viewFileContent = (source) => {
   selectedSource.value = source
-  
+
   // Check if this is a binary file type that can't be edited
   const ext = source.path.split('.').pop()?.toLowerCase()
   const binaryTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
-  
+
   if (binaryTypes.includes(ext)) {
     alert(`Cannot edit binary file: ${source.path}\n\nFile type: ${ext.toUpperCase()}\nThis file contains binary data that cannot be edited as text.`)
     return
   }
-  
+
   // Extract the relative path from the full source path
   let relativePath = source.path
   if (relativePath.startsWith('backend/knowledge/')) {
@@ -342,7 +533,7 @@ const viewFileContent = (source) => {
   } else if (relativePath.startsWith('public/')) {
     relativePath = relativePath.replace('public/', '')
   }
-  
+
   selectedFilename.value = relativePath
   showFileEditorModal.value = true
 }
@@ -365,9 +556,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.sources-view {
-  padding: 24px;
-}
 
 /* Ensure proper spacing for content type chips */
 .gap-1 > .v-chip {

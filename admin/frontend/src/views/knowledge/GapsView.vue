@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="d-flex justify-space-between align-center mb-6">
       <div>
-        <h1 class="text-h4 font-weight-bold">Content Insights</h1>
+        <h2 class="text-h5">Content Gaps</h2>
         <p class="text-body-1 text-medium-emphasis mt-1">
           Monitor and manage content gaps in your knowledge base
         </p>

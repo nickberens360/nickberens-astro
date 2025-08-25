@@ -46,7 +46,12 @@ import {
   mdiUndo,
   mdiWeatherNight,
   mdiWhiteBalanceSunny,
-  mdiMemory
+  mdiMemory,
+  mdiChartBar,
+  mdiLightbulbOutline,
+  mdiLightbulb,
+  mdiTableLarge,
+  mdiAlertCircleOutline
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -144,7 +149,13 @@ export default createVuetify({
       logout: mdiLogout,
       'weather-night': mdiWeatherNight,
       'light-mode': mdiWhiteBalanceSunny,
-      memory: mdiMemory
+      memory: mdiMemory,
+      'bar_chart': mdiChartBar,
+      'lightbulb': mdiLightbulbOutline,
+      'recommend': mdiLightbulb,
+      'table': mdiTableLarge,
+      'warning': mdiAlertCircleOutline,
+      'check_circle': mdiCheckCircle
     },
     sets: {
       mdi

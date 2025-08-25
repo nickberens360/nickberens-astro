@@ -366,7 +366,7 @@ export default {
       selectedDocument.value = item
       showDocumentDialog.value = true
       fullDocumentContent.value = ''
-      
+
       // Fetch the full document content
       try {
         loadingFullContent.value = true
@@ -415,9 +415,6 @@ export default {
 </script>
 
 <style scoped>
-.indexed-documents-view {
-  padding: 24px;
-}
 
 .v-card {
   margin-bottom: 16px;

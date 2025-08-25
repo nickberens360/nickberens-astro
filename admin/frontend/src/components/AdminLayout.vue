@@ -292,12 +292,6 @@ const navigationItems = computed(() => [
     icon: '$chart'
   },
   {
-    name: 'content',
-    title: 'Content',
-    to: '/admin/content',
-    icon: '$document'
-  },
-  {
     name: 'sessions',
     title: 'Sessions',
     to: '/admin/sessions',
@@ -308,10 +302,10 @@ const navigationItems = computed(() => [
     title: 'Knowledge Base',
     to: '/admin/knowledge/sources',
     icon: '$knowledge',
-    /*children: [
+    children: [
       {
         name: 'knowledge-sources',
-        title: 'Knowledge Sources',
+        title: 'Source Files',
         to: '/admin/knowledge/sources'
       },
       {
@@ -320,11 +314,16 @@ const navigationItems = computed(() => [
         to: '/admin/knowledge/documents'
       },
       {
+        name: 'knowledge-gaps',
+        title: 'Content Gaps',
+        to: '/admin/knowledge/gaps'
+      },
+      {
         name: 'knowledge-stats',
-        title: 'Knowledge Statistics',
+        title: 'Analytics',
         to: '/admin/knowledge/stats'
       }
-    ]*/
+    ]
   }
 ]);
 

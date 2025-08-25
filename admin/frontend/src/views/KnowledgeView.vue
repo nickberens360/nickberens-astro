@@ -15,7 +15,7 @@
 
     <!-- Navigation Metric Cards - Always Visible -->
     <v-row class="mb-6">
-      <v-col cols="12" md="3">
+      <v-col cols="12" sm="6" md="3">
         <v-card
           elevation="1"
           class="cursor-pointer"
@@ -33,7 +33,7 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col cols="12" sm="6" md="3">
         <v-card
           elevation="1"
           class="cursor-pointer"
@@ -51,7 +51,25 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col cols="12" sm="6" md="3">
+        <v-card
+          elevation="1"
+          class="cursor-pointer"
+          :class="{'v-card--active': currentRoute === 'knowledge-gaps'}"
+          @click="navigateTo('knowledge-gaps')"
+        >
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="warning" size="large" class="me-3">$warning</v-icon>
+              <div>
+                <div class="text-h6">{{ contentGaps || 0 }}</div>
+                <div class="text-body-2 text-medium-emphasis">Content Gaps</div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
         <v-card
           elevation="1"
           class="cursor-pointer"
@@ -60,23 +78,10 @@
         >
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="purple" size="large" class="me-3">$data_object</v-icon>
+              <v-icon color="purple" size="large" class="me-3">$chart</v-icon>
               <div>
-                <div class="text-h6">{{ knowledgeStats.total_chunks || 0 }}</div>
-                <div class="text-body-2 text-medium-emphasis">Vector Chunks</div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" md="3">
-        <v-card elevation="1">
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon color="orange" size="large" class="me-3">$memory</v-icon>
-              <div>
-                <div class="text-h6">{{ embeddingModel }}</div>
-                <div class="text-body-2 text-medium-emphasis">Embedding Model</div>
+                <div class="text-h6">Analytics</div>
+                <div class="text-body-2 text-medium-emphasis">Knowledge Stats</div>
               </div>
             </div>
           </v-card-text>
@@ -108,6 +113,7 @@ const knowledgeStats = ref({
   unique_sources: 0,
   content_types: {}
 })
+const contentGaps = ref(0)
 const embeddingModel = ref('text-embedding-3-small')
 
 const currentRoute = computed(() => route.name)
@@ -120,6 +126,7 @@ const refreshAll = async () => {
   loading.value = true
   try {
     await loadKnowledgeStats()
+    await loadContentGaps()
     // Emit refresh event to child components if needed
     // This could be enhanced with an event bus or provide/inject
   } catch (error) {
@@ -137,8 +144,18 @@ const loadKnowledgeStats = async () => {
   }
 }
 
+const loadContentGaps = async () => {
+  try {
+    const response = await adminAPI.getContentGaps({ resolved: false, limit: 100 })
+    contentGaps.value = response.total_count || 0
+  } catch (error) {
+    console.error('Failed to load content gaps:', error)
+  }
+}
+
 onMounted(() => {
   loadKnowledgeStats()
+  loadContentGaps()
 })
 </script>
 
