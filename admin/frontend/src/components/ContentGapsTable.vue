@@ -4,7 +4,7 @@
     <div class="d-flex justify-space-between align-center mb-4">
       <div class="d-flex align-center gap-4">
         <h2 class="text-h6 font-weight-bold">Content Gaps</h2>
-        <v-chip 
+        <v-chip
           :color="showResolved ? 'success' : 'warning'"
           variant="tonal"
           size="small"
@@ -12,7 +12,7 @@
           {{ gaps.length }} {{ showResolved ? 'Total' : 'Unresolved' }} Gaps
         </v-chip>
       </div>
-      
+
       <div class="d-flex align-center gap-2">
         <v-switch
           v-model="showResolved"
@@ -20,9 +20,10 @@
           color="primary"
           hide-details
           inset
+          class="mr-4"
           @update:model-value="fetchGaps"
         />
-        
+
         <v-btn
           color="primary"
           variant="outlined"
@@ -72,8 +73,8 @@
             <td class="py-4">
               <div class="d-flex flex-column">
                 <span class="font-weight-medium">{{ gap.pattern }}</span>
-                <span 
-                  v-if="gap.sample_query" 
+                <span
+                  v-if="gap.sample_query"
                   class="text-caption text-medium-emphasis mt-1"
                   style="max-width: 300px;"
                 >
@@ -84,7 +85,7 @@
 
             <!-- Count -->
             <td class="text-center">
-              <v-chip 
+              <v-chip
                 :color="getCountColor(gap.count)"
                 variant="tonal"
                 size="small"
@@ -143,7 +144,7 @@
                   <v-icon>$check</v-icon>
                   <v-tooltip activator="parent">Mark as Resolved</v-tooltip>
                 </v-btn>
-                
+
                 <v-btn
                   v-else
                   color="warning"
@@ -181,12 +182,12 @@
           <v-icon>$note-edit</v-icon>
           Edit Notes
         </v-card-title>
-        
+
         <v-card-text>
           <div class="mb-4">
             <strong>Pattern:</strong> {{ notesDialog.gap?.pattern }}
           </div>
-          
+
           <v-textarea
             v-model="notesDialog.notes"
             label="Notes"
@@ -197,12 +198,12 @@
             :rules="[v => !v || v.length <= 500 || 'Notes must be less than 500 characters']"
           />
         </v-card-text>
-        
+
         <v-card-actions>
           <v-spacer />
           <v-btn @click="closeNotesDialog" color="grey">Cancel</v-btn>
-          <v-btn 
-            @click="saveNotes" 
+          <v-btn
+            @click="saveNotes"
             color="primary"
             :loading="notesDialog.saving"
           >
@@ -275,9 +276,9 @@ const showSnackbar = (message, color = 'success') => {
 const fetchGaps = async () => {
   try {
     loading.value = true
-    const response = await api.getContentGaps({ 
-      resolved: showResolved.value, 
-      limit: 100 
+    const response = await api.getContentGaps({
+      resolved: showResolved.value,
+      limit: 100
     })
     gaps.value = response.gaps || []
   } catch (error) {
@@ -378,7 +379,7 @@ const stats = computed(() => {
   const total = gaps.value.length
   const resolved = gaps.value.filter(g => g.resolved).length
   const unresolved = total - resolved
-  const avgScore = total > 0 
+  const avgScore = total > 0
     ? (gaps.value.reduce((sum, g) => sum + g.avg_score, 0) / total).toFixed(2)
     : '0.00'
 

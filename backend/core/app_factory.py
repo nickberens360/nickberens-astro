@@ -107,5 +107,6 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     app.include_router(queries.router, prefix="/admin/api")  # For /admin/api/queries
     app.include_router(stats.router, prefix="/admin/api")  # For /admin/api/stats/overview
     app.include_router(performance.router, prefix="/admin/api")  # For /admin/api/performance endpoints
+    app.include_router(content.router, prefix="/admin/api")  # For /admin/api/content endpoints
 
     return app

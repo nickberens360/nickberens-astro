@@ -52,8 +52,8 @@ import {
 // Import Vuetify styles
 import 'vuetify/styles'
 
-// Custom theme
-const customTheme = {
+// Light theme
+const lightTheme = {
   dark: false,
   colors: {
     primary: '#1976D2',
@@ -68,11 +68,28 @@ const customTheme = {
   }
 }
 
+// Dark theme
+const darkTheme = {
+  dark: true,
+  colors: {
+    primary: '#2196F3',
+    secondary: '#616161',
+    accent: '#82B1FF',
+    error: '#FF5252',
+    info: '#2196F3',
+    success: '#4CAF50',
+    warning: '#FFC107',
+    surface: '#1E1E1E',
+    background: '#121212'
+  }
+}
+
 export default createVuetify({
   theme: {
-    defaultTheme: 'customTheme',
+    defaultTheme: 'dark',
     themes: {
-      customTheme
+      light: lightTheme,
+      dark: darkTheme
     }
   },
   icons: {

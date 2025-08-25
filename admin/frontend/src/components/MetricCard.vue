@@ -174,7 +174,7 @@ const formatChange = (change) => {
 
 .metric-card.cursor-pointer:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(var(--v-shadow-key-umbra-opacity), 0.15);
 }
 
 .metric-card .v-card-text {
