@@ -98,10 +98,7 @@ export const useAdminStore = defineStore('admin', () => {
     return isConnected.value
   }
 
-  const fetchStats = async (days = 7) => {
-    if (isLoading.value) return
-
-    isLoading.value = true
+  const fetchStatsInternal = async (days = 7) => {
     error.value = null
 
     try {
@@ -127,10 +124,20 @@ export const useAdminStore = defineStore('admin', () => {
       lastUpdate.value = new Date().toISOString()
       console.log('Stats updated:', stats.value)
       console.log('Stats reactive value:', stats.value)
-      console.log('Setting isLoading to false after successful stats fetch')
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch stats:', err)
+      throw err // Re-throw so refreshData can handle it
+    }
+  }
+
+  const fetchStats = async (days = 7) => {
+    if (isLoading.value) return
+
+    isLoading.value = true
+
+    try {
+      await fetchStatsInternal(days)
     } finally {
       isLoading.value = false
     }
@@ -172,11 +179,19 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   const refreshData = async () => {
+    if (isLoading.value) return
+    
     console.log('Refreshing admin data...')
-    await Promise.all([
-      fetchStats(),
-      fetchSystemHealth()
-    ])
+    isLoading.value = true
+    
+    try {
+      await Promise.all([
+        fetchStatsInternal(),
+        fetchSystemHealth()
+      ])
+    } finally {
+      isLoading.value = false
+    }
   }
 
   let refreshInterval = null
