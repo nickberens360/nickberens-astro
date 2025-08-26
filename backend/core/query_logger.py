@@ -279,7 +279,10 @@ class QueryLogger:
                     "query_type": "text",
                     "response_time": None,
                     "request_id": request_id,
-                    "metadata": {"cache_key": cache_key, "response_updated": datetime.now(datetime.timezone.utc).isoformat()},
+                    "metadata": {
+                        "cache_key": cache_key,
+                        "response_updated": datetime.now(datetime.timezone.utc).isoformat(),
+                    },
                 }
                 try:
                     with open(self.log_file_path, "a") as f:
