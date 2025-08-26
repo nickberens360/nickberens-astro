@@ -20,46 +20,123 @@ if admin_path not in sys.path:
 try:
     from auth import auth_manager
 except ImportError:
-    # Fallback for when admin auth is not available
+    # Database-backed auth manager for the main backend
     import secrets
     import sqlite3
     from datetime import datetime, timedelta
+    from pathlib import Path
 
     from passlib.context import CryptContext
 
-    # Simple fallback auth manager
-    class FallbackAuthManager:
+    # Database-backed auth manager
+    class DatabaseAuthManager:
         def __init__(self):
             self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-            self.sessions = {}
+            # Set up database path
+            self.db_path = Path(__file__).parent.parent / "logs" / "auth_sessions.db"
+            self.db_path.parent.mkdir(exist_ok=True)
+            self._init_database()
+            # Cache admin credentials
+            self._admin_username = os.getenv("ADMIN_USERNAME", "admin")
+            self._admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+
+        def _init_database(self):
+            """Initialize the sessions database."""
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    created_at TIMESTAMP NOT NULL,
+                    last_accessed TIMESTAMP NOT NULL,
+                    ip_address TEXT,
+                    user_agent TEXT
+                )
+            """
+            )
+            # Clean up old sessions (older than 24 hours)
+            cursor.execute(
+                """
+                DELETE FROM sessions 
+                WHERE datetime(last_accessed) < datetime('now', '-24 hours')
+            """
+            )
+            conn.commit()
+            conn.close()
 
         def authenticate_user(self, username: str, password: str, ip_address: str = None, user_agent: str = None):
-            # Simple fallback - use environment variables with proper bcrypt
-            admin_username = os.getenv("ADMIN_USERNAME", "admin")
-            admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-
-            if username != admin_username:
-                return None
-
-            # For fallback, hash the env password and compare
-            if not hasattr(self, "_hashed_admin_password"):
-                self._hashed_admin_password = self.pwd_context.hash(admin_password)
-
-            if not self.pwd_context.verify(password, self._hashed_admin_password):
+            # Simple authentication with environment variables
+            if username != self._admin_username or password != self._admin_password:
                 return None
 
             session_id = secrets.token_urlsafe(32)
-            self.sessions[session_id] = {"user": {"username": username, "id": 1}, "session_id": session_id}
-            return self.sessions[session_id]
+            now = datetime.now()
+
+            # Store session in database
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO sessions (session_id, username, user_id, created_at, last_accessed, ip_address, user_agent)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (session_id, username, 1, now, now, ip_address, user_agent),
+            )
+            conn.commit()
+            conn.close()
+
+            return {
+                "user": {"username": username, "id": 1},
+                "session_id": session_id,
+                "created_at": now,
+                "last_accessed": now,
+            }
 
         def get_session_from_request(self, request: Request):
             session_id = request.cookies.get("admin_session")
-            return self.sessions.get(session_id) if session_id else None
+            if not session_id:
+                return None
+
+            conn = sqlite3.connect(str(self.db_path))
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Get session and update last accessed time
+            cursor.execute(
+                """
+                UPDATE sessions 
+                SET last_accessed = ?
+                WHERE session_id = ? 
+                AND datetime(last_accessed) > datetime('now', '-24 hours')
+                RETURNING *
+            """,
+                (datetime.now(), session_id),
+            )
+
+            row = cursor.fetchone()
+            conn.commit()
+            conn.close()
+
+            if row:
+                return {
+                    "user": {"username": row["username"], "id": row["user_id"]},
+                    "session_id": row["session_id"],
+                    "created_at": datetime.fromisoformat(row["created_at"]),
+                    "last_accessed": datetime.fromisoformat(row["last_accessed"]),
+                }
+            return None
 
         def expire_session(self, session_id: str):
-            self.sessions.pop(session_id, None)
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+            conn.commit()
+            conn.close()
 
-    auth_manager = FallbackAuthManager()
+    auth_manager = DatabaseAuthManager()
 
 
 class LoginRequest(BaseModel):
@@ -83,7 +160,13 @@ def get_current_user(request: Request) -> Dict:
     session = auth_manager.get_session_from_request(request)
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return session
+    # Return user data with session info
+    return {
+        "username": session["user"]["username"],
+        "id": session["user"]["id"],
+        "created_at": session.get("created_at", datetime.now()),
+        "last_accessed": session.get("last_accessed", datetime.now()),
+    }
 
 
 router = APIRouter(

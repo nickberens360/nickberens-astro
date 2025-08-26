@@ -9,6 +9,7 @@ langchain-community
 langchain-google-genai
 lxml
 markdown
+passlib[bcrypt]
 pdfplumber
 pypdf
 python-docx

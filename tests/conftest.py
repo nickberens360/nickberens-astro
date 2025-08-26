@@ -21,27 +21,30 @@ def disable_rate_limiting(monkeypatch: pytest.MonkeyPatch):
     try:
         # Set unlimited rate limit in config for tests
         from backend.core.config import AppConfig
+
         monkeypatch.setattr(AppConfig, "RATE_LIMIT", "100000/minute", raising=False)
-        
+
         # Import and patch slowapi components
-        from slowapi import Limiter
         import slowapi
+        from slowapi import Limiter
 
         def _noop_decorator(*args, **kwargs):
             def _wrap(func):
                 return func
+
             return _wrap
 
         # Patch the Limiter class methods
         monkeypatch.setattr(Limiter, "limit", _noop_decorator, raising=False)
-        
+
         # Try to patch the app_factory limiter instance too
         try:
             from backend.core import app_factory
+
             monkeypatch.setattr(app_factory.limiter, "limit", _noop_decorator, raising=False)
         except Exception:
             pass
-        
+
     except Exception as e:
         # If any patching fails, continue with tests
         print(f"Warning: Could not fully disable rate limiting for tests: {e}")
