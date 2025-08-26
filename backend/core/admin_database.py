@@ -4,6 +4,7 @@ Migrated from admin/backend/database.py with improvements.
 """
 
 import logging
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime

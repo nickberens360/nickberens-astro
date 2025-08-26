@@ -10,6 +10,7 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
 from .geolocation_service import get_geolocation_service
@@ -38,16 +39,16 @@ class DualQueryLogger(QueryLogger):
 
         # Set up SQLite database path - use absolute path for consistency with admin
         if sqlite_db_path is None:
-            # Compute absolute path relative to project root (same logic as admin QueryDataManager)
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            sqlite_db_path = os.path.join(project_root, "backend", "logs", "rag_monitoring.db")
+            # Compute absolute path relative to project root using Path for better reliability
+            project_root = Path(__file__).parent.parent.parent
+            sqlite_db_path = str(project_root / "backend" / "logs" / "rag_monitoring.db")
         self.sqlite_db_path = sqlite_db_path
         self._init_sqlite_database()
 
     def _init_sqlite_database(self):
         """Initialize the SQLite database with required tables."""
         # Ensure directory exists
-        os.makedirs(os.path.dirname(self.sqlite_db_path), exist_ok=True)
+        Path(self.sqlite_db_path).parent.mkdir(parents=True, exist_ok=True)
 
         with self._get_sqlite_connection() as conn:
             cursor = conn.cursor()

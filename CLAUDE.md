@@ -310,7 +310,7 @@ The project features a fully integrated admin dashboard system with comprehensiv
 - **Frontend**: http://localhost:3000 (Vue.js + Vuetify interface)
 - **Backend**: http://localhost:8000 (FastAPI admin API - integrated with main backend)
 - **Authentication**: Token-based (ADMIN_TOKEN environment variable)
-- **Default Token**: `demo-admin-token-secure-123` (development only)
+- **Security**: Always set a secure ADMIN_TOKEN environment variable (generate with `openssl rand -hex 32`)
 - **Admin Routes**: `/admin/*` endpoints protected with token authentication
 
 #### Admin Dashboard Features
