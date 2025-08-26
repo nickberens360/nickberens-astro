@@ -154,13 +154,18 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   const fetchStats = async (days = 7) => {
-    if (isLoading.value) return
-
-    isLoading.value = true
-
+    // Don't return early if already loading - this could cause stuck state
+    // Instead, let the operation proceed and manage loading state properly
+    
     try {
+      isLoading.value = true
       await fetchStatsInternal(days)
+    } catch (err) {
+      // Make sure we catch and handle errors properly
+      console.error('Failed to fetch stats:', err)
+      error.value = adminAPI.formatError(err)
     } finally {
+      // Always reset loading state
       isLoading.value = false
     }
   }
@@ -203,14 +208,28 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   const refreshData = async () => {
-    if (isLoading.value) return
+    // Remove the early return to prevent getting stuck
+    // Instead, we'll use a timeout to force reset if needed
     
     if (import.meta.env.DEV) {
       console.log('Refreshing admin data...')
     }
-    isLoading.value = true
+    
+    // Force reset loading state if it's been stuck for too long
+    let loadingTimeout = null
     
     try {
+      // Set loading state
+      isLoading.value = true
+      
+      // Set a timeout to force reset loading state after 10 seconds
+      loadingTimeout = setTimeout(() => {
+        if (isLoading.value) {
+          console.warn('Force resetting loading state after timeout')
+          isLoading.value = false
+        }
+      }, 10000)
+      
       await Promise.all([
         fetchStatsInternal().catch(err => {
           console.error('Stats fetch failed:', err)
@@ -225,6 +244,10 @@ export const useAdminStore = defineStore('admin', () => {
       console.error('Refresh data failed:', err)
       error.value = adminAPI.formatError(err)
     } finally {
+      // Clear the timeout and reset loading state
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout)
+      }
       isLoading.value = false
     }
   }
