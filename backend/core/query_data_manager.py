@@ -321,6 +321,11 @@ class QueryDataManager:
                 queries = []
                 for row in cursor.fetchall():
                     query_dict = dict(row)
+
+                    # Map system_response to response for frontend compatibility
+                    if "system_response" in query_dict:
+                        query_dict["response"] = query_dict["system_response"]
+
                     # Parse JSON fields safely
                     try:
                         if query_dict["sources_used"]:
