@@ -135,8 +135,8 @@ async def start_cache_warming(retrievers: Dict[str, BaseRetriever], app_state: A
         logger.warning("No follow-up service available for cache warming")
         return
 
-    # Get the static questions (all 6 questions)
-    questions_to_warm = followup_service.questions.copy()
+    # Get the static questions (all 6 questions) - convert tuple to list for processing
+    questions_to_warm = list(followup_service.questions)
 
     if not questions_to_warm:
         logger.info("No general follow-up questions found for cache warming")
