@@ -92,3 +92,13 @@ query-logs/
 cookies*.txt
 *cookies*.txt
 admin_cookies.txt
+
+# Database files (SQLite - should not be in version control)
+*.db
+*.sqlite
+*.sqlite3
+backend/logs/*.db
+admin/*.db
+admin_monitoring.db
+rag_monitoring.db
+auth_sessions.db
