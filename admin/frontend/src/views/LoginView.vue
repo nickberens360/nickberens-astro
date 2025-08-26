@@ -124,7 +124,7 @@ export default {
       state.success = null
       
       try {
-        const response = await axios.post(`${API_BASE_URL}/admin/api/auth/login`, {
+        const response = await axios.post(`${API_BASE_URL}/auth/login`, {
           username: formData.username,
           password: formData.password
         })
@@ -180,7 +180,7 @@ export default {
       if (!token) return
       
       try {
-        const response = await axios.get(`${API_BASE_URL}/admin/api/auth/me`, {
+        const response = await axios.get(`${API_BASE_URL}/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         

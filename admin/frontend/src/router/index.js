@@ -151,7 +151,7 @@ router.beforeEach(async (to, from, next) => {
     if (token) {
       try {
         // Quick token validation
-        const response = await fetch(`${API_BASE_URL}/admin/api/auth/me`, {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         isAuthenticated = response.ok
@@ -174,7 +174,7 @@ router.beforeEach(async (to, from, next) => {
     const token = localStorage.getItem('admin_token')
     if (token) {
       try {
-        const response = await fetch(`${API_BASE_URL}/admin/api/auth/me`, {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (response.ok) {

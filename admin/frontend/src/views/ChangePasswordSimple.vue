@@ -129,7 +129,7 @@ export default {
           return
         }
         
-        const response = await axios.post(`${API_BASE_URL}/admin/api/auth/change-password`, {
+        const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {
           current_password: formData.currentPassword,
           new_password: formData.newPassword
         }, {
