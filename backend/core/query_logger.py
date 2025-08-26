@@ -281,7 +281,7 @@ class QueryLogger:
                     "request_id": request_id,
                     "metadata": {
                         "cache_key": cache_key,
-                        "response_updated": datetime.now(datetime.timezone.utc).isoformat(),
+                        "response_updated": datetime.now(timezone.utc).isoformat(),
                     },
                 }
                 try:

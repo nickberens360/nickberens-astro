@@ -17,7 +17,28 @@ logger = logging.getLogger(__name__)
 
 
 class AdminAuthManager:
-    """Handles admin authentication, password hashing, and session management."""
+    """
+    Manages admin authentication for the backend system.
+
+    Purpose:
+        Provides secure authentication mechanisms for admin users, including password hashing,
+        verification, session management, and rate limiting for failed login attempts.
+
+    Main Responsibilities:
+        - Hashes and verifies admin passwords using bcrypt.
+        - Manages admin sessions, including creation, expiry, and activity tracking.
+        - Limits concurrent sessions per user and expires oldest sessions when necessary.
+        - Implements rate limiting and lockout for repeated failed authentication attempts.
+        - Tracks session metadata such as IP address and user agent for auditing.
+
+    Security Considerations:
+        - Enforces minimum password length and uses bcrypt with configurable rounds for hashing.
+        - Sessions expire after a configurable period (default: 24 hours) to reduce risk of hijacking.
+        - Limits the number of concurrent active sessions per user to mitigate session abuse.
+        - Implements lockout after repeated failed login attempts to prevent brute-force attacks.
+        - Stores session metadata for monitoring and forensic analysis.
+        - Handles exceptions and logs errors for security auditing.
+    """
 
     def __init__(self):
         # Use bcrypt directly instead of passlib to avoid version compatibility issues

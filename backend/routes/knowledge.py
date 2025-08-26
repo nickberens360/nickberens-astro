@@ -15,7 +15,6 @@ from typing import List, Optional
 
 import aiofiles
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ..core.admin_auth import require_admin_auth

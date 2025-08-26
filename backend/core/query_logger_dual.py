@@ -6,17 +6,12 @@ This module extends the original query logger to write to both:
 2. SQLite database (for real-time admin dashboard access)
 """
 
-import hashlib
 import json
-import logging
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, Optional, Set
 
-from .config import AppConfig
 from .geolocation_service import get_geolocation_service
 from .query_logger import QueryLogger
 

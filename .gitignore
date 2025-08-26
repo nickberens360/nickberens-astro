@@ -87,3 +87,8 @@ query-logs/
 
 # Claude Code conversation logs
 2025-*-caveat-the-messages-below-were-generated-by-the-u.txt
+
+# Cookie files (session data)
+cookies*.txt
+*cookies*.txt
+admin_cookies.txt

@@ -117,9 +117,13 @@ class AdminDatabaseManager:
 
         # Default credentials (should be changed after first login)
         username = "admin"
-        password = "admin123"  # This should be changed immediately
+        password = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")  # Use env var or weak default
         email = "admin@localhost"
         role = "admin"
+
+        if password == "admin123":
+            logger.warning("Using weak default admin password. Set ADMIN_DEFAULT_PASSWORD env var.")
+            logger.warning("This should be changed immediately in production!")
 
         password_hash = pwd_context.hash(password)
 

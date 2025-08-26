@@ -3,6 +3,7 @@
 Script to set admin password without interactive prompts
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -14,9 +15,18 @@ from backend.database import db_manager
 
 
 def set_admin_password():
-    """Set a default password for the admin user."""
+    """
+    Set a default password for the admin user.
+
+    WARNING: This sets a weak default password and should ONLY be used for development.
+    For production, use the create_admin.py script with a strong password.
+    """
     username = "admin"
-    password = "admin123"  # Default password
+    password = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")  # Use env var or weak default
+
+    if password == "admin123":
+        print("WARNING: Using weak default password. Set ADMIN_DEFAULT_PASSWORD env var for better security.")
+        print("This should NEVER be used in production!")
 
     # Check if user exists
     user = db_manager.get_admin_user(username)

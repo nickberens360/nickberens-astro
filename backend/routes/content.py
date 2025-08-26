@@ -12,12 +12,9 @@ import sqlite3
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 from starlette.requests import Request
-
-from ..core.config import AppConfig
-from ..core.unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

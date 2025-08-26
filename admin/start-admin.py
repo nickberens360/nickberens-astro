@@ -25,8 +25,6 @@ def main():
     try:
         import uvicorn
 
-        from backend.main import app
-
         port = int(os.environ.get("ADMIN_PORT", 8000))
 
         print("🚀 Starting RAG Admin Dashboard (Integrated Backend)...")

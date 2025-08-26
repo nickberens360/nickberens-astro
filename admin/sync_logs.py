@@ -7,7 +7,6 @@ import json
 import os
 import sqlite3
 import sys
-import uuid
 from datetime import datetime
 from pathlib import Path
 

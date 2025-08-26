@@ -8,12 +8,11 @@ import io
 import json
 import logging
 import os
-import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
@@ -24,12 +23,10 @@ from ..models.admin_models import (
     ChangePasswordRequest,
     CreateUserRequest,
     FeedbackUpdate,
-    FileContentUpdate,
     LoginRequest,
     LoginResponse,
     OverviewStats,
     QueryResponse,
-    SuccessResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -116,10 +113,16 @@ async def get_current_user_info(session: Dict[str, Any] = Depends(require_admin_
 
 @router.post("/auth/change-password")
 async def change_password(
-    password_data: ChangePasswordRequest, session: Dict[str, Any] = Depends(require_admin_auth)
+    password_data: ChangePasswordRequest, request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
 ) -> Dict[str, Any]:
-    """Change the current user's password with enhanced security."""
+    """Change the current user's password with enhanced security and rate limiting."""
     try:
+        # Rate limiting for password change attempts
+        client_ip = request.client.host if request.client else "unknown"
+        if admin_auth_manager._is_rate_limited(client_ip):
+            logger.warning(f"Rate limited password change attempt from {client_ip} for user {session['username']}")
+            raise HTTPException(status_code=429, detail="Too many password change attempts. Please try again later.")
+
         # Get the current user
         user = admin_db_manager.get_admin_user(session["username"])
         if not user:
@@ -127,7 +130,9 @@ async def change_password(
 
         # Verify current password
         if not admin_auth_manager.verify_password(password_data.current_password, user["password_hash"]):
-            logger.warning(f"Invalid current password attempt for user: {session['username']}")
+            # Record failed password verification attempt
+            admin_auth_manager._record_failed_attempt(client_ip)
+            logger.warning(f"Invalid current password attempt for user: {session['username']} from IP: {client_ip}")
             raise HTTPException(status_code=400, detail="Current password is incorrect")
 
         # Enhanced password validation
@@ -160,6 +165,9 @@ async def change_password(
 
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update password")
+
+        # Reset failed attempts on successful password change
+        admin_auth_manager._reset_failed_attempts(client_ip)
 
         # Expire all sessions for this user (except current one)
         admin_auth_manager.expire_user_sessions(user["id"])

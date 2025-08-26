@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/components/AdminLayout.vue'
 import { useAdminStore } from '@/stores/admin'
 
+// API base URL configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -148,7 +151,7 @@ router.beforeEach(async (to, from, next) => {
     if (token) {
       try {
         // Quick token validation
-        const response = await fetch('http://localhost:8000/admin/api/auth/me', {
+        const response = await fetch(`${API_BASE_URL}/admin/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         isAuthenticated = response.ok
@@ -171,7 +174,7 @@ router.beforeEach(async (to, from, next) => {
     const token = localStorage.getItem('admin_token')
     if (token) {
       try {
-        const response = await fetch('http://localhost:8000/admin/api/auth/me', {
+        const response = await fetch(`${API_BASE_URL}/admin/api/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (response.ok) {

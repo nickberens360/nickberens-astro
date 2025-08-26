@@ -12,7 +12,7 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -110,7 +110,7 @@ async def get_performance_metrics(
 
         cursor = conn.cursor()
         start_date, end_date = parse_time_range(time_range)
-        period_length = end_date - start_date
+        end_date - start_date
 
         # Check what data is available and adjust comparison period accordingly
         cursor.execute(
@@ -130,7 +130,7 @@ async def get_performance_metrics(
                 cache_hit_rate={"current": 85, "previous": 85, "change": 0},
             )
 
-        earliest_data = datetime.fromisoformat(result["earliest_data"])
+        datetime.fromisoformat(result["earliest_data"])
 
         # Use a much simpler approach - just compare available data using string dates
         # This matches the database timestamp format exactly

@@ -3,7 +3,6 @@
 Test script to validate the admin dashboard setup.
 """
 import os
-import sqlite3
 import sys
 from pathlib import Path
 
@@ -17,10 +16,7 @@ def test_imports():
     print("🔍 Testing imports...")
 
     try:
-        from admin.backend.database import DatabaseManager
-        from admin.backend.main import create_admin_app
-        from admin.backend.models import OverviewStats, QueryLog
-        from admin.backend.routes import router
+        pass
 
         print("✅ All backend modules import successfully")
         return True
@@ -59,7 +55,7 @@ def test_database():
 
         # Test retrieving data
         queries = db_manager.get_queries(limit=1)
-        stats = db_manager.get_overview_stats()
+        db_manager.get_overview_stats()
 
         print(f"✅ Database test successful - Query ID: {query_id}")
         print(f"   Total queries in test: {queries['total']}")

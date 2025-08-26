@@ -25,7 +25,6 @@ def disable_rate_limiting(monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(AppConfig, "RATE_LIMIT", "100000/minute", raising=False)
 
         # Import and patch slowapi components
-        import slowapi
         from slowapi import Limiter
 
         def _noop_decorator(*args, **kwargs):
@@ -48,4 +47,3 @@ def disable_rate_limiting(monkeypatch: pytest.MonkeyPatch):
     except Exception as e:
         # If any patching fails, continue with tests
         print(f"Warning: Could not fully disable rate limiting for tests: {e}")
-        pass

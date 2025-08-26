@@ -74,6 +74,9 @@
 import { reactive } from 'vue'
 import axios from 'axios'
 
+// API base URL configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
 export default {
   name: 'ChangePasswordSimple',
   setup() {
@@ -126,7 +129,7 @@ export default {
           return
         }
         
-        const response = await axios.post('http://localhost:8000/admin/api/auth/change-password', {
+        const response = await axios.post(`${API_BASE_URL}/admin/api/auth/change-password`, {
           current_password: formData.currentPassword,
           new_password: formData.newPassword
         }, {

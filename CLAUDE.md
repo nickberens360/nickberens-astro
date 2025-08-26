@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Project Context for Claude
 
 ## Project Overview
-Nick Berens' personal website with an intelligent RAG-powered AI assistant. Backend built with FastAPI, frontend with Astro. The backend uses a **unified smart retriever system** that automatically discovers, indexes, and intelligently routes queries to relevant content without manual configuration.
+Nick Berens' personal website with an intelligent RAG-powered AI assistant. Backend built with FastAPI, frontend with Astro. The backend uses a **unified smart retriever system** that automatically discovers, indexes, and intelligently routes queries to relevant content without manual configuration. Features a comprehensive admin dashboard for monitoring and analytics.
 
 ## Key Commands
 
@@ -36,17 +36,27 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `PYTHONPATH=. pytest tests/` - Run tests with proper Python path
 - `pytest tests/integration/test_api_endpoints.py -v` - Run specific test file with verbose output
 
+### Makefile Commands
+- `make lint-fix` - Auto-format code with Black, isort, and autoflake
+- `make lint-check` - Check code formatting without making changes
+- `make type-check` - Run MyPy type checking on backend/core
+- `make lint` - Full lint pipeline: fix, check, and type-check
+- `make lint-fast` - Quick lint without MyPy (faster for dev cycles)
+- `make test-unit` - Run unit tests only (excludes integration and slow tests)
+- `make test-integration` - Run integration tests only
+
 ### Linting & Type Checking
 **Pre-commit hooks (run automatically on commit):**
-- Black (code formatting) + isort (import sorting) + flake8 (style checking)
-- Fast workflow: Only essential formatting and style checks
+- Black (code formatting) + isort (import sorting) - **MINIMAL** setup for speed
+- Basic safety checks (YAML validation, large files, merge conflicts)
+- MyPy and flake8 excluded from pre-commit for faster commits
 
 **Manual linting commands (as needed):**
-- `black backend/` - Format Python code (line length: 120)
-- `isort backend/` - Sort Python imports
-- `autoflake --remove-all-unused-imports --recursive --in-place backend/` - Remove unused imports
-- `flake8 backend/` - Check Python style (relaxed rules, focuses on real issues)
-- `mypy backend/` - Optional type checking (relaxed settings for faster development)
+- `black .` - Format Python code (line length: 120)
+- `isort .` - Sort Python imports
+- `autoflake --in-place --remove-all-unused-imports --remove-unused-variables --recursive .` - Remove unused imports
+- `flake8 .` - Check Python style (relaxed rules, focuses on real issues)
+- `mypy backend/core --ignore-missing-imports` - Type checking on core modules
 
 ### Pre-commit Hooks (Automated Quality Checks)
 **Pre-commit hooks are configured for speed and essential checks:**
@@ -73,14 +83,18 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
    - Known first party: ["backend", "tests"]
 
 3. **Flake8 Style:**
-   - Ignore: E203, W503, E501, E301, E302, E303, E305
-   - Tests can ignore E402 (imports not at top)
+   - Max line length: 120
+   - Ignore: E203 (whitespace before ':'), W503 (line break before binary operator)
+   - Per-file ignores: __init__.py (F401), tests/* (F401, F811)
+   - Excludes: .git, __pycache__, .venv, venv, node_modules, build, dist
 
-4. **MyPy Type Checking:**
+4. **MyPy Type Checking (Relaxed for Development):**
    - Python version: 3.11
-   - Enable: warn_return_any, warn_unused_configs, check_untyped_defs
-   - Enable: no_implicit_optional, warn_redundant_casts, warn_unused_ignores
-   - Enable: warn_no_return, strict_equality
+   - ignore_missing_imports: true
+   - follow_imports: silent
+   - show_error_codes: true
+   - warn_unused_configs: true
+   - Relaxed settings: no_implicit_optional: false, strict_optional: false
 
 ## Smart Retriever Architecture
 
@@ -96,35 +110,45 @@ The system now uses a **unified smart retriever** that:
 ```
 backend/
 ├── core/           # Core business logic
-│   ├── app_factory.py
+│   ├── app_factory.py             # FastAPI application factory
 │   ├── app_initializer_v2.py      # Unified retriever initialization
 │   ├── unified_retriever.py       # Smart auto-discovery system
 │   ├── smart_illustration_service.py  # Enhanced smart image search with caching
 │   ├── smart_query_handler.py     # Intelligent query processing
 │   ├── query_logger.py            # Query logging service
+│   ├── query_logger_dual.py       # Dual-output query logging
 │   ├── query_router.py            # Query routing logic
 │   ├── response_service.py        # Response processing service
+│   ├── response_cache_warmer.py   # Cache warming service
 │   ├── followup_service.py        # Follow-up question service (configurable)
-│   ├── followup_service_optimized.py    # Optimized follow-up service
-│   ├── followup_service_llm.py          # LLM-powered follow-up service
-│   ├── followup_service_pregenerated.py # Pre-generated follow-up service
-│   ├── followup_pregeneration.py        # Follow-up pre-generation utilities
-│   ├── geolocation_service.py           # Location-based services
-│   ├── llm_utils.py                     # Shared LLM utilities
-│   ├── constants.py                     # Shared constants and stop words
-│   ├── config.py
-│   ├── llm_chain.py               # UPDATED: Now uses smart routing
-│   └── ...
+│   ├── geolocation_service.py     # Location-based services
+│   ├── llm_utils.py               # Shared LLM utilities
+│   ├── constants.py               # Shared constants and stop words
+│   ├── config.py                  # Centralized configuration with validation
+│   ├── llm_chain.py               # LLM chain with smart routing
+│   ├── admin_auth.py              # Admin authentication service
+│   ├── admin_database.py          # Admin database operations
+│   ├── query_data_manager.py      # Query data management
+│   ├── content_indexer.py         # Content indexing utilities
+│   ├── content_router.py          # Content routing logic
+│   └── semantic_searcher.py       # Semantic search functionality
 ├── knowledge/      # Auto-indexed knowledge base
 │   ├── *.md        # Markdown documentation
 │   ├── *.pdf       # PDF documents
 │   ├── *.json      # Structured data including illustrations.json
 │   └── ...         # Any content - automatically indexed!
 ├── routes/         # API routes
-│   ├── query.py    # UPDATED: Uses smart retriever
-│   ├── smart_query.py  # Advanced testing endpoints
-│   ├── query_logs.py   # Protected query log interface
-│   └── health.py       # Health check endpoint
+│   ├── query.py            # Main query endpoint with smart retriever
+│   ├── smart_query.py      # Advanced testing endpoints
+│   ├── query_logs.py       # Protected query log interface
+│   ├── health.py           # Health check endpoint
+│   ├── admin.py            # Admin dashboard API routes
+│   ├── admin_refresh.py    # Admin refresh endpoints
+│   ├── content.py          # Content management routes
+│   ├── knowledge.py        # Knowledge base routes
+│   ├── performance.py      # Performance monitoring routes
+│   ├── queries.py          # Query management routes
+│   └── stats.py            # Statistics and analytics routes
 ├── templates/      # Jinja2 templates for admin interfaces
 └── main.py         # FastAPI app entry point
 
@@ -171,15 +195,20 @@ tests/             # Comprehensive test suite
 - `backend/core/query_logger.py` - Query logging and analytics
 - `backend/core/query_router.py` - Advanced query routing logic
 - `backend/core/response_service.py` - Response processing and enhancement
-- `backend/core/followup_service.py` - Intelligent follow-up question generation with multiple service implementations
+- `backend/core/followup_service.py` - Intelligent follow-up question generation
 - `backend/core/geolocation_service.py` - Location-based query processing
 - `backend/core/llm_utils.py` - Shared LLM utilities
 - `backend/core/constants.py` - Shared constants for consistent processing
+- `backend/core/config.py` - Centralized configuration with enhanced security validation
+- `backend/core/admin_auth.py` - Admin authentication and security
+- `backend/core/admin_database.py` - Admin database management
+- `backend/core/query_data_manager.py` - Query data operations and analytics
 
 ### Configuration
-- `backend/config/data_sources.yaml` - Legacy manual configuration (fallback only)
+- `backend/core/config.py` - **PRIMARY**: Centralized configuration with validation
 - `pyproject.toml` - Python project configuration and linting rules
-- `.pre-commit-config.yaml` - Pre-commit hooks for code quality automation
+- `.pre-commit-config.yaml` - Pre-commit hooks (minimal setup for speed)
+- `Makefile` - Development workflow commands for linting and testing
 
 ## Development Guidelines
 
@@ -267,8 +296,8 @@ INFO - Stored 8 documents in retrieval cache for key: 73ffbd0e3e3a5e87
 
 ## Current Development Status
 
-### Active Branch: `admin-area`
-The project is currently on the `admin-area` branch with comprehensive admin dashboard functionality for monitoring queries, managing knowledge, and system analytics.
+### Current Development Status
+The project features a fully integrated admin dashboard system with comprehensive monitoring and analytics capabilities.
 
 ### Recent API Additions
 - **Query Logging**: `/api/query-logs` - Admin interface for query analytics with protected access
@@ -279,9 +308,10 @@ The project is currently on the `admin-area` branch with comprehensive admin das
 
 ### Admin Dashboard Access
 - **Frontend**: http://localhost:3000 (Vue.js + Vuetify interface)
-- **Backend**: http://localhost:4323 (FastAPI admin API)
+- **Backend**: http://localhost:8000 (FastAPI admin API - integrated with main backend)
 - **Authentication**: Token-based (ADMIN_TOKEN environment variable)
 - **Default Token**: `demo-admin-token-secure-123` (development only)
+- **Admin Routes**: `/admin/*` endpoints protected with token authentication
 
 #### Admin Dashboard Features
 - **Dashboard**: System overview, query metrics, performance statistics
@@ -352,16 +382,20 @@ cd admin/frontend && npm run build
 
 ### New Services & Modules
 - `query_logger.py` - Comprehensive query logging and analytics
+- `query_logger_dual.py` - Dual-output logging (JSON + SQLite)
 - `response_service.py` - Enhanced response processing pipeline
-- `followup_service.py` - Intelligent follow-up question generation with configurable services
-- `followup_service_optimized.py` - Optimized follow-up question service
-- `followup_service_llm.py` - LLM-powered follow-up question generation (disabled by default)
-- `followup_service_pregenerated.py` - Pre-generated follow-up question service
-- `followup_pregeneration.py` - Follow-up question pre-generation utilities
+- `response_cache_warmer.py` - Cache warming for improved performance
+- `followup_service.py` - Intelligent follow-up question generation
 - `query_router.py` - Advanced query routing with intent analysis
 - `geolocation_service.py` - Location-based services for user queries
 - `llm_utils.py` - Shared LLM utilities and helper functions
 - `constants.py` - Shared constants including stop words for query processing
+- `admin_auth.py` - Admin authentication and security layer
+- `admin_database.py` - Admin database operations and management
+- `query_data_manager.py` - Query data analytics and operations
+- `content_indexer.py` - Content indexing and processing utilities
+- `content_router.py` - Content routing and management
+- `semantic_searcher.py` - Advanced semantic search capabilities
 
 ### Testing & Coverage
 - **Coverage Reports**: HTML coverage reports generated in `htmlcov/` directory
@@ -445,46 +479,59 @@ The system supports two query logging approaches:
 - **Read-only access**: Admin system reads backend data without modification rights
 
 ## Dependencies
-- **Backend:** FastAPI, LangChain, ChromaDB, Anthropic/Google AI APIs
-- **Frontend:** Astro, Vue.js
+
+### Backend Dependencies
+- **Core Framework:** FastAPI, uvicorn[standard]
+- **AI/ML:** LangChain, langchain-anthropic, langchain-google-genai, langchain-community, langchain-chroma
+- **Vector Database:** ChromaDB
+- **Document Processing:** pdfplumber, pypdf, python-docx, unstructured, lxml, beautifulsoup4
+- **Security:** passlib[bcrypt], python-multipart, slowapi (rate limiting)
+- **Utilities:** aiofiles, pyyaml, requests, python-dotenv, thefuzz[speed], watchdog
+- **Template Engine:** jinja2
+
+### Frontend Dependencies  
+- **Framework:** Astro 5.11.0, Vue.js 3.4.0
+- **UI Components:** Various FontAwesome packages, astro-icon
+- **Utilities:** marked (Markdown), lodash-es, nanostores
+- **Testing:** Vitest, jsdom, @vue/test-utils
+
+### Admin Dashboard Dependencies
+- **Frontend:** Vue.js 3.4.0, Vuetify 3.6.0, Vue Router 4.2.0
+- **State Management:** Pinia 2.1.0
+- **Charts:** Chart.js 4.5.0, vue-chartjs 5.3.2
+- **Icons:** @mdi/js 7.4.0 (Material Design Icons)
+- **Code Editor:** Monaco Editor 0.52.2
+- **HTTP Client:** Axios 1.6.0
+- **Date Utilities:** date-fns 3.6.0
+- **Build Tools:** Vite 5.2.0, TypeScript 5.4.0
+
+### Development Dependencies
 - **Python:** 3.11+ required
 - **Linting:** black, isort, flake8, mypy, autoflake
-- **Type Stubs:** types-PyYAML, types-requests, types-urllib3 (required for MyPy)
+- **Pre-commit:** Minimal setup with only Black and isort for speed
 
-### Important: Type Stub Packages & Pre-commit
-MyPy requires type stub packages for third-party libraries.
+### Pre-commit Configuration (Minimal Setup)
+The pre-commit configuration is intentionally minimal for faster development:
 
-**For Pre-commit hooks:** Type stubs are configured in `.pre-commit-config.yaml` under the mypy hook's `additional_dependencies`. Current stubs include:
 ```yaml
-additional_dependencies: [
-  types-PyYAML>=1.0.0,
-  types-requests>=2.0.0,
-  types-urllib3>=1.0.0,
-  pyyaml>=6.0,
-  langchain,
-  langchain-community,
-  langchain-core,
-  langchain-google-genai,
-  fastapi,
-  uvicorn
-]
-```
-If you add new dependencies that need type stubs, add them there.
-
-**For local development:** Install type stubs locally:
-```bash
-pip install types-PyYAML types-requests types-urllib3
-# Or install all missing stubs automatically:
-mypy --install-types
+# Only essential checks - no MyPy or flake8 in pre-commit
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    hooks:
+      - check-yaml
+      - check-added-large-files  
+      - check-merge-conflict
+  - repo: https://github.com/psf/black
+    hooks:
+      - black (line-length=120)
+  - repo: https://github.com/pycqa/isort
+    hooks:
+      - isort (profile=black)
 ```
 
-**If pre-commit mypy fails with missing stubs:**
-1. Add the type stub to `.pre-commit-config.yaml` under mypy's `additional_dependencies`
-2. Clean and reinstall pre-commit:
-```bash
-pre-commit clean
-pre-commit install
-```
+**Philosophy:** Pre-commit only handles auto-formatting. Manual linting and type checking via Makefile commands when needed.
+
+**For MyPy type checking:** Run manually with `make type-check` or `mypy backend/core --ignore-missing-imports`
 
 ## Migration Notes
 

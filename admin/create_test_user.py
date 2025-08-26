@@ -14,11 +14,21 @@ from admin.backend.database import db_manager
 
 
 def create_test_user():
-    """Create a test admin user."""
+    """
+    Create a test admin user.
+
+    WARNING: This creates a test user with weak credentials for development only.
+    NEVER use this in production. Use create_admin.py with strong credentials instead.
+    """
     username = "admin"
-    password = "admin123"
+    password = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")
     email = "admin@localhost"
     role = "owner"
+
+    if password == "admin123":
+        print("WARNING: Creating test user with weak default password!")
+        print("Set ADMIN_DEFAULT_PASSWORD env var for better security.")
+        print("This should NEVER be used in production!")
 
     try:
         # Check if user already exists

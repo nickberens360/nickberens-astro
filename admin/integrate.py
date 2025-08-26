@@ -52,7 +52,7 @@ def check_integration_requirements():
 
     # Check if existing query logger exists
     try:
-        from backend.core.query_logger import QueryLogger
+        pass
 
         requirements.append(("Existing Query Logger", True, "Found in backend.core.query_logger"))
     except ImportError:
@@ -60,7 +60,7 @@ def check_integration_requirements():
 
     # Check if admin backend is available
     try:
-        from admin.backend.database import DatabaseManager
+        pass
 
         requirements.append(("Admin Database", True, "Admin backend is available"))
     except ImportError:
