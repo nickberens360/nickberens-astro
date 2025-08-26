@@ -15,6 +15,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/test-password',
+      name: 'test-password',
+      component: () => import('@/views/ChangePasswordSimple.vue'),
+      meta: {
+        title: 'Test Change Password',
+        public: true
+      }
+    },
+    {
       path: '/admin',
       component: AdminLayout,
       meta: { requiresAuth: true },
@@ -130,24 +139,52 @@ router.beforeEach(async (to, from, next) => {
   // Update document title
   document.title = to.meta.title ? `${to.meta.title} - RAG Admin` : 'RAG Admin Dashboard'
   
-  const adminStore = useAdminStore()
-  
   // Check if route requires authentication
-  if (to.meta.requiresAuth) {
-    // Check authentication status
-    const isAuthenticated = adminStore.isAuthenticated || await adminStore.checkAuth()
+  if (to.meta.requiresAuth || to.path.startsWith('/admin')) {
+    // Check for valid authentication token
+    const token = localStorage.getItem('admin_token')
+    let isAuthenticated = false
+    
+    if (token) {
+      try {
+        // Quick token validation
+        const response = await fetch('http://localhost:8000/admin/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        isAuthenticated = response.ok
+      } catch (err) {
+        // Token invalid, clear it
+        localStorage.removeItem('admin_token')
+        isAuthenticated = false
+      }
+    }
     
     if (!isAuthenticated) {
-      // Redirect to login
+      // Redirect to login with return path
       next({ name: 'login', query: { redirect: to.fullPath } })
       return
     }
   }
   
-  // If going to login but already authenticated, redirect to dashboard
-  if (to.name === 'login' && adminStore.isAuthenticated) {
-    next({ name: 'dashboard' })
-    return
+  // If going to login but already have valid token, check auth and redirect
+  if (to.name === 'login') {
+    const token = localStorage.getItem('admin_token')
+    if (token) {
+      try {
+        const response = await fetch('http://localhost:8000/admin/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (response.ok) {
+          // Already authenticated, redirect to intended destination or dashboard
+          const redirect = to.query.redirect || '/admin'
+          next(redirect)
+          return
+        }
+      } catch (err) {
+        // Token invalid, clear it and continue to login
+        localStorage.removeItem('admin_token')
+      }
+    }
   }
   
   next()

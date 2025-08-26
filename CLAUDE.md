@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Project Context for Claude
 
 ## Project Overview
@@ -10,7 +14,17 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `npm run dev` - Start Astro development server
 - `npm run backend:build` - Build backend container with Podman
 - `npm run backend:dev` - Run backend in development mode with hot reload
+- `npm run backend:dev:reindex` - Run backend with forced data reindexing
 - `npm run backend:stop` - Stop the backend container
+
+### Admin Commands
+- `npm run admin:backend` - Start admin backend server (requires ADMIN_TOKEN env var)
+- `npm run admin:frontend` - Start admin frontend development server
+- `npm run admin:build` - Build admin frontend for production
+- `npm run admin` - Start both admin backend and frontend
+- `npm run admin:stop` - Stop admin backend processes
+- `npm run admin:sync` - Sync query logs with admin database
+- `npm run logs:download` - Download query logs using configured script
 
 ### Test Commands
 - `pytest` - Run Python tests with coverage (configured in pyproject.toml)
@@ -19,6 +33,8 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `pytest -m integration` - Run integration tests (slower)
 - `npm test` - Run frontend tests with Vitest
 - `npm run test:run` - Run frontend tests once
+- `PYTHONPATH=. pytest tests/` - Run tests with proper Python path
+- `pytest tests/integration/test_api_endpoints.py -v` - Run specific test file with verbose output
 
 ### Linting & Type Checking
 **Pre-commit hooks (run automatically on commit):**
@@ -111,6 +127,23 @@ backend/
 │   └── health.py       # Health check endpoint
 ├── templates/      # Jinja2 templates for admin interfaces
 └── main.py         # FastAPI app entry point
+
+admin/              # Admin dashboard system
+├── backend/        # Python admin backend services
+│   ├── auth.py     # Authentication and authorization
+│   ├── database.py # Admin database operations
+│   ├── main.py     # Admin FastAPI application
+│   ├── models.py   # Database models
+│   └── routes.py   # Admin API routes
+├── frontend/       # Vue.js admin frontend
+│   ├── src/
+│   │   ├── components/     # Reusable Vue components
+│   │   ├── views/         # Page components
+│   │   ├── stores/        # Pinia state management
+│   │   ├── services/      # API services
+│   │   └── plugins/       # Vuetify configuration
+│   └── dist/       # Built frontend files
+└── start-admin.py  # Admin server startup script
 
 public/            # Static data files (also auto-indexed)
 ├── resume.json
@@ -234,8 +267,8 @@ INFO - Stored 8 documents in retrieval cache for key: 73ffbd0e3e3a5e87
 
 ## Current Development Status
 
-### Active Branch: `illustration-updates`
-The project is currently on the `illustration-updates` branch with enhanced backend services and improved code quality.
+### Active Branch: `admin-area`
+The project is currently on the `admin-area` branch with comprehensive admin dashboard functionality for monitoring queries, managing knowledge, and system analytics.
 
 ### Recent API Additions
 - **Query Logging**: `/api/query-logs` - Admin interface for query analytics with protected access
@@ -243,6 +276,19 @@ The project is currently on the `illustration-updates` branch with enhanced back
 - **Smart Query Testing**: `/api/smart-query/*` - Advanced query analysis endpoints
 - **Query Log Download**: Automated scripts for downloading and analyzing query logs
 - **Protected Endpoints**: Security validation for admin interfaces
+
+### Admin Dashboard Access
+- **Frontend**: http://localhost:3000 (Vue.js + Vuetify interface)
+- **Backend**: http://localhost:4323 (FastAPI admin API)
+- **Authentication**: Token-based (ADMIN_TOKEN environment variable)
+- **Default Token**: `demo-admin-token-secure-123` (development only)
+
+#### Admin Dashboard Features
+- **Dashboard**: System overview, query metrics, performance statistics
+- **Queries**: Real-time query monitoring, analytics, response times
+- **Knowledge**: Content management, indexed documents, gap analysis
+- **Performance**: System performance metrics, response time analysis
+- **Sessions**: User session management and authentication logs
 
 ### Admin Dashboard Icon Usage
 The admin dashboard uses Vuetify with Material Design Icons (MDI). To maintain consistency and avoid console errors:
@@ -331,7 +377,72 @@ cd admin/frontend && npm run build
   - `integration/test_*.py` - Integration tests for API endpoints and search functionality
 
 ## Environment Variables
+
+### Core Backend Variables
 - `FORCE_REBUILD_DATA=true` - Force rebuild of vector indices on server startup (optional)
+- `WATCHFILES_FORCE_POLLING=true` - Enable file watching for container environments
+- `ANTHROPIC_API_KEY` - Required for Anthropic Claude API access
+- `GOOGLE_API_KEY` - Required for Google Gemini API access (if used)
+
+### Admin System Variables
+- `ADMIN_TOKEN` - Authentication token for admin dashboard access
+- `ADMIN_DB_PATH` - Path to admin SQLite database (defaults to backend/logs/admin_monitoring.db)
+
+### Development Setup
+1. **Copy environment template**: `cp .env.example .env` (if available)
+2. **Set API keys** in `.env` file
+3. **Install dependencies**: 
+   - Backend: `pip install -r backend/requirements.txt`
+   - Frontend: `npm install`
+   - Admin Frontend: `cd admin/frontend && npm install`
+
+## Database Architecture
+
+The system uses multiple SQLite databases for different purposes:
+
+### Core Backend Databases
+
+#### `/backend/logs/rag_monitoring.db`
+- **Purpose**: Primary query logging and analytics database
+- **Tables**:
+  - `query_logs` - All user queries, responses, and performance metrics
+  - `content_gaps` - Detected knowledge gaps for content improvement
+- **Usage**: Used by `QueryDataManager` for read access and query logging
+- **Location fields**: Includes geolocation data (city, region, country) for analytics
+
+#### `/backend/logs/auth_sessions.db`  
+- **Purpose**: User session tracking for the main application
+- **Tables**: 
+  - `user_sessions` - Session tracking for RAG queries
+- **Usage**: Session management and user behavior analytics
+
+### Admin System Databases
+
+#### `/backend/logs/admin_monitoring.db` 
+- **Purpose**: Admin dashboard user management and settings
+- **Tables**:
+  - `admin_users` - Admin user accounts and authentication
+  - `admin_sessions` - Admin dashboard login sessions
+  - `admin_settings` - System configuration and preferences
+- **Usage**: Used by `AdminDatabaseManager` for admin-specific operations
+- **Security**: Handles admin authentication, roles, and session management
+
+#### Query Log Storage Options
+The system supports two query logging approaches:
+1. **JSON File Logging**: Primary method using `/backend/logs/query_logs.json`
+   - Configurable via `QUERY_LOG_FILE` environment variable
+   - IP filtering and anonymization support
+   - Used by `QueryLogger` service
+   
+2. **SQLite Logging**: Alternative method in `rag_monitoring.db`
+   - Used for admin dashboard analytics
+   - Structured query analysis and performance metrics
+
+### Database Separation Strategy
+- **Admin databases**: Isolated for security and admin-specific features
+- **Backend databases**: Focus on query performance and analytics
+- **Dual managers**: `DatabaseManager` (admin) vs `QueryDataManager` (backend data)
+- **Read-only access**: Admin system reads backend data without modification rights
 
 ## Dependencies
 - **Backend:** FastAPI, LangChain, ChromaDB, Anthropic/Google AI APIs

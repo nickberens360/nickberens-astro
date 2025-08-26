@@ -9,10 +9,10 @@
           </v-card-title>
           
           <v-card-text>
-            <v-form ref="form" v-model="valid" @submit.prevent="changePassword">
+            <v-form ref="form">
               <v-text-field
                 v-model="currentPassword"
-                :rules="[rules.required]"
+                :rules="[requiredRule]"
                 label="Current Password"
                 type="password"
                 prepend-icon="$lock-outline"
@@ -21,7 +21,7 @@
               
               <v-text-field
                 v-model="newPassword"
-                :rules="[rules.required, rules.minLength]"
+                :rules="[requiredRule, minLengthRule]"
                 label="New Password"
                 type="password"
                 prepend-icon="$lock"
@@ -31,7 +31,7 @@
               
               <v-text-field
                 v-model="confirmPassword"
-                :rules="[rules.required, rules.passwordMatch]"
+                :rules="[requiredRule, passwordMatchRule]"
                 label="Confirm New Password"
                 type="password"
                 prepend-icon="$lock-check"
@@ -71,7 +71,7 @@
             </v-btn>
             <v-btn
               color="primary"
-              :disabled="!valid || loading"
+              :disabled="loading"
               :loading="loading"
               @click="changePassword"
             >
@@ -85,67 +85,85 @@
 </template>
 
 <script>
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/services/api'
 
 export default {
   name: 'ChangePassword',
-  data() {
-    return {
-      valid: false,
-      loading: false,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-      error: '',
-      success: '',
-      rules: {
-        required: v => !!v || 'Required',
-        minLength: v => (v && v.length >= 8) || 'Password must be at least 8 characters',
-        passwordMatch: v => v === this.newPassword || 'Passwords must match'
-      }
-    }
-  },
-  methods: {
-    async changePassword() {
-      if (!this.$refs.form.validate()) {
+  setup() {
+    const router = useRouter()
+    const form = ref(null)
+    
+    const loading = ref(false)
+    const currentPassword = ref('')
+    const newPassword = ref('')
+    const confirmPassword = ref('')
+    const error = ref('')
+    const success = ref('')
+    
+    const requiredRule = (v) => !!v || 'Required'
+    const minLengthRule = (v) => (v && v.length >= 8) || 'Password must be at least 8 characters'
+    const passwordMatchRule = computed(() => (v) => v === newPassword.value || 'Passwords must match')
+    
+    const changePassword = async () => {
+      if (!form.value.validate()) {
         return
       }
       
-      this.loading = true
-      this.error = ''
-      this.success = ''
+      loading.value = true
+      error.value = ''
+      success.value = ''
       
       try {
-        const response = await api.changePassword(this.currentPassword, this.newPassword)
+        const response = await api.changePassword(currentPassword.value, newPassword.value)
         
         if (response.success) {
-          this.success = 'Password changed successfully!'
-          this.resetForm()
+          success.value = 'Password changed successfully! All sessions have been invalidated. You will be redirected to login.'
+          resetForm()
           
-          // Optionally redirect to dashboard after a delay
+          // Clear stored token since all sessions are invalidated
+          localStorage.removeItem('admin_token')
+          
+          // Redirect to login page since sessions are expired
           setTimeout(() => {
-            this.$router.push('/admin')
-          }, 2000)
+            router.push('/login')
+          }, 3000)
         }
-      } catch (error) {
-        if (error.response && error.response.data) {
-          this.error = error.response.data.detail || 'Failed to change password'
+      } catch (err) {
+        if (err.response && err.response.data) {
+          error.value = err.response.data.detail || 'Failed to change password'
         } else {
-          this.error = 'An error occurred while changing password'
+          error.value = 'An error occurred while changing password'
         }
       } finally {
-        this.loading = false
+        loading.value = false
       }
-    },
+    }
     
-    resetForm() {
-      this.currentPassword = ''
-      this.newPassword = ''
-      this.confirmPassword = ''
-      this.error = ''
-      if (this.$refs.form) {
-        this.$refs.form.reset()
+    const resetForm = () => {
+      currentPassword.value = ''
+      newPassword.value = ''
+      confirmPassword.value = ''
+      error.value = ''
+      if (form.value) {
+        form.value.reset()
       }
+    }
+    
+    return {
+      form,
+      loading,
+      currentPassword,
+      newPassword,
+      confirmPassword,
+      error,
+      success,
+      requiredRule,
+      minLengthRule,
+      passwordMatchRule,
+      changePassword,
+      resetForm
     }
   }
 }

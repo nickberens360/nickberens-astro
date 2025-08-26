@@ -86,6 +86,15 @@ const cardsLoading = computed(() => {
 })
 
 const metrics = computed(() => {
+  // Debug logging to see what data we're getting
+  if (import.meta.env.DEV && stats.value) {
+    console.log('Stats data:', stats.value)
+    console.log('totalQueriesChange:', stats.value?.totalQueriesChange)
+    console.log('averageResponseTimeChange:', stats.value?.averageResponseTimeChange) 
+    console.log('uniqueSessionsChange:', stats.value?.uniqueSessionsChange)
+    console.log('errorRateChange:', stats.value?.errorRateChange)
+  }
+  
   return [
     {
       key: 'totalQueries',
@@ -93,7 +102,7 @@ const metrics = computed(() => {
       value: stats.value?.totalQueries || 0,
       icon: '$search',
       color: 'primary',
-      change: 12.5
+      change: stats.value?.totalQueriesChange || 25.5 // Force test value
     },
     {
       key: 'avgResponseTime',
@@ -102,7 +111,7 @@ const metrics = computed(() => {
       unit: 'ms',
       icon: '$clock',
       color: 'info',
-      change: -5.2,
+      change: stats.value?.averageResponseTimeChange || -15.2, // Force test value
       inverse: true
     },
     {
@@ -112,7 +121,8 @@ const metrics = computed(() => {
       unit: '%',
       icon: '$check',
       color: 'success',
-      change: 2.1
+      change: stats.value?.errorRateChange ? -stats.value.errorRateChange : 8.3, // Force test value
+      inverse: true
     },
     {
       key: 'activeSessions',
@@ -120,7 +130,7 @@ const metrics = computed(() => {
       value: stats.value?.activeSessions || 0,
       icon: '$users',
       color: 'warning',
-      change: 8.7
+      change: stats.value?.uniqueSessionsChange || -5.1 // Force test value
     }
   ]
 })

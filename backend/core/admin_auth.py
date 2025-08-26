@@ -1,5 +1,6 @@
 """
-Authentication utilities for the admin dashboard.
+Admin authentication system for the main backend.
+Migrated from admin/backend/auth.py with improvements.
 """
 
 import logging
@@ -7,24 +8,20 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
+import bcrypt
 from fastapi import HTTPException, Request
-from passlib.context import CryptContext
 
-from .database import db_manager
+from .admin_database import admin_db_manager
 
 logger = logging.getLogger(__name__)
 
 
-class AuthManager:
-    """Handles authentication, password hashing, and session management with security enhancements."""
+class AdminAuthManager:
+    """Handles admin authentication, password hashing, and session management."""
 
     def __init__(self):
-        # Password hashing context using bcrypt with enhanced security
-        self.pwd_context = CryptContext(
-            schemes=["bcrypt"],
-            deprecated="auto",
-            bcrypt__rounds=12,  # Higher rounds for better security
-        )
+        # Use bcrypt directly instead of passlib to avoid version compatibility issues
+        self._bcrypt_rounds = 12
         # Session expiry time (24 hours)
         self.session_expiry_hours = 24
         # Rate limiting for failed attempts
@@ -37,9 +34,12 @@ class AuthManager:
             raise ValueError("Password must be at least 8 characters long")
 
         try:
-            return self.pwd_context.hash(password)
+            password_bytes = password.encode("utf-8")
+            salt = bcrypt.gensalt(rounds=self._bcrypt_rounds)
+            hashed = bcrypt.hashpw(password_bytes, salt)
+            return hashed.decode("utf-8")
         except Exception as e:
-            logger.error(f"Error hashing password: {str(e)}", exc_info=True)
+            logger.error(f"Bcrypt hashing failed: {str(e)}", exc_info=True)
             raise ValueError("Failed to hash password")
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -48,9 +48,12 @@ class AuthManager:
             return False
 
         try:
-            return self.pwd_context.verify(plain_password, hashed_password)
+            # Try bcrypt directly first (works for both old and new hashes)
+            password_bytes = plain_password.encode("utf-8")
+            hash_bytes = hashed_password.encode("utf-8")
+            return bcrypt.checkpw(password_bytes, hash_bytes)
         except Exception as e:
-            logger.error(f"Error verifying password: {str(e)}", exc_info=True)
+            logger.error(f"Password verification failed: {str(e)}", exc_info=True)
             return False
 
     def create_session(self, user_id: int, ip_address: Optional[str] = None, user_agent: Optional[str] = None) -> str:
@@ -65,7 +68,7 @@ class AuthManager:
         now = datetime.now()
 
         try:
-            with db_manager.get_connection() as conn:
+            with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Limit concurrent sessions per user (max 5)
@@ -73,14 +76,17 @@ class AuthManager:
                 active_sessions = cursor.fetchone()[0]
 
                 if active_sessions >= 5:
-                    # Expire oldest session
+                    # Expire oldest session - SQLite doesn't support ORDER BY in UPDATE, so use subquery
                     cursor.execute(
                         """
                         UPDATE admin_sessions 
                         SET is_active = 0 
-                        WHERE user_id = ? AND is_active = 1 
-                        ORDER BY started_at ASC 
-                        LIMIT 1
+                        WHERE id = (
+                            SELECT id FROM admin_sessions 
+                            WHERE user_id = ? AND is_active = 1 
+                            ORDER BY started_at ASC 
+                            LIMIT 1
+                        )
                         """,
                         (user_id,),
                     )
@@ -113,7 +119,7 @@ class AuthManager:
             return None
 
         try:
-            with db_manager.get_connection() as conn:
+            with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -152,7 +158,7 @@ class AuthManager:
             return
 
         try:
-            with db_manager.get_connection() as conn:
+            with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
@@ -167,7 +173,7 @@ class AuthManager:
             return
 
         try:
-            with db_manager.get_connection() as conn:
+            with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
                 logger.info(f"Expired session {session_id[:8]}...")
@@ -180,7 +186,7 @@ class AuthManager:
             return
 
         try:
-            with db_manager.get_connection() as conn:
+            with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
                 logger.info(f"Expired all sessions for user {user_id}")
@@ -201,7 +207,7 @@ class AuthManager:
             logger.warning(f"Rate limited authentication attempt from {ip_address} for user {username}")
             return None
 
-        user = db_manager.get_admin_user(username)
+        user = admin_db_manager.get_admin_user(username)
 
         if not user or not self.verify_password(password, user["password_hash"]):
             self._record_failed_attempt(ip_address or "unknown")
@@ -213,7 +219,7 @@ class AuthManager:
 
         try:
             # Update last login time
-            with db_manager.get_connection() as conn:
+            with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"]))
 
@@ -236,7 +242,7 @@ class AuthManager:
             raise ValueError("Password must be at least 8 characters long")
 
         password_hash = self.hash_password(password)
-        return db_manager.create_admin_user(username, email, password_hash, role)
+        return admin_db_manager.create_admin_user(username, email, password_hash, role)
 
     def get_session_from_request(self, request: Request) -> Optional[Dict]:
         """Extract and validate session from request."""
@@ -264,7 +270,7 @@ class AuthManager:
         try:
             expiry_cutoff = datetime.now() - timedelta(hours=self.session_expiry_hours)
 
-            with db_manager.get_connection() as conn:
+            with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "UPDATE admin_sessions SET is_active = 0 WHERE last_active_at < ? AND is_active = 1",
@@ -304,31 +310,31 @@ class AuthManager:
 
 
 # Global auth manager instance
-auth_manager = AuthManager()
+admin_auth_manager = AdminAuthManager()
 
 
-def require_auth(request: Request) -> Dict:
-    """Dependency to require authentication for routes with enhanced security."""
-    session = auth_manager.get_session_from_request(request)
+def require_admin_auth(request: Request) -> Dict:
+    """Dependency to require authentication for admin routes."""
+    session = admin_auth_manager.get_session_from_request(request)
     if not session:
-        logger.warning(f"Unauthenticated request from {request.client.host if request.client else 'unknown'}")
+        logger.warning(f"Unauthenticated admin request from {request.client.host if request.client else 'unknown'}")
         raise HTTPException(status_code=401, detail="Authentication required")
     return session
 
 
 def require_admin_role(request: Request) -> Dict:
     """Dependency to require admin role for routes with logging."""
-    session = require_auth(request)
+    session = require_admin_auth(request)
     if session["role"] not in ["admin", "owner"]:
         logger.warning(f"Unauthorized admin access attempt by user {session.get('username', 'unknown')}")
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return session
 
 
-def get_current_user(request: Request) -> Optional[Dict]:
-    """Get current user from request if authenticated, None otherwise."""
+def get_current_admin_user(request: Request) -> Optional[Dict]:
+    """Get current admin user from request if authenticated, None otherwise."""
     try:
-        return auth_manager.get_session_from_request(request)
+        return admin_auth_manager.get_session_from_request(request)
     except Exception as e:
-        logger.error(f"Error getting current user: {str(e)}", exc_info=True)
+        logger.error(f"Error getting current admin user: {str(e)}", exc_info=True)
         return None

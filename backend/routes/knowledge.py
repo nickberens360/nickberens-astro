@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .auth import get_current_user
+from ..core.admin_auth import require_admin_auth
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -637,7 +637,7 @@ async def update_knowledge_file_content(file_path: str, request: Request):
 
 @router.post("/api/knowledge/upload")
 async def upload_knowledge_files(
-    request: Request, files: List[UploadFile] = File(...), current_user: dict = Depends(get_current_user)
+    request: Request, files: List[UploadFile] = File(...), session: dict = Depends(require_admin_auth)
 ):
     """
     Upload multiple files to the knowledge base.

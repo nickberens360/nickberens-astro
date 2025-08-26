@@ -2,49 +2,61 @@
   <v-container class="fill-height" fluid>
     <v-row align="center" justify="center">
       <v-col cols="12" sm="8" md="6" lg="4">
-        <v-card class="elevation-12">
-          <v-toolbar color="primary" dark flat>
-            <v-toolbar-title>Admin Login</v-toolbar-title>
-          </v-toolbar>
+        <v-card>
+          <v-card-title class="text-center">
+            <v-icon class="mr-2">$dashboard</v-icon>
+            Admin Login
+          </v-card-title>
+          
           <v-card-text>
-            <v-form @submit.prevent="handleLogin">
-              <v-text-field
-                v-model="username"
-                label="Username"
-                prepend-inner-icon="$account"
-                required
-                :error-messages="errors.username"
-                @keyup.enter="handleLogin"
-              ></v-text-field>
-
-              <v-text-field
-                v-model="password"
-                label="Password"
-                type="password"
-                prepend-inner-icon="$lock"
-                required
-                :error-messages="errors.password"
-                @keyup.enter="handleLogin"
-              ></v-text-field>
-
-              <v-alert
-                v-if="errors.general"
-                type="error"
-                class="mb-4"
-                dense
-              >
-                {{ errors.general }}
-              </v-alert>
-            </v-form>
+            <v-text-field
+              v-model="formData.username"
+              label="Username"
+              variant="outlined"
+              prepend-inner-icon="$account"
+              :error-messages="validation.username"
+              @keyup.enter="login"
+            ></v-text-field>
+            
+            <v-text-field
+              v-model="formData.password"
+              label="Password"
+              type="password"
+              variant="outlined"
+              prepend-inner-icon="$lock"
+              :error-messages="validation.password"
+              @keyup.enter="login"
+            ></v-text-field>
+            
+            <v-alert
+              v-if="state.error"
+              type="error"
+              class="mb-4"
+              closable
+              @click="state.error = null"
+            >
+              {{ state.error }}
+            </v-alert>
+            
+            <v-alert
+              v-if="state.success"
+              type="success"
+              class="mb-4"
+            >
+              {{ state.success }}
+            </v-alert>
           </v-card-text>
+          
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn
-              color="primary"
-              :loading="loading"
-              @click="handleLogin"
+            <v-btn 
+              color="primary" 
+              size="large"
+              :loading="state.loading"
+              :disabled="!isFormValid"
+              @click="login"
             >
-              Login
+              {{ state.loading ? 'Logging in...' : 'Login' }}
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -54,89 +66,142 @@
 </template>
 
 <script>
-import { useAdminStore } from '@/stores/admin'
+import { reactive, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
 
 export default {
   name: 'LoginView',
-  data() {
-    return {
-      username: '',
-      password: '',
-      loading: false,
-      errors: {
-        username: [],
-        password: [],
-        general: ''
-      }
-    }
-  },
   setup() {
-    const adminStore = useAdminStore()
-    return { adminStore }
-  },
-  methods: {
-    clearErrors() {
-      this.errors = {
-        username: [],
-        password: [],
-        general: ''
-      }
-    },
+    const router = useRouter()
+    const route = useRoute()
     
-    validateForm() {
-      this.clearErrors()
-      let isValid = true
-
-      if (!this.username.trim()) {
-        this.errors.username.push('Username is required')
-        isValid = false
+    const formData = reactive({
+      username: '',
+      password: ''
+    })
+    
+    const state = reactive({
+      loading: false,
+      error: null,
+      success: null
+    })
+    
+    const validation = reactive({
+      username: [],
+      password: []
+    })
+    
+    const isFormValid = computed(() => {
+      return formData.username.trim() && formData.password.trim()
+    })
+    
+    const validateForm = () => {
+      validation.username = []
+      validation.password = []
+      
+      if (!formData.username.trim()) {
+        validation.username.push('Username is required')
       }
-
-      if (!this.password) {
-        this.errors.password.push('Password is required')
-        isValid = false
+      
+      if (!formData.password.trim()) {
+        validation.password.push('Password is required')
       }
-
-      return isValid
-    },
-
-    async handleLogin() {
-      if (!this.validateForm()) {
+      
+      return validation.username.length === 0 && validation.password.length === 0
+    }
+    
+    const login = async () => {
+      if (!validateForm()) {
         return
       }
-
-      this.loading = true
-      this.clearErrors()
-
+      
+      state.loading = true
+      state.error = null
+      state.success = null
+      
       try {
-        await this.adminStore.login(this.username, this.password)
+        const response = await axios.post('http://localhost:8000/admin/api/auth/login', {
+          username: formData.username,
+          password: formData.password
+        })
         
-        // Redirect to dashboard or the intended page
-        const redirect = this.$route.query.redirect || '/admin'
-        this.$router.push(redirect)
-        
-      } catch (error) {
-        console.error('Login error:', error)
-        
-        if (error.response?.status === 401) {
-          this.errors.general = 'Invalid username or password'
-        } else if (error.response?.data?.detail) {
-          this.errors.general = error.response.data.detail
-        } else if (error.message) {
-          this.errors.general = error.message
+        if (response.data.success) {
+          // Store authentication token
+          localStorage.setItem('admin_token', response.data.session_id)
+          
+          // Show success message briefly
+          state.success = 'Login successful! Redirecting...'
+          
+          // Determine redirect destination
+          const redirectTo = route.query.redirect || '/admin'
+          
+          // Redirect after a brief delay
+          setTimeout(() => {
+            router.push(redirectTo)
+          }, 1000)
+          
         } else {
-          this.errors.general = 'Login failed. Please try again.'
+          state.error = response.data.message || 'Login failed'
+        }
+        
+      } catch (err) {
+        console.error('Login error:', err)
+        
+        if (err.response?.status === 401) {
+          state.error = 'Invalid username or password'
+        } else if (err.response?.data?.detail) {
+          state.error = err.response.data.detail
+        } else if (err.response?.data?.message) {
+          state.error = err.response.data.message
+        } else {
+          state.error = 'Login failed. Please try again.'
         }
       } finally {
-        this.loading = false
+        state.loading = false
       }
     }
-  },
-  
-  mounted() {
-    // Check if user is already logged in
-    if (this.adminStore.isAuthenticated) {
-      this.$router.push({ name: 'dashboard' })
+    
+    const clearForm = () => {
+      formData.username = ''
+      formData.password = ''
+      validation.username = []
+      validation.password = []
+      state.error = null
+      state.success = null
+    }
+    
+    // Check if user is already authenticated on component mount
+    const checkExistingAuth = async () => {
+      const token = localStorage.getItem('admin_token')
+      if (!token) return
+      
+      try {
+        const response = await axios.get('http://localhost:8000/admin/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        if (response.data.user) {
+          // User is already authenticated, redirect
+          const redirectTo = route.query.redirect || '/admin'
+          router.push(redirectTo)
+        }
+      } catch (err) {
+        // Invalid token, clear it
+        localStorage.removeItem('admin_token')
+      }
+    }
+    
+    // Check auth on mount
+    checkExistingAuth()
+    
+    return {
+      formData,
+      state,
+      validation,
+      isFormValid,
+      login,
+      clearForm
     }
   }
 }
@@ -145,5 +210,16 @@ export default {
 <style scoped>
 .fill-height {
   min-height: 100vh;
+}
+
+.v-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.v-card-title {
+  padding-top: 2rem;
+  padding-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 </style>

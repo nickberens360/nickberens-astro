@@ -25,11 +25,11 @@ def main():
     try:
         import uvicorn
 
-        from admin.backend.main import app
+        from backend.main import app
 
-        port = int(os.environ.get("ADMIN_PORT", 8001))
+        port = int(os.environ.get("ADMIN_PORT", 8000))
 
-        print("🚀 Starting RAG Admin Dashboard...")
+        print("🚀 Starting RAG Admin Dashboard (Integrated Backend)...")
         print(f"   Backend API: http://localhost:{port}/admin/api")
         print(f"   API Docs: http://localhost:{port}/docs")
         print(f"   Health Check: http://localhost:{port}/admin/api/health")
@@ -41,7 +41,7 @@ def main():
         print("📊 Dashboard will be available at the frontend URL after building")
         print()
 
-        uvicorn.run("admin.backend.main:app", host="0.0.0.0", port=port, reload=True, log_level="info")
+        uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=True, log_level="info")
 
     except ImportError as e:
         print(f"❌ Missing dependencies: {e}")

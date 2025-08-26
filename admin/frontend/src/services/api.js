@@ -9,8 +9,11 @@ class AdminAPI {
       withCredentials: true  // Enable cookies for session management
     })
 
-    // Runtime token container
+    // Runtime token container - load from localStorage if available
     this.authToken = null
+    if (typeof localStorage !== 'undefined') {
+      this.authToken = localStorage.getItem('admin_token')
+    }
 
     // Request interceptor
     this.client.interceptors.request.use(
@@ -19,6 +22,12 @@ class AdminAPI {
         if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_API) {
           console.debug(`API ${config.method?.toUpperCase()}: ${config.url}`)
         }
+        
+        // Add Authorization header if we have a token
+        if (this.authToken) {
+          config.headers.Authorization = `Bearer ${this.authToken}`
+        }
+        
         // Session-based authentication - cookies are automatically sent with withCredentials: true
         return config
       },

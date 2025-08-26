@@ -22,14 +22,8 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
-    proxy: {
-      '/admin/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false
-      }
-    }
+    port: 3000
+    // No proxy needed - frontend calls backend directly
   },
   build: {
     outDir: 'dist',

@@ -8,6 +8,7 @@
           prepend-icon="$upload"
           @click="showUploadDialog = true"
           variant="outlined"
+          class="mr-4"
         >
           Upload Files
         </v-btn>
@@ -81,22 +82,13 @@
           <template v-slot:item.actions="{ item }">
             <div class="d-flex align-center gap-1">
               <v-btn
-                icon="$view"
+                icon="$edit"
                 size="small"
                 variant="text"
                 color="green"
                 @click="viewFileContent(item)"
                 :disabled="loading"
                 title="View/Edit File Content"
-              ></v-btn>
-              <v-btn
-                icon="$edit"
-                size="small"
-                variant="text"
-                color="blue"
-                @click="editSource(item)"
-                :disabled="loading"
-                title="Edit Metadata"
               ></v-btn>
               <v-btn
                 icon="$delete"
@@ -198,14 +190,14 @@
           <v-icon class="me-2">$upload</v-icon>
           Upload Knowledge Files
         </v-card-title>
-        
+
         <v-card-text>
           <div class="mb-4">
             <p class="text-body-2 text-medium-emphasis mb-3">
               Upload documents to add them to your knowledge base. Supported formats:
               <strong>MD, PDF, TXT, JSON, HTML, DOCX</strong>
             </p>
-            
+
             <v-file-input
               v-model="selectedFiles"
               label="Select files to upload"
@@ -218,7 +210,7 @@
               :rules="fileRules"
             />
           </div>
-          
+
           <!-- Upload Progress -->
           <div v-if="uploadProgress.active" class="mb-4">
             <v-card variant="outlined">
@@ -248,7 +240,7 @@
                     :key="result.filename"
                   >
                     <template v-slot:prepend>
-                      <v-icon 
+                      <v-icon
                         :color="result.success ? 'success' : 'error'"
                         :icon="result.success ? '$check' : '$alert'"
                       />
@@ -269,8 +261,8 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn 
-            @click="cancelUpload" 
+          <v-btn
+            @click="cancelUpload"
             :disabled="uploadProgress.active"
             variant="text"
           >
@@ -354,10 +346,10 @@ const uploadFiles = async () => {
     }
 
     const response = await adminAPI.uploadKnowledgeFiles(formData)
-    
+
     uploadResults.value = response.results || []
     uploadProgress.value.completed = selectedFiles.value.length
-    
+
     // Show success message
     if (response.successful_uploads > 0) {
       setTimeout(() => {

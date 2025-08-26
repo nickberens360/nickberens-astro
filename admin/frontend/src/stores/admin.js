@@ -124,15 +124,22 @@ export const useAdminStore = defineStore('admin', () => {
       stats.value = {
         totalQueries: data.total_queries || 0,
         averageResponseTime: Math.round(data.avg_response_time_ms || 0),
-        successRate: Math.round((1 - (data.error_rate || 0)) * 100), // Calculate from error rate
-        cacheHitRate: Math.round((data.cache_hit_rate || 0) * 100),
+        successRate: Math.round((100 - (data.error_rate || 0))), // Calculate from error rate
+        cacheHitRate: Math.round((data.cache_hit_rate || 0)),
         activeSessions: data.unique_sessions || 0, // Use unique_sessions as active sessions
-        errorRate: Math.round((data.error_rate || 0) * 100),
+        errorRate: Math.round((data.error_rate || 0)),
         totalSources: data.total_sources || 0,
         totalTopics: data.total_topics || 0,
         queriesToday: data.queries_today || 0,
         queriesThisWeek: data.queries_this_week || 0,
-        helpfulRate: Math.round((data.helpful_rate || 0) * 100)
+        helpfulRate: Math.round((data.helpful_rate || 0)),
+        // Add comparison data for percentage calculations
+        totalQueriesChange: data.total_queries_change || 0,
+        averageResponseTimeChange: data.avg_response_time_change || 0,
+        uniqueSessionsChange: data.unique_sessions_change || 0,
+        errorRateChange: data.error_rate_change || 0,
+        cacheHitRateChange: data.cache_hit_rate_change || 0,
+        helpfulRateChange: data.helpful_rate_change || 0
       }
       
       lastUpdate.value = new Date().toISOString()
@@ -205,9 +212,18 @@ export const useAdminStore = defineStore('admin', () => {
     
     try {
       await Promise.all([
-        fetchStatsInternal(),
-        fetchSystemHealth()
+        fetchStatsInternal().catch(err => {
+          console.error('Stats fetch failed:', err)
+          // Don't re-throw, just log the error
+        }),
+        fetchSystemHealth().catch(err => {
+          console.error('System health fetch failed:', err)
+          // Don't re-throw, just log the error  
+        })
       ])
+    } catch (err) {
+      console.error('Refresh data failed:', err)
+      error.value = adminAPI.formatError(err)
     } finally {
       isLoading.value = false
     }
