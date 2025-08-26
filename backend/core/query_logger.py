@@ -12,7 +12,7 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -176,7 +176,7 @@ class QueryLogger:
         anonymized_ip = self.anonymize_ip(client_ip)
 
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "client_ip": anonymized_ip,
             "location": location_data,  # Add location data
             "question": question,
@@ -270,7 +270,7 @@ class QueryLogger:
             # If request_id is provided, append a completion entry instead of rewriting the file
             if request_id:
                 completion_entry = {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "client_ip": self.anonymize_ip(client_ip),
                     "location": get_geolocation_service().get_location(client_ip),
                     "question": question,
@@ -279,7 +279,7 @@ class QueryLogger:
                     "query_type": "text",
                     "response_time": None,
                     "request_id": request_id,
-                    "metadata": {"cache_key": cache_key, "response_updated": datetime.utcnow().isoformat()},
+                    "metadata": {"cache_key": cache_key, "response_updated": datetime.now(datetime.timezone.utc).isoformat()},
                 }
                 try:
                     with open(self.log_file_path, "a") as f:

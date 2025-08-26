@@ -8,7 +8,7 @@ This module provides a protected endpoint to:
 """
 
 import hmac
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -147,7 +147,7 @@ async def get_query_log_stats(
     logger = get_query_logger()
     stats = logger.get_log_stats(exclude_ips=exclude_ips)
 
-    return {"stats": stats, "generated_at": datetime.utcnow().isoformat(), "excluded_ips": exclude_ips}
+    return {"stats": stats, "generated_at": datetime.now(timezone.utc).isoformat(), "excluded_ips": exclude_ips}
 
 
 @router.delete("/query-logs")
@@ -163,7 +163,7 @@ async def clear_query_logs(_token: str = Depends(verify_token)):
     success = logger.clear_logs()
 
     if success:
-        return {"message": "Query logs cleared successfully", "cleared_at": datetime.utcnow().isoformat()}
+        return {"message": "Query logs cleared successfully", "cleared_at": datetime.now(timezone.utc).isoformat()}
     else:
         raise HTTPException(status_code=500, detail="Failed to clear query logs")
 
