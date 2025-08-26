@@ -10,7 +10,6 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 
@@ -560,8 +559,9 @@ class QueryDataManager:
                     ),
                 )
 
-                conn.commit()
-                return cursor.lastrowid
+                query_id = cursor.lastrowid
+                logger.debug(f"Logged query with ID: {query_id}")
+                return query_id
 
         except Exception as e:
             print(f"Database error in log_query: {e}")

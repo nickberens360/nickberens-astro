@@ -61,7 +61,7 @@ const router = createRouter({
           component: () => import('@/views/KnowledgeView.vue'),
           meta: {
             title: 'Knowledge Base',
-            icon: 'library_books'
+            icon: '$knowledge'
           },
           children: [
             {

@@ -15,7 +15,8 @@ onMounted(async () => {
   try {
     await adminStore.initialize()
   } catch (error) {
-    console.log('Admin store initialization failed, likely due to authentication:', error)
+    // Silent catch - authentication failures are expected
+    console.debug('Admin store initialization failed:', error.message || error)
   }
 })
 </script>

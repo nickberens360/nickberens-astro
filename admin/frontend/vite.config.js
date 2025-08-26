@@ -9,7 +9,7 @@ export default defineConfig({
     vuetify({
       autoImport: true,
       theme: {
-        defaultTheme: 'light'
+        defaultTheme: 'dark'
       }
     })
   ],
@@ -34,13 +34,41 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true
+    sourcemap: process.env.NODE_ENV !== 'production',
+    target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia'],
+          vuetify: ['vuetify'],
+          charts: ['chart.js', 'vue-chartjs'],
+          icons: ['@mdi/js']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   },
   optimizeDeps: {
-    include: ['monaco-editor']
+    include: [
+      'monaco-editor',
+      'vue',
+      'vue-router',
+      'pinia',
+      'vuetify',
+      'axios',
+      '@mdi/js'
+    ]
   },
   define: {
     // Monaco Editor needs these global variables
-    global: 'globalThis'
+    global: 'globalThis',
+    __VUE_OPTIONS_API__: false,
+    __VUE_PROD_DEVTOOLS__: false
+  },
+  
+  // Performance optimizations
+  esbuild: {
+    target: 'es2020',
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : []
   }
 })

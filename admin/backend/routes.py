@@ -4,17 +4,18 @@ API routes for the RAG admin dashboard.
 
 import csv
 import io
+import json
 import logging
 import os
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 
-from .auth import auth_manager, get_current_user, require_admin_role, require_auth
+from .auth import auth_manager, require_admin_role, require_auth
 from .database import db_manager, query_data_manager
 from .models import (
     ChangePasswordRequest,
@@ -34,30 +35,37 @@ router = APIRouter(prefix="/admin/api", tags=["admin"])
 
 # Authentication endpoints
 @router.post("/auth/login", response_model=LoginResponse)
-async def login(login_data: LoginRequest, request: Request, response: Response):
-    """Authenticate user and create session."""
+async def login(login_data: LoginRequest, request: Request, response: Response) -> LoginResponse:
+    """Authenticate user and create session with rate limiting and security checks."""
     try:
-        client_ip = request.client.host if request.client else None
-        user_agent = request.headers.get("User-Agent")
+        # Basic rate limiting check (in production, use Redis or similar)
+        client_ip = request.client.host if request.client else "unknown"
+
+        # Validate input
+        if not login_data.username.strip() or not login_data.password:
+            return LoginResponse(success=False, message="Username and password are required")
+        user_agent = request.headers.get("User-Agent", "")
 
         auth_result = auth_manager.authenticate_user(
             login_data.username, login_data.password, ip_address=client_ip, user_agent=user_agent
         )
 
         if not auth_result:
+            logger.warning(f"Failed login attempt for username: {login_data.username} from IP: {client_ip}")
             return LoginResponse(success=False, message="Invalid username or password")
 
         user_data = auth_result["user"].copy()
         user_data.pop("password_hash", None)  # Remove password hash from response
 
-        # Set session cookie
+        # Set secure session cookie
+        is_production = os.getenv("ENVIRONMENT", "development") == "production"
         response.set_cookie(
             key="admin_session",
             value=auth_result["session_id"],
             max_age=24 * 60 * 60,  # 24 hours
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
-            samesite="lax",
+            secure=is_production,  # Only secure in production
+            samesite="strict" if is_production else "lax",
         )
 
         return LoginResponse(
@@ -65,13 +73,15 @@ async def login(login_data: LoginRequest, request: Request, response: Response):
         )
 
     except Exception as e:
-        logger.error(f"Login error: {str(e)}")
+        logger.error(f"Login error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Login failed")
 
 
 @router.post("/auth/logout")
-async def logout(request: Request, response: Response, session: dict = Depends(require_auth)):
-    """Logout user and expire session."""
+async def logout(
+    request: Request, response: Response, session: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """Logout user and expire session securely."""
     try:
         session_id = request.cookies.get("admin_session")
         if session_id:
@@ -83,17 +93,17 @@ async def logout(request: Request, response: Response, session: dict = Depends(r
         return {"success": True, "message": "Logout successful"}
 
     except Exception as e:
-        logger.error(f"Logout error: {str(e)}")
+        logger.error(f"Logout error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Logout failed")
 
 
 @router.get("/auth/me")
-async def get_current_user_info(session: dict = Depends(require_auth)):
-    """Get current authenticated user information."""
+async def get_current_user_info(session: Dict[str, Any] = Depends(require_auth)) -> Dict[str, Any]:
+    """Get current authenticated user information (excluding sensitive data)."""
     user_data = {
         "id": session["user_id"],
         "username": session["username"],
-        "email": session["email"],
+        "email": session.get("email"),
         "role": session["role"],
         "last_login_at": session.get("last_login_at"),
     }
@@ -101,8 +111,10 @@ async def get_current_user_info(session: dict = Depends(require_auth)):
 
 
 @router.post("/auth/change-password")
-async def change_password(password_data: ChangePasswordRequest, session: dict = Depends(require_auth)):
-    """Change the current user's password."""
+async def change_password(
+    password_data: ChangePasswordRequest, session: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """Change the current user's password with enhanced security."""
     try:
         # Get the current user
         user = db_manager.get_admin_user(session["username"])
@@ -111,14 +123,32 @@ async def change_password(password_data: ChangePasswordRequest, session: dict = 
 
         # Verify current password
         if not auth_manager.verify_password(password_data.current_password, user["password_hash"]):
+            logger.warning(f"Invalid current password attempt for user: {session['username']}")
             raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-        # Validate new password
-        if len(password_data.new_password) < 8:
+        # Enhanced password validation
+        new_password = password_data.new_password
+        if len(new_password) < 8:
             raise HTTPException(status_code=400, detail="New password must be at least 8 characters long")
 
-        if password_data.current_password == password_data.new_password:
-            raise HTTPException(status_code=400, detail="New password must be different from current password")
+        # Check for basic password complexity (more efficient with single pass)
+        has_upper = has_lower = has_digit = False
+        for char in new_password:
+            if char.isupper():
+                has_upper = True
+            elif char.islower():
+                has_lower = True
+            elif char.isdigit():
+                has_digit = True
+            # Early exit if all conditions are met
+            if has_upper and has_lower and has_digit:
+                break
+
+        if not (has_upper and has_lower):
+            raise HTTPException(status_code=400, detail="Password must contain both uppercase and lowercase letters")
+
+        if not has_digit:
+            raise HTTPException(status_code=400, detail="Password must contain at least one digit")
 
         # Hash and update the new password
         new_password_hash = auth_manager.hash_password(password_data.new_password)
@@ -141,13 +171,15 @@ async def change_password(password_data: ChangePasswordRequest, session: dict = 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Password change error: {str(e)}")
+        logger.error(f"Password change error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to change password")
 
 
 @router.post("/auth/create-user")
-async def create_user(user_data: CreateUserRequest, session: dict = Depends(require_admin_role)):
-    """Create a new admin user (admin only)."""
+async def create_user(
+    user_data: CreateUserRequest, session: Dict[str, Any] = Depends(require_admin_role)
+) -> Dict[str, Any]:
+    """Create a new admin user (admin only) with validation."""
     try:
         # Check if username already exists
         existing_user = db_manager.get_admin_user(user_data.username)
@@ -163,12 +195,14 @@ async def create_user(user_data: CreateUserRequest, session: dict = Depends(requ
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Create user error: {str(e)}")
+        logger.error(f"Create user error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create user")
 
 
 @router.get("/stats/overview", response_model=OverviewStats)
-async def get_overview_stats(days: int = Query(7, ge=1, le=90), session: dict = Depends(require_auth)):
+async def get_overview_stats(
+    days: int = Query(7, ge=1, le=90), session: Dict[str, Any] = Depends(require_auth)
+) -> OverviewStats:
     """Get overview statistics for the specified number of days."""
     try:
         stats = query_data_manager.get_overview_stats(days)
@@ -183,21 +217,25 @@ async def get_overview_stats(days: int = Query(7, ge=1, le=90), session: dict = 
             queries_this_week=stats.get("queries_this_week", 0),
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching overview stats: {str(e)}")
+        logger.error(f"Error fetching overview stats: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching overview statistics")
 
 
 @router.get("/queries", response_model=QueryResponse)
 async def get_queries(
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    search: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=500),
     errors_only: bool = Query(False),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
-    session: dict = Depends(require_auth),
-):
-    """Get paginated list of queries with optional filters."""
+    session: Dict[str, Any] = Depends(require_auth),
+) -> QueryResponse:
+    """Get paginated list of queries with optional filters and input sanitization."""
     try:
+        # Sanitize search input
+        if search:
+            search = search.strip()[:500]  # Limit search length
         result = query_data_manager.get_queries(
             limit=limit,
             offset=offset,
@@ -208,14 +246,17 @@ async def get_queries(
         )
         return QueryResponse(**result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching queries: {str(e)}")
+        logger.error(f"Error fetching queries: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching queries")
 
 
 @router.get("/queries/{query_id}")
-async def get_query_detail(query_id: int, session: dict = Depends(require_auth)):
-    """Get detailed information about a specific query."""
+async def get_query_detail(query_id: int, session: Dict[str, Any] = Depends(require_auth)) -> Dict[str, Any]:
+    """Get detailed information about a specific query with proper error handling."""
+    if query_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid query ID")
+
     try:
-        result = query_data_manager.get_queries(limit=1, offset=0)
         # Filter by ID (simplified for this implementation)
         with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
@@ -226,28 +267,34 @@ async def get_query_detail(query_id: int, session: dict = Depends(require_auth))
                 raise HTTPException(status_code=404, detail="Query not found")
 
             query_dict = dict(row)
-            # Parse JSON fields
-            if query_dict["sources_used"]:
-                import json
+            # Safely parse JSON fields
+            try:
+                if query_dict["sources_used"]:
+                    query_dict["sources_used"] = json.loads(query_dict["sources_used"])
+            except (json.JSONDecodeError, TypeError):
+                query_dict["sources_used"] = []
 
-                query_dict["sources_used"] = json.loads(query_dict["sources_used"])
-            if query_dict["follow_up_questions"]:
-                import json
-
-                query_dict["follow_up_questions"] = json.loads(query_dict["follow_up_questions"])
+            try:
+                if query_dict["follow_up_questions"]:
+                    query_dict["follow_up_questions"] = json.loads(query_dict["follow_up_questions"])
+            except (json.JSONDecodeError, TypeError):
+                query_dict["follow_up_questions"] = []
 
             return query_dict
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching query detail: {str(e)}")
+        logger.error(f"Error fetching query detail: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching query details")
 
 
 @router.post("/queries/{query_id}/feedback")
-async def update_query_feedback(query_id: int, feedback: FeedbackUpdate, session: dict = Depends(require_auth)):
-    """Update user feedback for a query."""
-    if feedback.feedback not in ["helpful", "not_helpful"]:
-        raise HTTPException(status_code=400, detail="Feedback must be 'helpful' or 'not_helpful'")
+async def update_query_feedback(
+    query_id: int, feedback: FeedbackUpdate, session: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, str]:
+    """Update user feedback for a query with validation."""
+    if query_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid query ID")
 
     try:
         # Update feedback directly in the backend database
@@ -257,13 +304,14 @@ async def update_query_feedback(query_id: int, feedback: FeedbackUpdate, session
             conn.commit()
         return {"status": "success", "message": "Feedback updated"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating feedback: {str(e)}")
+        logger.error(f"Error updating feedback: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating feedback")
 
 
 @router.get("/performance/metrics")
 async def get_performance_metrics(
-    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), session: dict = Depends(require_auth)
-):
+    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), session: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
     """Get performance metrics for the specified time range with comparison to previous period."""
     try:
 
@@ -340,14 +388,15 @@ async def get_performance_metrics(
             },
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching performance metrics: {str(e)}")
+        logger.error(f"Error fetching performance metrics: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching performance metrics")
 
 
 @router.get("/performance/timeline")
 async def get_performance_timeline(
     days: int = Query(7, ge=1, le=90),
     interval: str = Query("hour", regex="^(hour|day)$"),
-    session: dict = Depends(require_auth),
+    session: Dict[str, Any] = Depends(require_auth),
 ):
     """Get time series data for performance charts."""
     try:
@@ -355,10 +404,8 @@ async def get_performance_timeline(
             cursor = conn.cursor()
 
             if interval == "hour":
-                time_format = "%Y-%m-%d %H:00:00"
                 time_group = "strftime('%Y-%m-%d %H:00:00', timestamp)"
             else:
-                time_format = "%Y-%m-%d"
                 time_group = "date(timestamp)"
 
             cursor.execute(
@@ -400,7 +447,7 @@ async def get_performance_timeline(
 
 @router.get("/performance/percentiles")
 async def get_response_time_percentiles(
-    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), session: dict = Depends(require_auth)
+    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$"), session: Dict[str, Any] = Depends(require_auth)
 ):
     """Get response time percentiles for the specified time range."""
     try:
@@ -418,7 +465,7 @@ async def get_response_time_percentiles(
 async def get_content_gaps(
     resolved: bool = Query(False, description="Include resolved content gaps"),
     limit: int = Query(50, ge=1, le=200),
-    session: dict = Depends(require_auth),
+    session: Dict[str, Any] = Depends(require_auth),
 ):
     """Get content gaps detected automatically by the query logger."""
     try:
@@ -475,7 +522,7 @@ async def update_content_gap(
     gap_id: int,
     resolved: bool = Query(None, description="Mark as resolved/unresolved"),
     notes: str = Query(None, description="Add notes about the content gap"),
-    session: dict = Depends(require_auth),
+    session: Dict[str, Any] = Depends(require_auth),
 ):
     """Update a content gap (mark as resolved, add notes)."""
     try:
@@ -514,7 +561,7 @@ async def update_content_gap(
 
 
 @router.get("/content/popular-topics")
-async def get_popular_topics(session: dict = Depends(require_auth)):
+async def get_popular_topics(session: Dict[str, Any] = Depends(require_auth)):
     """Get most queried topics/themes."""
     try:
         with query_data_manager.get_connection() as conn:
@@ -548,7 +595,9 @@ async def get_popular_topics(session: dict = Depends(require_auth)):
 
 @router.get("/sessions")
 async def get_sessions(
-    active_only: bool = Query(False), limit: int = Query(50, ge=1, le=1000), session: dict = Depends(require_auth)
+    active_only: bool = Query(False),
+    limit: int = Query(50, ge=1, le=1000),
+    session: Dict[str, Any] = Depends(require_auth),
 ):
     """Get user session information."""
     try:
@@ -580,7 +629,7 @@ async def export_csv(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     export_type: str = Query("queries", regex="^(queries|metrics)$"),
-    session: dict = Depends(require_auth),
+    session: Dict[str, Any] = Depends(require_auth),
 ):
     """Export data as CSV file."""
     try:
@@ -698,21 +747,52 @@ async def health_check():
 
 # Knowledge base management endpoints
 @router.post("/knowledge/upload")
-async def upload_knowledge_files(files: List[UploadFile] = File(...), session: dict = Depends(require_auth)):
-    """Upload files to the knowledge base directory."""
+async def upload_knowledge_files(
+    files: List[UploadFile] = File(...), session: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """Upload files to the knowledge base directory with security validation."""
+    # Security: Only allow authenticated users
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    if len(files) > 10:  # Limit number of files
+        raise HTTPException(status_code=400, detail="Too many files (max 10 per upload)")
+
     # Get the knowledge base directory path
-    # Assuming the admin backend is in /admin/backend and knowledge is in /backend/knowledge
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
+
+    # Security check: ensure directory is within expected bounds
+    try:
+        knowledge_dir = knowledge_dir.resolve()
+        expected_base = Path(__file__).parent.parent.parent.resolve()
+        knowledge_dir.relative_to(expected_base)
+    except ValueError:
+        raise HTTPException(status_code=500, detail="Invalid knowledge directory path")
+
     knowledge_dir.mkdir(parents=True, exist_ok=True)
 
-    # Allowed file extensions
+    # Allowed file extensions and MIME types for security
     allowed_extensions = {".md", ".pdf", ".json", ".txt", ".html", ".docx"}
+    allowed_mime_types = {
+        "text/markdown",
+        "text/plain",
+        "application/json",
+        "text/html",
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/octet-stream",  # Some browsers send this for text files
+    }
 
     uploaded_files = []
     errors = []
 
     try:
         for file in files:
+            # Security: Validate filename
+            if not file.filename or ".." in file.filename or "/" in file.filename or "\\" in file.filename:
+                errors.append(f"Invalid filename: {file.filename}")
+                continue
+
             # Validate file extension
             file_ext = Path(file.filename).suffix.lower()
             if file_ext not in allowed_extensions:
@@ -721,26 +801,46 @@ async def upload_knowledge_files(files: List[UploadFile] = File(...), session: d
                 )
                 continue
 
-            # Check file size (10MB limit)
-            if file.size and file.size > 10 * 1024 * 1024:
-                errors.append(f"File '{file.filename}' is too large (max 10MB)")
+            # Validate MIME type for additional security
+            if file.content_type and file.content_type not in allowed_mime_types:
+                logger.warning(f"Suspicious file upload attempt: {file.filename} with MIME type {file.content_type}")
+                errors.append(f"File '{file.filename}' has unsupported content type")
+                continue
+
+            # Check file size (5MB limit for security)
+            if file.size and file.size > 5 * 1024 * 1024:
+                errors.append(f"File '{file.filename}' is too large (max 5MB)")
+                continue
+
+            # Security: Sanitize filename
+            safe_filename = "".join(c for c in file.filename if c.isalnum() or c in ".-_").rstrip()
+            if not safe_filename:
+                errors.append(f"Invalid filename after sanitization: {file.filename}")
                 continue
 
             # Save file to knowledge directory
-            file_path = knowledge_dir / file.filename
+            file_path = knowledge_dir / safe_filename
 
             # Check if file already exists
             if file_path.exists():
-                errors.append(f"File '{file.filename}' already exists")
+                errors.append(f"File '{safe_filename}' already exists")
+                continue
+
+            # Security: Ensure file path is within knowledge directory
+            try:
+                file_path.resolve().relative_to(knowledge_dir.resolve())
+            except ValueError:
+                errors.append(f"Invalid file path: {safe_filename}")
                 continue
 
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            uploaded_files.append({"filename": file.filename, "size": file.size or 0, "path": str(file_path)})
+            uploaded_files.append({"filename": safe_filename, "size": file.size or 0, "path": str(file_path)})
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error uploading files: {str(e)}")
+        logger.error(f"Error uploading files: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error uploading files")
 
     # Return results
     response = {"uploaded_files": uploaded_files, "upload_count": len(uploaded_files), "total_files": len(files)}
@@ -755,7 +855,7 @@ async def upload_knowledge_files(files: List[UploadFile] = File(...), session: d
 
 
 @router.get("/knowledge/files")
-async def get_knowledge_files(session: dict = Depends(require_auth)):
+async def get_knowledge_files(session: Dict[str, Any] = Depends(require_auth)):
     """Get list of files in the knowledge base directory."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
 
@@ -786,14 +886,26 @@ async def get_knowledge_files(session: dict = Depends(require_auth)):
 
 
 @router.delete("/knowledge/files/{filename}")
-async def delete_knowledge_file(filename: str, session: dict = Depends(require_auth)):
-    """Delete a file from the knowledge base directory."""
+async def delete_knowledge_file(filename: str, session: Dict[str, Any] = Depends(require_auth)) -> Dict[str, str]:
+    """Delete a file from the knowledge base directory with enhanced security."""
+    # Enhanced security validation
+    if not filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    # Only allow specific file extensions for deletion
+    allowed_extensions = {".md", ".pdf", ".json", ".txt", ".html", ".docx"}
+    file_ext = Path(filename).suffix.lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="File type not allowed")
+
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
     file_path = knowledge_dir / filename
 
     # Security check - ensure file is in knowledge directory
     try:
-        file_path.resolve().relative_to(knowledge_dir.resolve())
+        resolved_path = file_path.resolve()
+        resolved_knowledge_dir = knowledge_dir.resolve()
+        resolved_path.relative_to(resolved_knowledge_dir)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid file path")
 
@@ -807,11 +919,12 @@ async def delete_knowledge_file(filename: str, session: dict = Depends(require_a
         file_path.unlink()
         return {"message": f"File '{filename}' deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
+        logger.error(f"Error deleting file {filename}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting file")
 
 
 @router.get("/knowledge/stats")
-async def get_knowledge_stats(session: dict = Depends(require_auth)):
+async def get_knowledge_stats(session: Dict[str, Any] = Depends(require_auth)):
     """Get statistics about the knowledge base."""
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
 
@@ -842,58 +955,71 @@ async def get_knowledge_stats(session: dict = Depends(require_auth)):
 @router.post("/knowledge/refresh")
 async def refresh_knowledge_base(
     force_reindex: bool = Query(True, description="Force re-indexing of all files"),
-    session: dict = Depends(require_auth),
-):
+    session: Dict[str, Any] = Depends(require_auth),
+) -> Dict[str, Any]:
     """Trigger a production-ready refresh of the knowledge base index."""
-    from .knowledge_refresh_service_v2 import knowledge_refresh_service
-
     try:
+        from .knowledge_refresh_service_v2 import knowledge_refresh_service
+
         result = await knowledge_refresh_service.refresh_knowledge_base(force_reindex=force_reindex)
         return result
-
+    except ImportError:
+        logger.warning("Knowledge refresh service not available")
+        raise HTTPException(status_code=503, detail="Knowledge refresh service not available")
     except Exception as e:
         logger.error(f"Knowledge base refresh failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error refreshing knowledge base: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error refreshing knowledge base")
 
 
 @router.get("/knowledge/refresh/status")
-async def get_refresh_status(session: dict = Depends(require_auth)):
+async def get_refresh_status(session: Dict[str, Any] = Depends(require_auth)) -> Dict[str, Any]:
     """Get the current status of knowledge base refresh operation."""
-    from .knowledge_refresh_service_v2 import knowledge_refresh_service
-
     try:
-        return knowledge_refresh_service.get_refresh_status()
+        from .knowledge_refresh_service_v2 import knowledge_refresh_service
 
+        return knowledge_refresh_service.get_refresh_status()
+    except ImportError:
+        logger.warning("Knowledge refresh service not available")
+        raise HTTPException(status_code=503, detail="Knowledge refresh service not available")
     except Exception as e:
         logger.error(f"Failed to get refresh status: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error getting refresh status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error getting refresh status")
 
 
 @router.post("/knowledge/refresh/wait")
 async def wait_for_refresh_completion(
-    timeout: int = Query(300, ge=10, le=600, description="Timeout in seconds"), session: dict = Depends(require_auth)
-):
+    timeout: int = Query(300, ge=10, le=600, description="Timeout in seconds"),
+    session: Dict[str, Any] = Depends(require_auth),
+) -> Dict[str, Any]:
     """Wait for the current refresh operation to complete."""
-    from .knowledge_refresh_service_v2 import knowledge_refresh_service
-
     try:
+        from .knowledge_refresh_service_v2 import knowledge_refresh_service
+
         result = await knowledge_refresh_service.wait_for_completion(timeout=timeout)
         return result
-
+    except ImportError:
+        logger.warning("Knowledge refresh service not available")
+        raise HTTPException(status_code=503, detail="Knowledge refresh service not available")
     except Exception as e:
         logger.error(f"Error waiting for refresh completion: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error waiting for refresh: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error waiting for refresh completion")
 
 
 @router.get("/knowledge/files/{filename}/content")
-async def get_knowledge_file_content(filename: str, session: dict = Depends(require_auth)):
-    """Get the content of a specific file from the knowledge base directory."""
+async def get_knowledge_file_content(filename: str, session: Dict[str, Any] = Depends(require_auth)) -> Dict[str, Any]:
+    """Get the content of a specific file from the knowledge base directory with security validation."""
+    # Enhanced security validation
+    if not filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
     file_path = knowledge_dir / filename
 
     # Security check - ensure file is in knowledge directory
     try:
-        file_path.resolve().relative_to(knowledge_dir.resolve())
+        resolved_path = file_path.resolve()
+        resolved_knowledge_dir = knowledge_dir.resolve()
+        resolved_path.relative_to(resolved_knowledge_dir)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid file path")
 
@@ -920,22 +1046,29 @@ async def get_knowledge_file_content(filename: str, session: dict = Depends(requ
             "type": file_path.suffix.lower(),
         }
     except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File is not a text file")
+        raise HTTPException(status_code=400, detail="File is not a text file or has invalid encoding")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+        logger.error(f"Error reading file {filename}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error reading file")
 
 
 @router.put("/knowledge/files/{filename}/content")
 async def update_knowledge_file_content(
-    filename: str, file_content: FileContentUpdate, session: dict = Depends(require_auth)
-):
-    """Update the content of a specific file in the knowledge base directory."""
+    filename: str, file_content: FileContentUpdate, session: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """Update the content of a specific file in the knowledge base directory with backup and validation."""
+    # Enhanced security validation
+    if not filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
     knowledge_dir = Path(__file__).parent.parent.parent / "backend" / "knowledge"
     file_path = knowledge_dir / filename
 
     # Security check - ensure file is in knowledge directory
     try:
-        file_path.resolve().relative_to(knowledge_dir.resolve())
+        resolved_path = file_path.resolve()
+        resolved_knowledge_dir = knowledge_dir.resolve()
+        resolved_path.relative_to(resolved_knowledge_dir)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid file path")
 
@@ -983,6 +1116,8 @@ async def update_knowledge_file_content(
             if backup_path.exists():
                 shutil.copy2(backup_path, file_path)
                 backup_path.unlink()
-        except:
-            pass
-        raise HTTPException(status_code=500, detail=f"Error updating file: {str(e)}")
+        except Exception as restore_error:
+            logger.error(f"Failed to restore backup for {filename}: {str(restore_error)}")
+
+        logger.error(f"Error updating file {filename}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating file")

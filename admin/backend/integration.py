@@ -4,13 +4,11 @@ Integration module to connect existing RAG system with admin dashboard logging.
 
 import hashlib
 import hmac
-import json
 import logging
 import os
 import time
 import uuid
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from .database import db_manager, query_data_manager
 

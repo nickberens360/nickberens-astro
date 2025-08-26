@@ -16,14 +16,16 @@ class AdminAPI {
     this.client.interceptors.request.use(
       (config) => {
         // Optional: minimal dev-only logging
-        if (import.meta.env.DEV) {
-          console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`)
+        if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_API) {
+          console.debug(`API ${config.method?.toUpperCase()}: ${config.url}`)
         }
         // Session-based authentication - cookies are automatically sent with withCredentials: true
         return config
       },
       (error) => {
-        console.error('Request error:', error)
+        if (import.meta.env.DEV) {
+          console.error('Request error:', error)
+        }
         return Promise.reject(error)
       }
     )
@@ -34,14 +36,20 @@ class AdminAPI {
         return response.data
       },
       (error) => {
-        console.error('API Error:', error.response?.data || error.message)
+        if (import.meta.env.DEV) {
+          console.error('API Error:', error.response?.data || error.message)
+        }
         
         // Handle common error cases
         if (error.response?.status === 401) {
           // Handle unauthorized access
-          console.error('Unauthorized access - authentication required')
+          if (import.meta.env.DEV) {
+            console.debug('Unauthorized access - authentication required')
+          }
         } else if (error.response?.status === 404) {
-          console.error('API endpoint not found')
+          if (import.meta.env.DEV) {
+            console.error('API endpoint not found')
+          }
         } else if (error.response?.status >= 500) {
           console.error('Server error')
         }

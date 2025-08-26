@@ -8,7 +8,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 # Add backend to path to import from main backend
 backend_path = Path(__file__).parent.parent.parent / "backend"
@@ -20,11 +20,9 @@ sys.path.insert(0, str(project_root))
 
 try:
     from backend.core.app_initializer_v2 import initialize_app_state
-    from backend.core.unified_retriever import UnifiedRetriever
 except ImportError:
     # Fallback for direct imports
     from core.app_initializer_v2 import initialize_app_state
-    from core.unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
 

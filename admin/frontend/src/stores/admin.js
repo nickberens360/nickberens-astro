@@ -58,13 +58,17 @@ export const useAdminStore = defineStore('admin', () => {
 
   // Actions
   const initialize = async () => {
-    console.log('Initializing admin store...')
+    if (import.meta.env.DEV) {
+      console.log('Initializing admin store...')
+    }
     
     // First check if user is authenticated
     const authenticated = await checkAuth()
     
     if (!authenticated) {
-      console.log('User not authenticated, skipping data initialization')
+      if (import.meta.env.DEV) {
+        console.log('User not authenticated, skipping data initialization')
+      }
       return false
     }
     
@@ -85,15 +89,21 @@ export const useAdminStore = defineStore('admin', () => {
       isConnected.value = await adminAPI.testConnection()
       if (isConnected.value) {
         error.value = null
-        console.log('Successfully connected to admin API')
+        if (import.meta.env.DEV) {
+          console.log('Successfully connected to admin API')
+        }
       } else {
         error.value = 'Unable to connect to admin API'
-        console.error('Failed to connect to admin API')
+        if (import.meta.env.DEV) {
+          console.error('Failed to connect to admin API')
+        }
       }
     } catch (err) {
       isConnected.value = false
       error.value = adminAPI.formatError(err)
-      console.error('Connection test failed:', err)
+      if (import.meta.env.DEV) {
+        console.error('Connection test failed:', err)
+      }
     }
     return isConnected.value
   }
@@ -102,9 +112,13 @@ export const useAdminStore = defineStore('admin', () => {
     error.value = null
 
     try {
-      console.log('Fetching stats with days:', days)
+      if (import.meta.env.DEV) {
+        console.log('Fetching stats with days:', days)
+      }
       const data = await adminAPI.getStats(days)
-      console.log('Raw API response:', data)
+      if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_API) {
+        console.log('Raw API response:', data)
+      }
       
       // Update stats with received data - fix field mappings
       stats.value = {
@@ -122,8 +136,9 @@ export const useAdminStore = defineStore('admin', () => {
       }
       
       lastUpdate.value = new Date().toISOString()
-      console.log('Stats updated:', stats.value)
-      console.log('Stats reactive value:', stats.value)
+      if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_STORES) {
+        console.log('Stats updated:', stats.value)
+      }
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch stats:', err)
@@ -153,7 +168,9 @@ export const useAdminStore = defineStore('admin', () => {
         lastUpdated: new Date().toISOString(),
         ...data
       }
-      console.log('System health updated:', systemHealth.value)
+      if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_STORES) {
+        console.log('System health updated:', systemHealth.value)
+      }
     } catch (err) {
       console.error('Failed to fetch system health:', err)
       systemHealth.value.status = 'error'
@@ -181,7 +198,9 @@ export const useAdminStore = defineStore('admin', () => {
   const refreshData = async () => {
     if (isLoading.value) return
     
-    console.log('Refreshing admin data...')
+    if (import.meta.env.DEV) {
+      console.log('Refreshing admin data...')
+    }
     isLoading.value = true
     
     try {
@@ -208,14 +227,18 @@ export const useAdminStore = defineStore('admin', () => {
       }
     }, interval)
 
-    console.log(`Auto-refresh started with ${interval}ms interval`)
+    if (import.meta.env.DEV) {
+      console.log(`Auto-refresh started with ${interval}ms interval`)
+    }
   }
 
   const stopAutoRefresh = () => {
     if (refreshInterval) {
       clearInterval(refreshInterval)
       refreshInterval = null
-      console.log('Auto-refresh stopped')
+      if (import.meta.env.DEV) {
+        console.log('Auto-refresh stopped')
+      }
     }
   }
 
@@ -260,7 +283,9 @@ export const useAdminStore = defineStore('admin', () => {
         return true
       }
     } catch (err) {
-      console.log('Not authenticated or session expired')
+      if (import.meta.env.DEV) {
+        console.debug('Not authenticated or session expired')
+      }
       user.value = null
       isAuthenticated.value = false
     }

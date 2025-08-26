@@ -242,22 +242,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useDisplay, useTheme } from 'vuetify';
-import { useAdminStore } from '@/stores/admin';
-import { formatDate } from '@/types/admin';
-import TimeRangeSelector from '@/components/TimeRangeSelector.vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useDisplay, useTheme } from 'vuetify'
+import { useAdminStore } from '@/stores/admin'
+import { formatDate } from '@/types/admin'
+import TimeRangeSelector from '@/components/TimeRangeSelector.vue'
 
-const router = useRouter();
-const route = useRoute();
-const { mobile } = useDisplay();
-const theme = useTheme();
+const router = useRouter()
+const route = useRoute()
+const { mobile } = useDisplay()
+const theme = useTheme()
 
-const adminStore = useAdminStore();
+const adminStore = useAdminStore()
 
 // Local state
-const drawer = ref(true);
+const drawer = ref(true)
 
 // Computed properties
 const {
@@ -270,7 +270,7 @@ const {
   isHealthy
 } = adminStore;
 
-const isDark = computed(() => theme.global.current.value.dark);
+const isDark = computed(() => theme.global.current.value.dark)
 
 const navigationItems = computed(() => [
   {
@@ -347,23 +347,23 @@ const showTimeRangeSelector = computed(() => {
   return ['dashboard', 'performance'].includes(route.name);
 });
 
-const showError = ref(false);
-const showConnectionWarning = ref(false);
+const showError = ref(false)
+const showConnectionWarning = ref(false)
 
 // Watch for error changes
 watch(() => error?.value, (newError) => {
-  showError.value = Boolean(newError);
-});
+  showError.value = Boolean(newError)
+})
 
 // Watch for connection status changes
 watch([() => isConnected.value, () => isLoading.value], ([connected, loading]) => {
-  showConnectionWarning.value = !connected && !loading;
-});
+  showConnectionWarning.value = !connected && !loading
+})
 
 const formatLastUpdate = computed(() => {
-  if (!adminStore.lastUpdate) return 'Never';
-  return formatDate(adminStore.lastUpdate);
-});
+  if (!adminStore.lastUpdate) return 'Never'
+  return formatDate(adminStore.lastUpdate)
+})
 
 // Methods
 const getStatusColor = (status) => {
@@ -371,78 +371,78 @@ const getStatusColor = (status) => {
     case 'healthy':
     case 'ok':
     case 'running':
-      return 'success';
+      return 'success'
     case 'error':
     case 'failed':
     case 'down':
-      return 'error';
+      return 'error'
     case 'warning':
     case 'degraded':
-      return 'warning';
+      return 'warning'
     case 'unknown':
     case 'loading':
-      return 'info';
+      return 'info'
     default:
-      return 'grey';
+      return 'grey'
   }
-};
+}
 
 const refreshData = async () => {
-  await adminStore.refreshData();
-};
+  await adminStore.refreshData()
+}
 
 const setTimeRange = async (newTimeRange) => {
-  await adminStore.setTimeRange(newTimeRange);
-};
+  await adminStore.setTimeRange(newTimeRange)
+}
 
 const resetError = () => {
-  showError.value = false;
-  adminStore.resetError();
-};
+  showError.value = false
+  adminStore.resetError()
+}
 
 const testConnection = async () => {
-  await adminStore.testConnection();
+  await adminStore.testConnection()
   if (isConnected.value) {
-    await refreshData();
+    await refreshData()
   }
-};
+}
 
 const toggleTheme = () => {
-  theme.global.name.value = isDark.value ? 'light' : 'dark';
-};
+  theme.global.name.value = isDark.value ? 'light' : 'dark'
+}
 
 const exportData = () => {
   // TODO: Implement export functionality
-  console.log('Export data functionality to be implemented');
-};
+  console.log('Export data functionality to be implemented')
+}
 
 const navigateToParent = (item) => {
   // Navigate to the parent route which will redirect to the default child
   if (item.to) {
-    router.push(item.to);
+    router.push(item.to)
   }
-};
+}
 
 const handleLogout = async () => {
   try {
-    await adminStore.logout();
-    router.push({ name: 'login' });
+    await adminStore.logout()
+    router.push({ name: 'login' })
   } catch (error) {
-    console.error('Logout failed:', error);
+    console.error('Logout failed:', error)
   }
-};
+}
 
 // Lifecycle
 onMounted(() => {
   // Close drawer on mobile by default
   if (mobile.value) {
-    drawer.value = false;
+    drawer.value = false
   }
-});
+})
 
 onUnmounted(() => {
-  adminStore.cleanup();
-});
+  adminStore.cleanup()
+})
 </script>
 
 <style scoped>
