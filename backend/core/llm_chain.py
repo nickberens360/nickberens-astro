@@ -479,14 +479,18 @@ async def stream_with_fallback(
                         client_ip=client_ip,
                         question=question,
                         response=cached_response,
-                        provider="cached",
-                        tokens_used=0,
-                        response_time_ms=0,
+                        model_used="cached",
+                        query_type="text",
+                        response_time=0.0,
+                        metadata={
+                            "cache_hit": True,
+                            "source_urls": [],
+                            "source_titles": [],
+                            "geo_info": None,
+                            "tokens_used": 0,
+                            "provider": "cached",
+                        },
                         request_id=request_id,
-                        cache_hit=True,
-                        source_urls=[],
-                        source_titles=[],
-                        geo_info=None,
                     )
                 except Exception as e:
                     logger.warning(f"Failed to log cached response: {e}")

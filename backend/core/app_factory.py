@@ -78,7 +78,19 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     )
 
     # Register routers - import here to avoid circular imports
-    from ..routes import admin, admin_refresh, content, health, knowledge, query, query_logs, smart_query
+    from ..routes import (
+        admin,
+        admin_refresh,
+        content,
+        health,
+        knowledge,
+        performance,
+        queries,
+        query,
+        query_logs,
+        smart_query,
+        stats,
+    )
 
     # Core routes
     app.include_router(health.router)
@@ -87,6 +99,10 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     app.include_router(content.router, prefix="/api")
     app.include_router(knowledge.router)
     app.include_router(admin_refresh.router)
+
+    # Stats and performance routes
+    app.include_router(stats.router, prefix="/api")
+    app.include_router(performance.router, prefix="/api")
 
     # Admin routes - consolidated into single comprehensive admin router
     app.include_router(admin.router)  # Handles all /admin/api/* endpoints

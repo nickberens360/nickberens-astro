@@ -115,7 +115,7 @@ class QueryDataManager:
             logger.error(f"Error initializing query data manager database: {str(e)}", exc_info=True)
             raise
 
-    def get_overview_stats(self, days: int = 7) -> Dict[str, Any]:
+    def get_overview_stats(self, days: float = 7) -> Dict[str, Any]:
         """Get overview statistics for the specified number of days, including comparison with previous period."""
         try:
             with self.get_connection() as conn:

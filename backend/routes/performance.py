@@ -276,7 +276,7 @@ async def get_performance_metrics(
 
 @router.get("/performance/timeline", response_model=PerformanceTimeline)
 async def get_performance_timeline(
-    days: int = Query(7, ge=1, le=30, description="Number of days for timeline"),
+    days: float = Query(7, ge=0.1, le=30, description="Number of days for timeline"),
     interval: str = Query("hour", description="Interval for timeline (hour, day)"),
 ):
     """Get performance timeline data for charts."""

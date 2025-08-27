@@ -15,6 +15,9 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from starlette.requests import Request
 
+# Import shared models from knowledge module
+from .knowledge import IndexedDocument, IndexedDocumentsResponse
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -46,26 +49,6 @@ class ContentGapsResponse(BaseModel):
 
     gaps: List[ContentGap]
     total_count: int
-
-
-class IndexedDocument(BaseModel):
-    """Model for indexed document data."""
-
-    id: str
-    source: str
-    content_preview: str
-    content_type: str
-    metadata: dict
-    word_count: int
-
-
-class IndexedDocumentsResponse(BaseModel):
-    """Response model for indexed documents listing."""
-
-    documents: List[IndexedDocument]
-    total_count: int
-    collection_name: str
-    embedding_model: str
 
 
 # Database connection utility imported from shared module
@@ -158,10 +141,10 @@ async def get_content_gaps(
 
     except sqlite3.Error as e:
         logger.error(f"Database error in get_content_gaps: {e}")
-        raise HTTPException(status_code=500, detail="Database error")
+        raise HTTPException(status_code=500, detail="Database error") from e
     except Exception as e:
         logger.error(f"Error in get_content_gaps: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.patch("/content/gaps/{gap_id}")
@@ -219,12 +202,12 @@ async def update_content_gap(
 
     except sqlite3.Error as e:
         logger.error(f"Database error in update_content_gap: {e}")
-        raise HTTPException(status_code=500, detail="Database error")
+        raise HTTPException(status_code=500, detail="Database error") from e
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error in update_content_gap: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/content/popular-topics")

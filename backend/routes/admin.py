@@ -296,7 +296,7 @@ async def create_user(
 # Stats endpoints
 @router.get("/stats/overview", response_model=OverviewStats)
 async def get_overview_stats(
-    days: int = Query(7, ge=1, le=90), session: Dict[str, Any] = Depends(require_admin_auth)
+    days: float = Query(7, ge=0.1, le=90), session: Dict[str, Any] = Depends(require_admin_auth)
 ) -> OverviewStats:
     """Get overview statistics for the specified number of days."""
     try:
@@ -446,7 +446,7 @@ async def get_performance_metrics(
 
 @router.get("/performance/timeline")
 async def get_performance_timeline(
-    days: int = Query(7, ge=1, le=30),
+    days: float = Query(7, ge=0.1, le=30),
     interval: str = Query("day", pattern="^(hour|day)$"),
     session: Dict[str, Any] = Depends(require_admin_auth),
 ) -> Dict[str, Any]:

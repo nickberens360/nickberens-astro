@@ -28,7 +28,7 @@ from ..core.database_utils import get_rag_monitoring_db_connection as get_db_con
 
 
 @router.get("/stats/overview", response_model=OverviewStats)
-async def get_stats_overview(days: int = Query(7, ge=1, le=90, description="Number of days for statistics")):
+async def get_stats_overview(days: float = Query(7, ge=0.1, le=90, description="Number of days for statistics")):
     """
     Get overview statistics for the admin dashboard.
 
