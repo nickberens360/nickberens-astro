@@ -49,10 +49,11 @@ export const formatDuration = (ms) => {
 }
 
 export const formatBytes = (bytes) => {
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  if (bytes === 0) return '0 Bytes'
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB']
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 Bytes'
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), sizes.length - 1)
+  const value = bytes / Math.pow(1024, i)
+  return `${value.toFixed(value >= 10 || i === 0 ? 0 : 2)} ${sizes[i]}`
 }
 
 export const formatDate = (date) => {

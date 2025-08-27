@@ -239,7 +239,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, reactive } from 'vue'
 import api from '@/services/api'
 
 // Define emits
@@ -249,7 +249,7 @@ const emit = defineEmits(['stats-updated'])
 const gaps = ref([])
 const loading = ref(false)
 const showResolved = ref(false)
-const resolvingIds = ref(new Set())
+const resolvingIds = reactive(new Set())
 
 const notesDialog = ref({
   show: false,
@@ -291,7 +291,7 @@ const fetchGaps = async () => {
 
 const markResolved = async (gap) => {
   try {
-    resolvingIds.value.add(gap.id)
+    resolvingIds.add(gap.id)
     await api.updateContentGap(gap.id, { resolved: true })
     gap.resolved = true
     showSnackbar(`Content gap "${truncateText(gap.pattern, 30)}" marked as resolved`)
@@ -299,13 +299,13 @@ const markResolved = async (gap) => {
     console.error('Failed to mark gap as resolved:', error)
     showSnackbar('Failed to mark gap as resolved', 'error')
   } finally {
-    resolvingIds.value.delete(gap.id)
+    resolvingIds.delete(gap.id)
   }
 }
 
 const markUnresolved = async (gap) => {
   try {
-    resolvingIds.value.add(gap.id)
+    resolvingIds.add(gap.id)
     await api.updateContentGap(gap.id, { resolved: false })
     gap.resolved = false
     showSnackbar(`Content gap "${truncateText(gap.pattern, 30)}" marked as unresolved`)
@@ -313,7 +313,7 @@ const markUnresolved = async (gap) => {
     console.error('Failed to mark gap as unresolved:', error)
     showSnackbar('Failed to mark gap as unresolved', 'error')
   } finally {
-    resolvingIds.value.delete(gap.id)
+    resolvingIds.delete(gap.id)
   }
 }
 

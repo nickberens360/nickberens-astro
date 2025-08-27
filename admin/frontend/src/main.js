@@ -13,10 +13,13 @@ import './styles/main.css'
 // Admin API setup
 import { adminAPI } from './services/api'
 
-// Initialize admin token at startup (for development/demo)
-// In production, this should be handled by a proper login flow
-if (import.meta.env.VITE_ADMIN_TOKEN) {
-  adminAPI.setAuthToken(import.meta.env.VITE_ADMIN_TOKEN)
+// Initialize admin token at startup (development only)
+// Never define VITE_ADMIN_TOKEN in production builds.
+if (import.meta.env.DEV) {
+  const devToken = import.meta.env.VITE_ADMIN_TOKEN
+  if (devToken) {
+    adminAPI.setAuthToken(devToken)
+  }
 }
 
 const app = createApp(App)

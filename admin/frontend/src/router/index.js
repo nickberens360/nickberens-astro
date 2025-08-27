@@ -157,8 +157,10 @@ router.beforeEach(async (to, from, next) => {
 
   // If going to login but already authenticated, redirect away
   if (to.name === 'login' && adminStore.isAuthenticated) {
-    const redirect = to.query.redirect || '/admin'
-    next(redirect)
+    const raw = to.query.redirect
+    const redirect =
+      typeof raw === 'string' && raw.startsWith('/') ? raw : '/admin'
+    next({ path: redirect })
     return
   }
 

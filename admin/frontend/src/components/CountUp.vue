@@ -39,7 +39,16 @@ const easeOutQuart = (t) => {
   return 1 - Math.pow(1 - t, 4)
 }
 
+let rafId = null
 const animate = (from, to, duration) => {
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+  if (!Number.isFinite(duration) || duration <= 0) {
+    displayValue.value = props.useFormat ? formatNumber(to) : to.toFixed(props.decimals)
+    return
+  }
   const startTime = Date.now()
   const range = to - from
 
@@ -55,14 +64,15 @@ const animate = (from, to, duration) => {
     displayValue.value = props.useFormat ? Math.round(currentValue).toString() : currentValue.toFixed(props.decimals)
 
     if (progress < 1) {
-      requestAnimationFrame(step)
+      rafId = requestAnimationFrame(step)
     } else {
       // Apply proper formatting only to the final value
       displayValue.value = props.useFormat ? formatNumber(to) : to.toFixed(props.decimals)
+      rafId = null
     }
   }
 
-  requestAnimationFrame(step)
+  rafId = requestAnimationFrame(step)
 }
 
 const startAnimation = () => {

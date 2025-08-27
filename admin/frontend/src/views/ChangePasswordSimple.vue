@@ -59,7 +59,7 @@
         </v-card>
         
         <!-- Debug info -->
-        <v-card class="mt-4" v-if="state.debugInfo">
+        <v-card class="mt-4" v-if="import.meta.env.DEV && state.debugInfo">
           <v-card-title>Debug Info</v-card-title>
           <v-card-text>
             <pre>{{ state.debugInfo }}</pre>
@@ -81,7 +81,7 @@ export default {
   name: 'ChangePasswordSimple',
   setup() {
     const formData = reactive({
-      currentPassword: 'Admin123',
+      currentPassword: '',
       newPassword: '',
       confirmPassword: ''
     })
@@ -153,15 +153,17 @@ export default {
         
       } catch (err) {
         console.error('Password change error:', err)
-        state.error = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to change password'
-        state.debugInfo = `ERROR: ${err.response?.status} ${err.response?.statusText}\n${JSON.stringify(err.response?.data || err.message, null, 2)}`
+        state.error = 'Failed to change password. Please try again.'
+        if (import.meta.env.DEV) {
+          state.debugInfo = `ERROR: ${err.response?.status ?? ''} ${err.response?.statusText ?? ''}\n${JSON.stringify(err.response?.data || err.message, null, 2)}`
+        }
       } finally {
         state.loading = false
       }
     }
     
     const resetForm = () => {
-      formData.currentPassword = 'Admin123'
+      formData.currentPassword = ''
       formData.newPassword = ''
       formData.confirmPassword = ''
       state.error = null

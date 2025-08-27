@@ -102,7 +102,7 @@ const metrics = computed(() => {
       value: stats.value?.totalQueries || 0,
       icon: '$search',
       color: 'primary',
-      change: stats.value?.totalQueriesChange || 25.5 // Force test value
+      change: stats.value?.totalQueriesChange ?? 0
     },
     {
       key: 'avgResponseTime',
@@ -111,7 +111,7 @@ const metrics = computed(() => {
       unit: 'ms',
       icon: '$clock',
       color: 'info',
-      change: stats.value?.averageResponseTimeChange || -15.2, // Force test value
+      change: stats.value?.averageResponseTimeChange ?? 0,
       inverse: true
     },
     {
@@ -121,7 +121,7 @@ const metrics = computed(() => {
       unit: '%',
       icon: '$check',
       color: 'success',
-      change: stats.value?.errorRateChange ? -stats.value.errorRateChange : 8.3, // Force test value
+      change: stats.value?.errorRateChange != null ? -stats.value.errorRateChange : 0,
       inverse: true
     },
     {
@@ -130,7 +130,7 @@ const metrics = computed(() => {
       value: stats.value?.activeSessions || 0,
       icon: '$users',
       color: 'warning',
-      change: stats.value?.uniqueSessionsChange || -5.1 // Force test value
+      change: stats.value?.uniqueSessionsChange ?? 0
     }
   ]
 })

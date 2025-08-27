@@ -90,14 +90,11 @@ class UnifiedRetriever:
             logger.info(f"Reindexing file: {file_path}")
 
             # Remove existing documents with this file path from vector store
-            if hasattr(self.semantic_searcher.vector_store, "_collection"):
-                collection = self.semantic_searcher.vector_store._collection
-                # Delete documents with matching source metadata (this is what the loaders set)
-                try:
-                    collection.delete(where={"source": str(file_path_obj)})
-                    logger.info(f"Removed existing entries for: {file_path}")
-                except Exception as e:
-                    logger.warning(f"Could not remove existing entries: {e}")
+            try:
+                self.semantic_searcher.delete_where({"source": str(file_path_obj)})
+                logger.info(f"Removed existing entries for: {file_path}")
+            except Exception as e:
+                logger.warning(f"Could not remove existing entries: {e}")
 
             # Process the file like in process_directory
             docs = load_doc(file_path_obj)

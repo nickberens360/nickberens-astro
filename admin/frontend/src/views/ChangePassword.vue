@@ -107,7 +107,8 @@ export default {
     const passwordMatchRule = computed(() => (v) => v === newPassword.value || 'Passwords must match')
     
     const changePassword = async () => {
-      if (!form.value.validate()) {
+      const result = await form.value?.validate?.()
+      if (!result || result.valid === false) {
         return
       }
       

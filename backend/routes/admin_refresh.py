@@ -72,8 +72,8 @@ requested_by=admin_interface
         }
 
     except Exception as e:
-        logger.error(f"Failed to set refresh flag: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to set refresh flag: {str(e)}")
+        logger.error("Failed to set refresh flag: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to set refresh flag: {str(e)}") from e
 
 
 @router.get("/refresh/status")
@@ -94,5 +94,5 @@ async def get_refresh_status() -> Dict:
             return {"refresh_pending": False, "note": "No refresh currently pending"}
 
     except Exception as e:
-        logger.error(f"Failed to check refresh status: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to check refresh status: {str(e)}")
+        logger.error("Failed to check refresh status: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to check refresh status: {str(e)}") from e

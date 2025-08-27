@@ -308,7 +308,7 @@ class QueryDataManager:
                 total = cursor.fetchone()[0]
 
                 # Get paginated results
-                params.extend([limit, offset])
+                params.extend([str(limit), str(offset)])
                 cursor.execute(
                     f"""
                     SELECT * FROM query_logs{where_clause}
@@ -322,9 +322,11 @@ class QueryDataManager:
                 for row in cursor.fetchall():
                     query_dict = dict(row)
 
-                    # Map system_response to response for frontend compatibility
-                    if "system_response" in query_dict:
-                        query_dict["response"] = query_dict["system_response"]
+                    # Map response for frontend compatibility
+                    for key in ("response", "system_response", "response_text"):
+                        if key in query_dict and query_dict.get(key) is not None:
+                            query_dict["response"] = query_dict[key]
+                            break
 
                     # Parse JSON fields safely
                     try:
@@ -346,11 +348,12 @@ class QueryDataManager:
                     "total": total,
                     "limit": limit,
                     "offset": offset,
+                    "has_more": (offset + limit) < total,
                 }
 
         except Exception as e:
             logger.error(f"Error getting queries: {str(e)}", exc_info=True)
-            return {"queries": [], "total": 0, "limit": limit, "offset": offset}
+            return {"queries": [], "total": 0, "limit": limit, "offset": offset, "has_more": False}
 
     def get_performance_metrics(self, time_range: str = "24h") -> Dict[str, Any]:
         """Get performance metrics for the specified time range."""

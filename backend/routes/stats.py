@@ -10,28 +10,15 @@ Provides endpoints for:
 import logging
 import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from fastapi import APIRouter, Query
-from pydantic import BaseModel
+
+from backend.models.admin_models import OverviewStats  # reuse shared model
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-
-class OverviewStats(BaseModel):
-    """Model for overview statistics response."""
-
-    total_queries: int = 0
-    avg_response_time_ms: float = 0.0
-    error_rate: float = 0.0
-    cache_hit_rate: float = 0.0
-    unique_sessions: int = 0
-    total_sources: int = 0
-    total_topics: int = 0
-    queries_today: int = 0
-    queries_this_week: int = 0
-    helpful_rate: float = 0.0
+# NOTE: Using shared OverviewStats model from admin_models
 
 
 # Database connection utility imported from shared module

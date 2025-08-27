@@ -127,12 +127,20 @@ export default {
           // The API service now handles setting the token
           state.success = 'Login successful! Redirecting...'
           
-          // Determine redirect destination
-          const redirectTo = route.query.redirect || '/admin'
-          
+          // Determine a safe redirect destination (internal-only)
+          const rawRedirect = Array.isArray(route.query.redirect)
+            ? route.query.redirect[0]
+            : route.query.redirect
+          const redirectTo =
+            typeof rawRedirect === 'string' &&
+            rawRedirect.startsWith('/') &&
+            !rawRedirect.startsWith('//')
+              ? rawRedirect
+              : '/admin'
+
           // Redirect after a brief delay
           setTimeout(() => {
-            router.push(redirectTo)
+            router.push({ path: redirectTo })
           }, 1000)
           
         } else {

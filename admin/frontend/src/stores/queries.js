@@ -32,12 +32,8 @@ export const useQueriesStore = defineStore('queries', () => {
     unansweredQuestions: []
   })
 
-  // Getters
-  const paginatedQueries = computed(() => {
-    const start = (filters.value.page - 1) * filters.value.limit
-    const end = start + filters.value.limit
-    return queries.value.slice(start, end)
-  })
+  // Server returns the current page; expose as-is
+  const paginatedQueries = computed(() => queries.value)
 
   const totalPages = computed(() => {
     return Math.ceil(totalQueries.value / filters.value.limit)

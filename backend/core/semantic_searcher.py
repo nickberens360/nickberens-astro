@@ -192,6 +192,24 @@ class SemanticSearcher:
             except Exception as e:
                 logger.warning(f"Could not delete collection: {e}")
 
+    def delete_where(self, where: Dict[str, Any]) -> None:
+        """Delete documents from the underlying store by metadata filter."""
+        if hasattr(self.vector_store, "delete"):
+            # LangChain vector stores commonly expose delete(where=...) for Chroma
+            try:
+                self.vector_store.delete(where=where)  # type: ignore[attr-defined]
+                return
+            except Exception as e:
+                logger.warning("Vector store delete(where=...) failed: %s", e, exc_info=True)
+        # ChromaDB collection fallback
+        if hasattr(self.vector_store, "_collection"):
+            try:
+                self.vector_store._collection.delete(where=where)  # type: ignore[attr-defined]
+                return
+            except Exception as e:
+                logger.warning("Chroma _collection.delete failed: %s", e, exc_info=True)
+        raise RuntimeError("Delete not supported by current vector store")
+
     def reset_store(self) -> None:
         """Reset and reinitialize the vector store."""
         self.delete_collection()
