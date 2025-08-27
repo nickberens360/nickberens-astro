@@ -68,10 +68,7 @@
 <script>
 import { reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import axios from 'axios'
-
-// API base URL configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+import { adminAPI } from '@/services/api'
 
 export default {
   name: 'LoginView',
@@ -124,16 +121,10 @@ export default {
       state.success = null
       
       try {
-        const response = await axios.post(`${API_BASE_URL}/auth/login`, {
-          username: formData.username,
-          password: formData.password
-        })
+        const response = await adminAPI.login(formData.username, formData.password)
         
-        if (response.data.success) {
-          // Store authentication token
-          localStorage.setItem('admin_token', response.data.session_id)
-          
-          // Show success message briefly
+        if (response.success) {
+          // The API service now handles setting the token
           state.success = 'Login successful! Redirecting...'
           
           // Determine redirect destination
@@ -145,7 +136,7 @@ export default {
           }, 1000)
           
         } else {
-          state.error = response.data.message || 'Login failed'
+          state.error = response.message || 'Login failed'
         }
         
       } catch (err) {
@@ -180,18 +171,16 @@ export default {
       if (!token) return
       
       try {
-        const response = await axios.get(`${API_BASE_URL}/auth/me`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+        const response = await adminAPI.getCurrentUser()
         
-        if (response.data.user) {
+        if (response.user) {
           // User is already authenticated, redirect
           const redirectTo = route.query.redirect || '/admin'
           router.push(redirectTo)
         }
       } catch (err) {
         // Invalid token, clear it
-        localStorage.removeItem('admin_token')
+        adminAPI.clearAuthToken()
       }
     }
     

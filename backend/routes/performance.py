@@ -110,7 +110,6 @@ async def get_performance_metrics(
 
         cursor = conn.cursor()
         start_date, end_date = parse_time_range(time_range)
-        end_date - start_date
 
         # Check what data is available and adjust comparison period accordingly
         cursor.execute(
@@ -130,14 +129,16 @@ async def get_performance_metrics(
                 cache_hit_rate={"current": 85, "previous": 85, "change": 0},
             )
 
-        datetime.fromisoformat(result["earliest_data"])
+        # Calculate dynamic date ranges based on the period
+        period_duration = end_date - start_date
+        previous_period_end = start_date
+        previous_period_start = previous_period_end - period_duration
 
-        # Use a much simpler approach - just compare available data using string dates
-        # This matches the database timestamp format exactly
-        current_period_start = "2025-08-25"  # Today
-        current_period_end = "2025-08-26"  # Tomorrow (exclusive)
-        previous_start = "2025-08-24"  # Yesterday
-        previous_end = "2025-08-25"  # Today (exclusive)
+        # Convert to string format for SQL queries
+        current_period_start = start_date.isoformat()
+        current_period_end = end_date.isoformat()
+        previous_start = previous_period_start.isoformat()
+        previous_end = previous_period_end.isoformat()
 
         # Get current period response time
         cursor.execute(
@@ -184,8 +185,8 @@ async def get_performance_metrics(
 
         result = cursor.fetchone()
         current_queries = result["query_count"] if result else 0
-        current_hours = 24  # One full day
-        current_throughput = current_queries / current_hours if current_hours > 0 else 0
+        period_hours = (end_date - start_date).total_seconds() / 3600
+        current_throughput = current_queries / period_hours if period_hours > 0 else 0
 
         # Get previous period throughput
         cursor.execute(
@@ -199,8 +200,8 @@ async def get_performance_metrics(
 
         result = cursor.fetchone()
         previous_queries = result["query_count"] if result else 0
-        previous_hours = 24  # One full day
-        previous_throughput = previous_queries / previous_hours if previous_hours > 0 else 0
+        # Previous period has the same duration as current period
+        previous_throughput = previous_queries / period_hours if period_hours > 0 else 0
 
         # Calculate throughput change
         throughput_change = 0.0

@@ -2,9 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/components/AdminLayout.vue'
 import { useAdminStore } from '@/stores/admin'
 
-// API base URL configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -141,55 +138,30 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   // Update document title
   document.title = to.meta.title ? `${to.meta.title} - RAG Admin` : 'RAG Admin Dashboard'
-  
+
+  const adminStore = useAdminStore()
+
   // Check if route requires authentication
   if (to.meta.requiresAuth || to.path.startsWith('/admin')) {
-    // Check for valid authentication token
-    const token = localStorage.getItem('admin_token')
-    let isAuthenticated = false
-    
-    if (token) {
-      try {
-        // Quick token validation
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        isAuthenticated = response.ok
-      } catch (err) {
-        // Token invalid, clear it
-        localStorage.removeItem('admin_token')
-        isAuthenticated = false
-      }
+    // Use the store's authentication check, which calls the API
+    if (!adminStore.isAuthenticated) {
+      await adminStore.checkAuth()
     }
-    
-    if (!isAuthenticated) {
+
+    if (!adminStore.isAuthenticated) {
       // Redirect to login with return path
       next({ name: 'login', query: { redirect: to.fullPath } })
       return
     }
   }
-  
-  // If going to login but already have valid token, check auth and redirect
-  if (to.name === 'login') {
-    const token = localStorage.getItem('admin_token')
-    if (token) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (response.ok) {
-          // Already authenticated, redirect to intended destination or dashboard
-          const redirect = to.query.redirect || '/admin'
-          next(redirect)
-          return
-        }
-      } catch (err) {
-        // Token invalid, clear it and continue to login
-        localStorage.removeItem('admin_token')
-      }
-    }
+
+  // If going to login but already authenticated, redirect away
+  if (to.name === 'login' && adminStore.isAuthenticated) {
+    const redirect = to.query.redirect || '/admin'
+    next(redirect)
+    return
   }
-  
+
   next()
 })
 

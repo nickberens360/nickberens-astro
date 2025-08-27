@@ -136,7 +136,7 @@ class AdminDatabaseManager:
             (username, email, password_hash, role, datetime.now(), datetime.now()),
         )
 
-        logger.warning(f"Created default admin user: {username}/admin123 - CHANGE PASSWORD IMMEDIATELY!")
+        logger.warning(f"Created default admin user: {username} - CHANGE DEFAULT PASSWORD IMMEDIATELY!")
 
     def get_admin_user(self, username: str) -> Optional[Dict]:
         """Get admin user by username."""

@@ -5,12 +5,13 @@ Simple script to create a test admin user for testing authentication.
 
 import os
 import sys
+from pathlib import Path
 
 # Add the parent directory to the Python path so we can import admin modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from admin.backend.auth import auth_manager
-from admin.backend.database import db_manager
+from backend.core.admin_auth import admin_auth_manager as auth_manager
+from backend.core.admin_database import admin_db_manager as db_manager
 
 
 def create_test_user():

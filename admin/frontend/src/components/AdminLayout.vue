@@ -8,7 +8,7 @@
       color="surface"
     >
       <v-list>
-        <v-list-item class="px-4 py-6">
+        <v-list-item class="px-4 py-0 pb-2">
           <v-list-item-title class="text-h6 font-weight-bold">
             RAG Admin
           </v-list-item-title>
@@ -245,6 +245,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
+import { storeToRefs } from 'pinia'
 import { useAdminStore } from '@/stores/admin'
 import { formatDate } from '@/types/admin'
 import TimeRangeSelector from '@/components/TimeRangeSelector.vue'
@@ -268,7 +269,7 @@ const {
   error,
   isConnected,
   isHealthy
-} = adminStore;
+} = storeToRefs(adminStore);
 
 const isDark = computed(() => theme.global.current.value.dark)
 
@@ -302,28 +303,7 @@ const navigationItems = computed(() => [
     title: 'Knowledge Base',
     to: '/admin/knowledge/sources',
     icon: '$knowledge',
-    children: [
-      {
-        name: 'knowledge-sources',
-        title: 'Source Files',
-        to: '/admin/knowledge/sources'
-      },
-      {
-        name: 'knowledge-documents',
-        title: 'Indexed Documents',
-        to: '/admin/knowledge/documents'
-      },
-      {
-        name: 'knowledge-gaps',
-        title: 'Content Gaps',
-        to: '/admin/knowledge/gaps'
-      },
-      {
-        name: 'knowledge-stats',
-        title: 'Analytics',
-        to: '/admin/knowledge/stats'
-      }
-    ]
+    //do nest children
   }
 ]);
 
@@ -351,12 +331,12 @@ const showError = ref(false)
 const showConnectionWarning = ref(false)
 
 // Watch for error changes
-watch(() => error?.value, (newError) => {
+watch(error, (newError) => {
   showError.value = Boolean(newError)
 })
 
 // Watch for connection status changes
-watch([() => isConnected.value, () => isLoading.value], ([connected, loading]) => {
+watch([isConnected, isLoading], ([connected, loading]) => {
   showConnectionWarning.value = !connected && !loading
 })
 

@@ -7,11 +7,11 @@ import os
 import sys
 from pathlib import Path
 
-# Add parent directory to path to import backend modules
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root (parent of the 'admin' directory) to sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from backend.auth import auth_manager
-from backend.database import db_manager
+from backend.core.admin_auth import admin_auth_manager as auth_manager
+from backend.core.admin_database import admin_db_manager as db_manager
 
 
 def set_admin_password():
