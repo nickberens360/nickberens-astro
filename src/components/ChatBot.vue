@@ -18,8 +18,10 @@
     </div>
 
     <div
-      v-if="rateLimitNotification && false"
+      v-if="rateLimitNotification"
       class="status-notification rate-limit"
+      role="status"
+      aria-live="polite"
     >
       <p>{{ rateLimitNotification }}</p>
     </div>

@@ -72,6 +72,7 @@ public/unified_data.json
 # Log files
 backend/query_logs.json
 backend/.followup_cache.json
+backend/logs/query_logs.json
 *.log
 query_logs.json
 

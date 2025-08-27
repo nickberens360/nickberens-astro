@@ -169,8 +169,12 @@ class QueryLogger:
             return
 
         # Get geolocation data before anonymizing
-        geo_service = get_geolocation_service()
-        location_data = geo_service.get_location(client_ip)
+        try:
+            geo_service = get_geolocation_service()
+            location_data = geo_service.get_location(client_ip)
+        except Exception as e:
+            self.logger.warning("Geolocation lookup failed for %s: %s", client_ip, e)
+            location_data = None
 
         # Anonymize IP address before logging
         anonymized_ip = self.anonymize_ip(client_ip)
