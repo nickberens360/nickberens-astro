@@ -1,37 +1,39 @@
-# Node modules and build artifacts
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm
-.yarn
+# Git and version control
+.git
+.gitignore
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.venv/
-pip-log.txt
-pip-delete-this-directory.txt
+# Documentation
+*.md
+README*
 
-# Environment and secrets
+# Development files
 .env
 .env.local
 .env.*.local
-*.key
-*.pem
 
-# IDE and editor files
+# Node modules (will be installed in container)
+node_modules/
+admin/frontend/node_modules/
+
+# Build artifacts
+admin/frontend/dist/
+.astro/
+dist/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDEs and editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-podman-commands.sh
 
 # OS generated files
 .DS_Store
@@ -42,29 +44,24 @@ podman-commands.sh
 ehthumbs.db
 Thumbs.db
 
-# Development files
-.git/
-.gitignore
-README.md
-*.md
+# Logs
+*.log
+logs/
+backend/logs/
 
-# Test files
-coverage/
-.nyc_output/
+# Testing
 .coverage
 htmlcov/
 .pytest_cache/
-test-results/
+.tox/
 
-# Logs
-logs/
-*.log
+# Virtual environments
+venv/
+env/
+ENV/
 
-# Docker files themselves
-Dockerfile*
-docker-compose*.yml
-.dockerignore
+# Claude Code
+.claude/
 
-# Build outputs (will be copied from build stage)
-dist/
-build/
+# Railway
+.railway/

@@ -9,10 +9,12 @@ This module handles:
 - Security middleware application
 """
 
+from pathlib import Path
 from typing import AsyncContextManager, Callable, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
@@ -110,5 +112,11 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     # Legacy admin routes for backward compatibility (if needed)
     app.include_router(query_logs.router, prefix="/admin")
     app.include_router(knowledge.router, prefix="/admin")
+
+    # Serve admin frontend static files (mount after API routes to avoid conflicts)
+    admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"
+    if admin_static_path.exists():
+        # Mount static files at /admin/dashboard to avoid API route conflicts
+        app.mount("/admin/dashboard", StaticFiles(directory=str(admin_static_path), html=True), name="admin_frontend")
 
     return app

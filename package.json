@@ -19,7 +19,9 @@
     "admin:build": "cd admin/frontend && npm run build",
     "admin": "npm run admin:backend & npm run admin:frontend",
     "admin:stop": "pkill -f 'python3 admin/start-admin.py' || true",
-    "admin:sync": "python3 admin/sync_logs.py"
+    "admin:sync": "python3 admin/sync_logs.py",
+    "railway:build": "./scripts/copy-content-to-knowledge.sh && cd admin/frontend && npm ci && npm run build",
+    "railway:deploy": "railway up"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.3.0",
