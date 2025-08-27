@@ -113,7 +113,15 @@
                 <template v-slot:prepend>
                   <v-icon :color="insight.color" size="small">{{ insight.icon }}</v-icon>
                 </template>
-                <v-list-item-title>{{ insight.title }}</v-list-item-title>
+                <v-list-item-title class="d-flex align-center">
+                  {{ insight.title }}
+                  <v-tooltip location="top" max-width="300px">
+                    <template v-slot:activator="{ props }">
+                      <v-icon v-bind="props" size="small" class="ml-2 text-medium-emphasis">$info</v-icon>
+                    </template>
+                    <div class="text-body-2">{{ getRecommendationTooltip(insight.title) }}</div>
+                  </v-tooltip>
+                </v-list-item-title>
                 <v-list-item-subtitle>{{ insight.description }}</v-list-item-subtitle>
               </v-list-item>
             </v-list>
@@ -130,11 +138,19 @@
             <v-list density="compact">
               <v-list-item v-for="rec in recommendations" :key="rec.title">
                 <template v-slot:prepend>
-                  <v-chip :color="rec.priority" size="x-small" class="me-2">
+                  <v-chip :color="getPriorityColor(rec.priority)" size="x-small" class="me-2">
                     {{ rec.priority }}
                   </v-chip>
                 </template>
-                <v-list-item-title>{{ rec.title }}</v-list-item-title>
+                <v-list-item-title class="d-flex align-center">
+                  {{ rec.title }}
+                  <v-tooltip location="top" max-width="300px">
+                    <template v-slot:activator="{ props }">
+                      <v-icon v-bind="props" size="small" class="ml-2 text-medium-emphasis">$info</v-icon>
+                    </template>
+                    <div class="text-body-2">{{ getRecommendationTooltip(rec.title) }}</div>
+                  </v-tooltip>
+                </v-list-item-title>
                 <v-list-item-subtitle>{{ rec.action }}</v-list-item-subtitle>
               </v-list-item>
             </v-list>
@@ -315,42 +331,62 @@ const contentInsights = computed(() => {
   const types = stats.value.content_types || {}
   const total = Object.values(types).reduce((a, b) => a + b, 0) || 1
 
-  // Find underrepresented types
-  const underrepresented = Object.entries(types)
-    .filter(([_, count]) => (count / total) * 100 < 5)
-    .map(([type]) => type)
-
-  if (underrepresented.length > 0) {
+  // Positive insight about content diversity
+  const diversityScore = Object.keys(types).length
+  if (diversityScore >= 30) {
     insights.push({
-      icon: '$warning',
-      color: 'warning',
-      title: 'Coverage Gaps Detected',
-      description: `${underrepresented.join(', ')} content types are underrepresented`
+      icon: '$check_circle',
+      color: 'success',
+      title: 'Excellent Content Diversity',
+      description: `${diversityScore} different content types show comprehensive coverage`
+    })
+  } else if (diversityScore >= 15) {
+    insights.push({
+      icon: '$info',
+      color: 'info',
+      title: 'Good Content Variety',
+      description: `${diversityScore} content types provide solid knowledge coverage`
     })
   }
 
-  // Check for imbalance
+  // Content distribution analysis
   const values = Object.values(types)
   if (values.length > 0) {
     const maxCount = Math.max(...values)
     const minCount = Math.min(...values)
-    if (maxCount / minCount > 10) {
+    const avgCount = total / values.length
+    
+    if (maxCount / minCount <= 3) {
       insights.push({
-        icon: '$info',
+        icon: '$check_circle',
+        color: 'success',
+        title: 'Well-Balanced Content',
+        description: 'Content is evenly distributed across different types'
+      })
+    } else if (maxCount / minCount > 10) {
+      insights.push({
+        icon: '$trendUp',
         color: 'info',
-        title: 'Content Imbalance',
-        description: 'Significant variation in content type distribution'
+        title: 'Content Distribution Pattern',
+        description: 'Some content types are much more prominent than others'
       })
     }
   }
 
-  // Positive insights
-  if (Object.keys(types).length >= 6) {
+  // Content volume insight
+  if (total > 500) {
     insights.push({
-      icon: '$check_circle',
+      icon: '$knowledge',
       color: 'success',
-      title: 'Good Content Diversity',
-      description: 'Knowledge base covers multiple content areas'
+      title: 'Rich Knowledge Base',
+      description: `${total} total content chunks provide comprehensive information`
+    })
+  } else if (total > 100) {
+    insights.push({
+      icon: '$document',
+      color: 'info', 
+      title: 'Growing Knowledge Base',
+      description: `${total} content chunks form a solid foundation`
     })
   }
 
@@ -362,39 +398,59 @@ const recommendations = computed(() => {
   const types = stats.value.content_types || {}
   const total = Object.values(types).reduce((a, b) => a + b, 0) || 1
 
-  // Find gaps
+  // Find underrepresented types (less than 2% of total content)
   const commonTypes = ['technical', 'experience', 'skills', 'about', 'project', 'creative']
-  const missingTypes = commonTypes.filter(type => !types[type] || types[type] < 5)
+  const underrepresented = commonTypes.filter(type => {
+    const count = types[type] || 0
+    const percentage = (count / total) * 100
+    return percentage < 2
+  })
 
-  if (missingTypes.length > 0) {
+  if (underrepresented.length > 0) {
     recs.push({
-      priority: 'high',
-      title: 'Add Missing Content',
-      action: `Consider adding ${missingTypes.slice(0, 3).join(', ')} content`
+      priority: 'medium',
+      title: 'Expand Underrepresented Areas',
+      action: `Consider expanding ${underrepresented.slice(0, 3).join(', ')} content (currently <2% each)`
     })
   }
 
-  // Check for dominant types
+  // Check for highly dominant types (>15% is significant with 55+ types)
   const dominant = Object.entries(types)
-    .filter(([_, count]) => (count / total) * 100 > 30)
-    .map(([type]) => type)
+    .filter(([_, count]) => (count / total) * 100 > 15)
+    .map(([type, count]) => ({ type, percentage: ((count / total) * 100).toFixed(1) }))
 
   if (dominant.length > 0) {
     recs.push({
-      priority: 'medium',
-      title: 'Balance Content',
-      action: `${dominant[0]} is dominant, diversify other areas`
+      priority: 'low',
+      title: 'Content Distribution',
+      action: `${dominant[0].type} represents ${dominant[0].percentage}% of content - consider balancing`
     })
   }
 
-  // Chunk optimization
-  if (stats.value.total_chunks / stats.value.unique_sources > 20) {
+  // Look for content optimization opportunities
+  if (Object.keys(types).length > 40) {
     recs.push({
       priority: 'low',
-      title: 'Optimize Chunking',
-      action: 'Consider adjusting chunk size for better retrieval'
+      title: 'Content Type Consolidation',
+      action: 'Consider consolidating similar content types for better organization'
     })
   }
+
+  // Check for significant content imbalances that need action
+  const values = Object.values(types)
+  if (values.length > 0) {
+    const maxCount = Math.max(...values)
+    const minCount = Math.min(...values)
+    if (maxCount / minCount > 20) {
+      recs.push({
+        priority: 'medium',
+        title: 'Address Content Imbalance',
+        action: 'Some content types are heavily overrepresented - consider balancing coverage'
+      })
+    }
+  }
+
+  // Don't add diversity insight here - it belongs in contentInsights
 
   return recs
 })
@@ -424,6 +480,33 @@ const getStatusColor = (status) => {
   if (status === 'Balanced') return 'success'
   if (status === 'Dominant') return 'warning'
   return 'error'
+}
+
+const getPriorityColor = (priority) => {
+  const colorMap = {
+    'high': 'error',
+    'medium': 'warning', 
+    'low': 'info',
+    'success': 'success',
+    'info': 'info'
+  }
+  return colorMap[priority] || 'grey'
+}
+
+const getRecommendationTooltip = (title) => {
+  const tooltips = {
+    'Expand Underrepresented Areas': 'Content types that have very little coverage (<2% of total content) and could benefit from more material.',
+    'Content Distribution': 'A content type that represents a large portion of your knowledge base. Consider diversifying to maintain balance.',
+    'Content Type Consolidation': 'You have many different content types. Consider grouping similar types together for better organization.',
+    'Address Content Imbalance': 'Some content types are heavily overrepresented compared to others. Balancing coverage improves search relevance.',
+    'Excellent Content Diversity': 'Your knowledge base covers many different content areas, providing comprehensive information coverage.',
+    'Well-Balanced Content': 'Content is evenly distributed across different types, making for consistent coverage.',
+    'Content Distribution Pattern': 'Analysis of how your content is spread across different categories and types.',
+    'Rich Knowledge Base': 'Your knowledge base contains a substantial amount of content providing comprehensive coverage.',
+    'Growing Knowledge Base': 'Your knowledge base has good foundational content and is expanding well.',
+    'Good Content Variety': 'Your knowledge base covers multiple content types providing solid information diversity.'
+  }
+  return tooltips[title] || 'Additional information about this recommendation or insight.'
 }
 
 const updateCharts = () => {
@@ -546,8 +629,13 @@ const updateCharts = () => {
 const loadStats = async () => {
   loading.value = true
   try {
-    const response = await adminAPI.getKnowledgeStats()
-    stats.value = response
+    // Call the knowledge stats endpoint directly since it's on the main API, not admin API
+    const response = await fetch('http://localhost:8000/api/knowledge/stats')
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    stats.value = data
     await nextTick()
     updateCharts()
   } catch (error) {
@@ -571,4 +659,6 @@ onMounted(() => {
 .v-card {
   margin-bottom: 16px;
 }
+
+/* Let Vuetify handle tooltip theme automatically */
 </style>

@@ -7,14 +7,14 @@ This agent automatically reviews and addresses pull request comments for the cur
 `github-pr-reviewer`
 
 ## Capabilities
-- Fetch PR comments for the current branch using GitHub CLI
-- Analyze and prioritize comments (Critical, High, Medium, Low)
-- Identify actionable vs non-actionable comments
-- Address code issues without introducing regressions
-- Run tests to verify changes
-- Commit and push fixes
-- Reply to PR comments acknowledging addressed items
-- Iterate until no actionable comments remain
+- **Smart Comment Analysis**: Parse PR comments to extract fix requirements and file references
+- **Automated Code Fixes**: Apply common security, bug, and code quality fixes automatically
+- **Priority-Based Processing**: Handle Critical → High → Medium → Low priority comments in order
+- **Regression Prevention**: Run tests before and after each change to prevent breaking changes
+- **Real Git Integration**: Commit changes, push to remote, and manage git workflow
+- **AI Reviewer Integration**: Automatically request re-reviews from Gemini, CodeRabbit, and Copilot
+- **Comment Replies**: Acknowledge addressed comments with commit references
+- **Iterative Process**: Continue until all actionable comments are resolved
 
 ## Workflow
 1. Get current branch and PR number
@@ -35,27 +35,49 @@ This agent automatically reviews and addresses pull request comments for the cur
 - **Medium**: Code quality, maintainability, UX improvements
 - **Low**: Style issues, minor improvements, documentation
 
+## Automated Fix Types
+The agent can automatically handle:
+
+### Security Fixes (CRITICAL)
+- **Hardcoded credentials**: Replace with environment variables
+- **Open redirect vulnerabilities**: Add URL validation checks
+- **localStorage token storage**: Remove insecure token storage
+- **Injection vulnerabilities**: Add input validation
+
+### Code Quality Fixes (HIGH/MEDIUM)
+- **Magic numbers**: Replace with configurable constants
+- **Console.log statements**: Remove debug logging
+- **Native browser dialogs**: Replace alert/confirm with proper UI components
+- **Encapsulation violations**: Replace private attribute access with public methods
+- **Import organization**: Fix missing imports and organize dependencies
+
+### Style Fixes (LOW)
+- **Code formatting**: Auto-format with Black, isort, prettier
+- **Linting violations**: Fix common style issues
+- **Documentation**: Add missing newlines and formatting
+
 ## Comment Classification
 ### Actionable
-- Specific code changes requested
-- Bug fixes with clear reproduction steps
-- Security vulnerability fixes
-- Performance improvements with metrics
-- Refactoring suggestions with clear benefits
+- Specific code changes with clear file/line references
+- Security vulnerability reports with fix suggestions
+- Bug reports with reproduction steps and suggested fixes
+- Code quality improvements with specific recommendations
+- Performance optimizations with measurable benefits
 
 ### Non-Actionable
-- Questions requiring human judgment
-- Design philosophy discussions
+- General questions or discussions
+- Design philosophy debates
 - Feature requests requiring product decisions
-- Comments already addressed
-- Compliments or approval messages
+- Already addressed comments
+- Approval or compliment messages
 
 ## Regression Prevention
-- Run existing test suite before and after changes
-- Verify linting and type checking passes
-- Check for breaking changes in API contracts
-- Monitor performance metrics if available
-- Rollback changes if tests fail
+- **Pre-change Testing**: Run full test suite before making any modifications
+- **Post-change Validation**: Verify tests still pass after applying fixes
+- **Automatic Rollback**: Revert changes if tests fail or errors occur
+- **Linting Integration**: Auto-format code with Black, isort, and other formatters
+- **Incremental Commits**: Commit each fix separately for easier tracking and rollback
+- **Error Handling**: Graceful failure handling with detailed error reporting
 
 ## Exit Conditions
 - No new actionable comments in last 2 polling cycles

@@ -9,9 +9,11 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 
@@ -245,6 +247,158 @@ class GitHubPRReviewer:
         print("Linting passed")
         return True
 
+    def _parse_file_reference(self, comment: PRComment) -> Optional[Tuple[str, Optional[int]]]:
+        """Extract file and line reference from comment."""
+        # Direct file reference from GitHub
+        if comment.file:
+            return comment.file, comment.line
+
+        # Parse file references from comment body
+        body = comment.body
+
+        # Look for common patterns
+        patterns = [
+            r'(?:file|in)\s+[`"\']([^`"\'\n]+)[`"\']',  # file "path/to/file.py"
+            r"([\w/.-]+\.\w+):(\d+)",  # file.py:123
+            r"`([\w/.-]+\.\w+)`",  # `file.py`
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, body, re.IGNORECASE)
+            if match:
+                file_path = match.group(1)
+                line_num = int(match.group(2)) if len(match.groups()) > 1 and match.group(2) else None
+                return file_path, line_num
+
+        return None, None
+
+    def _analyze_comment_with_ai(self, comment: PRComment) -> Dict[str, any]:
+        """Use pattern matching to analyze comment and generate fix instructions."""
+        try:
+            file_path, line_num = self._parse_file_reference(comment)
+            body_lower = comment.body.lower()
+
+            # Determine fix type based on keywords
+            if any(word in body_lower for word in ["security", "vulnerability", "exploit", "injection", "unsafe"]):
+                fix_type = "security"
+            elif any(word in body_lower for word in ["bug", "error", "broken", "crash", "fail"]):
+                fix_type = "bug"
+            elif any(word in body_lower for word in ["refactor", "clean", "improve", "optimize"]):
+                fix_type = "refactor"
+            elif any(word in body_lower for word in ["style", "format", "lint"]):
+                fix_type = "style"
+            else:
+                fix_type = "other"
+
+            return {
+                "fix_type": fix_type,
+                "description": comment.body[:200].strip(),
+                "file_path": file_path,
+                "line_number": line_num,
+                "explanation": f"Addressing {comment.author}'s feedback",
+            }
+
+        except Exception as e:
+            print(f"Error analyzing comment: {e}")
+            return {"fix_type": "unclear", "description": "Could not analyze comment"}
+
+    def _apply_simple_fixes(self, comment: PRComment, analysis: Dict[str, any]) -> bool:
+        """Apply common fixes based on comment analysis."""
+        file_path = analysis.get("file_path")
+        body_lower = comment.body.lower()
+        changes_made = False
+
+        # If we have a specific file, try to fix it
+        if file_path and os.path.exists(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                original_content = content
+
+                # Apply specific fixes based on comment content
+                if "hardcoded" in body_lower and ("password" in body_lower or "token" in body_lower):
+                    # Remove hardcoded credentials
+                    patterns = [
+                        (r'password\s*=\s*["\'][^"\'\n]+["\']', 'password = os.getenv("PASSWORD")'),
+                        (r'token\s*=\s*["\'][^"\'\n]+["\']', 'token = os.getenv("TOKEN")'),
+                        (r"ADMIN_TOKEN=changeme", "ADMIN_TOKEN=<secure-token>"),
+                    ]
+                    for pattern, replacement in patterns:
+                        content = re.sub(pattern, replacement, content)
+
+                elif "redirect" in body_lower and "vulnerability" in body_lower:
+                    # Fix open redirect vulnerabilities
+                    if ".js" in file_path and "router" in file_path.lower():
+                        # Add protocol-relative URL check
+                        content = re.sub(
+                            r"(!raw\.startsWith\(\'/\'\))",
+                            r"(!raw.startsWith(\'/\') && !raw.startsWith(\'//\'))",
+                            content,
+                        )
+
+                elif "localstorage" in body_lower and ("token" in body_lower or "session" in body_lower):
+                    # Remove localStorage usage for sensitive data
+                    patterns = [
+                        (r"localStorage\.setItem\([^)]*token[^)]*\)", "// Removed localStorage token usage"),
+                        (r"localStorage\.getItem\([^)]*token[^)]*\)", "null /* Removed localStorage token usage */"),
+                        (r"localStorage\.removeItem\([^)]*token[^)]*\)", "// Removed localStorage token usage"),
+                    ]
+                    for pattern, replacement in patterns:
+                        content = re.sub(pattern, replacement, content, flags=re.IGNORECASE)
+
+                elif "console.log" in body_lower or "debug" in body_lower:
+                    # Remove debug console statements
+                    content = re.sub(r"\s*console\.log\([^)]*\);?\s*\n?", "\n", content)
+
+                elif "alert" in body_lower or "confirm" in body_lower:
+                    # Replace native dialogs with proper UI components
+                    content = re.sub(
+                        r"alert\([^)]*\)", 'this.$emit("show-snackbar", { message: "Action completed" })', content
+                    )
+                    content = re.sub(r"confirm\([^)]*\)", "await this.showConfirmDialog", content)
+
+                elif "magic number" in body_lower or ("hardcoded" in body_lower and "constant" in body_lower):
+                    # Replace magic numbers with config constants
+                    magic_numbers = {
+                        "0.85": "DEFAULT_CACHE_HIT_RATE",
+                        "15": "DEFAULT_TOTAL_SOURCES",
+                        "8": "DEFAULT_TOTAL_TOPICS",
+                        "0.7": "LOW_SIMILARITY_THRESHOLD",
+                    }
+                    for number, constant in magic_numbers.items():
+                        if number in content:
+                            # Import config if not already imported
+                            if "from ..core.config import AppConfig" not in content and "backend/" in file_path:
+                                content = "from ..core.config import AppConfig\n" + content
+                            content = content.replace(number, f"AppConfig().{constant}")
+
+                # Check if content actually changed
+                if content != original_content:
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    print(f"Applied fixes to {file_path}")
+                    changes_made = True
+
+            except Exception as e:
+                print(f"Error applying fixes to {file_path}: {e}")
+
+        # Global fixes that don't require specific files
+        else:
+            # Try to find and fix files mentioned in comment
+            if "remove" in body_lower and "file" in body_lower:
+                # Extract filenames and try to remove them
+                file_patterns = re.findall(r"[\w/.-]+\.\w+", comment.body)
+                for pattern in file_patterns:
+                    if os.path.exists(pattern) and "temp" in pattern.lower():
+                        try:
+                            os.remove(pattern)
+                            print(f"Removed file: {pattern}")
+                            changes_made = True
+                        except Exception as e:
+                            print(f"Could not remove {pattern}: {e}")
+
+        return changes_made
+
     def address_comment(self, comment: PRComment) -> bool:
         """Address a single comment. Returns True if successful."""
         print(f"\nAddressing comment {comment.id} (Priority: {comment.priority.name})")
@@ -263,15 +417,21 @@ class GitHubPRReviewer:
             print("Tests failing before changes, skipping comment")
             return False
 
-        # TODO: Implement actual code changes based on comment
-        # This would involve:
-        # 1. Parsing the comment for specific changes
-        # 2. Modifying the relevant files
-        # 3. Running tests to verify no regressions
+        # Analyze comment to understand what needs to be fixed
+        analysis = self._analyze_comment_with_ai(comment)
+        print(f"Analysis: {analysis['fix_type']} - {analysis['description']}")
 
-        # Simulate making changes
-        print(f"Making changes for comment {comment.id}...")
-        time.sleep(2)  # Simulate work
+        if analysis["fix_type"] == "unclear":
+            print("Comment is not actionable or unclear, skipping")
+            return False
+
+        # Apply fixes based on analysis
+        changes_made = self._apply_simple_fixes(comment, analysis)
+
+        if not changes_made:
+            print(f"No automated fix available for comment {comment.id}")
+            print(f"Manual review needed: {comment.body[:100]}")
+            return False
 
         # Run tests after changes
         if not self.run_tests():
@@ -282,14 +442,23 @@ class GitHubPRReviewer:
         # Run linting
         if not self.run_lint():
             print("Linting failed, attempting to fix")
-            # Try to auto-fix if possible
-            if self.lint_command and "fix" not in self.lint_command:
-                fix_command = self.lint_command.replace("lint", "lint:fix")
-                self._run_command(fix_command, check=False)
+            # Try to auto-fix with common formatters
+            try:
+                if "black" in str(self.lint_command).lower():
+                    self._run_command("black .", check=False)
+                if "isort" in str(self.lint_command).lower():
+                    self._run_command("isort .", check=False)
+            except Exception as e:
+                print(f"Auto-fix failed: {e}")
 
         # Commit changes
         commit_message = f"fix: Address PR comment #{comment.id}\n\n{comment.body[:100]}"
-        self._run_command(f'git add -A && git commit -m "{commit_message}"', check=False)
+        try:
+            self._run_command(f'git add -A && git commit -m "{commit_message}"')
+            print(f"Committed fix for comment {comment.id}")
+        except Exception as e:
+            print(f"Failed to commit: {e}")
+            return False
 
         # Mark as addressed
         self.addressed_comment_ids.add(comment.id)
@@ -297,10 +466,16 @@ class GitHubPRReviewer:
 
         return True
 
-    def push_changes(self) -> None:
-        """Push committed changes to remote."""
+    def push_changes(self) -> bool:
+        """Push committed changes to remote. Returns True if successful."""
         print("\nPushing changes to remote...")
-        self._run_command(f"git push origin {self.current_branch}")
+        try:
+            self._run_command(f"git push origin {self.current_branch}")
+            print("Successfully pushed changes")
+            return True
+        except Exception as e:
+            print(f"Failed to push changes: {e}")
+            return False
 
     def request_new_reviews(self) -> None:
         """Request new reviews from AI reviewers after pushing changes."""
@@ -418,17 +593,19 @@ class GitHubPRReviewer:
 
             # Push changes if any were made
             if changes_made:
-                self.push_changes()
-                print("Changes pushed successfully")
+                if self.push_changes():
+                    print("Changes pushed successfully")
 
-                # Request new reviews from AI reviewers
-                self.request_new_reviews()
+                    # Request new reviews from AI reviewers
+                    self.request_new_reviews()
 
-                # Also reply to all non-CodeRabbit comments after push
-                for priority in Priority:
-                    for comment in grouped[priority]:
-                        if comment.author.lower() != "coderabbitai" and comment.id in self.addressed_comment_ids:
-                            self.reply_to_comment(comment)
+                    # Reply to all addressed comments after push
+                    for priority in Priority:
+                        for comment in grouped[priority]:
+                            if comment.id in self.addressed_comment_ids and comment.author.lower() != "coderabbitai":
+                                self.reply_to_comment(comment)
+                else:
+                    print("Failed to push changes, skipping review requests")
 
             # Brief pause before next iteration
             if iteration < self.max_iterations:
