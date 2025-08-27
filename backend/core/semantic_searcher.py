@@ -203,15 +203,26 @@ class SemanticSearcher:
         try:
             # Use ChromaDB's get() method which is the proper public interface
             collection = self.vector_store._collection
-            result = collection.get(where=where, limit=limit, offset=offset, include=["metadatas", "documents", "ids"])
+
+            # Convert empty where clause to None for ChromaDB compatibility
+            where_clause = where if where else None
+
+            result = collection.get(where=where_clause, limit=limit, offset=offset, include=["metadatas", "documents"])
+
+            # Get IDs separately since ChromaDB requires them to be requested explicitly
+            ids_result = collection.get(where=where_clause, limit=limit, offset=offset, include=[])
 
             # Format the results consistently
             documents = []
-            for i in range(len(result["ids"])):
+            ids = ids_result.get("ids", [])
+            docs = result.get("documents", [])
+            metadatas = result.get("metadatas", [])
+
+            for i in range(len(docs)):
                 doc = {
-                    "id": result["ids"][i],
-                    "content": result["documents"][i] if i < len(result["documents"]) else "",
-                    "metadata": result["metadatas"][i] if i < len(result["metadatas"]) else {},
+                    "id": ids[i] if i < len(ids) else f"doc_{i}",
+                    "content": docs[i],
+                    "metadata": metadatas[i] if i < len(metadatas) else {},
                 }
                 documents.append(doc)
 
@@ -305,14 +316,21 @@ class SemanticSearcher:
 
         try:
             result = self.vector_store._collection.get(
-                where={"source": source_path}, include=["metadatas", "documents", "ids"]
+                where={"source": source_path}, include=["metadatas", "documents"]
             )
+            # Get IDs separately
+            ids_result = self.vector_store._collection.get(where={"source": source_path}, include=[])
+
             documents = []
-            for i in range(len(result["ids"])):
+            ids = ids_result.get("ids", [])
+            docs = result.get("documents", [])
+            metadatas = result.get("metadatas", [])
+
+            for i in range(len(docs)):
                 doc = {
-                    "id": result["ids"][i],
-                    "content": result["documents"][i] if i < len(result["documents"]) else "",
-                    "metadata": result["metadatas"][i] if i < len(result["metadatas"]) else {},
+                    "id": ids[i] if i < len(ids) else f"doc_{i}",
+                    "content": docs[i],
+                    "metadata": metadatas[i] if i < len(metadatas) else {},
                 }
                 documents.append(doc)
             return documents
