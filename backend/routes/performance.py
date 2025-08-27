@@ -94,7 +94,11 @@ async def get_performance_metrics(
                 response_time={"current": 0, "previous": 0, "change": 0},
                 throughput={"current": 0, "previous": 0, "change": 0},
                 error_rate={"current": 0, "previous": 0, "change": 0},
-                cache_hit_rate={"current": 85, "previous": 85, "change": 0},
+                cache_hit_rate={
+                    "current": AppConfig.DEFAULT_CACHE_HIT_RATE * 100,
+                    "previous": AppConfig.DEFAULT_CACHE_HIT_RATE * 100,
+                    "change": 0,
+                },
             )
 
         cursor = conn.cursor()
@@ -115,7 +119,11 @@ async def get_performance_metrics(
                 response_time={"current": 0, "previous": 0, "change": 0},
                 throughput={"current": 0, "previous": 0, "change": 0},
                 error_rate={"current": 0, "previous": 0, "change": 0},
-                cache_hit_rate={"current": 85, "previous": 85, "change": 0},
+                cache_hit_rate={
+                    "current": AppConfig.DEFAULT_CACHE_HIT_RATE * 100,
+                    "previous": AppConfig.DEFAULT_CACHE_HIT_RATE * 100,
+                    "change": 0,
+                },
             )
 
         # Calculate dynamic date ranges based on the period
@@ -327,7 +335,7 @@ async def get_performance_timeline(
                     avg_response_time=row["avg_response_time"] or 0.0,
                     query_count=row["query_count"] or 0,
                     error_rate=(row["error_rate"] or 0.0) * 100,  # Convert to percentage
-                    cache_hit_rate=85.0,  # Static value for now
+                    cache_hit_rate=AppConfig.DEFAULT_CACHE_HIT_RATE * 100,  # From configuration
                 )
             )
 

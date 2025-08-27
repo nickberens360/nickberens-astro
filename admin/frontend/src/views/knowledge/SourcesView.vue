@@ -547,15 +547,8 @@ const viewFileContent = (source) => {
     return
   }
 
-  // Extract the relative path from the full source path
-  let relativePath = source.path
-  if (relativePath.startsWith('backend/knowledge/')) {
-    relativePath = relativePath.replace('backend/knowledge/', '')
-  } else if (relativePath.startsWith('public/')) {
-    relativePath = relativePath.replace('public/', '')
-  }
-
-  selectedFilename.value = relativePath
+  // Use the display path provided by the backend (no path manipulation needed)
+  selectedFilename.value = source.display_path || source.path
   showFileEditorModal.value = true
 }
 

@@ -393,7 +393,7 @@ const toggleTheme = () => {
 
 const exportData = () => {
   // TODO: Implement export functionality
-  console.log('Export data functionality to be implemented')
+  // Export data functionality to be implemented
 }
 
 const navigateToParent = (item) => {

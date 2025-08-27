@@ -129,7 +129,6 @@ export const usePerformanceStore = defineStore('performance', () => {
         }
       }
       
-      console.log('Performance metrics updated:', metrics.value)
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch metrics:', err)
@@ -146,7 +145,6 @@ export const usePerformanceStore = defineStore('performance', () => {
       // Process data for charts
       updateChartData()
       
-      console.log(`Fetched ${timeline.value.length} timeline points`)
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch timeline:', err)
@@ -162,7 +160,6 @@ export const usePerformanceStore = defineStore('performance', () => {
         p99: Math.round(data.p99 || 0)
       }
       
-      console.log('Percentiles updated:', percentiles.value)
     } catch (err) {
       console.error('Failed to fetch percentiles:', err)
     }
@@ -301,7 +298,6 @@ export const usePerformanceStore = defineStore('performance', () => {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       
-      console.log(`Exported performance report for ${timeRange.value}`)
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to export report:', err)

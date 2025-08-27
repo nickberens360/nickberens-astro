@@ -17,7 +17,7 @@ import QueryTable from '@/components/QueryTable.vue'
 const queriesStore = useQueriesStore()
 
 const handleQuerySelected = (query) => {
-  console.log('Selected query:', query)
+  // Handle query selection
 }
 
 onMounted(async () => {

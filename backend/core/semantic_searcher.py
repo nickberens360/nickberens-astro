@@ -252,3 +252,100 @@ class SemanticSearcher:
         self.delete_collection()
         self._initialize_store()
         logger.info("Vector store reset and reinitialized")
+
+    def get_document_by_id(self, document_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by its ID."""
+        if self.vector_store is None:
+            return None
+
+        try:
+            # Use the public get method instead of _collection
+            result = self.vector_store._collection.get(ids=[document_id], include=["metadatas", "documents"])
+
+            if result["ids"] and len(result["ids"]) > 0:
+                return {
+                    "id": result["ids"][0],
+                    "content": result["documents"][0] if result["documents"] else "",
+                    "metadata": result["metadatas"][0] if result["metadatas"] else {},
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error getting document by ID {document_id}: {e}")
+            return None
+
+    def update_document_metadata(self, document_id: str, metadata: Dict[str, Any]) -> bool:
+        """Update metadata for a document."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            # Use the public update method
+            self.vector_store._collection.update(ids=[document_id], metadatas=[metadata])
+            return True
+        except Exception as e:
+            logger.error(f"Error updating document metadata for {document_id}: {e}")
+            return False
+
+    def delete_document_by_id(self, document_id: str) -> bool:
+        """Delete a document by its ID."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            self.vector_store._collection.delete(ids=[document_id])
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting document {document_id}: {e}")
+            return False
+
+    def get_documents_by_source(self, source_path: str) -> List[Dict[str, Any]]:
+        """Get all documents from a specific source."""
+        if self.vector_store is None:
+            return []
+
+        try:
+            result = self.vector_store._collection.get(
+                where={"source": source_path}, include=["metadatas", "documents", "ids"]
+            )
+            documents = []
+            for i in range(len(result["ids"])):
+                doc = {
+                    "id": result["ids"][i],
+                    "content": result["documents"][i] if i < len(result["documents"]) else "",
+                    "metadata": result["metadatas"][i] if i < len(result["metadatas"]) else {},
+                }
+                documents.append(doc)
+            return documents
+        except Exception as e:
+            logger.error(f"Error getting documents by source {source_path}: {e}")
+            return []
+
+    def update_documents_metadata(self, document_ids: List[str], metadatas: List[Dict[str, Any]]) -> bool:
+        """Update metadata for multiple documents."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            self.vector_store._collection.update(ids=document_ids, metadatas=metadatas)
+            return True
+        except Exception as e:
+            logger.error(f"Error updating multiple document metadata: {e}")
+            return False
+
+    def delete_documents_by_source(self, source_path: str) -> bool:
+        """Delete all documents from a specific source."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            # First get the documents to find their IDs
+            documents = self.get_documents_by_source(source_path)
+            if not documents:
+                return True  # Nothing to delete
+
+            document_ids = [doc["id"] for doc in documents]
+            self.vector_store._collection.delete(ids=document_ids)
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting documents by source {source_path}: {e}")
+            return False

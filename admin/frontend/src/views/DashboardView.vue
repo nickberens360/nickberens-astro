@@ -174,7 +174,7 @@ const handleMetricClick = (metric) => {
 }
 
 const handleQuerySelected = (query) => {
-  console.log('Selected query:', query)
+  // Handle query selection
   // Could navigate to query details or show modal
 }
 

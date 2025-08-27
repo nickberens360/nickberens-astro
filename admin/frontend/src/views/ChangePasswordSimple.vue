@@ -59,7 +59,7 @@
         </v-card>
         
         <!-- Debug info -->
-        <v-card class="mt-4" v-if="import.meta.env.DEV && state.debugInfo">
+        <v-card class="mt-4" v-if="isDev && state.debugInfo">
           <v-card-title>Debug Info</v-card-title>
           <v-card-text>
             <pre>{{ state.debugInfo }}</pre>
@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import axios from 'axios'
 
 // API base URL configuration
@@ -174,7 +174,7 @@ export default {
       } catch (err) {
         console.error('Password change error:', err)
         state.error = 'Failed to change password. Please try again.'
-        if (import.meta.env.DEV) {
+        if (isDev.value) {
           state.debugInfo = `ERROR: ${err.response?.status ?? ''} ${err.response?.statusText ?? ''}\n${JSON.stringify(err.response?.data || err.message, null, 2)}`
         }
       } finally {
@@ -191,11 +191,14 @@ export default {
       state.debugInfo = null
     }
     
+    const isDev = computed(() => import.meta.env.DEV)
+    
     return {
       formData,
       state,
       changePassword,
-      resetForm
+      resetForm,
+      isDev
     }
   }
 }

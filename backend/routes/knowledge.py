@@ -167,27 +167,21 @@ async def get_knowledge_stats(request: Request):
         if not retriever.semantic_searcher.vector_store:
             raise HTTPException(status_code=503, detail="Vector store not available")
 
-        # Get the collection from the vector store
-        try:
-            collection = retriever.semantic_searcher.vector_store._collection
-        except Exception as e:
-            logger.error(f"Failed to get collection: {e}")
-            raise HTTPException(status_code=503, detail="Collection not available")
+        # Get all documents metadata using encapsulated method
+        all_docs = retriever.semantic_searcher.get_documents(limit=100000)  # Get all documents
 
-        # Get all documents metadata
-        all_docs = collection.get(include=["metadatas"])
-
-        if not all_docs or not all_docs.get("ids"):
+        if not all_docs:
             return KnowledgeStats(total_documents=0, total_chunks=0, unique_sources=0, content_types={})
 
         # Calculate statistics
-        total_chunks = len(all_docs["ids"])
+        total_chunks = len(all_docs)
 
         # Count unique sources and content types
         sources = set()
         content_types = {}
 
-        for metadata in all_docs["metadatas"]:
+        for doc in all_docs:
+            metadata = doc.get("metadata", {})
             if metadata:
                 source = metadata.get("source", "unknown")
                 sources.add(source)
@@ -247,29 +241,35 @@ async def get_knowledge_sources(request: Request):
         if not retriever.semantic_searcher.vector_store:
             raise HTTPException(status_code=503, detail="Vector store not available")
 
-        # Get the collection from the vector store
-        try:
-            collection = retriever.semantic_searcher.vector_store._collection
-        except Exception as e:
-            logger.error(f"Failed to get collection: {e}")
-            raise HTTPException(status_code=503, detail="Collection not available")
+        # Get all documents metadata using encapsulated method
+        all_docs = retriever.semantic_searcher.get_documents(limit=100000)  # Get all documents
 
-        # Get all documents metadata
-        all_docs = collection.get(include=["metadatas"])
-
-        if not all_docs or not all_docs.get("ids"):
+        if not all_docs:
             return {"sources": [], "total": 0}
 
         # Collect unique sources with counts
         source_counts = {}
 
-        for metadata in all_docs["metadatas"]:
+        for doc in all_docs:
+            metadata = doc.get("metadata", {})
             if metadata:
                 source = metadata.get("source", "unknown")
                 content_type = metadata.get("content_type", "unknown")
 
                 if source not in source_counts:
-                    source_counts[source] = {"path": source, "content_type": content_type, "chunk_count": 0}
+                    # Provide both full path and display path for frontend
+                    display_path = source
+                    if source.startswith("backend/knowledge/"):
+                        display_path = source.replace("backend/knowledge/", "")
+                    elif source.startswith("public/"):
+                        display_path = source.replace("public/", "")
+
+                    source_counts[source] = {
+                        "path": source,  # Full path for backend operations
+                        "display_path": display_path,  # Clean path for frontend display
+                        "content_type": content_type,
+                        "chunk_count": 0,
+                    }
                 source_counts[source]["chunk_count"] += 1
 
         # Convert to list and sort by path
@@ -310,25 +310,15 @@ async def get_document_content(request: Request, document_id: str):
         if not retriever.semantic_searcher.vector_store:
             raise HTTPException(status_code=503, detail="Vector store not available")
 
-        # Get the collection from the vector store
-        try:
-            collection = retriever.semantic_searcher.vector_store._collection
-        except Exception as e:
-            logger.error(f"Failed to get collection: {e}")
-            raise HTTPException(status_code=503, detail="Collection not available")
+        # Get the document using encapsulated method
+        document_data = retriever.semantic_searcher.get_document_by_id(document_id)
 
-        # Get the specific document by ID
-        result = collection.get(ids=[document_id], include=["metadatas", "documents"])
-
-        if not result or not result.get("ids") or document_id not in result["ids"]:
+        if not document_data:
             raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
 
-        # Find the index of our document
-        doc_index = result["ids"].index(document_id)
-
         # Extract document data
-        metadata = result["metadatas"][doc_index] if result.get("metadatas") else {}
-        content = result["documents"][doc_index] if result.get("documents") else ""
+        metadata = document_data.get("metadata", {})
+        content = document_data.get("content", "")
 
         # Count words
         word_count = len(content.split()) if content else 0
@@ -375,39 +365,38 @@ async def update_knowledge_source(request: Request, source_path: str, update_dat
         if not retriever.semantic_searcher.vector_store:
             raise HTTPException(status_code=503, detail="Vector store not available")
 
-        # Get the collection from the vector store
-        try:
-            collection = retriever.semantic_searcher.vector_store._collection
-        except Exception as e:
-            logger.error(f"Failed to get collection: {e}")
-            raise HTTPException(status_code=503, detail="Collection not available")
+        # Find all documents from this source using encapsulated method
+        documents = retriever.semantic_searcher.get_documents_by_source(source_path)
 
-        # Find all documents from this source
-        results = collection.get(where={"source": source_path}, include=["metadatas"])
-
-        if not results or not results.get("ids"):
+        if not documents:
             raise HTTPException(status_code=404, detail=f"Source '{source_path}' not found")
 
         # Update metadata for all chunks from this source
         updated_metadatas = []
-        for i, doc_id in enumerate(results["ids"]):
-            metadata = results["metadatas"][i] if results.get("metadatas") else {}
+        document_ids = []
+        for doc in documents:
+            doc_id = doc["id"]
+            metadata = doc.get("metadata", {})
 
             # Update the content_type if provided
             if update_data.content_type is not None:
                 metadata["content_type"] = update_data.content_type
 
             updated_metadatas.append(metadata)
+            document_ids.append(doc_id)
 
-        # Update in ChromaDB
-        collection.update(ids=results["ids"], metadatas=updated_metadatas)
+        # Update using encapsulated method
+        success = retriever.semantic_searcher.update_documents_metadata(document_ids, updated_metadatas)
 
-        logger.info(f"Updated {len(results['ids'])} documents from source: {source_path}")
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update source metadata")
+
+        logger.info(f"Updated {len(documents)} documents from source: {source_path}")
 
         return {
             "success": True,
-            "message": f"Updated {len(results['ids'])} documents from source '{source_path}'",
-            "updated_chunks": len(results["ids"]),
+            "message": f"Updated {len(documents)} documents from source '{source_path}'",
+            "updated_chunks": len(documents),
         }
 
     except HTTPException:
@@ -442,23 +431,19 @@ async def delete_knowledge_source(request: Request, source_path: str):
         if not retriever.semantic_searcher.vector_store:
             raise HTTPException(status_code=503, detail="Vector store not available")
 
-        # Get the collection from the vector store
-        try:
-            collection = retriever.semantic_searcher.vector_store._collection
-        except Exception as e:
-            logger.error(f"Failed to get collection: {e}")
-            raise HTTPException(status_code=503, detail="Collection not available")
+        # Find all documents from this source using encapsulated method
+        documents = retriever.semantic_searcher.get_documents_by_source(source_path)
 
-        # Find all documents from this source
-        results = collection.get(where={"source": source_path}, include=["metadatas"])
-
-        if not results or not results.get("ids"):
+        if not documents:
             raise HTTPException(status_code=404, detail=f"Source '{source_path}' not found")
 
-        chunk_count = len(results["ids"])
+        chunk_count = len(documents)
 
-        # Delete all chunks from this source
-        collection.delete(where={"source": source_path})
+        # Delete all chunks from this source using encapsulated method
+        success = retriever.semantic_searcher.delete_documents_by_source(source_path)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete source documents")
 
         # Also try to delete the physical file if it exists in the knowledge directory
         try:
@@ -505,15 +490,21 @@ async def get_knowledge_file_content(file_path: str):
         File content and metadata
     """
     try:
-        # Construct the full file path
-        knowledge_base_path = os.path.join("backend", "knowledge")
-        full_path = os.path.join(knowledge_base_path, file_path)
+        # Construct the full file path using pathlib for better security
+        knowledge_base_path = Path("backend", "knowledge")
+        full_path = knowledge_base_path / file_path
 
-        # Security check: ensure the file is within the knowledge directory
-        if not os.path.abspath(full_path).startswith(os.path.abspath(knowledge_base_path)):
+        # Security check: ensure the file is within the knowledge directory (resolve symlinks)
+        try:
+            if (
+                knowledge_base_path.resolve() not in full_path.resolve().parents
+                and knowledge_base_path.resolve() != full_path.resolve()
+            ):
+                raise HTTPException(status_code=400, detail="Invalid file path")
+        except (OSError, ValueError):
             raise HTTPException(status_code=400, detail="Invalid file path")
 
-        if not os.path.exists(full_path):
+        if not full_path.exists():
             raise HTTPException(status_code=404, detail=f"File '{file_path}' not found")
 
         # Read file content
@@ -561,20 +552,26 @@ async def update_knowledge_file_content(file_path: str, request: Request):
         body = await request.json()
         new_content = body.get("content", "")
 
-        # Construct the full file path
-        knowledge_base_path = os.path.join("backend", "knowledge")
-        full_path = os.path.join(knowledge_base_path, file_path)
+        # Construct the full file path using pathlib for better security
+        knowledge_base_path = Path("backend", "knowledge")
+        full_path = knowledge_base_path / file_path
 
-        # Security check: ensure the file is within the knowledge directory
-        if not os.path.abspath(full_path).startswith(os.path.abspath(knowledge_base_path)):
+        # Security check: ensure the file is within the knowledge directory (resolve symlinks)
+        try:
+            if (
+                knowledge_base_path.resolve() not in full_path.resolve().parents
+                and knowledge_base_path.resolve() != full_path.resolve()
+            ):
+                raise HTTPException(status_code=400, detail="Invalid file path")
+        except (OSError, ValueError):
             raise HTTPException(status_code=400, detail="Invalid file path")
 
-        if not os.path.exists(full_path):
+        if not full_path.exists():
             raise HTTPException(status_code=404, detail=f"File '{file_path}' not found")
 
         # Create backup of original file
-        backup_path = full_path + ".backup"
-        if os.path.exists(full_path):
+        backup_path = full_path.with_suffix(full_path.suffix + ".backup")
+        if full_path.exists():
             shutil.copy2(full_path, backup_path)
 
         # Write new content
