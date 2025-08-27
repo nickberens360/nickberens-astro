@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
+from .config import AppConfig
 from .geolocation_service import get_geolocation_service
 from .query_logger import QueryLogger
 
@@ -402,11 +403,10 @@ class DualQueryLogger(QueryLogger):
         """Detect and record potential content gaps based on query quality indicators."""
         try:
             # Define thresholds for content gap detection
-            LOW_SIMILARITY_THRESHOLD = 0.7  # Configurable threshold
             is_content_gap = False
 
             # Check for content gaps based on various indicators
-            if similarity_score is not None and similarity_score < LOW_SIMILARITY_THRESHOLD:
+            if similarity_score is not None and similarity_score < AppConfig.LOW_SIMILARITY_THRESHOLD:
                 is_content_gap = True
             elif error_occurred:
                 is_content_gap = True

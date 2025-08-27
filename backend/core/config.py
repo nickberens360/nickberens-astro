@@ -45,6 +45,44 @@ class AppConfig:
 
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
 
+    # Default Statistics Configuration
+    try:
+        DEFAULT_CACHE_HIT_RATE = float(os.getenv("DEFAULT_CACHE_HIT_RATE", "0.85"))
+        if DEFAULT_CACHE_HIT_RATE < 0.0 or DEFAULT_CACHE_HIT_RATE > 1.0:
+            logger.error("Invalid DEFAULT_CACHE_HIT_RATE value. Using default value of 0.85.")
+            DEFAULT_CACHE_HIT_RATE = 0.85
+    except ValueError:
+        logger.error("Invalid DEFAULT_CACHE_HIT_RATE value. Using default value of 0.85.")
+        DEFAULT_CACHE_HIT_RATE = 0.85
+
+    try:
+        DEFAULT_TOTAL_SOURCES = int(os.getenv("DEFAULT_TOTAL_SOURCES", "15"))
+        if DEFAULT_TOTAL_SOURCES < 1:
+            logger.error("Invalid DEFAULT_TOTAL_SOURCES value. Using default value of 15.")
+            DEFAULT_TOTAL_SOURCES = 15
+    except ValueError:
+        logger.error("Invalid DEFAULT_TOTAL_SOURCES value. Using default value of 15.")
+        DEFAULT_TOTAL_SOURCES = 15
+
+    try:
+        DEFAULT_TOTAL_TOPICS = int(os.getenv("DEFAULT_TOTAL_TOPICS", "8"))
+        if DEFAULT_TOTAL_TOPICS < 1:
+            logger.error("Invalid DEFAULT_TOTAL_TOPICS value. Using default value of 8.")
+            DEFAULT_TOTAL_TOPICS = 8
+    except ValueError:
+        logger.error("Invalid DEFAULT_TOTAL_TOPICS value. Using default value of 8.")
+        DEFAULT_TOTAL_TOPICS = 8
+
+    # Query Logger Configuration
+    try:
+        LOW_SIMILARITY_THRESHOLD = float(os.getenv("LOW_SIMILARITY_THRESHOLD", "0.7"))
+        if LOW_SIMILARITY_THRESHOLD < 0.0 or LOW_SIMILARITY_THRESHOLD > 1.0:
+            logger.error("Invalid LOW_SIMILARITY_THRESHOLD value. Using default value of 0.7.")
+            LOW_SIMILARITY_THRESHOLD = 0.7
+    except ValueError:
+        logger.error("Invalid LOW_SIMILARITY_THRESHOLD value. Using default value of 0.7.")
+        LOW_SIMILARITY_THRESHOLD = 0.7
+
     # Dynamic attributes that will be set at module load time
     ENABLE_SMART_MODEL_SELECTION: bool
     RETRIEVAL_SCORE_THRESHOLD: float

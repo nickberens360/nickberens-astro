@@ -212,8 +212,15 @@ RUN pip install -r requirements.txt
 COPY . .
 EXPOSE 8001
 
-ENV ADMIN_TOKEN=changeme
+# DO NOT bake ADMIN_TOKEN into the image - pass at runtime for security
+# Example: docker run -e ADMIN_TOKEN="$(openssl rand -hex 32)" -p 8001:8001 <image>
 CMD ["python", "admin/start-admin.py"]
+```
+
+**Security Note**: Always set `ADMIN_TOKEN` at runtime, never in the Dockerfile:
+```bash
+# Generate secure token and run container
+docker run -e ADMIN_TOKEN="$(openssl rand -hex 32)" -p 8001:8001 your-admin-image
 ```
 
 ## 🔍 Troubleshooting

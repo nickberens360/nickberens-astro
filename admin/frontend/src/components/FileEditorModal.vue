@@ -94,6 +94,32 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Unsaved Changes Confirmation Dialog -->
+  <v-dialog v-model="showCloseConfirm" max-width="400">
+    <v-card>
+      <v-card-title class="text-h6">
+        Discard unsaved changes?
+      </v-card-title>
+      
+      <v-card-text>
+        You have unsaved changes that will be lost if you close without saving.
+      </v-card-text>
+
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          text="Cancel"
+          @click="cancelClose"
+        ></v-btn>
+        <v-btn
+          color="warning"
+          text="Discard Changes"
+          @click="confirmClose"
+        ></v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
@@ -121,6 +147,7 @@ export default {
     const error = ref(null)
     const success = ref(null)
     const hasUnsavedChanges = ref(false)
+    const showCloseConfirm = ref(false)
     const editorContainer = ref(null)
     
     let editor = null
@@ -348,12 +375,19 @@ export default {
 
     const handleCancel = () => {
       if (hasUnsavedChanges.value) {
-        if (confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
-          dialog.value = false
-        }
+        showCloseConfirm.value = true
       } else {
         dialog.value = false
       }
+    }
+
+    const confirmClose = () => {
+      showCloseConfirm.value = false
+      dialog.value = false
+    }
+
+    const cancelClose = () => {
+      showCloseConfirm.value = false
     }
 
     const cleanup = () => {
@@ -385,6 +419,7 @@ export default {
       error,
       success,
       hasUnsavedChanges,
+      showCloseConfirm,
       editorContainer,
       fileType,
       fileSize,
@@ -393,7 +428,9 @@ export default {
       formatFileSize,
       saveFile,
       formatJson,
-      handleCancel
+      handleCancel,
+      confirmClose,
+      cancelClose
     }
   }
 }

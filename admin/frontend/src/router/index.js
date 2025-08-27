@@ -158,8 +158,17 @@ router.beforeEach(async (to, from, next) => {
   // If going to login but already authenticated, redirect away
   if (to.name === 'login' && adminStore.isAuthenticated) {
     const raw = to.query.redirect
+    // Prevent open redirect vulnerabilities by ensuring the redirect path:
+    // 1. Is a string and starts with '/'
+    // 2. Does not start with '//' (protocol-relative URLs)
+    // 3. Contains only safe path characters
     const redirect =
-      typeof raw === 'string' && raw.startsWith('/') ? raw : '/admin'
+      typeof raw === 'string' && 
+      raw.startsWith('/') && 
+      !raw.startsWith('//') &&
+      !/[^a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=]/.test(raw) 
+        ? raw 
+        : '/admin'
     next({ path: redirect })
     return
   }

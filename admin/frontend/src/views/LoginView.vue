@@ -175,10 +175,8 @@ export default {
     
     // Check if user is already authenticated on component mount
     const checkExistingAuth = async () => {
-      const token = localStorage.getItem('admin_token')
-      if (!token) return
-      
       try {
+        // Check authentication via HTTPOnly cookie (no localStorage needed)
         const response = await adminAPI.getCurrentUser()
         
         if (response.user) {
@@ -187,8 +185,8 @@ export default {
           router.push(redirectTo)
         }
       } catch (err) {
-        // Invalid token, clear it
-        adminAPI.clearAuthToken()
+        // Not authenticated or invalid session - allow login to proceed
+        // HTTPOnly cookies are automatically managed by the browser
       }
     }
     

@@ -175,19 +175,28 @@ class AdminDatabaseManager:
 
     def _create_default_admin_user(self, cursor):
         """Create a default admin user."""
+        import secrets
+        import string
+
         from passlib.context import CryptContext
 
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-        # Default credentials (should be changed after first login)
+        # Default credentials (require secure password via env var)
         username = "admin"
-        password = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")  # Use env var or weak default
+        password = os.getenv("ADMIN_DEFAULT_PASSWORD")
         email = "admin@localhost"
         role = "admin"
 
-        if password == "admin123":
-            logger.warning("Using weak default admin password. Set ADMIN_DEFAULT_PASSWORD env var.")
-            logger.warning("This should be changed immediately in production!")
+        if not password:
+            # Generate a secure random password if none provided
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            password = "".join(secrets.choice(alphabet) for _ in range(16))
+            logger.warning("No ADMIN_DEFAULT_PASSWORD set. Generated secure random password.")
+            logger.warning(f"GENERATED ADMIN PASSWORD: {password}")
+            logger.warning("SAVE THIS PASSWORD - IT WILL NOT BE DISPLAYED AGAIN!")
+        elif len(password) < 12:
+            raise ValueError("ADMIN_DEFAULT_PASSWORD must be at least 12 characters long")
 
         password_hash = pwd_context.hash(password)
 
@@ -199,7 +208,11 @@ class AdminDatabaseManager:
             (username, email, password_hash, role, datetime.now(), datetime.now()),
         )
 
-        logger.warning(f"Created default admin user: {username} - CHANGE DEFAULT PASSWORD IMMEDIATELY!")
+        logger.info(f"Created default admin user: {username}")
+        if os.getenv("ADMIN_DEFAULT_PASSWORD"):
+            logger.info("Using admin password from ADMIN_DEFAULT_PASSWORD environment variable")
+        else:
+            logger.warning("Random password generated - check logs above for password")
 
     def get_admin_user(self, username: str) -> Optional[Dict]:
         """Get admin user by username."""

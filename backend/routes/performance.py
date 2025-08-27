@@ -16,6 +16,8 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from ..core.config import AppConfig
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -234,8 +236,8 @@ async def get_performance_metrics(
 
         conn.close()
 
-        # Cache hit rate is a static value for now - could be enhanced later
-        cache_hit_rate = 85.0
+        # Cache hit rate uses configurable default - could be enhanced later
+        cache_hit_rate = AppConfig.DEFAULT_CACHE_HIT_RATE * 100  # Convert to percentage
 
         return PerformanceMetrics(
             response_time={

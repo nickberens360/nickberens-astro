@@ -15,6 +15,8 @@ from fastapi import APIRouter, Query
 
 from backend.models.admin_models import OverviewStats  # reuse shared model
 
+from ..core.config import AppConfig
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -152,11 +154,11 @@ async def get_stats_overview(days: int = Query(7, ge=1, le=90, description="Numb
 
         conn.close()
 
-        # For cache hit rate and sources/topics, provide reasonable defaults
+        # For cache hit rate and sources/topics, use configurable defaults
         # These could be enhanced with actual implementations later
-        cache_hit_rate = 0.85  # Default assumption
-        total_sources = 15  # Approximate based on knowledge base
-        total_topics = 8  # Approximate number of topic categories
+        cache_hit_rate = AppConfig.DEFAULT_CACHE_HIT_RATE
+        total_sources = AppConfig.DEFAULT_TOTAL_SOURCES
+        total_topics = AppConfig.DEFAULT_TOTAL_TOPICS
 
         return OverviewStats(
             total_queries=total_queries,

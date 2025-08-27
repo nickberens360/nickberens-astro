@@ -323,7 +323,9 @@ class QueryLogger:
             # Prepare excluded IPs set once, outside the loop for performance
             excluded_set = set()
             if exclude_ips:
-                excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
+                raw_excluded = set(ip.strip() for ip in exclude_ips.split(","))
+                # If anonymization is enabled, transform excluded IPs to match stored anonymized format
+                excluded_set = {self.anonymize_ip(ip) for ip in raw_excluded} if self.anonymize_ips else raw_excluded
 
             def _log_stream():
                 """Stream logs from file without loading all into memory."""
@@ -381,7 +383,9 @@ class QueryLogger:
             # Prepare excluded IPs set once, outside the loop for performance
             excluded_set = set()
             if exclude_ips:
-                excluded_set = set(ip.strip() for ip in exclude_ips.split(","))
+                raw_excluded = set(ip.strip() for ip in exclude_ips.split(","))
+                # If anonymization is enabled, transform excluded IPs to match stored anonymized format
+                excluded_set = {self.anonymize_ip(ip) for ip in raw_excluded} if self.anonymize_ips else raw_excluded
 
             try:
                 with open(self.log_file_path, "r") as f:

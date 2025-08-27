@@ -287,6 +287,23 @@
       :filename="selectedFilename"
       @file-saved="handleFileSaved"
     />
+
+    <!-- Notification Snackbar -->
+    <v-snackbar
+      v-model="showNotification"
+      :color="notificationType"
+      :timeout="6000"
+      location="top"
+    >
+      {{ notificationMessage }}
+      <template v-slot:actions>
+        <v-btn
+          text="Close"
+          variant="text"
+          @click="showNotification = false"
+        ></v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
@@ -307,6 +324,11 @@ const selectedFilename = ref('')
 
 // Upload dialog state
 const showUploadDialog = ref(false)
+
+// Notification system
+const showNotification = ref(false)
+const notificationMessage = ref('')
+const notificationType = ref('info') // info, success, warning, error
 const selectedFiles = ref(null)
 const uploadResults = ref([])
 const uploadProgress = ref({
@@ -327,6 +349,13 @@ const fileRules = [
   files => !files || files.length <= 10 || 'Maximum 10 files at once',
   files => !files || files.every(file => file.size <= 50 * 1024 * 1024) || 'Files must be smaller than 50MB'
 ]
+
+// Notification helper
+const showAlert = (message, type = 'info') => {
+  notificationMessage.value = message
+  notificationType.value = type
+  showNotification.value = true
+}
 
 // Upload methods
 const uploadFiles = async () => {
@@ -514,7 +543,7 @@ const viewFileContent = (source) => {
   const binaryTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
 
   if (binaryTypes.includes(ext)) {
-    alert(`Cannot edit binary file: ${source.path}\n\nFile type: ${ext.toUpperCase()}\nThis file contains binary data that cannot be edited as text.`)
+    showAlert(`Cannot edit binary file: ${source.path}. File type: ${ext.toUpperCase()}. This file contains binary data that cannot be edited as text.`, 'warning')
     return
   }
 

@@ -90,13 +90,6 @@ async def get_indexed_documents(
         if not retriever.semantic_searcher.vector_store:
             raise HTTPException(status_code=503, detail="Vector store not available")
 
-        # Get the collection from the vector store
-        try:
-            collection = retriever.semantic_searcher.vector_store._collection
-        except Exception as e:
-            logger.error(f"Failed to get collection: {e}")
-            raise HTTPException(status_code=503, detail="Collection not available")
-
         # Build query filter
         where_clause = {}
         if content_type:
@@ -104,36 +97,38 @@ async def get_indexed_documents(
         if source_filter:
             where_clause["source"] = {"$contains": source_filter}
 
-        # Get documents with pagination
-        if where_clause:
-            results = collection.get(where=where_clause, limit=limit, offset=offset, include=["metadatas", "documents"])
-        else:
-            results = collection.get(limit=limit, offset=offset, include=["metadatas", "documents"])
+        # Get documents using proper encapsulated method
+        try:
+            result_docs = retriever.semantic_searcher.get_documents(
+                where=where_clause if where_clause else None, limit=limit, offset=offset
+            )
+        except Exception as e:
+            logger.error(f"Failed to get documents: {e}")
+            raise HTTPException(status_code=503, detail="Failed to retrieve documents")
 
         # Format documents for response
         documents = []
-        if results and results.get("ids"):
-            for i, doc_id in enumerate(results["ids"]):
-                content = results["documents"][i] if results.get("documents") else ""
-                metadata = results["metadatas"][i] if results.get("metadatas") else {}
+        for doc in result_docs:
+            content = doc.get("content", "")
+            metadata = doc.get("metadata", {})
+            doc_id = doc.get("id", "")
 
-                # Create content preview (first 200 characters)
-                preview = content[:200] + "..." if len(content) > 200 else content
+            # Create content preview (first 200 characters)
+            preview = content[:200] + "..." if len(content) > 200 else content
 
-                documents.append(
-                    IndexedDocument(
-                        id=doc_id,
-                        source=metadata.get("source", "unknown"),
-                        content_preview=preview,
-                        content_type=metadata.get("content_type", "unknown"),
-                        metadata=metadata,
-                        word_count=len(content.split()) if content else 0,
-                    )
+            documents.append(
+                IndexedDocument(
+                    id=doc_id,
+                    source=metadata.get("source", "unknown"),
+                    content_preview=preview,
+                    content_type=metadata.get("content_type", "unknown"),
+                    metadata=metadata,
+                    word_count=len(content.split()) if content else 0,
                 )
+            )
 
-        # Get total count
-        all_docs = collection.get(include=["metadatas"])
-        total_count = len(all_docs["ids"]) if all_docs and all_docs.get("ids") else 0
+        # Get total count using proper method
+        total_count = retriever.semantic_searcher.get_collection_count()
 
         # Get collection info
         collection_name = "unified_knowledge"  # This is hardcoded in SemanticSearcher

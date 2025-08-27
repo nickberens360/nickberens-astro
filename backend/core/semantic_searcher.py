@@ -183,6 +183,43 @@ class SemanticSearcher:
             logger.warning(f"Could not get collection count: {e}")
             return 0
 
+    def get_documents(
+        self, where: Optional[Dict[str, Any]] = None, limit: int = 100, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        Get documents from the vector store with optional filtering.
+
+        Args:
+            where: Optional filter conditions for metadata
+            limit: Maximum number of documents to return
+            offset: Number of documents to skip (for pagination)
+
+        Returns:
+            List of document dictionaries with metadata and content
+        """
+        if self.vector_store is None:
+            raise ValueError("Vector store not initialized")
+
+        try:
+            # Use ChromaDB's get() method which is the proper public interface
+            collection = self.vector_store._collection
+            result = collection.get(where=where, limit=limit, offset=offset, include=["metadatas", "documents", "ids"])
+
+            # Format the results consistently
+            documents = []
+            for i in range(len(result["ids"])):
+                doc = {
+                    "id": result["ids"][i],
+                    "content": result["documents"][i] if i < len(result["documents"]) else "",
+                    "metadata": result["metadatas"][i] if i < len(result["metadatas"]) else {},
+                }
+                documents.append(doc)
+
+            return documents
+        except Exception as e:
+            logger.error(f"Error getting documents: {e}")
+            return []
+
     def delete_collection(self) -> None:
         """Delete the vector store collection (for testing/cleanup)."""
         if self.vector_store is not None:
