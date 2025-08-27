@@ -11,7 +11,6 @@ Provides detailed performance metrics including:
 import logging
 import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Query

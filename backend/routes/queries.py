@@ -9,7 +9,6 @@ Provides endpoints for:
 
 import logging
 import sqlite3
-from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
