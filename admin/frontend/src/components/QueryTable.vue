@@ -449,19 +449,19 @@ const headers = computed(() => [
   },
   {
     title: 'Status',
-    key: 'status',
+    key: 'error_occurred',
     width: '8%',
     sortable: true
   },
   {
     title: 'Response Time',
-    key: 'response_time',
+    key: 'response_time_ms',
     width: '10%',
     sortable: true
   },
   {
     title: 'Relevance',
-    key: 'relevance_score',
+    key: 'vector_search_score',
     width: '10%',
     sortable: true
   },
