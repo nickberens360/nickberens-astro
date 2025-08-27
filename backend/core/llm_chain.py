@@ -13,9 +13,11 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.history_aware_retriever import create_history_aware_retriever
 from langchain_anthropic import ChatAnthropic
 from langchain_core.documents import Document
+from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
+from langchain_core.runnables import Runnable
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .config import AppConfig
@@ -311,7 +313,7 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
     return llms
 
 
-def create_qa_chain(llm):
+def create_qa_chain(llm: BaseLanguageModel) -> Runnable:
     """Creates the main question-answering chain."""
     system_prompt = DEFAULT_PROMPTS.get(
         "system_template",

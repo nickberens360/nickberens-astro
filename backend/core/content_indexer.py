@@ -12,7 +12,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
@@ -40,7 +40,7 @@ class ContentIndexer:
                 sha256_hash.update(byte_block)
         return sha256_hash.hexdigest()
 
-    def extract_content_metadata(self, doc: Document, file_path: Path) -> Dict:
+    def extract_content_metadata(self, doc: Document, file_path: Path) -> Dict[str, Any]:
         """Extract metadata using LLM topics plus deterministic fallbacks.
 
         Heuristics ensure key content remains discoverable even if LLM topic extraction fails.

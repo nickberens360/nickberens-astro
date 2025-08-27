@@ -256,27 +256,20 @@ class QueryLogger:
             return True  # Skip logging but return success
 
         try:
-            # Read all log entries
-            log_entries = []
-            try:
-                with open(self.log_file_path, "r") as f:
-                    for line in f:
-                        if line.strip():
-                            try:
-                                log_entries.append(json.loads(line))
-                            except json.JSONDecodeError:
-                                # Keep malformed entries as-is
-                                log_entries.append(line.rstrip())
-            except FileNotFoundError:
-                self.logger.warning("Log file not found: %s", self.log_file_path)
-                return False
+            # Append completion entry only when request_id is provided
+            if request_id is not None:
+                # Get geolocation data with error handling
+                try:
+                    geo_service = get_geolocation_service()
+                    location_data = geo_service.get_location(client_ip)
+                except Exception as e:
+                    self.logger.warning("Geolocation lookup failed for %s: %s", client_ip, e)
+                    location_data = None
 
-            # If request_id is provided, append a completion entry instead of rewriting the file
-            if request_id:
                 completion_entry = {
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "client_ip": self.anonymize_ip(client_ip),
-                    "location": get_geolocation_service().get_location(client_ip),
+                    "location": location_data,
                     "question": question,
                     "response": actual_response,
                     "model_used": "streaming_completion",
@@ -289,18 +282,16 @@ class QueryLogger:
                     },
                 }
                 try:
-                    with open(self.log_file_path, "a") as f:
+                    with open(self.log_file_path, "a", encoding="utf-8") as f:
                         f.write(json.dumps(completion_entry, default=str) + "\n")
                     self.logger.debug("Appended streaming completion for request_id: %s", request_id)
                     return True
                 except (IOError, TypeError) as e:
                     self.logger.error("Failed to append streaming completion: %s", e)
-                    # Fall through to legacy rewrite method
+                    return False
 
-            # Legacy rewrite path disabled to avoid race conditions
-            self.logger.warning(
-                "No request_id provided; skipping legacy rewrite of query logs to avoid race conditions"
-            )
+            # Explicitly require request_id to avoid fragile rewrites
+            self.logger.warning("No request_id provided; streaming completion not logged")
             return False
 
         except (IOError, TypeError) as e:

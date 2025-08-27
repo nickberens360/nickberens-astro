@@ -10,7 +10,7 @@ This module provides a protected endpoint to:
 import hmac
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
@@ -72,7 +72,7 @@ async def get_query_logs(
     exclude_ips: Optional[str] = FastAPIQuery(
         default=None, description="Comma-separated list of IP addresses to exclude (anonymized hashes)"
     ),
-):
+) -> Dict[str, Any]:
     """
     Retrieve query logs with optional filtering.
 
@@ -90,14 +90,16 @@ async def get_query_logs(
     # Validate date formats if provided
     if start_date:
         try:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").isoformat()
+            _sd = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start_date = _sd.isoformat()
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD format.")
 
     if end_date:
         try:
             # Add time component to include the entire end date
-            end_date = datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S").isoformat()
+            _ed = datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            end_date = _ed.isoformat()
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD format.")
 
@@ -128,7 +130,7 @@ async def get_query_log_stats(
     exclude_ips: Optional[str] = FastAPIQuery(
         default=None, description="Comma-separated list of IPs to exclude from stats"
     ),
-):
+) -> Dict[str, Any]:
     """
     Get statistics about query logs.
 
@@ -151,7 +153,7 @@ async def get_query_log_stats(
 
 
 @router.delete("/query-logs")
-async def clear_query_logs(_token: str = Depends(verify_token)):
+async def clear_query_logs(_token: str = Depends(verify_token)) -> Dict[str, Any]:
     """
     Clear all query logs (use with caution).
 
@@ -169,7 +171,7 @@ async def clear_query_logs(_token: str = Depends(verify_token)):
 
 
 @router.get("/query-logs/download")
-async def download_query_logs(_token: str = Depends(verify_token)):
+async def download_query_logs(_token: str = Depends(verify_token)) -> FileResponse:
     """
     Download the raw JSONL query log file as an attachment.
 
@@ -189,7 +191,7 @@ async def download_query_logs(_token: str = Depends(verify_token)):
 
 
 @router.get("/query-logs/health")
-async def query_logs_health():
+async def query_logs_health() -> Dict[str, Any]:
     """
     Health check endpoint for query logging system.
 
@@ -214,7 +216,7 @@ async def query_logs_health():
 
 
 @router.get("/query-logs/admin", response_class=HTMLResponse)
-async def query_logs_admin_page(request: Request):
+async def query_logs_admin_page(request: Request) -> HTMLResponse:
     """
     Serve the query logs admin web interface.
 

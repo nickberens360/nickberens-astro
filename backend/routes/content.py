@@ -69,14 +69,15 @@ class IndexedDocumentsResponse(BaseModel):
     embedding_model: str
 
 
+# Database connection utility imported from shared module
+from ..core.database_utils import get_rag_monitoring_db_connection
+
+
 def get_db_connection():
     """Get database connection to the SQLite database."""
-    db_path = "backend/logs/rag_monitoring.db"
-    if not Path(db_path).exists():
+    conn = get_rag_monitoring_db_connection()
+    if not conn:
         raise HTTPException(status_code=503, detail="Database not available")
-
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
     return conn
 
 

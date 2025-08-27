@@ -54,20 +54,8 @@ class PercentileMetrics(BaseModel):
     p99: float
 
 
-def get_db_connection():
-    """Get database connection to the SQLite database."""
-    db_path = "backend/logs/rag_monitoring.db"
-    if not Path(db_path).exists():
-        logger.warning(f"Database not found at {db_path}, returning empty data")
-        return None
-
-    try:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except Exception as e:
-        logger.error(f"Failed to connect to database: {e}")
-        return None
+# Database connection utility imported from shared module
+from ..core.database_utils import get_rag_monitoring_db_connection as get_db_connection
 
 
 def parse_time_range(time_range: str) -> tuple:

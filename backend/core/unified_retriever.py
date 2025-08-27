@@ -145,7 +145,7 @@ class UnifiedRetriever:
             return False
 
     def get_retriever(
-        self, search_kwargs: Optional[Dict] = None, filter_content_types: Optional[List[str]] = None
+        self, search_kwargs: Optional[Dict[str, Any]] = None, filter_content_types: Optional[List[str]] = None
     ) -> BaseRetriever:
         """
         Get a retriever with optional filtering.
@@ -157,7 +157,7 @@ class UnifiedRetriever:
         return self.semantic_searcher.get_retriever(search_kwargs, filter_content_types)
 
     def get_relevant_documents(
-        self, query: str, k: int = None, filter_content_types: Optional[List[str]] = None
+        self, query: str, k: Optional[int] = None, filter_content_types: Optional[List[str]] = None
     ) -> List[Document]:
         """
         Get relevant documents for a query (compatibility method).
@@ -167,7 +167,11 @@ class UnifiedRetriever:
         return self.semantic_search(query, k, filter_content_types)
 
     def semantic_search(
-        self, query: str, k: int = None, filter_content_types: Optional[List[str]] = None, score_threshold: float = None
+        self,
+        query: str,
+        k: Optional[int] = None,
+        filter_content_types: Optional[List[str]] = None,
+        score_threshold: Optional[float] = None,
     ) -> List[Document]:
         """
         Perform semantic search with optional filtering and scoring.
@@ -192,7 +196,7 @@ class UnifiedRetriever:
         """
         return self.content_router.auto_route_query(query)
 
-    def get_search_strategy(self, query: str) -> dict:
+    def get_search_strategy(self, query: str) -> Dict[str, Any]:
         """
         Get the optimal search strategy for a query.
 
@@ -200,7 +204,7 @@ class UnifiedRetriever:
         """
         return self.content_router.get_search_strategy(query)
 
-    def route_with_strategy(self, query: str, custom_strategy: Optional[dict] = None) -> List[Document]:
+    def route_with_strategy(self, query: str, custom_strategy: Optional[Dict[str, Any]] = None) -> List[Document]:
         """
         Route query using a specific strategy.
 
