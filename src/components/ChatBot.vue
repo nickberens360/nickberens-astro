@@ -18,7 +18,7 @@
     </div>
 
     <div
-      v-if="rateLimitNotification"
+      v-if="rateLimitNotification && false"
       class="status-notification rate-limit"
       role="status"
       aria-live="polite"
