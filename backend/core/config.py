@@ -45,6 +45,16 @@ class AppConfig:
 
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
 
+    # Dynamic attributes that will be set at module load time
+    ENABLE_SMART_MODEL_SELECTION: bool
+    RETRIEVAL_SCORE_THRESHOLD: float
+    CACHE_TTL: int
+    MAX_CACHE_SIZE: int
+    EXCLUDED_IPS: List[str]
+    QUERY_LOG_AUTH_TOKEN: Optional[str]
+    IP_HASH_SALT: str
+    QUERY_LOG_FILE: str
+
     # Smart Model Selection Configuration
     @classmethod
     def is_smart_model_selection_enabled(cls) -> bool:
@@ -81,12 +91,6 @@ class AppConfig:
             pass
         logger.warning("Invalid CACHE_TTL; defaulting to 3600")
         return 3600
-
-    @classmethod
-    def get_cors_origins(cls) -> List[str]:
-        """Get allowed CORS origins."""
-        origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:4321,http://localhost:4323")
-        return [origin.strip() for origin in origins.split(",") if origin.strip()]
 
     @classmethod
     def get_max_cache_size(cls) -> int:

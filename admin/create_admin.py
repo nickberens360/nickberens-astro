@@ -12,8 +12,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from admin.backend.auth import auth_manager
-from admin.backend.database import db_manager
+from backend.core.admin_auth import admin_auth_manager as auth_manager
+from backend.core.admin_database import admin_db_manager as db_manager
 
 
 def create_admin_user():
@@ -79,7 +79,7 @@ def create_admin_user():
         # Create the user
         user_id = auth_manager.create_admin_user(username=username, password=password, email=email, role=role)
 
-        print(f"✅ Successfully created admin user:")
+        print("✅ Successfully created admin user:")
         print(f"   Username: {username}")
         print(f"   Email: {email or 'Not provided'}")
         print(f"   Role: {role}")
@@ -114,7 +114,8 @@ def list_admin_users():
                 return
 
             print(
-                f"{'ID':<5} {'Username':<20} {'Email':<30} {'Role':<10} {'Active':<8} {'Created':<20} {'Last Login':<20}"
+                f"{'ID':<5} {'Username':<20} {'Email':<30} {'Role':<10} {'Active':<8} "
+                f"{'Created':<20} {'Last Login':<20}"
             )
             print("-" * 120)
 

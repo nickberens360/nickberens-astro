@@ -25,11 +25,13 @@ def create_realistic_knowledge_base() -> List[Document]:
     return [
         # Technical skills content
         Document(
-            page_content="Nick has extensive experience with React, TypeScript, and modern JavaScript frameworks. He specializes in building scalable web applications with clean, maintainable code.",
+            page_content="Nick has extensive experience with React, TypeScript, and modern JavaScript frameworks. "
+            "He specializes in building scalable web applications with clean, maintainable code.",
             metadata={"source": "technical-skills.md", "content_types": "technical,skills", "file_type": ".md"},
         ),
         Document(
-            page_content="Python development experience includes FastAPI, Django, and data processing libraries. Strong focus on backend API design and database optimization.",
+            page_content="Python development experience includes FastAPI, Django, and data processing libraries. "
+            "Strong focus on backend API design and database optimization.",
             metadata={"source": "python-skills.md", "content_types": "technical,skills", "file_type": ".md"},
         ),
         # Work experience content

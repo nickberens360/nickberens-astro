@@ -41,7 +41,7 @@ def create_test_user():
         # Create the user
         user_id = auth_manager.create_admin_user(username=username, password=password, email=email, role=role)
 
-        print(f"✅ Successfully created admin user:")
+        print("✅ Successfully created admin user:")
         print(f"   Username: {username}")
         print(f"   Password: {password}")
         print(f"   Email: {email}")

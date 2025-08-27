@@ -205,7 +205,7 @@ def sync_json_to_sqlite():
     conn.commit()
     conn.close()
 
-    print(f"Sync completed:")
+    print("Sync completed:")
     print(f"  - Processed: {processed_count} new entries")
     print(f"  - Skipped: {skipped_count} existing entries")
 
