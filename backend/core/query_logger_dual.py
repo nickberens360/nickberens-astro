@@ -342,7 +342,7 @@ class DualQueryLogger(QueryLogger):
                 # SQLite doesn't support ORDER BY in UPDATE, so we find the ID first
                 cursor.execute(
                     """
-                    SELECT id FROM query_logs 
+                    SELECT id FROM query_logs
                     WHERE user_query = ? AND system_response = '[STREAMING RESPONSE]'
                     ORDER BY id DESC LIMIT 1
                 """,
@@ -354,7 +354,7 @@ class DualQueryLogger(QueryLogger):
                     entry_id = row[0]
                     cursor.execute(
                         """
-                        UPDATE query_logs 
+                        UPDATE query_logs
                         SET system_response = ?
                         WHERE id = ?
                     """,
@@ -436,7 +436,7 @@ class DualQueryLogger(QueryLogger):
 
                     cursor.execute(
                         """
-                        UPDATE content_gaps 
+                        UPDATE content_gaps
                         SET occurrence_count = ?, avg_similarity_score = ?, last_seen = CURRENT_TIMESTAMP
                         WHERE id = ?
                         """,

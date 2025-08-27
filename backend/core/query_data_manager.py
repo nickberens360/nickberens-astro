@@ -171,9 +171,9 @@ class QueryDataManager:
                 # Error rate - current and previous
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
                         CAST(SUM(error_occurred) AS REAL) / CAST(COUNT(*) AS REAL) * 100 as error_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= ? AND timestamp < ?
                     """,
                     (start_date, end_date),
@@ -181,9 +181,9 @@ class QueryDataManager:
                 error_rate = cursor.fetchone()[0] or 0
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
                         CAST(SUM(error_occurred) AS REAL) / CAST(COUNT(*) AS REAL) * 100 as error_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= ? AND timestamp < ?
                     """,
                     (prev_start_date, prev_end_date),
@@ -193,9 +193,9 @@ class QueryDataManager:
                 # Cache hit rate - current and previous
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
                         CAST(SUM(cache_hit) AS REAL) / CAST(COUNT(*) AS REAL) * 100 as cache_hit_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= ? AND timestamp < ?
                     """,
                     (start_date, end_date),
@@ -203,9 +203,9 @@ class QueryDataManager:
                 cache_hit_rate = cursor.fetchone()[0] or 0
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
                         CAST(SUM(cache_hit) AS REAL) / CAST(COUNT(*) AS REAL) * 100 as cache_hit_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= ? AND timestamp < ?
                     """,
                     (prev_start_date, prev_end_date),
@@ -215,10 +215,10 @@ class QueryDataManager:
                 # Helpful rate (queries with positive feedback) - current and previous
                 cursor.execute(
                     """
-                    SELECT 
-                        CAST(SUM(CASE WHEN user_feedback = 'helpful' THEN 1 ELSE 0 END) AS REAL) / 
+                    SELECT
+                        CAST(SUM(CASE WHEN user_feedback = 'helpful' THEN 1 ELSE 0 END) AS REAL) /
                         CAST(COUNT(*) AS REAL) * 100 as helpful_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= ? AND timestamp < ? AND user_feedback IS NOT NULL
                     """,
                     (start_date, end_date),
@@ -226,10 +226,10 @@ class QueryDataManager:
                 helpful_rate = cursor.fetchone()[0] or 0
                 cursor.execute(
                     """
-                    SELECT 
-                        CAST(SUM(CASE WHEN user_feedback = 'helpful' THEN 1 ELSE 0 END) AS REAL) / 
+                    SELECT
+                        CAST(SUM(CASE WHEN user_feedback = 'helpful' THEN 1 ELSE 0 END) AS REAL) /
                         CAST(COUNT(*) AS REAL) * 100 as helpful_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= ? AND timestamp < ? AND user_feedback IS NOT NULL
                     """,
                     (prev_start_date, prev_end_date),
@@ -376,13 +376,13 @@ class QueryDataManager:
                 # Get metrics
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_queries,
                         AVG(response_time_ms) as avg_response_time,
                         SUM(error_occurred) as error_count,
                         SUM(cache_hit) as cache_hits,
                         COUNT(DISTINCT session_id) as unique_sessions
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= ?
                     """,
                     (start_time,),

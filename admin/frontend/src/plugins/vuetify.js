@@ -17,7 +17,7 @@ import {
   
   // Content & Knowledge
   mdiBookOpenPageVariant, mdiInformation, mdiFolder, mdiFormatListBulleted,
-  mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb,
+  mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb, mdiHelpCircleOutline,
   
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
@@ -111,6 +111,7 @@ const iconAliases = {
   language: mdiWeb,
   article: mdiFileDocumentOutline,
   'insert_drive_file': mdiFileDocumentOutline,
+  help: mdiHelpCircleOutline,
   
   // User & Security
   account: mdiAccount,

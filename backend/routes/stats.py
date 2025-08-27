@@ -78,7 +78,7 @@ async def get_stats_overview(days: int = Query(7, ge=1, le=90, description="Numb
         # Get error rate
         cursor.execute(
             """
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 COUNT(CASE WHEN error_occurred = 1 THEN 1 END) as errors
             FROM query_logs
@@ -135,7 +135,7 @@ async def get_stats_overview(days: int = Query(7, ge=1, le=90, description="Numb
         # Get helpful rate (based on user_feedback if available)
         cursor.execute(
             """
-            SELECT 
+            SELECT
                 COUNT(*) as total_with_feedback,
                 COUNT(CASE WHEN user_feedback = 'helpful' THEN 1 END) as helpful_count
             FROM query_logs

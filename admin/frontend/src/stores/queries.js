@@ -70,13 +70,18 @@ export const useQueriesStore = defineStore('queries', () => {
     error.value = null
 
     try {
-      const mergedParams = { ...filters.value, ...params }
+      // For client-side table, fetch all queries without pagination
+      const mergedParams = { 
+        limit: 1000, // Get a large number of queries
+        offset: 0,
+        ...params 
+      }
       const data = await adminAPI.getQueries(mergedParams)
       
       queries.value = data.queries || []
       totalQueries.value = data.total || 0
       
-      console.log(`Fetched ${queries.value.length} queries (total: ${totalQueries.value})`)
+      // Queries fetched successfully
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch queries:', err)
@@ -114,7 +119,7 @@ export const useQueriesStore = defineStore('queries', () => {
         query.feedback_updated_at = new Date().toISOString()
       }
       
-      console.log(`Updated feedback for query ${id}:`, feedback)
+      // Feedback updated successfully
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to update feedback:', err)
@@ -131,7 +136,7 @@ export const useQueriesStore = defineStore('queries', () => {
         lowConfidenceQueries: data.low_confidence_queries || [],
         unansweredQuestions: data.unanswered_questions || []
       }
-      console.log('Query insights updated:', insights.value)
+      // Query insights updated successfully
     } catch (err) {
       console.error('Failed to fetch insights:', err)
     }
@@ -199,7 +204,7 @@ export const useQueriesStore = defineStore('queries', () => {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       
-      console.log(`Exported queries as ${format}`)
+      // Queries exported successfully
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to export queries:', err)

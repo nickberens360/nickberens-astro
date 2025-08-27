@@ -3,7 +3,7 @@ Performance analytics API routes for admin dashboard.
 
 Provides detailed performance metrics including:
 - Response time metrics and percentiles
-- Query throughput analysis  
+- Query throughput analysis
 - Timeline data for charts
 - Error rate tracking
 """
@@ -198,7 +198,7 @@ async def get_performance_metrics(
         # Get current period error rate
         cursor.execute(
             """
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 COUNT(CASE WHEN error_occurred = 1 THEN 1 END) as errors
             FROM query_logs
@@ -215,7 +215,7 @@ async def get_performance_metrics(
         # Get previous period error rate
         cursor.execute(
             """
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 COUNT(CASE WHEN error_occurred = 1 THEN 1 END) as errors
             FROM query_logs
@@ -286,7 +286,7 @@ async def get_performance_timeline(
             # Group by hour
             cursor.execute(
                 """
-                SELECT 
+                SELECT
                     strftime('%Y-%m-%d %H:00:00', timestamp) as time_bucket,
                     AVG(response_time_ms) as avg_response_time,
                     COUNT(*) as query_count,
@@ -302,7 +302,7 @@ async def get_performance_timeline(
             # Group by day
             cursor.execute(
                 """
-                SELECT 
+                SELECT
                     strftime('%Y-%m-%d', timestamp) as time_bucket,
                     AVG(response_time_ms) as avg_response_time,
                     COUNT(*) as query_count,

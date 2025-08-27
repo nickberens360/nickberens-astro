@@ -71,12 +71,13 @@ async def get_queries(
     end_date: Optional[str] = Query(None, description="End date for filtering (ISO format)"),
     errors_only: Optional[bool] = Query(False, description="Show only queries with errors"),
     min_relevance: Optional[float] = Query(None, description="Minimum relevance score"),
-    sort_by: Optional[str] = Query("created_at", description="Field to sort by"),
+    sort_by: Optional[str] = Query("timestamp", description="Field to sort by"),
     sort_order: Optional[str] = Query("desc", description="Sort order (asc/desc)"),
 ):
     """
     Get list of queries with filtering and pagination.
     """
+    logger.info(f"get_queries called with sort_by='{sort_by}', sort_order='{sort_order}', search='{search}'")
     try:
         conn = get_db_connection()
 
@@ -113,13 +114,20 @@ async def get_queries(
 
         # Build main query with pagination
         order_direction = "DESC" if sort_order.lower() == "desc" else "ASC"
-        valid_sort_fields = ["timestamp", "response_time_ms", "user_query", "llm_model"]
+        valid_sort_fields = [
+            "timestamp",
+            "response_time_ms",
+            "user_query",
+            "llm_model",
+            "error_occurred",
+            "vector_search_score",
+        ]
         sort_field = sort_by if sort_by in valid_sort_fields else "timestamp"
 
         query = f"""
-            SELECT id, user_query, system_response, timestamp, response_time_ms, 
+            SELECT id, user_query, system_response, timestamp, response_time_ms,
                    llm_model, error_occurred, error_message, session_id, user_feedback,
-                   vector_search_score, sources_used, client_ip, location_city, 
+                   vector_search_score, sources_used, client_ip, location_city,
                    location_region, location_country, location_country_code
             FROM query_logs
             {where_clause}
@@ -184,7 +192,7 @@ async def get_query_insights():
         # Get basic stats
         cursor.execute(
             """
-            SELECT 
+            SELECT
                 COUNT(*) as total_queries,
                 AVG(response_time_ms) as avg_response_time,
                 COUNT(CASE WHEN error_occurred = 1 THEN 1 END) as error_count
@@ -249,7 +257,7 @@ async def get_query(query_id: str):
             """
             SELECT id, user_query, system_response, timestamp, response_time_ms,
                    llm_model, error_occurred, error_message, session_id, user_feedback,
-                   vector_search_score, sources_used, client_ip, location_city, 
+                   vector_search_score, sources_used, client_ip, location_city,
                    location_region, location_country, location_country_code
             FROM query_logs
             WHERE id = ?

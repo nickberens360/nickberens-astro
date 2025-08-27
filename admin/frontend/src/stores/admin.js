@@ -116,9 +116,7 @@ export const useAdminStore = defineStore('admin', () => {
         console.log('Fetching stats with days:', days)
       }
       const data = await adminAPI.getStats(days)
-      if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_API) {
-        console.log('Raw API response:', data)
-      }
+      // API response received successfully
       
       // Update stats with received data - fix field mappings
       stats.value = {
@@ -143,9 +141,7 @@ export const useAdminStore = defineStore('admin', () => {
       }
       
       lastUpdate.value = new Date().toISOString()
-      if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_STORES) {
-        console.log('Stats updated:', stats.value)
-      }
+      // Stats updated successfully
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch stats:', err)

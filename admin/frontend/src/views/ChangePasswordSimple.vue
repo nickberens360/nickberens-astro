@@ -112,38 +112,58 @@ export default {
         return
       }
       
-      if (formData.newPassword.length < 8) {
-        state.error = 'Password must be at least 8 characters'
+      // Enhanced password validation to match backend requirements
+      if (formData.newPassword.length < 12) {
+        state.error = 'Password must be at least 12 characters'
+        state.loading = false
+        return
+      }
+      
+      if (!/[A-Z]/.test(formData.newPassword)) {
+        state.error = 'Password must contain at least one uppercase letter'
+        state.loading = false
+        return
+      }
+      
+      if (!/[a-z]/.test(formData.newPassword)) {
+        state.error = 'Password must contain at least one lowercase letter'
+        state.loading = false
+        return
+      }
+      
+      if (!/\d/.test(formData.newPassword)) {
+        state.error = 'Password must contain at least one digit'
+        state.loading = false
+        return
+      }
+      
+      if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(formData.newPassword)) {
+        state.error = 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
         state.loading = false
         return
       }
       
       try {
-        console.log('Attempting password change...')
+        // Attempting password change...
         
-        // Get current token from localStorage
-        const token = localStorage.getItem('admin_token')
-        if (!token) {
-          state.error = 'No authentication token found. Please login first.'
-          state.loading = false
-          return
-        }
+        // Authentication is now handled via HTTPOnly cookies
+        // No token needed - cookies are sent automatically
         
         const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {
           current_password: formData.currentPassword,
           new_password: formData.newPassword
         }, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true  // Send HTTPOnly cookies
         })
         
-        console.log('Password change response:', response.data)
-        state.debugInfo = `SUCCESS!\n${JSON.stringify(response.data, null, 2)}`
+        // Password change successful
+        state.debugInfo = `SUCCESS! Password changed successfully.`
         state.success = 'Password changed successfully! All sessions have been invalidated. Please login again.'
         
-        // Clear the stored token since all sessions are invalidated
-        localStorage.removeItem('admin_token')
+        // HTTPOnly cookies will be cleared by the server
         
         // Reset form and redirect to login
         setTimeout(() => {

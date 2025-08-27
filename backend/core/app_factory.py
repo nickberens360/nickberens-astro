@@ -17,8 +17,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
-from ..middleware.security import add_security_headers
 from .config import AppConfig
+from .security_middleware import add_security_middleware
 
 
 # Initialize the limiter - centralized application-wide rate limiting
@@ -65,7 +65,7 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
     # Add security middleware
-    app.middleware("http")(add_security_headers)
+    add_security_middleware(app)
 
     # Add CORS middleware
     app.add_middleware(

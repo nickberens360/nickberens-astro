@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
+from ..core.audit_logger import AuditLogger
 from ..core.query_data_manager import query_data_manager
 from ..models.admin_models import (
     AdminUser,
@@ -30,6 +31,9 @@ from ..models.admin_models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Initialize audit logger
+audit_logger = AuditLogger()
 
 router = APIRouter(prefix="/admin/api", tags=["admin"])
 
@@ -53,21 +57,34 @@ async def login(login_data: LoginRequest, request: Request, response: Response) 
 
         if not auth_result:
             logger.warning(f"Failed login attempt for username: {login_data.username} from IP: {client_ip}")
+
+            # Audit log failed login
+            from ..core.audit_logger import audit_logger
+
+            audit_logger.log_login(
+                login_data.username, client_ip, user_agent, success=False, error_message="Invalid credentials"
+            )
+
             return LoginResponse(success=False, message="Invalid username or password")
 
         user_data = auth_result["user"].copy()
         user_data.pop("password_hash", None)  # Remove password hash from response
 
-        # Set secure session cookie
+        # Set secure HTTPOnly session cookie
         is_production = os.getenv("ENVIRONMENT", "development") == "production"
         response.set_cookie(
             key="admin_session",
             value=auth_result["session_id"],
             max_age=24 * 60 * 60,  # 24 hours
-            httponly=is_production,  # Allow JS access in development
-            secure=is_production,  # Only secure in production
-            samesite="lax",  # Lax is better for same-domain dev
+            httponly=True,  # Always HTTPOnly for security
+            secure=is_production,  # Only secure in production (requires HTTPS)
+            samesite="lax",  # Lax for better compatibility with same-domain dev
         )
+
+        # Audit log successful login
+        from ..core.audit_logger import audit_logger
+
+        audit_logger.log_login(login_data.username, client_ip, user_agent, success=True, method="password")
 
         return LoginResponse(
             success=True, message="Login successful", user=user_data, session_id=auth_result["session_id"]
@@ -88,8 +105,16 @@ async def logout(
         if session_id:
             admin_auth_manager.expire_session(session_id)
 
-        # Clear session cookie
-        response.delete_cookie(key="admin_session")
+        # Clear session cookie with same attributes as when set
+        is_production = os.getenv("ENVIRONMENT", "development") == "production"
+        response.delete_cookie(key="admin_session", secure=is_production, samesite="lax")
+
+        # Audit log logout
+        from ..core.audit_logger import audit_logger
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        audit_logger.log_logout(session["username"], client_ip, user_agent)
 
         return {"success": True, "message": "Logout successful"}
 
@@ -119,7 +144,7 @@ async def change_password(
     try:
         # Rate limiting for password change attempts
         client_ip = request.client.host if request.client else "unknown"
-        if admin_auth_manager._is_rate_limited(client_ip):
+        if admin_auth_manager.is_rate_limited(client_ip, "ip"):
             logger.warning(f"Rate limited password change attempt from {client_ip} for user {session['username']}")
             raise HTTPException(status_code=429, detail="Too many password change attempts. Please try again later.")
 
@@ -131,17 +156,27 @@ async def change_password(
         # Verify current password
         if not admin_auth_manager.verify_password(password_data.current_password, user["password_hash"]):
             # Record failed password verification attempt
-            admin_auth_manager._record_failed_attempt(client_ip)
+            admin_db_manager.record_rate_limit_attempt(client_ip, "ip", 5)
+            admin_db_manager.record_security_event(
+                "password_change_failure",
+                session["username"],
+                "medium",
+                "Failed password change attempt - invalid current password",
+                client_ip,
+                request.headers.get("User-Agent"),
+            )
             logger.warning(f"Invalid current password attempt for user: {session['username']} from IP: {client_ip}")
             raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-        # Enhanced password validation
+        # Enhanced password validation - stricter requirements
         new_password = password_data.new_password
-        if len(new_password) < 8:
-            raise HTTPException(status_code=400, detail="New password must be at least 8 characters long")
+        if len(new_password) < 12:
+            raise HTTPException(status_code=400, detail="New password must be at least 12 characters long")
 
-        # Check for basic password complexity (more efficient with single pass)
-        has_upper = has_lower = has_digit = False
+        # Check for comprehensive password complexity
+        has_upper = has_lower = has_digit = has_special = False
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+
         for char in new_password:
             if char.isupper():
                 has_upper = True
@@ -149,15 +184,61 @@ async def change_password(
                 has_lower = True
             elif char.isdigit():
                 has_digit = True
+            elif char in special_chars:
+                has_special = True
             # Early exit if all conditions are met
-            if has_upper and has_lower and has_digit:
+            if has_upper and has_lower and has_digit and has_special:
                 break
 
-        if not (has_upper and has_lower):
-            raise HTTPException(status_code=400, detail="Password must contain both uppercase and lowercase letters")
+        if not has_upper:
+            raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
+
+        if not has_lower:
+            raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
 
         if not has_digit:
             raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+
+        if not has_special:
+            raise HTTPException(
+                status_code=400, detail=f"Password must contain at least one special character: {special_chars}"
+            )
+
+        # Check for common weak patterns
+        weak_patterns = [
+            "password",
+            "123456",
+            "qwerty",
+            "admin",
+            "user",
+            "login",
+            "welcome",
+            "letmein",
+            "monkey",
+            "dragon",
+            "master",
+        ]
+        lower_password = new_password.lower()
+        for pattern in weak_patterns:
+            if pattern in lower_password:
+                raise HTTPException(
+                    status_code=400, detail=f"Password cannot contain common weak patterns like '{pattern}'"
+                )
+
+        # Check for sequential characters
+        if any(
+            ord(new_password[i]) == ord(new_password[i + 1]) - 1 == ord(new_password[i + 2]) - 2
+            for i in range(len(new_password) - 2)
+        ):
+            raise HTTPException(
+                status_code=400, detail="Password cannot contain sequential characters (e.g., abc, 123)"
+            )
+
+        # Check for repeated characters (more than 2 in a row)
+        if any(new_password[i] == new_password[i + 1] == new_password[i + 2] for i in range(len(new_password) - 2)):
+            raise HTTPException(
+                status_code=400, detail="Password cannot contain more than 2 repeated characters in a row"
+            )
 
         # Hash and update the new password
         new_password_hash = admin_auth_manager.hash_password(password_data.new_password)
@@ -167,7 +248,14 @@ async def change_password(
             raise HTTPException(status_code=500, detail="Failed to update password")
 
         # Reset failed attempts on successful password change
-        admin_auth_manager._reset_failed_attempts(client_ip)
+        admin_db_manager.reset_rate_limit(client_ip, "ip")
+
+        # Audit log password change
+        from ..core.audit_logger import audit_logger
+
+        audit_logger.log_password_change(
+            session["username"], session["username"], client_ip, request.headers.get("User-Agent", ""), success=True
+        )
 
         # Expire all sessions for this user (except current one)
         admin_auth_manager.expire_user_sessions(user["id"])
@@ -371,13 +459,13 @@ async def get_performance_timeline(
                 # Hourly data for the last N days
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
                         strftime('%Y-%m-%d %H:00:00', timestamp) as period,
                         COUNT(*) as query_count,
                         AVG(response_time_ms) as avg_response_time,
                         AVG(CASE WHEN error_occurred THEN 1.0 ELSE 0.0 END) as error_rate,
                         AVG(CASE WHEN cache_hit THEN 1.0 ELSE 0.0 END) as cache_hit_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= datetime('now', '-' || ? || ' days')
                     GROUP BY strftime('%Y-%m-%d %H:00:00', timestamp)
                     ORDER BY period
@@ -388,13 +476,13 @@ async def get_performance_timeline(
                 # Daily data for the last N days
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
                         strftime('%Y-%m-%d', timestamp) as period,
                         COUNT(*) as query_count,
                         AVG(response_time_ms) as avg_response_time,
                         AVG(CASE WHEN error_occurred THEN 1.0 ELSE 0.0 END) as error_rate,
                         AVG(CASE WHEN cache_hit THEN 1.0 ELSE 0.0 END) as cache_hit_rate
-                    FROM query_logs 
+                    FROM query_logs
                     WHERE timestamp >= datetime('now', '-' || ? || ' days')
                     GROUP BY strftime('%Y-%m-%d', timestamp)
                     ORDER BY period
@@ -437,7 +525,7 @@ async def get_response_time_percentiles(
             cursor.execute(
                 f"""
                 SELECT response_time_ms
-                FROM query_logs 
+                FROM query_logs
                 WHERE timestamp >= datetime('now', '-{time_map[time_range]}')
                 AND response_time_ms IS NOT NULL
                 ORDER BY response_time_ms
@@ -524,7 +612,7 @@ async def get_content_gaps(
 
             cursor.execute(
                 f"""
-                SELECT 
+                SELECT
                     cg.id,
                     cg.query_pattern,
                     cg.occurrence_count,
@@ -597,10 +685,10 @@ async def export_csv(
 
                 cursor.execute(
                     f"""
-                    SELECT 
-                        id, session_id, user_query, response_time_ms, 
+                    SELECT
+                        id, session_id, user_query, response_time_ms,
                         llm_provider, llm_model, vector_search_score,
-                        cache_hit, error_occurred, error_message, 
+                        cache_hit, error_occurred, error_message,
                         user_feedback, timestamp
                     FROM query_logs{where_clause}
                     ORDER BY timestamp DESC
@@ -642,6 +730,98 @@ async def export_csv(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error exporting CSV: {str(e)}")
+
+
+# Security monitoring endpoints
+@router.get("/security/alerts")
+async def get_security_alerts(
+    hours: int = Query(24, ge=1, le=168, description="Hours to look back"),
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Get recent security events and alerts."""
+    try:
+        alerts = admin_auth_manager.get_security_alerts(hours)
+
+        # Categorize alerts by severity
+        critical = [a for a in alerts if a["severity"] == "critical"]
+        high = [a for a in alerts if a["severity"] == "high"]
+        medium = [a for a in alerts if a["severity"] == "medium"]
+        low = [a for a in alerts if a["severity"] == "low"]
+
+        return {
+            "alerts": alerts,
+            "summary": {
+                "total": len(alerts),
+                "critical": len(critical),
+                "high": len(high),
+                "medium": len(medium),
+                "low": len(low),
+            },
+            "time_range_hours": hours,
+        }
+    except Exception as e:
+        logger.error(f"Error fetching security alerts: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching security alerts")
+
+
+@router.get("/security/session-stats")
+async def get_session_security_stats(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get session-related security statistics."""
+    try:
+        with admin_db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Active sessions by IP
+            cursor.execute(
+                """
+                SELECT ip_address, COUNT(*) as session_count
+                FROM admin_sessions
+                WHERE is_active = 1
+                GROUP BY ip_address
+                ORDER BY session_count DESC
+                LIMIT 10
+            """
+            )
+            sessions_by_ip = [{"ip": row[0], "count": row[1]} for row in cursor.fetchall()]
+
+            # Sessions by user
+            cursor.execute(
+                """
+                SELECT u.username, COUNT(*) as session_count
+                FROM admin_sessions s
+                JOIN admin_users u ON s.user_id = u.id
+                WHERE s.is_active = 1
+                GROUP BY u.username
+                ORDER BY session_count DESC
+            """
+            )
+            sessions_by_user = [{"username": row[0], "count": row[1]} for row in cursor.fetchall()]
+
+            # Session duration statistics
+            cursor.execute(
+                """
+                SELECT
+                    AVG((julianday('now') - julianday(started_at)) * 24) as avg_duration_hours,
+                    MAX((julianday('now') - julianday(started_at)) * 24) as max_duration_hours,
+                    COUNT(*) as total_active_sessions
+                FROM admin_sessions
+                WHERE is_active = 1
+            """
+            )
+            duration_stats = cursor.fetchone()
+
+            return {
+                "sessions_by_ip": sessions_by_ip,
+                "sessions_by_user": sessions_by_user,
+                "duration_stats": {
+                    "average_hours": round(duration_stats[0] or 0, 1),
+                    "max_hours": round(duration_stats[1] or 0, 1),
+                    "total_active": duration_stats[2] or 0,
+                },
+            }
+    except Exception as e:
+        logger.error(f"Error fetching session security stats: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching session security statistics")
 
 
 # User management endpoints

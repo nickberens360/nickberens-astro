@@ -9,11 +9,8 @@ class AdminAPI {
       withCredentials: true  // Enable cookies for session management
     })
 
-    // Runtime token container - load from localStorage if available
-    this.authToken = null
-    if (typeof localStorage !== 'undefined') {
-      this.authToken = localStorage.getItem('admin_token')
-    }
+    // Authentication is now handled via HTTPOnly cookies
+    // No longer storing tokens in localStorage for security
 
     // Request interceptor
     this.client.interceptors.request.use(
@@ -23,12 +20,8 @@ class AdminAPI {
           console.debug(`API ${config.method?.toUpperCase()}: ${config.url}`)
         }
         
-        // Add Authorization header if we have a token
-        if (this.authToken) {
-          config.headers.Authorization = `Bearer ${this.authToken}`
-        }
-        
-        // Session-based authentication - cookies are automatically sent with withCredentials: true
+        // Session-based authentication - HTTPOnly cookies are automatically sent with withCredentials: true
+        // No manual Authorization header needed
         return config
       },
       (error) => {
@@ -267,9 +260,8 @@ class AdminAPI {
         password
       })
       
-      if (response.success && response.session_id) {
-        this.setAuthToken(response.session_id)
-      }
+      // Session is now managed via HTTPOnly cookies
+      // No need to store session_id manually
       
       return response
     } catch (error) {
@@ -281,11 +273,11 @@ class AdminAPI {
   async logout() {
     try {
       const response = await this.client.post('/auth/logout')
-      this.clearAuthToken()
+      // HTTPOnly cookie will be cleared by the server
       return response
     } catch (error) {
       console.error('Logout failed:', error)
-      this.clearAuthToken() // Clear token even if logout fails
+      // Cookie should still be cleared by server even if logout fails
       throw error
     }
   }
@@ -342,14 +334,14 @@ class AdminAPI {
     }
   }
 
+  // Authentication token methods removed - now using HTTPOnly cookies exclusively
+  // These methods are kept for backward compatibility but do nothing
   setAuthToken(token) {
-    this.authToken = token
-    if (typeof localStorage !== 'undefined') localStorage.setItem('admin_token', token)
+    console.warn('setAuthToken deprecated - using HTTPOnly cookies')
   }
 
   clearAuthToken() {
-    this.authToken = null
-    if (typeof localStorage !== 'undefined') localStorage.removeItem('admin_token')
+    console.warn('clearAuthToken deprecated - using HTTPOnly cookies')
   }
 }
 

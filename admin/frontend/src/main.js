@@ -13,14 +13,8 @@ import './styles/main.css'
 // Admin API setup
 import { adminAPI } from './services/api'
 
-// Initialize admin token at startup (development only)
-// Never define VITE_ADMIN_TOKEN in production builds.
-if (import.meta.env.DEV) {
-  const devToken = import.meta.env.VITE_ADMIN_TOKEN
-  if (devToken) {
-    adminAPI.setAuthToken(devToken)
-  }
-}
+// Authentication is now handled via HTTPOnly cookies exclusively
+// No development token injection needed - use proper login flow
 
 const app = createApp(App)
 

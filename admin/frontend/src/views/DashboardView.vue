@@ -87,13 +87,8 @@ const cardsLoading = computed(() => {
 
 const metrics = computed(() => {
   // Debug logging to see what data we're getting
-  if (import.meta.env.DEV && stats.value) {
-    console.log('Stats data:', stats.value)
-    console.log('totalQueriesChange:', stats.value?.totalQueriesChange)
-    console.log('averageResponseTimeChange:', stats.value?.averageResponseTimeChange) 
-    console.log('uniqueSessionsChange:', stats.value?.uniqueSessionsChange)
-    console.log('errorRateChange:', stats.value?.errorRateChange)
-  }
+  // Debug stats data (development only)
+  // Stats validation and processing...
   
   return [
     {

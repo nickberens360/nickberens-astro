@@ -26,7 +26,7 @@
                 type="password"
                 prepend-icon="$lock"
                 required
-                hint="At least 8 characters"
+                hint="At least 12 characters with uppercase, lowercase, digit, and special character"
               ></v-text-field>
               
               <v-text-field
@@ -103,7 +103,15 @@ export default {
     const success = ref('')
     
     const requiredRule = (v) => !!v || 'Required'
-    const minLengthRule = (v) => (v && v.length >= 8) || 'Password must be at least 8 characters'
+    const minLengthRule = (v) => {
+      if (!v) return 'Password is required'
+      if (v.length < 12) return 'Password must be at least 12 characters'
+      if (!/[A-Z]/.test(v)) return 'Password must contain at least one uppercase letter'
+      if (!/[a-z]/.test(v)) return 'Password must contain at least one lowercase letter'
+      if (!/\d/.test(v)) return 'Password must contain at least one digit'
+      if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(v)) return 'Password must contain at least one special character'
+      return true
+    }
     const passwordMatchRule = computed(() => (v) => v === newPassword.value || 'Passwords must match')
     
     const changePassword = async () => {
@@ -123,8 +131,7 @@ export default {
           success.value = 'Password changed successfully! All sessions have been invalidated. You will be redirected to login.'
           resetForm()
           
-          // Clear stored token since all sessions are invalidated
-          localStorage.removeItem('admin_token')
+          // HTTPOnly cookies will be cleared by the server
           
           // Redirect to login page since sessions are expired
           setTimeout(() => {

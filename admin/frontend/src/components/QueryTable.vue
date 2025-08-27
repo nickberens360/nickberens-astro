@@ -15,7 +15,7 @@
             prepend-inner-icon="$search"
             clearable
             style="max-width: 300px;"
-            @update:model-value="debouncedSearch"
+            @update:model-value="searchQuery = $event"
           />
         </v-col>
         <v-col cols="auto">
@@ -126,18 +126,15 @@
       </v-row>
     </v-card-title>
 
-    <v-data-table-server
+    <v-data-table
       v-model="selectedQueries"
       :headers="headers"
       :items="queries"
-      :items-length="totalQueries"
       :loading="loading"
       :items-per-page="itemsPerPage"
-      :page="page"
       show-select
       :search="searchQuery"
       item-value="id"
-      @update:options="updateOptions"
       @click:row="handleRowClick"
     >
       <template #item.user_query="{ item }">
@@ -152,7 +149,7 @@
         </div>
       </template>
 
-      <template #item.status="{ item }">
+      <template #item.error_occurred="{ item }">
         <v-chip
           :color="getStatusColor(item.error_occurred ? 'error' : 'success')"
           size="small"
@@ -162,13 +159,13 @@
         </v-chip>
       </template>
 
-      <template #item.response_time="{ item }">
+      <template #item.response_time_ms="{ item }">
         <span :class="getResponseTimeColor(item.response_time_ms)">
           {{ formatDuration(item.response_time_ms) }}
         </span>
       </template>
 
-      <template #item.relevance_score="{ item }">
+      <template #item.vector_search_score="{ item }">
         <div class="d-flex align-center">
           <v-progress-linear
             :model-value="item.vector_search_score ? item.vector_search_score * 100 : 0"
@@ -181,6 +178,16 @@
               item.vector_search_score ? Math.round(item.vector_search_score * 100) + '%' : 'N/A'
             }}</span>
         </div>
+      </template>
+
+      <template #item.llm_model="{ item }">
+        <v-chip
+          :color="getModelColor(item.llm_model)"
+          size="small"
+          variant="outlined"
+        >
+          {{ getModelDisplayName(item.llm_model) }}
+        </v-chip>
       </template>
 
       <template #item.location="{ item }">
@@ -301,21 +308,14 @@
       <template #bottom>
         <div class="d-flex align-center justify-space-between pa-4">
           <div class="text-caption text-medium-emphasis">
-            Showing {{ queries.length }} of {{ totalQueries }} queries
+            Showing {{ queries.length }} queries
             <span v-if="selectedQueries.length > 0">
               ({{ selectedQueries.length }} selected)
             </span>
           </div>
-
-          <v-pagination
-            v-model="page"
-            :length="totalPages"
-            :total-visible="7"
-            @update:model-value="updatePage"
-          />
         </div>
       </template>
-    </v-data-table-server>
+    </v-data-table>
 
     <!-- Query Details Dialog -->
     <v-dialog
@@ -357,6 +357,7 @@
             </v-card>
           </div>
 
+          <!-- Technical Details Grid -->
           <v-row>
             <v-col cols="6">
               <div class="mb-2">
@@ -374,12 +375,150 @@
             <v-col cols="6">
               <div class="mb-2">
                 <v-label class="font-weight-bold">Response Time:</v-label>
-                <span class="ml-2">{{
-                    formatDuration(selectedQuery.response_time_ms)
-                  }}</span>
+                <span class="ml-2">{{ formatDuration(selectedQuery.response_time_ms) }}</span>
               </div>
             </v-col>
           </v-row>
+
+          <v-row>
+            <v-col cols="6">
+              <div class="mb-2">
+                <v-label class="font-weight-bold">LLM Model:</v-label>
+                <v-chip
+                  :color="getModelColor(selectedQuery.llm_model)"
+                  size="small"
+                  variant="outlined"
+                  class="ml-2"
+                >
+                  {{ getModelDisplayName(selectedQuery.llm_model) }}
+                </v-chip>
+              </div>
+            </v-col>
+          </v-row>
+
+          <v-row>
+            <v-col cols="6">
+              <div class="mb-2">
+                <v-label class="font-weight-bold">Cache Hit:</v-label>
+                <v-chip
+                  :color="selectedQuery.cache_hit ? 'success' : 'default'"
+                  size="small"
+                  variant="flat"
+                  class="ml-2"
+                >
+                  {{ selectedQuery.cache_hit ? 'Yes' : 'No' }}
+                </v-chip>
+              </div>
+            </v-col>
+            <v-col cols="6" v-if="selectedQuery.vector_search_score !== null">
+              <div class="mb-2">
+                <v-label class="font-weight-bold">Relevance Score:</v-label>
+                <span class="ml-2">{{ Math.round(selectedQuery.vector_search_score * 100) }}%</span>
+              </div>
+            </v-col>
+          </v-row>
+
+          <!-- Session & Identity -->
+          <v-divider class="my-4"/>
+          <v-row>
+            <v-col cols="6">
+              <div class="mb-2">
+                <v-label class="font-weight-bold">Session ID:</v-label>
+                <span class="ml-2 text-caption font-mono">{{ selectedQuery.session_id || 'N/A' }}</span>
+              </div>
+            </v-col>
+            <v-col cols="6">
+              <div class="mb-2">
+                <v-label class="font-weight-bold">Query ID:</v-label>
+                <span class="ml-2 text-caption font-mono">{{ selectedQuery.id }}</span>
+              </div>
+            </v-col>
+          </v-row>
+
+          <v-row>
+            <v-col cols="6">
+              <div class="mb-2">
+                <v-label class="font-weight-bold">Client IP:</v-label>
+                <span class="ml-2 text-caption font-mono">{{ selectedQuery.client_ip || 'N/A' }}</span>
+              </div>
+            </v-col>
+            <v-col cols="6">
+              <div class="mb-2">
+                <v-label class="font-weight-bold">Timestamp:</v-label>
+                <span class="ml-2 text-caption">{{ formatDate(selectedQuery.timestamp) }}</span>
+              </div>
+            </v-col>
+          </v-row>
+
+          <!-- Location Data -->
+          <div v-if="selectedQuery.location_city || selectedQuery.location_country" class="mb-4">
+            <v-label class="mb-2 font-weight-bold">Location:</v-label>
+            <div class="ml-2">
+              <span v-if="selectedQuery.location_city">{{ selectedQuery.location_city }}</span>
+              <span v-if="selectedQuery.location_city && selectedQuery.location_region">, </span>
+              <span v-if="selectedQuery.location_region">{{ selectedQuery.location_region }}</span>
+              <span v-if="(selectedQuery.location_city || selectedQuery.location_region) && selectedQuery.location_country">, </span>
+              <span v-if="selectedQuery.location_country">{{ selectedQuery.location_country }}</span>
+              <span v-if="selectedQuery.location_country_code" class="text-caption"> ({{ selectedQuery.location_country_code }})</span>
+            </div>
+          </div>
+
+          <!-- Sources Used -->
+          <div v-if="selectedQuery.sources_used" class="mb-4">
+            <v-label class="mb-2 font-weight-bold">Sources Used:</v-label>
+            <div class="d-flex flex-wrap gap-2">
+              <v-chip
+                v-for="source in parseSourcesUsed(selectedQuery.sources_used)"
+                :key="source"
+                size="small"
+                variant="outlined"
+              >
+                {{ source }}
+              </v-chip>
+            </div>
+          </div>
+
+          <!-- Follow-up Questions -->
+          <div v-if="selectedQuery.follow_up_questions" class="mb-4">
+            <v-label class="mb-2 font-weight-bold">Follow-up Questions:</v-label>
+            <v-list density="compact" class="ml-2">
+              <v-list-item 
+                v-for="(question, index) in parseFollowUpQuestions(selectedQuery.follow_up_questions)"
+                :key="index"
+                class="text-body-2"
+              >
+                <template #prepend>
+                  <v-icon size="small">$help</v-icon>
+                </template>
+                {{ question }}
+              </v-list-item>
+            </v-list>
+          </div>
+
+          <!-- User Feedback -->
+          <div v-if="selectedQuery.user_feedback" class="mb-4">
+            <v-label class="mb-2 font-weight-bold">User Feedback:</v-label>
+            <v-chip
+              :color="selectedQuery.user_feedback === 'helpful' ? 'success' : 'error'"
+              size="small"
+              variant="flat"
+              class="ml-2"
+            >
+              {{ selectedQuery.user_feedback === 'helpful' ? 'Helpful' : 'Not Helpful' }}
+            </v-chip>
+          </div>
+
+          <!-- Error Details -->
+          <div v-if="selectedQuery.error_occurred && selectedQuery.error_message" class="mb-4">
+            <v-label class="mb-2 font-weight-bold">Error Details:</v-label>
+            <v-card
+              variant="outlined"
+              color="error"
+              class="pa-3"
+            >
+              <div class="text-body-2">{{ selectedQuery.error_message }}</div>
+            </v-card>
+          </div>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -408,7 +547,6 @@ const searchQuery = ref('');
 const selectedQueries = ref([]);
 const selectedQuery = ref(null);
 const showDetailsDialog = ref(false);
-const page = ref(1);
 const itemsPerPage = ref(25);
 
 // Filters
@@ -427,12 +565,7 @@ const {
   error
 } = storeToRefs(queriesStore);
 
-const totalPages = computed(() => {
-  if (!totalQueries.value || totalQueries.value === 0) {
-    return 1;
-  }
-  return Math.ceil(totalQueries.value / itemsPerPage.value) || 1;
-});
+// Remove totalPages - not needed for client-side table
 
 const headers = computed(() => [
   {
@@ -463,6 +596,12 @@ const headers = computed(() => [
     title: 'Relevance',
     key: 'vector_search_score',
     width: '10%',
+    sortable: true
+  },
+  {
+    title: 'LLM',
+    key: 'llm_model',
+    width: '8%',
     sortable: true
   },
   {
@@ -512,25 +651,33 @@ const getRelevanceColor = (score) => {
   return 'error';
 };
 
-const updateOptions = (options) => {
-  page.value = options.page;
-  itemsPerPage.value = options.itemsPerPage;
-
-  const sortBy = options.sortBy?.[0];
-  if (sortBy) {
-    queriesStore.setFilters({
-      sortBy: sortBy.key,
-      sortOrder: sortBy.order,
-      page: page.value,
-      limit: itemsPerPage.value
-    });
-  }
+const getModelColor = (model) => {
+  if (!model) return 'grey';
+  const lowerModel = model.toLowerCase();
+  if (lowerModel.includes('haiku') || lowerModel.includes('claude_haiku')) return 'info';
+  if (lowerModel.includes('claude')) return 'primary';
+  if (lowerModel.includes('gemini')) return 'purple';
+  if (lowerModel.includes('cached')) return 'success';
+  if (lowerModel.includes('image')) return 'orange';
+  return 'grey';
 };
 
-const updatePage = (newPage) => {
-  page.value = newPage;
-  queriesStore.setFilters({ page: newPage });
+const getModelDisplayName = (model) => {
+  if (!model) return 'Unknown';
+  const lowerModel = model.toLowerCase();
+  if (lowerModel.includes('haiku') || lowerModel.includes('claude_haiku')) return 'Claude Haiku';
+  if (lowerModel.includes('claude-3-5-sonnet')) return 'Claude Sonnet 3.5';
+  if (lowerModel.includes('claude-3-sonnet')) return 'Claude Sonnet 3';
+  if (lowerModel.includes('claude')) return 'Claude';
+  if (lowerModel.includes('gemini')) return 'Gemini';
+  if (lowerModel === 'cached') return 'Cached';
+  if (lowerModel.includes('image')) return 'Image Search';
+
+  // Fallback to prettified version of the raw model name
+  return model.replace(/-/g, ' ').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
+
+// Remove updateOptions and updatePage - not needed for client-side table
 
 const handleRowClick = (event, { item }) => {
   viewDetails(item);
@@ -552,10 +699,8 @@ const updateFeedback = async (queryId, feedback) => {
 
 const applyFilters = async () => {
   await queriesStore.setFilters({
-    ...filters.value,
-    page: 1
+    ...filters.value
   });
-  page.value = 1;
 };
 
 const resetFilters = async () => {
@@ -566,7 +711,6 @@ const resetFilters = async () => {
     minRelevance: 0
   };
   await queriesStore.resetFilters();
-  page.value = 1;
 };
 
 const exportData = async (format) => {
@@ -577,14 +721,32 @@ const exportData = async (format) => {
   }
 };
 
-// Debounced search
-let searchTimeout = null;
-const debouncedSearch = (value) => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    queriesStore.searchQueries(value);
-  }, 300);
+// Helper functions for parsing JSON fields
+const parseSourcesUsed = (sources) => {
+  if (!sources) return [];
+  if (typeof sources === 'string') {
+    try {
+      return JSON.parse(sources);
+    } catch {
+      return sources.split(',').map(s => s.trim());
+    }
+  }
+  return Array.isArray(sources) ? sources : [];
 };
+
+const parseFollowUpQuestions = (questions) => {
+  if (!questions) return [];
+  if (typeof questions === 'string') {
+    try {
+      return JSON.parse(questions);
+    } catch {
+      return [questions];
+    }
+  }
+  return Array.isArray(questions) ? questions : [];
+};
+
+// For client-side table, no need for debounced search - just update the reactive searchQuery
 
 // Watch for changes
 watch(selectedQueries, (newSelection) => {
