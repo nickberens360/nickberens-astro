@@ -292,6 +292,20 @@ export const useAdminStore = defineStore('admin', () => {
       if (response.success && response.user) {
         user.value = response.user
         isAuthenticated.value = true
+        
+        // Initialize data in background - don't block login response
+        Promise.resolve().then(async () => {
+          try {
+            await testConnection()
+            if (isConnected.value) {
+              await Promise.all([fetchStats(), fetchSystemHealth()])
+              startAutoRefresh()
+            }
+          } catch (err) {
+            console.warn('Post-login data initialization failed:', err)
+          }
+        })
+        
         return response
       } else {
         throw new Error(response.message || 'Login failed')
@@ -308,6 +322,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
       console.error('Logout failed:', err)
     } finally {
+      stopAutoRefresh()
       user.value = null
       isAuthenticated.value = false
     }
