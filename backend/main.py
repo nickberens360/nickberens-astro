@@ -52,8 +52,6 @@ except Exception as e:
 query_router = QueryRouter()
 response_service = ResponseService()
 
-
-# Create follow-up service - simplified to only use static service
 followup_service = FollowUpService()
 
 query_logger = get_query_logger()
