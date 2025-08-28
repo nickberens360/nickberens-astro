@@ -9,7 +9,6 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
-# Authentication models
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=100)
     password: str = Field(..., min_length=1)
