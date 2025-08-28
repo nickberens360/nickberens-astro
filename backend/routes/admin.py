@@ -369,7 +369,6 @@ async def get_performance_metrics(
     """Get performance metrics for the specified time range."""
     try:
         # Use the same logic as the main performance API endpoint
-        import sqlite3
         from datetime import datetime, timedelta
 
         from ..core.config import AppConfig

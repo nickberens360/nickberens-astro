@@ -16,7 +16,6 @@ from pydantic import BaseModel
 from starlette.requests import Request
 
 # Import shared models from knowledge module
-from .knowledge import IndexedDocument, IndexedDocumentsResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

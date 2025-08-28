@@ -120,7 +120,7 @@ class UnifiedRetriever:
                 index_metadata_path = Path(self.persist_dir) / "index_metadata.json"
                 indexed_files = {}
                 if index_metadata_path.exists():
-                    with open(index_metadata_path, "r") as f:
+                    with open(index_metadata_path, "r", encoding="utf-8") as f:
                         indexed_files = json.load(f)
 
                 # Update hash
@@ -129,7 +129,7 @@ class UnifiedRetriever:
 
                 # Save updated metadata
                 Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-                with open(index_metadata_path, "w") as f:
+                with open(index_metadata_path, "w", encoding="utf-8") as f:
                     json.dump(indexed_files, f)
 
                 return True

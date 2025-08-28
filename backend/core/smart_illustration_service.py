@@ -91,7 +91,7 @@ class SmartIllustrationService:
             logger.error("Failed to get all illustrations", exc_info=True)
             return []
 
-    def search(self, search_term: str, top_k: int = None) -> List[Dict[str, str]]:
+    def search(self, search_term: str, top_k: Optional[int] = None) -> List[Dict[str, str]]:
         """
         Search illustrations using smart retriever with caching and improved matching.
 
@@ -252,7 +252,7 @@ class SmartIllustrationService:
 
         return " ".join(cleaned.split())
 
-    def _is_fuzzy_match(self, search: str, content: str, threshold: float = None) -> bool:
+    def _is_fuzzy_match(self, search: str, content: str, threshold: Optional[float] = None) -> bool:
         """Check if search term is a fuzzy match for content."""
         if threshold is None:
             threshold = AppConfig.DEFAULT_FUZZY_THRESHOLD

@@ -5,7 +5,7 @@ Adds security headers and other security features.
 
 import logging
 import os
-from typing import Callable
+from typing import Callable, Optional
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -27,7 +27,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Permissions-Policy
     """
 
-    def __init__(self, app, enable_hsts: bool = None):
+    def __init__(self, app, enable_hsts: Optional[bool] = None):
         super().__init__(app)
 
         # Auto-detect production environment for HSTS

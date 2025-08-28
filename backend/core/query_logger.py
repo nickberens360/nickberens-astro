@@ -58,7 +58,7 @@ class QueryLogger:
             fd = os.open(self.log_file_path, os.O_CREAT | os.O_APPEND, 0o600)
             os.close(fd)
             # Test write permissions
-            with open(self.log_file_path, "a") as f:
+            with open(self.log_file_path, "a", encoding="utf-8") as f:
                 f.write("")  # Test write without actually writing
             self.logger.info("Query logger initialized successfully at: %s", self.log_file_path)
         except OSError as e:
@@ -194,7 +194,7 @@ class QueryLogger:
 
         try:
             # Append to file in JSONL format for efficiency and safety
-            with open(self.log_file_path, "a") as f:
+            with open(self.log_file_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_entry, default=str) + "\n")
         except (IOError, TypeError) as e:
             self.logger.error("Failed to log query: %s", e)
@@ -330,7 +330,7 @@ class QueryLogger:
             def _log_stream():
                 """Stream logs from file without loading all into memory."""
                 try:
-                    with open(self.log_file_path, "r") as f:
+                    with open(self.log_file_path, "r", encoding="utf-8") as f:
                         for line in f:
                             if line.strip():
                                 try:
@@ -388,7 +388,7 @@ class QueryLogger:
                 excluded_set = {self.anonymize_ip(ip) for ip in raw_excluded} if self.anonymize_ips else raw_excluded
 
             try:
-                with open(self.log_file_path, "r") as f:
+                with open(self.log_file_path, "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line:
@@ -450,7 +450,7 @@ class QueryLogger:
         """
         try:
             # Create empty file for JSONL format
-            with open(self.log_file_path, "w"):
+            with open(self.log_file_path, "w", encoding="utf-8"):
                 pass  # Just create/truncate the file
             return True
         except Exception as e:

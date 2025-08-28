@@ -155,7 +155,7 @@ class ContentIndexer:
         indexed_files = {}
 
         if index_metadata_path.exists() and not force_reindex:
-            with open(index_metadata_path, "r") as f:
+            with open(index_metadata_path, "r", encoding="utf-8") as f:
                 indexed_files = json.load(f)
 
         all_documents = []
@@ -203,7 +203,7 @@ class ContentIndexer:
 
         # Save index metadata
         Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-        with open(index_metadata_path, "w") as f:
+        with open(index_metadata_path, "w", encoding="utf-8") as f:
             json.dump(indexed_files, f)
 
         return all_documents, files_processed, total_chunks

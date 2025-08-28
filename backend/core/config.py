@@ -4,7 +4,7 @@ import os
 import re
 import secrets
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from urllib.parse import urlparse
 
 # Set up logging

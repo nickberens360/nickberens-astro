@@ -154,7 +154,7 @@ class SemanticSearcher:
         # Return top k results
         return filtered_docs[:k]
 
-    def similarity_search_with_score(self, query: str, k: int = None) -> List[tuple]:
+    def similarity_search_with_score(self, query: str, k: Optional[int] = None) -> List[tuple]:
         """
         Perform similarity search and return documents with scores.
 

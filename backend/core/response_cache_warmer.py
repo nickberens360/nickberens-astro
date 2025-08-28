@@ -22,6 +22,9 @@ class ResponseCacheWarmer:
     def __init__(self):
         self.warmed_questions: List[str] = []
         self.warming_complete = False
+        self.warming_in_progress = False
+        self.successful_warmups = 0
+        self.failed_warmups = 0
 
     async def warm_cache(
         self,
@@ -37,17 +40,27 @@ class ResponseCacheWarmer:
             retrievers: Dictionary of retrievers for RAG
             app_state: FastAPI app state containing services
         """
-        if not questions:
-            logger.info("No questions to warm cache with")
+        if self.warming_in_progress:
+            logger.warning("Cache warming already in progress, skipping duplicate request")
             return
 
+        if self.warming_complete:
+            logger.info("Cache warming already complete, skipping")
+            return
+
+        if not questions:
+            logger.info("No questions to warm cache with")
+            self.warming_complete = True
+            return
+
+        self.warming_in_progress = True
         logger.info(f"Starting cache warming for {len(questions)} questions...")
 
         try:
             from ..core.llm_chain import stream_with_fallback
 
-            successful_warmups = 0
-            failed_warmups = 0
+            self.successful_warmups = 0
+            self.failed_warmups = 0
 
             for i, question in enumerate(questions, 1):
                 try:
@@ -70,30 +83,32 @@ class ResponseCacheWarmer:
                         response_text += chunk
 
                     if response_text:
-                        successful_warmups += 1
+                        self.successful_warmups += 1
                         self.warmed_questions.append(question)
                         logger.debug(f"Successfully cached response for: {question[:50]}...")
                     else:
-                        failed_warmups += 1
+                        self.failed_warmups += 1
                         logger.warning(f"Empty response for question: {question}")
 
                 except Exception as e:
-                    failed_warmups += 1
-                    logger.error(f"Failed to warm cache for question '{question}': {e}")
+                    self.failed_warmups += 1
+                    logger.error(f"Failed to warm cache for question '{question}': {e}", exc_info=True)
 
                 # Small delay between questions to avoid overwhelming the LLM
                 if i < len(questions):
                     await asyncio.sleep(0.5)
 
             self.warming_complete = True
+            self.warming_in_progress = False
             logger.info(
-                f"Cache warming complete: {successful_warmups} successful, "
-                f"{failed_warmups} failed out of {len(questions)} total"
+                f"Cache warming complete: {self.successful_warmups} successful, "
+                f"{self.failed_warmups} failed out of {len(questions)} total"
             )
 
         except Exception as e:
-            logger.error(f"Cache warming failed: {e}")
+            logger.error(f"Cache warming failed: {e}", exc_info=True)
             self.warming_complete = True
+            self.warming_in_progress = False
 
     def get_warmed_questions(self) -> List[str]:
         """Get the list of successfully warmed questions."""
@@ -102,6 +117,17 @@ class ResponseCacheWarmer:
     def is_warming_complete(self) -> bool:
         """Check if cache warming is complete."""
         return self.warming_complete
+
+    def get_status(self) -> Dict[str, Any]:
+        """Get the current cache warming status."""
+        return {
+            "warming_complete": self.warming_complete,
+            "warming_in_progress": self.warming_in_progress,
+            "successful_warmups": self.successful_warmups,
+            "failed_warmups": self.failed_warmups,
+            "warmed_count": len(self.warmed_questions),
+            "warmed_questions": self.warmed_questions,
+        }
 
 
 # Global cache warmer instance
