@@ -48,10 +48,18 @@ async def status(state: dict = Depends(get_app_state)):
 
 @router.get("/health")
 async def health_check(state: dict = Depends(get_app_state)):
-    count = state["illustration_service"].get_all() if state["illustration_service"] else []
+    illustration_count = 0
+    try:
+        if state["illustration_service"]:
+            count = state["illustration_service"].get_all()
+            illustration_count = len(count)
+    except Exception:
+        # During startup, illustration service may not be ready
+        illustration_count = 0
+
     return {
-        "status": "healthy" if state["app_initialized"] else "degraded",
-        "illustration_count": len(count),
+        "status": "healthy" if state["app_initialized"] else "initializing",
+        "illustration_count": illustration_count,
     }
 
 
