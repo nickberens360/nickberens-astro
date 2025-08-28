@@ -170,77 +170,11 @@ async def change_password(
             logger.warning(f"Invalid current password attempt for user: {session['username']} from IP: {client_ip}")
             raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-        # Enhanced password validation - stricter requirements
-        new_password = password_data.new_password
-        if len(new_password) < 12:
-            raise HTTPException(status_code=400, detail="New password must be at least 12 characters long")
-
-        # Check for comprehensive password complexity
-        has_upper = has_lower = has_digit = has_special = False
-        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-
-        for char in new_password:
-            if char.isupper():
-                has_upper = True
-            elif char.islower():
-                has_lower = True
-            elif char.isdigit():
-                has_digit = True
-            elif char in special_chars:
-                has_special = True
-            # Early exit if all conditions are met
-            if has_upper and has_lower and has_digit and has_special:
-                break
-
-        if not has_upper:
-            raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
-
-        if not has_lower:
-            raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
-
-        if not has_digit:
-            raise HTTPException(status_code=400, detail="Password must contain at least one digit")
-
-        if not has_special:
-            raise HTTPException(
-                status_code=400, detail=f"Password must contain at least one special character: {special_chars}"
-            )
-
-        # Check for common weak patterns
-        weak_patterns = [
-            "password",
-            "123456",
-            "qwerty",
-            "admin",
-            "user",
-            "login",
-            "welcome",
-            "letmein",
-            "monkey",
-            "dragon",
-            "master",
-        ]
-        lower_password = new_password.lower()
-        for pattern in weak_patterns:
-            if pattern in lower_password:
-                raise HTTPException(
-                    status_code=400, detail=f"Password cannot contain common weak patterns like '{pattern}'"
-                )
-
-        # Check for sequential characters
-        if any(
-            ord(new_password[i]) == ord(new_password[i + 1]) - 1 == ord(new_password[i + 2]) - 2
-            for i in range(len(new_password) - 2)
-        ):
-            raise HTTPException(
-                status_code=400, detail="Password cannot contain sequential characters (e.g., abc, 123)"
-            )
-
-        # Check for repeated characters (more than 2 in a row)
-        if any(new_password[i] == new_password[i + 1] == new_password[i + 2] for i in range(len(new_password) - 2)):
-            raise HTTPException(
-                status_code=400, detail="Password cannot contain more than 2 repeated characters in a row"
-            )
+        # Validate new password using centralized validation
+        try:
+            admin_auth_manager.validate_password_strength(password_data.new_password)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
         # Hash and update the new password
         new_password_hash = admin_auth_manager.hash_password(password_data.new_password)

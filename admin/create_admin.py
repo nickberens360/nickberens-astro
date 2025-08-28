@@ -16,21 +16,21 @@ from backend.core.admin_auth import admin_auth_manager as auth_manager
 from backend.core.admin_database import admin_db_manager as db_manager
 
 
-def create_admin_user():
+def create_admin_user(args=None):
     """Interactive admin user creation."""
-    parser = argparse.ArgumentParser(description="Create an admin user for the RAG dashboard")
-    parser.add_argument("--username", "-u", help="Username for the admin user")
-    parser.add_argument("--email", "-e", help="Email for the admin user")
-    parser.add_argument(
-        "--role",
-        "-r",
-        choices=["viewer", "admin", "owner"],
-        default="admin",
-        help="Role for the admin user (default: admin)",
-    )
-    parser.add_argument("--password", "-p", help="Password (not recommended, will prompt if not provided)")
-
-    args = parser.parse_args()
+    if args is None:
+        parser = argparse.ArgumentParser(description="Create an admin user for the RAG dashboard")
+        parser.add_argument("--username", "-u", help="Username for the admin user")
+        parser.add_argument("--email", "-e", help="Email for the admin user")
+        parser.add_argument(
+            "--role",
+            "-r",
+            choices=["viewer", "admin", "owner"],
+            default="admin",
+            help="Role for the admin user (default: admin)",
+        )
+        parser.add_argument("--password", "-p", help="Password (not recommended, will prompt if not provided)")
+        args = parser.parse_args()
 
     # Get username
     username = args.username
@@ -132,21 +132,52 @@ def list_admin_users():
 
 
 def main():
-    """Main function."""
-    if len(sys.argv) > 1 and sys.argv[1] == "--list":
+    """Main function with proper argparse subcommands."""
+    parser = argparse.ArgumentParser(description="Admin User Management Tool")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Create command
+    create_parser = subparsers.add_parser("create", help="Create a new admin user")
+    create_parser.add_argument("--username", "-u", help="Username for the admin user")
+    create_parser.add_argument("--email", "-e", help="Email for the admin user")
+    create_parser.add_argument(
+        "--role",
+        "-r",
+        choices=["viewer", "admin", "owner"],
+        default="admin",
+        help="Role for the admin user (default: admin)",
+    )
+    create_parser.add_argument("--password", "-p", help="Password (not recommended, will prompt if not provided)")
+
+    # List command
+    list_parser = subparsers.add_parser("list", help="List all admin users")
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Handle no command provided (backward compatibility)
+    if args.command is None:
+        print("🔧 Admin User Creation Tool")
+        print("=" * 30)
+        print("No command specified. Creating admin user...")
+        print()
+        success = create_admin_user()
+        if success:
+            print("\n🚀 You can now start the admin server with:")
+            print("   cd admin && python3 start-admin.py")
+        sys.exit(0 if success else 1)
+
+    # Handle commands
+    if args.command == "list":
         list_admin_users()
-        return
-
-    print("🔧 Admin User Creation Tool")
-    print("=" * 30)
-
-    success = create_admin_user()
-
-    if success:
-        print("\n🚀 You can now start the admin server with:")
-        print("   cd admin && python3 start-admin.py")
-
-    sys.exit(0 if success else 1)
+    elif args.command == "create":
+        print("🔧 Admin User Creation Tool")
+        print("=" * 30)
+        success = create_admin_user(args)
+        if success:
+            print("\n🚀 You can now start the admin server with:")
+            print("   cd admin && python3 start-admin.py")
+        sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
