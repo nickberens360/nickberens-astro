@@ -60,6 +60,9 @@ export default defineConfig({
     __VUE_PROD_DEVTOOLS__: false
   },
   
+  // Environment variable handling for production builds
+  envPrefix: 'VITE_',
+  
   // Performance optimizations
   esbuild: {
     target: 'es2020',
