@@ -66,6 +66,18 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     # Check if we should force rebuild
     force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
 
+    # Check for admin-triggered refresh flag
+    refresh_flag_file = backend_dir / ".refresh_required"
+    if refresh_flag_file.exists():
+        logger.info("Admin refresh flag detected - forcing rebuild")
+        force_rebuild = True
+        # Remove the flag file after processing
+        try:
+            refresh_flag_file.unlink()
+            logger.info("Admin refresh flag processed and removed")
+        except Exception as e:
+            logger.warning(f"Could not remove refresh flag file: {e}")
+
     for directory in directories_to_index:
         if os.path.exists(directory):
             files, chunks = unified_retriever.index_directory(directory, force_reindex=force_rebuild)

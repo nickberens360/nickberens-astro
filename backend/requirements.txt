@@ -1,3 +1,4 @@
+aiofiles
 beautifulsoup4
 chromadb
 fastapi
@@ -8,11 +9,13 @@ langchain-community
 langchain-google-genai
 lxml
 markdown
+passlib[bcrypt]
 pdfplumber
 pypdf
 python-docx
 python-dotenv
 python-magic
+python-multipart
 pyyaml>=6.0
 requests
 slowapi

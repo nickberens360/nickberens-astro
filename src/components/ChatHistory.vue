@@ -301,7 +301,7 @@ export default {
     const handleCreateNewChat = () => {
       // Don't allow new chat creation if there's a typing message or if processing
       if (hasTypingMessage.value || isProcessing.value) {
-        console.log('Cannot create new chat while message is typing or processing');
+        // Cannot create new chat while message is typing or processing
         return;
       }
 

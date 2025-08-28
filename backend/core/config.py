@@ -4,7 +4,7 @@ import os
 import re
 import secrets
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from urllib.parse import urlparse
 
 # Set up logging
@@ -44,6 +44,53 @@ class AppConfig:
         MAX_RESULTS = 15
 
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
+
+    # Default Statistics Configuration
+    try:
+        DEFAULT_CACHE_HIT_RATE = float(os.getenv("DEFAULT_CACHE_HIT_RATE", "0.85"))
+        if DEFAULT_CACHE_HIT_RATE < 0.0 or DEFAULT_CACHE_HIT_RATE > 1.0:
+            logger.error("Invalid DEFAULT_CACHE_HIT_RATE value. Using default value of 0.85.")
+            DEFAULT_CACHE_HIT_RATE = 0.85
+    except ValueError:
+        logger.error("Invalid DEFAULT_CACHE_HIT_RATE value. Using default value of 0.85.")
+        DEFAULT_CACHE_HIT_RATE = 0.85
+
+    try:
+        DEFAULT_TOTAL_SOURCES = int(os.getenv("DEFAULT_TOTAL_SOURCES", "15"))
+        if DEFAULT_TOTAL_SOURCES < 1:
+            logger.error("Invalid DEFAULT_TOTAL_SOURCES value. Using default value of 15.")
+            DEFAULT_TOTAL_SOURCES = 15
+    except ValueError:
+        logger.error("Invalid DEFAULT_TOTAL_SOURCES value. Using default value of 15.")
+        DEFAULT_TOTAL_SOURCES = 15
+
+    try:
+        DEFAULT_TOTAL_TOPICS = int(os.getenv("DEFAULT_TOTAL_TOPICS", "8"))
+        if DEFAULT_TOTAL_TOPICS < 1:
+            logger.error("Invalid DEFAULT_TOTAL_TOPICS value. Using default value of 8.")
+            DEFAULT_TOTAL_TOPICS = 8
+    except ValueError:
+        logger.error("Invalid DEFAULT_TOTAL_TOPICS value. Using default value of 8.")
+        DEFAULT_TOTAL_TOPICS = 8
+
+    # Query Logger Configuration
+    try:
+        LOW_SIMILARITY_THRESHOLD = float(os.getenv("LOW_SIMILARITY_THRESHOLD", "0.7"))
+        if LOW_SIMILARITY_THRESHOLD < 0.0 or LOW_SIMILARITY_THRESHOLD > 1.0:
+            logger.error("Invalid LOW_SIMILARITY_THRESHOLD value. Using default value of 0.7.")
+            LOW_SIMILARITY_THRESHOLD = 0.7
+    except ValueError:
+        logger.error("Invalid LOW_SIMILARITY_THRESHOLD value. Using default value of 0.7.")
+        LOW_SIMILARITY_THRESHOLD = 0.7
+
+    # Dynamic attributes that will be set at module load time
+    ENABLE_SMART_MODEL_SELECTION: bool
+    RETRIEVAL_SCORE_THRESHOLD: float
+    CACHE_TTL: int
+    MAX_CACHE_SIZE: int
+    EXCLUDED_IPS: List[str]
+    IP_HASH_SALT: str
+    QUERY_LOG_FILE: str
 
     # Smart Model Selection Configuration
     @classmethod
@@ -273,21 +320,6 @@ class AppConfig:
 
         return excluded_ips
 
-    # Query Log Authentication
-    @classmethod
-    def get_query_log_auth_token(cls) -> Optional[str]:
-        """Get query log auth token with production enforcement."""
-        token = os.getenv("QUERY_LOG_AUTH_TOKEN", "")
-        environment = os.getenv("ENV", "development").lower()
-
-        if environment in ["production", "prod"] and not token:
-            raise ValueError(
-                "QUERY_LOG_AUTH_TOKEN must be set in production environments. "
-                "Generate a secure token and set it as an environment variable."
-            )
-
-        return token if token else None
-
     # IP Anonymization Settings (GDPR/CCPA compliance)
     ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default
 
@@ -344,6 +376,6 @@ AppConfig.RETRIEVAL_SCORE_THRESHOLD = AppConfig.get_retrieval_score_threshold()
 AppConfig.CACHE_TTL = AppConfig.get_cache_ttl()
 AppConfig.MAX_CACHE_SIZE = AppConfig.get_max_cache_size()
 AppConfig.EXCLUDED_IPS = AppConfig.get_excluded_ips()
-AppConfig.QUERY_LOG_AUTH_TOKEN = AppConfig.get_query_log_auth_token()
+# AppConfig.QUERY_LOG_AUTH_TOKEN assignment removed - using session-based auth only
 AppConfig.IP_HASH_SALT = AppConfig.get_ip_hash_salt()
 AppConfig.QUERY_LOG_FILE = AppConfig.get_query_log_file()

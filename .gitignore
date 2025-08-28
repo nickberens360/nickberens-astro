@@ -72,6 +72,7 @@ public/unified_data.json
 # Log files
 backend/query_logs.json
 backend/.followup_cache.json
+backend/logs/query_logs.json
 *.log
 query_logs.json
 
@@ -87,3 +88,18 @@ query-logs/
 
 # Claude Code conversation logs
 2025-*-caveat-the-messages-below-were-generated-by-the-u.txt
+
+# Cookie files (session data)
+cookies*.txt
+*cookies*.txt
+admin_cookies.txt
+
+# Database files (SQLite - should not be in version control)
+*.db
+*.sqlite
+*.sqlite3
+backend/logs/*.db
+admin/*.db
+admin_monitoring.db
+rag_monitoring.db
+auth_sessions.db
