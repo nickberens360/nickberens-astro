@@ -31,7 +31,7 @@
         <PerformanceChart
           title="Response Time Trend"
           :data="responseTimeChartData"
-          :loading="isLoading"
+          :loading="isLoading || performanceLoading"
           type="line"
         />
       </v-col>
@@ -65,6 +65,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import { useQueriesStore } from '@/stores/queries'
+import { usePerformanceStore } from '@/stores/performance'
 import MetricCard from '@/components/MetricCard.vue'
 import PerformanceChart from '@/components/PerformanceChart.vue'
 import QueryTable from '@/components/QueryTable.vue'
@@ -72,9 +73,11 @@ import QueryTable from '@/components/QueryTable.vue'
 const router = useRouter()
 const adminStore = useAdminStore()
 const queriesStore = useQueriesStore()
+const performanceStore = usePerformanceStore()
 
 // Computed properties - use storeToRefs for reactivity
 const { stats, isLoading } = storeToRefs(adminStore)
+const { chartData: performanceChartData, isLoading: performanceLoading } = storeToRefs(performanceStore)
 
 // Computed property for loading state to ensure reactivity
 const cardsLoading = computed(() => {
@@ -130,17 +133,19 @@ const metrics = computed(() => {
   ]
 })
 
-// Mock chart data - in real app, this would come from stores
-const responseTimeChartData = computed(() => ({
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-  datasets: [{
-    label: 'Response Time (ms)',
-    data: [450, 520, 380, 420, 360, 400],
-    borderColor: '#1976D2',
-    backgroundColor: 'rgba(25, 118, 210, 0.1)',
-    tension: 0.4
-  }]
-}))
+// Real-time response time chart data from performance store
+const responseTimeChartData = computed(() => {
+  return performanceChartData.value?.responseTime || {
+    labels: [],
+    datasets: [{
+      label: 'Response Time (ms)',
+      data: [],
+      borderColor: '#1976D2',
+      backgroundColor: 'rgba(25, 118, 210, 0.1)',
+      tension: 0.4
+    }]
+  }
+})
 
 const statusChartData = computed(() => {
   // Use real data from stats if available
@@ -183,7 +188,8 @@ onMounted(async () => {
   // Initialize data - the stores will handle API calls
   await Promise.all([
     adminStore.fetchStats(),
-    queriesStore.fetchQueries({ limit: 10 })
+    queriesStore.fetchQueries({ limit: 10 }),
+    performanceStore.refreshData()
   ])
 })
 

@@ -106,6 +106,8 @@ export const usePerformanceStore = defineStore('performance', () => {
     try {
       const data = await adminAPI.getPerformanceMetrics(timeRange.value)
       
+      // Debug logging removed - issue identified and fixed
+      
       metrics.value = {
         responseTime: {
           current: Math.round(data.response_time?.current || 0),
@@ -140,14 +142,24 @@ export const usePerformanceStore = defineStore('performance', () => {
   const fetchTimeline = async (days = 7, interval = 'hour') => {
     try {
       const data = await adminAPI.getPerformanceTimeline(days, interval)
-      timeline.value = data.timeline || []
       
-      // Process data for charts
-      updateChartData()
+      // Ensure we have valid timeline data
+      if (data && data.timeline && Array.isArray(data.timeline)) {
+        timeline.value = data.timeline
+        
+        // Only update chart data if we have valid timeline points
+        if (timeline.value.length > 0) {
+          updateChartData()
+        }
+      } else {
+        console.warn('Invalid timeline data received:', data)
+        timeline.value = []
+      }
       
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch timeline:', err)
+      timeline.value = [] // Reset timeline on error
     }
   }
 
@@ -171,11 +183,35 @@ export const usePerformanceStore = defineStore('performance', () => {
     }
     
     const labels = timeline.value.map(point => {
-      const date = new Date(point.timestamp)
+      // Check if point exists and has either timestamp or period field
+      if (!point) {
+        console.warn('Missing data point')
+        return 'N/A'
+      }
+      
+      // Backend returns 'period' field for some endpoints, 'timestamp' for others
+      const dateStr = point.timestamp || point.period
+      
+      if (!dateStr) {
+        console.warn('Missing timestamp/period in data point:', point)
+        return 'N/A'
+      }
+      
+      // Handle different timestamp formats from backend
+      // Backend returns either "YYYY-MM-DD HH:00:00" or "YYYY-MM-DD"
+      const timestamp = dateStr.replace(' ', 'T') // Convert space to T for ISO format
+      const date = new Date(timestamp)
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date format:', dateStr)
+        return dateStr // Return original string as fallback
+      }
+      
       return date.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric',
-        hour: timeRange.value === '1h' ? '2-digit' : undefined
+        hour: timeRange.value === '1h' || timeRange.value === '6h' ? '2-digit' : undefined
       })
     })
 
