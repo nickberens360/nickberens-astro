@@ -131,14 +131,15 @@ class TestAdminIntegrationSecurity:
 
     def test_complete_authentication_flow_security(self, client, setup_test_environment):
         """Test complete authentication flow with security validations."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
-                # Mock database manager to use our test database
-                mock_db.get_connection.return_value.__enter__ = lambda: sqlite3.connect(
-                    setup_test_environment["db_path"]
-                )
-                mock_db.get_connection.return_value.__enter__.return_value.row_factory = sqlite3.Row
-                mock_db.get_connection.return_value.__exit__ = lambda *args: None
+                # Create a simple mock for the context manager
+                from unittest.mock import MagicMock
+
+                mock_conn = MagicMock()
+                mock_conn.row_factory = sqlite3.Row
+                mock_db.get_connection.return_value.__enter__.return_value = mock_conn
+                mock_db.get_connection.return_value.__exit__.return_value = None
 
                 mock_db.get_admin_user.side_effect = self._get_admin_user_mock(setup_test_environment["db_path"])
                 mock_db.record_security_event.return_value = True
@@ -149,7 +150,7 @@ class TestAdminIntegrationSecurity:
                 with patch("backend.routes.admin.audit_logger") as mock_audit:
                     # Step 1: Failed login attempt
                     response = client.post(
-                        "/admin/api/auth/login",
+                        "/api/admin/auth/login",
                         json={"username": setup_test_environment["admin_username"], "password": "wrongpassword"},
                     )
 
@@ -176,7 +177,7 @@ class TestAdminIntegrationSecurity:
                         mock_auth.return_value = {"user": mock_user, "session_id": "test-session-123"}
 
                         response = client.post(
-                            "/admin/api/auth/login",
+                            "/api/admin/auth/login",
                             json={
                                 "username": setup_test_environment["admin_username"],
                                 "password": setup_test_environment["password"],
@@ -194,7 +195,7 @@ class TestAdminIntegrationSecurity:
 
     def test_session_hijacking_detection_flow(self, client, setup_test_environment):
         """Test complete session hijacking detection flow."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.routes.admin.require_admin_auth") as mock_auth:
                 with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
                     # Create valid session
@@ -219,7 +220,7 @@ class TestAdminIntegrationSecurity:
                         }
 
                         # Access admin endpoint - should trigger session monitoring
-                        response = client.get("/admin/api/stats/overview")
+                        response = client.get("/api/admin/stats/overview")
 
                         # Should still allow access but log security event
                         assert response.status_code == 200
@@ -236,14 +237,15 @@ class TestAdminIntegrationSecurity:
 
     def test_rate_limiting_cross_system_integration(self, client, setup_test_environment):
         """Test rate limiting integration across authentication and API endpoints."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
-                # Setup rate limiting state
-                mock_db.get_connection.return_value.__enter__ = lambda: sqlite3.connect(
-                    setup_test_environment["db_path"]
-                )
-                mock_db.get_connection.return_value.__enter__.return_value.row_factory = sqlite3.Row
-                mock_db.get_connection.return_value.__exit__ = lambda *args: None
+                # Create a simple mock for the context manager
+                from unittest.mock import MagicMock
+
+                mock_conn = MagicMock()
+                mock_conn.row_factory = sqlite3.Row
+                mock_db.get_connection.return_value.__enter__.return_value = mock_conn
+                mock_db.get_connection.return_value.__exit__.return_value = None
 
                 # Mock progressive rate limiting
                 attempt_count = 0
@@ -260,7 +262,7 @@ class TestAdminIntegrationSecurity:
                 # Make multiple failed login attempts
                 for i in range(6):
                     response = client.post(
-                        "/admin/api/auth/login",
+                        "/api/admin/auth/login",
                         json={"username": setup_test_environment["admin_username"], "password": "wrongpassword"},
                     )
 
@@ -273,7 +275,7 @@ class TestAdminIntegrationSecurity:
 
     def test_geolocation_security_integration(self, client, setup_test_environment):
         """Test geolocation security validation integration."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
                 mock_db.get_admin_user.side_effect = self._get_admin_user_mock(setup_test_environment["db_path"])
                 mock_db.record_security_event.return_value = True
@@ -293,7 +295,7 @@ class TestAdminIntegrationSecurity:
                             mock_auth.return_value = None  # Blocked by geolocation
 
                             response = client.post(
-                                "/admin/api/auth/login",
+                                "/api/admin/auth/login",
                                 json={
                                     "username": setup_test_environment["admin_username"],
                                     "password": setup_test_environment["password"],
@@ -308,7 +310,7 @@ class TestAdminIntegrationSecurity:
 
     def test_audit_trail_security_integration(self, client, setup_test_environment):
         """Test comprehensive audit trail integration."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.routes.admin.audit_logger") as mock_audit:
                 with patch("backend.routes.admin.require_admin_auth") as mock_auth:
                     session_data = {"user_id": 1, "username": setup_test_environment["admin_username"], "role": "admin"}
@@ -316,8 +318,8 @@ class TestAdminIntegrationSecurity:
 
                     # Test multiple admin actions that should be audited
                     admin_actions = [
-                        ("GET", "/admin/api/auth/me", {}, "profile_access"),
-                        ("POST", "/admin/api/auth/logout", {}, "logout"),
+                        ("GET", "/api/admin/auth/me", {}, "profile_access"),
+                        ("POST", "/api/admin/auth/logout", {}, "logout"),
                     ]
 
                     for method, endpoint, data, expected_event in admin_actions:
@@ -331,7 +333,7 @@ class TestAdminIntegrationSecurity:
 
     def test_role_escalation_prevention(self, client, setup_test_environment):
         """Test prevention of role escalation attacks."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             # Test with viewer role trying to access admin endpoints
             with patch("backend.routes.admin.require_admin_role") as mock_admin_role:
                 with patch("backend.routes.admin.require_admin_auth") as mock_auth:
@@ -345,7 +347,7 @@ class TestAdminIntegrationSecurity:
                     mock_admin_role.side_effect = HTTPException(status_code=403, detail="Admin privileges required")
 
                     # Try to access admin-only endpoints
-                    admin_endpoints = ["/admin/api/auth/create-user", "/admin/api/users"]
+                    admin_endpoints = ["/api/admin/auth/create-user", "/api/admin/users"]
 
                     for endpoint in admin_endpoints:
                         if endpoint.endswith("create-user"):
@@ -360,14 +362,15 @@ class TestAdminIntegrationSecurity:
 
     def test_session_security_lifecycle(self, client, setup_test_environment):
         """Test complete session security lifecycle."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
-                # Mock database operations
-                mock_db.get_connection.return_value.__enter__ = lambda: sqlite3.connect(
-                    setup_test_environment["db_path"]
-                )
-                mock_db.get_connection.return_value.__enter__.return_value.row_factory = sqlite3.Row
-                mock_db.get_connection.return_value.__exit__ = lambda *args: None
+                # Create a simple mock for the context manager
+                from unittest.mock import MagicMock
+
+                mock_conn = MagicMock()
+                mock_conn.row_factory = sqlite3.Row
+                mock_db.get_connection.return_value.__enter__.return_value = mock_conn
+                mock_db.get_connection.return_value.__exit__.return_value = None
 
                 session_id = "test-session-lifecycle"
 
@@ -387,12 +390,12 @@ class TestAdminIntegrationSecurity:
                         mock_auth.return_value = session_data
 
                         # Access protected endpoint
-                        response = client.get("/admin/api/auth/me")
+                        response = client.get("/api/admin/auth/me")
                         assert response.status_code == 200
 
                         # Step 3: Session expiry and cleanup
                         with patch("backend.core.admin_auth.AdminAuthManager.expire_session") as mock_expire:
-                            response = client.post("/admin/api/auth/logout")
+                            response = client.post("/api/admin/auth/logout")
                             assert response.status_code == 200
 
                             # Should clean up session cookie
@@ -400,7 +403,7 @@ class TestAdminIntegrationSecurity:
 
     def test_database_isolation_security(self, client, setup_test_environment):
         """Test database isolation between admin and backend systems."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.routes.admin.require_admin_auth") as mock_auth:
                 mock_auth.return_value = {
                     "user_id": 1,
@@ -412,7 +415,7 @@ class TestAdminIntegrationSecurity:
                 with patch("backend.routes.admin.query_data_manager") as mock_query_manager:
                     mock_query_manager.get_queries.return_value = {"queries": [], "total": 0, "limit": 50, "offset": 0}
 
-                    response = client.get("/admin/api/queries")
+                    response = client.get("/api/admin/queries")
                     assert response.status_code == 200
 
                     # Should only read, never write to backend database
@@ -439,7 +442,7 @@ class TestAdminIntegrationSecurity:
 
     def test_comprehensive_security_scenario(self, client, setup_test_environment):
         """Test comprehensive security scenario with multiple attack vectors."""
-        with patch("backend.core.admin_database.AdminDatabaseManager.db_path", setup_test_environment["db_path"]):
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
             with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
                 mock_db.get_admin_user.side_effect = self._get_admin_user_mock(setup_test_environment["db_path"])
                 mock_db.record_security_event.return_value = True
@@ -450,7 +453,7 @@ class TestAdminIntegrationSecurity:
 
                 # 1. SQL injection in login
                 response = client.post(
-                    "/admin/api/auth/login", json={"username": "admin'; DROP TABLE admin_users; --", "password": "any"}
+                    "/api/admin/auth/login", json={"username": "admin'; DROP TABLE admin_users; --", "password": "any"}
                 )
                 assert response.status_code == 200
                 assert not response.json()["success"]
@@ -463,14 +466,14 @@ class TestAdminIntegrationSecurity:
                         "role": "admin",
                     }
 
-                    response = client.get("/admin/api/queries?search=<script>alert('xss')</script>")
+                    response = client.get("/api/admin/queries?search=<script>alert('xss')</script>")
                     assert response.status_code in [200, 400, 422]
 
                     # Response should not contain unescaped script
                     assert "<script>" not in response.text
 
                 # 3. Parameter pollution
-                response = client.get("/admin/api/queries?limit=10&limit=999999&limit=-1")
+                response = client.get("/api/admin/queries?limit=10&limit=999999&limit=-1")
                 # Should handle parameter pollution gracefully
                 assert response.status_code in [200, 400, 422]
 
