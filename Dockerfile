@@ -31,7 +31,7 @@ RUN pip install --upgrade pip && \
 # Build admin frontend
 COPY admin/frontend/package*.json /app/admin/frontend/
 WORKDIR /app/admin/frontend
-RUN npm ci --only=production
+RUN npm ci
 
 COPY admin/frontend/ /app/admin/frontend/
 RUN npm run build
