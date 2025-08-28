@@ -49,7 +49,6 @@ except Exception as e:
     llm = None
     app_initialized = False
 
-# Initialize singleton services
 query_router = QueryRouter()
 response_service = ResponseService()
 
