@@ -61,7 +61,6 @@ def mock_environment():
     # Set test environment variables
     test_env = {
         "ENVIRONMENT": "testing",
-        "ADMIN_TOKEN": "test-admin-token-12345",
         "ADMIN_DB_PATH": ":memory:",
         "RATE_LIMIT": "100/minute",
         "SESSION_TIMEOUT_HOURS": "1",
