@@ -17,7 +17,7 @@
     "admin:backend": "ADMIN_TOKEN=\"demo-admin-token-secure-123\" python3 admin/start-admin.py",
     "admin:frontend": "cd admin/frontend && npm run dev",
     "admin:build": "cd admin/frontend && npm run build",
-    "admin": "npm run admin:backend & npm run admin:frontend",
+    "admin": "npm run admin:frontend",
     "admin:stop": "pkill -f 'python3 admin/start-admin.py' || true",
     "admin:sync": "python3 admin/sync_logs.py",
     "railway:build": "./scripts/copy-content-to-knowledge.sh && cd admin/frontend && npm ci && npm run build",
