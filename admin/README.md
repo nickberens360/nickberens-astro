@@ -22,9 +22,6 @@ A comprehensive admin dashboard for monitoring and analyzing the RAG (Retrieval-
 cd admin/backend
 pip install -r requirements.txt
 
-# Set admin token (required)
-export ADMIN_TOKEN="your-secure-admin-token-here"
-
 # Start backend server
 python3 ../start-admin.py
 ```
@@ -56,9 +53,7 @@ See **[SETUP.md](SETUP.md)** for complete installation, configuration, and deplo
 Base URL: `http://localhost:8001/admin/api`
 
 ### Authentication
-All endpoints require an admin token passed via:
-- Query parameter: `?token=your-admin-token`
-- Authorization header: `Authorization: Bearer your-admin-token`
+All endpoints require session-based authentication via secure cookies.
 
 ### Available Endpoints
 
@@ -132,7 +127,6 @@ rm admin/rag_monitoring.db
 ## Configuration
 
 Environment variables:
-- `ADMIN_TOKEN` - Required. Secure token for admin authentication
 - `ADMIN_PORT` - Optional. Port for admin server (default: 8001)
 - `ADMIN_DB_PATH` - Optional. Path to SQLite database (default: admin/rag_monitoring.db)
 

@@ -23,16 +23,12 @@ pip install fastapi uvicorn python-multipart pydantic python-dateutil
 ### 2. Set Environment Variables
 
 ```bash
-# Set a secure admin token (required)
-export ADMIN_TOKEN="your-super-secure-admin-token-here"
-
 # Optional: Set custom port (default is 8001)
 export ADMIN_PORT="8001"
 ```
 
 Or create a `.env` file in the admin directory:
 ```bash
-ADMIN_TOKEN=your-super-secure-admin-token-here
 ADMIN_PORT=8001
 ```
 
@@ -70,12 +66,7 @@ npm run dev
 
 ## 🔐 Authentication
 
-The dashboard uses token-based authentication. Use the admin token you set in the environment variables to log in.
-
-For testing, you can also pass the token via URL:
-```
-http://localhost:3000/login?token=your-admin-token
-```
+The dashboard uses session-based authentication with secure login credentials.
 
 ## 📊 Features
 
@@ -172,7 +163,6 @@ The system uses SQLite with these main tables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ADMIN_TOKEN` | *required* | Authentication token for admin access |
 | `ADMIN_PORT` | `8001` | Port for the admin backend server |
 | `ADMIN_DB_PATH` | `admin/rag_monitoring.db` | Path to SQLite database |
 
@@ -212,16 +202,10 @@ RUN pip install -r requirements.txt
 COPY . .
 EXPOSE 8001
 
-# DO NOT bake ADMIN_TOKEN into the image - pass at runtime for security
-# Example: docker run -e ADMIN_TOKEN="$(openssl rand -hex 32)" -p 8001:8001 <image>
 CMD ["python", "admin/start-admin.py"]
 ```
 
-**Security Note**: Always set `ADMIN_TOKEN` at runtime, never in the Dockerfile:
-```bash
-# Generate secure token and run container
-docker run -e ADMIN_TOKEN="$(openssl rand -hex 32)" -p 8001:8001 your-admin-image
-```
+**Security Note**: Session-based authentication provides secure access without environment tokens.
 
 ## 🔍 Troubleshooting
 
@@ -232,10 +216,9 @@ docker run -e ADMIN_TOKEN="$(openssl rand -hex 32)" -p 8001:8001 your-admin-imag
    pip install fastapi uvicorn
    ```
 
-2. **"Admin token not configured"**
-   ```bash
-   export ADMIN_TOKEN="your-secure-token"
-   ```
+2. **Authentication issues**
+   - Ensure admin users are properly configured in the database
+   - Check session management and cookie settings
 
 3. **Frontend not loading**
    - Build the frontend: `cd admin/frontend && npm run build`
@@ -250,8 +233,8 @@ docker run -e ADMIN_TOKEN="$(openssl rand -hex 32)" -p 8001:8001 your-admin-imag
 # Run setup validation
 python3 admin/test-setup.py
 
-# Test API endpoints
-curl -H "Authorization: Bearer your-token" http://localhost:8001/admin/api/health
+# Test API endpoints (requires valid session)
+curl -c cookies.txt -b cookies.txt http://localhost:8001/admin/api/health
 ```
 
 ## 📈 Performance Considerations

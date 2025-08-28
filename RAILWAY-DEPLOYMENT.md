@@ -29,7 +29,6 @@ In your Railway project settings, add these environment variables:
 **Required:**
 ```
 ANTHROPIC_API_KEY=your-anthropic-api-key
-ADMIN_TOKEN=your-secure-admin-token-here
 ```
 
 **Optional:**
@@ -84,9 +83,9 @@ Then visit:
 ## Troubleshooting
 
 ### Admin Dashboard Not Loading
-- Check that `ADMIN_TOKEN` environment variable is set
 - Verify admin frontend built correctly (`admin/frontend/dist/` should exist)
 - Check Railway logs for any build errors
+- Ensure admin database is properly initialized
 
 ### API Errors
 - Ensure all required environment variables are set
@@ -100,7 +99,7 @@ Then visit:
 
 ## Security Notes
 
-- Always use a strong, unique `ADMIN_TOKEN` 
-- Never commit API keys or tokens to your repository
-- The admin dashboard is protected by token authentication
+- Never commit API keys to your repository
+- The admin dashboard is protected by session-based authentication
 - All traffic uses HTTPS on Railway by default
+- Session cookies use secure attributes and fingerprinting

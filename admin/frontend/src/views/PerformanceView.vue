@@ -1,6 +1,6 @@
 <template>
   <div class="performance-view">
-    <h1 class="text-h4 font-weight-bold mb-6">Performance Analytics</h1>
+    <h1 class="dashboard-title mb-6">Performance Analytics</h1>
     
     <v-row class="mb-6">
       <v-col

@@ -59,102 +59,9 @@ const themes = {
   }
 }
 
-// Custom typography configuration for Vuetify
+// Simplified typography - just set global font family, let Vuetify handle the rest
 const typography = {
-  fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-  h1: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '1.875rem',
-    fontWeight: 700,
-    lineHeight: '1.3',
-    letterSpacing: '0em'
-  },
-  h2: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '1.5rem',
-    fontWeight: 600,
-    lineHeight: '1.4',
-    letterSpacing: '0em'
-  },
-  h3: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '1.25rem',
-    fontWeight: 600,
-    lineHeight: '1.4',
-    letterSpacing: '0em'
-  },
-  h4: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '1.125rem',
-    fontWeight: 500,
-    lineHeight: '1.4',
-    letterSpacing: '0em'
-  },
-  h5: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '1rem',
-    fontWeight: 500,
-    lineHeight: '1.5',
-    letterSpacing: '0em'
-  },
-  h6: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    lineHeight: '1.5',
-    letterSpacing: '0.01em'
-  },
-  subtitle1: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '1rem',
-    fontWeight: 400,
-    lineHeight: '1.6',
-    letterSpacing: '0em'
-  },
-  subtitle2: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    lineHeight: '1.4',
-    letterSpacing: '0.01em'
-  },
-  body1: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '1rem',
-    fontWeight: 400,
-    lineHeight: '1.6',
-    letterSpacing: '0em'
-  },
-  body2: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '0.875rem',
-    fontWeight: 400,
-    lineHeight: '1.5',
-    letterSpacing: '0em'
-  },
-  button: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    lineHeight: '1.6',
-    letterSpacing: '0.01em',
-    textTransform: 'none' // Remove uppercase transformation
-  },
-  caption: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '0.75rem',
-    fontWeight: 400,
-    lineHeight: '1.5',
-    letterSpacing: '0.01em'
-  },
-  overline: {
-    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
-    fontSize: '0.75rem',
-    fontWeight: 500,
-    lineHeight: '1.5',
-    letterSpacing: '0.05em',
-    textTransform: 'uppercase'
-  }
+  fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace'
 }
 
 // Icon aliases configuration
@@ -270,21 +177,6 @@ export default createVuetify({
       variant: 'outlined',
       density: 'comfortable'
     },
-    // Typography defaults for common components
-    VCardTitle: {
-      class: 'typography-h5'
-    },
-    VCardText: {
-      class: 'typography-body-1'
-    },
-    VListItemTitle: {
-      class: 'typography-body-1 font-medium'
-    },
-    VListItemSubtitle: {
-      class: 'typography-body-2'
-    },
-    VChip: {
-      class: 'typography-caption font-medium'
-    }
+    // Remove custom typography classes since global font handles everything
   }
 })

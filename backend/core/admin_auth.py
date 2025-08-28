@@ -504,14 +504,8 @@ class AdminAuthManager:
 
     def get_session_from_request(self, request: Request) -> Optional[Dict]:
         """Extract and validate session from request."""
-        # Try to get session ID from cookie
+        # Get session ID from cookie only - no fallbacks
         session_id = request.cookies.get("admin_session")
-
-        # Fallback to Authorization header
-        if not session_id:
-            auth_header = request.headers.get("Authorization")
-            if auth_header and auth_header.startswith("Bearer "):
-                session_id = auth_header.split(" ")[1]
 
         if not session_id:
             return None

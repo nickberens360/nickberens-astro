@@ -18,7 +18,7 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `npm run backend:stop` - Stop the backend container
 
 ### Admin Commands
-- `npm run admin:backend` - Start admin backend server (requires ADMIN_TOKEN env var)
+- `npm run admin:backend` - Start admin backend server
 - `npm run admin:frontend` - Start admin frontend development server
 - `npm run admin:build` - Build admin frontend for production
 - `npm run admin` - Start both admin backend and frontend
@@ -309,9 +309,9 @@ The project features a fully integrated admin dashboard system with comprehensiv
 ### Admin Dashboard Access
 - **Frontend**: http://localhost:3000 (Vue.js + Vuetify interface)
 - **Backend**: http://localhost:8000 (FastAPI admin API - integrated with main backend)
-- **Authentication**: Token-based (ADMIN_TOKEN environment variable)
-- **Security**: Always set a secure ADMIN_TOKEN environment variable (generate with `openssl rand -hex 32`)
-- **Admin Routes**: `/admin/*` endpoints protected with token authentication
+- **Authentication**: Session-based with secure cookies
+- **Security**: Session fingerprinting and secure cookie attributes
+- **Admin Routes**: `/admin/*` endpoints protected with session authentication
 
 #### Admin Dashboard Features
 - **Dashboard**: System overview, query metrics, performance statistics
@@ -419,7 +419,6 @@ cd admin/frontend && npm run build
 - `GOOGLE_API_KEY` - Required for Google Gemini API access (if used)
 
 ### Admin System Variables
-- `ADMIN_TOKEN` - Authentication token for admin dashboard access
 - `ADMIN_DB_PATH` - Path to admin SQLite database (defaults to backend/logs/admin_monitoring.db)
 
 ### Development Setup
@@ -563,7 +562,7 @@ repos:
 - **Error Handling**: Enhanced error handling across all services
 - **Code Deduplication**: Shared constants to eliminate duplication
 - **Performance Optimization**: Illustration data caching during initialization
-- **Security**: Protected admin endpoints with token authentication
+- **Security**: Protected admin endpoints with session-based authentication
 - **Testing**: Comprehensive test coverage with fuzzy matching validation
 
 ### Service Architecture Improvements

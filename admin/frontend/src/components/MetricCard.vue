@@ -8,7 +8,7 @@
   >
     <v-card-text>
       <div class="d-flex align-center justify-space-between mb-2">
-        <div class="metric-label">
+        <div class="text-caption text-medium-emphasis">
           {{ title }}
         </div>
         <v-icon
@@ -23,7 +23,7 @@
       <div class="d-flex align-center justify-space-between">
         <div>
           <div
-            class="metric-value"
+            class="text-h4 font-weight-bold"
             :class="[`text-${color}`]"
           >
             <span v-if="typeof value === 'number'">
@@ -37,7 +37,7 @@
 
           <div
             v-if="subtitle"
-            class="typography-caption text-medium-emphasis mt-1"
+            class="text-caption text-medium-emphasis mt-1"
           >
             {{ subtitle }}
           </div>
@@ -63,7 +63,7 @@
           
           <div
             v-if="changeLabel"
-            class="typography-caption text-medium-emphasis"
+            class="text-caption text-medium-emphasis"
           >
             {{ changeLabel }}
           </div>

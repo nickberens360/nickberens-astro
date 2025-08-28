@@ -22,11 +22,6 @@ body {
     font-family: 'JetBrains Mono';
     font-display: swap;
   }
-  
-  @font-face {
-    font-family: 'Inter';
-    font-display: swap;
-  }
 }
 
 /* Custom scrollbar */
@@ -111,38 +106,6 @@ body {
   outline-offset: 2px;
 }
 
-/* Improved readability for code blocks in dark theme */
-.v-theme--dark .typography-code-inline,
-.v-theme--dark .typography-code-block {
-  color: rgb(var(--v-theme-on-surface));
-}
-
-/* Enhanced spacing for better typography rhythm */
-.typography-h1 + .typography-body-1,
-.typography-h2 + .typography-body-1,
-.typography-h3 + .typography-body-1,
-.typography-h4 + .typography-body-1 {
-  margin-top: 0.5em;
-}
-
-/* Responsive typography adjustments */
-@media (max-width: 768px) {
-  .typography-display-1 {
-    font-size: 2.25rem; /* Reduced from 3rem on mobile */
-  }
-  
-  .typography-display-2 {
-    font-size: 1.875rem; /* Reduced from 2.25rem on mobile */
-  }
-  
-  .typography-display-3 {
-    font-size: 1.5rem; /* Reduced from 1.875rem on mobile */
-  }
-  
-  .dashboard-title {
-    font-size: 1.5rem; /* Smaller on mobile */
-  }
-}
 
 /* Improved contrast for better accessibility */
 .text-medium-emphasis {
@@ -153,33 +116,9 @@ body {
   opacity: 0.87;
 }
 
-/* Typography consistency for Vuetify components */
-.v-data-table .v-data-table__td,
-.v-data-table .v-data-table__th {
-  font-family: inherit;
-}
-
-.v-card-title {
-  font-family: var(--font-family-display);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--letter-spacing-normal);
-}
-
-.v-card-text {
-  font-family: var(--font-family-body);
-  line-height: var(--line-height-relaxed);
-  letter-spacing: var(--letter-spacing-normal);
-}
-
-/* Monaco Editor typography integration */
-.monaco-editor {
-  font-family: var(--font-family-mono) !important;
-}
-
-/* Performance optimization: Prevent layout shift */
+/* Ensure all Vuetify components inherit global font */
 .v-application {
-  font-family: var(--font-family-body);
-  letter-spacing: var(--letter-spacing-normal);
+  font-family: var(--font-family);
 }
 
 /* Print styles for typography */
