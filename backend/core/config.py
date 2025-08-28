@@ -89,7 +89,7 @@ class AppConfig:
     CACHE_TTL: int
     MAX_CACHE_SIZE: int
     EXCLUDED_IPS: List[str]
-    QUERY_LOG_AUTH_TOKEN: Optional[str]
+    # QUERY_LOG_AUTH_TOKEN removed - using session-based auth only
     IP_HASH_SALT: str
     QUERY_LOG_FILE: str
 
@@ -322,19 +322,7 @@ class AppConfig:
         return excluded_ips
 
     # Query Log Authentication
-    @classmethod
-    def get_query_log_auth_token(cls) -> Optional[str]:
-        """Get query log auth token with production enforcement."""
-        token = os.getenv("QUERY_LOG_AUTH_TOKEN", "")
-        environment = os.getenv("ENV", "development").lower()
-
-        if environment in ["production", "prod"] and not token:
-            raise ValueError(
-                "QUERY_LOG_AUTH_TOKEN must be set in production environments. "
-                "Generate a secure token and set it as an environment variable."
-            )
-
-        return token if token else None
+    # Query log auth token method removed - using session-based auth only
 
     # IP Anonymization Settings (GDPR/CCPA compliance)
     ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default
@@ -392,6 +380,6 @@ AppConfig.RETRIEVAL_SCORE_THRESHOLD = AppConfig.get_retrieval_score_threshold()
 AppConfig.CACHE_TTL = AppConfig.get_cache_ttl()
 AppConfig.MAX_CACHE_SIZE = AppConfig.get_max_cache_size()
 AppConfig.EXCLUDED_IPS = AppConfig.get_excluded_ips()
-AppConfig.QUERY_LOG_AUTH_TOKEN = AppConfig.get_query_log_auth_token()
+# AppConfig.QUERY_LOG_AUTH_TOKEN assignment removed - using session-based auth only
 AppConfig.IP_HASH_SALT = AppConfig.get_ip_hash_salt()
 AppConfig.QUERY_LOG_FILE = AppConfig.get_query_log_file()

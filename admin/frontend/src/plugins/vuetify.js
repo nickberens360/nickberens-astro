@@ -59,6 +59,104 @@ const themes = {
   }
 }
 
+// Custom typography configuration for Vuetify
+const typography = {
+  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  h1: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '1.875rem',
+    fontWeight: 700,
+    lineHeight: '1.25',
+    letterSpacing: '-0.025em'
+  },
+  h2: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '1.5rem',
+    fontWeight: 600,
+    lineHeight: '1.375',
+    letterSpacing: '-0.025em'
+  },
+  h3: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    lineHeight: '1.375',
+    letterSpacing: '0em'
+  },
+  h4: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '1.125rem',
+    fontWeight: 500,
+    lineHeight: '1.375',
+    letterSpacing: '0em'
+  },
+  h5: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '1rem',
+    fontWeight: 500,
+    lineHeight: '1.5',
+    letterSpacing: '0em'
+  },
+  h6: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    lineHeight: '1.5',
+    letterSpacing: '0.025em'
+  },
+  subtitle1: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '1rem',
+    fontWeight: 400,
+    lineHeight: '1.625',
+    letterSpacing: '0em'
+  },
+  subtitle2: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    lineHeight: '1.375',
+    letterSpacing: '0.025em'
+  },
+  body1: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '1rem',
+    fontWeight: 400,
+    lineHeight: '1.625',
+    letterSpacing: '0em'
+  },
+  body2: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '0.875rem',
+    fontWeight: 400,
+    lineHeight: '1.5',
+    letterSpacing: '0em'
+  },
+  button: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    lineHeight: '1.75',
+    letterSpacing: '0.025em',
+    textTransform: 'none' // Remove uppercase transformation
+  },
+  caption: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '0.75rem',
+    fontWeight: 400,
+    lineHeight: '1.5',
+    letterSpacing: '0.025em'
+  },
+  overline: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '0.75rem',
+    fontWeight: 500,
+    lineHeight: '1.5',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase'
+  }
+}
+
 // Icon aliases configuration
 const iconAliases = {
   // Navigation
@@ -135,8 +233,14 @@ const iconAliases = {
 export default createVuetify({
   theme: {
     defaultTheme: 'dark',
-    themes
+    themes,
+    variations: {
+      colors: ['primary', 'secondary', 'accent', 'error', 'info', 'success', 'warning'],
+      lighten: 5,
+      darken: 5
+    }
   },
+  typography,
   icons: {
     defaultSet: 'mdi',
     aliases: {
@@ -165,6 +269,22 @@ export default createVuetify({
     VSelect: {
       variant: 'outlined',
       density: 'comfortable'
+    },
+    // Typography defaults for common components
+    VCardTitle: {
+      class: 'typography-h5'
+    },
+    VCardText: {
+      class: 'typography-body-1'
+    },
+    VListItemTitle: {
+      class: 'typography-body-1 font-medium'
+    },
+    VListItemSubtitle: {
+      class: 'typography-body-2'
+    },
+    VChip: {
+      class: 'typography-caption font-medium'
     }
   }
 })

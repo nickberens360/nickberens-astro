@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard">
-    <h1 class="text-h4 font-weight-bold mb-6">Dashboard Overview</h1>
+    <h1 class="dashboard-title mb-6">Dashboard Overview</h1>
     
     <!-- Metric Cards Grid -->
     <v-row class="mb-6">

@@ -120,7 +120,18 @@ const router = createRouter({
             title: 'Change Password',
             icon: 'lock'
           }
-        }
+        },
+        // Development-only route for typography testing
+        ...(import.meta.env.DEV ? [{
+          path: 'typography-demo',
+          name: 'typography-demo',
+          component: () => import('@/components/TypographyDemo.vue'),
+          meta: {
+            title: 'Typography Demo',
+            icon: 'article',
+            hidden: true // Hide from main navigation
+          }
+        }] : [])
       ]
     },
     {

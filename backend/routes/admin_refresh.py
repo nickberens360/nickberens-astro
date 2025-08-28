@@ -10,30 +10,20 @@ from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+from ..core.admin_auth import require_admin_auth
 
 logger = logging.getLogger(__name__)
 
-
-def verify_admin_token(request: Request):
-    """Verify admin authentication token."""
-    admin_token = os.getenv("ADMIN_TOKEN")
-    if not admin_token:
-        raise HTTPException(status_code=500, detail="Admin token not configured")
-
-    # Check token in query params or Authorization header
-    token = request.query_params.get("token")
-    if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
-
-    if not token or token != admin_token:
-        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+# Initialize rate limiter for admin refresh endpoints
+limiter = Limiter(key_func=get_remote_address)
 
 
 router = APIRouter(
     tags=["admin"],
-    dependencies=[Depends(verify_admin_token)],
+    dependencies=[Depends(require_admin_auth)],
 )
 
 
@@ -42,7 +32,8 @@ class RefreshRequest(BaseModel):
 
 
 @router.post("/refresh")
-async def trigger_refresh(request: RefreshRequest) -> Dict:
+@limiter.limit("5/minute")  # Limit refresh requests to 5 per minute
+async def trigger_refresh(request: Request, refresh_request: RefreshRequest) -> Dict:
     """
     Trigger a knowledge base refresh.
 
@@ -55,17 +46,17 @@ async def trigger_refresh(request: RefreshRequest) -> Dict:
         flag_file = backend_dir / ".refresh_required"
 
         flag_content = f"""refresh_requested_at={datetime.now().isoformat()}
-force_reindex={request.force_reindex}
+force_reindex={refresh_request.force_reindex}
 requested_by=admin_interface
 """
 
         flag_file.write_text(flag_content)
 
-        logger.info(f"Refresh flag set: force_reindex={request.force_reindex}")
+        logger.info(f"Refresh flag set: force_reindex={refresh_request.force_reindex}")
 
         return {
             "message": "Refresh flag set successfully",
-            "force_reindex": request.force_reindex,
+            "force_reindex": refresh_request.force_reindex,
             "timestamp": datetime.now().isoformat(),
             "note": "Changes will take effect on next server restart",
         }
@@ -76,7 +67,8 @@ requested_by=admin_interface
 
 
 @router.get("/refresh/status")
-async def get_refresh_status() -> Dict:
+@limiter.limit("10/minute")  # Allow more frequent status checks
+async def get_refresh_status(request: Request) -> Dict:
     """Get the current refresh status."""
     try:
         backend_dir = Path(__file__).parent.parent

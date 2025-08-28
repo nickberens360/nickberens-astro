@@ -359,6 +359,8 @@ class AdminDatabaseManager:
             logger.error(f"Error getting active sessions count: {str(e)}", exc_info=True)
             return 0
 
+    # CSRF token method removed - simplified to session-only authentication
+
     def record_rate_limit_attempt(
         self, identifier: str, identifier_type: str, lockout_duration_minutes: int = 5
     ) -> bool:

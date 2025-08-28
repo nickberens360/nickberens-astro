@@ -9,6 +9,7 @@ import './monaco-env.js'
 
 // Global CSS
 import './styles/main.css'
+import './styles/typography.css'
 
 // Admin API setup
 import { adminAPI } from './services/api'

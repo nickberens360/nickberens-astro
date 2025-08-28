@@ -7,7 +7,7 @@ This module provides a protected endpoint to:
 - Clear logs (admin function)
 """
 
-import hmac
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -16,55 +16,35 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
 from fastapi import Request
 from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastapi.templating import Jinja2Templates
 
-from ..core.config import AppConfig
+# HTTPBearer security is now handled by unified_auth
+from fastapi.templating import Jinja2Templates
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+from ..core.admin_auth import require_admin_auth
 from ..core.query_logger import get_query_logger
 
 # Initialize router and security
 router = APIRouter()
-security = HTTPBearer()
+limiter = Limiter(key_func=get_remote_address)
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 # Initialize templates
 template_dir = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(template_dir))
 
 
-async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """
-    Verify the authorization token for accessing query logs.
-
-    Args:
-        credentials: HTTP Authorization credentials
-
-    Returns:
-        The verified token
-
-    Raises:
-        HTTPException: If token is invalid or missing
-    """
-    config = AppConfig()
-    try:
-        auth_token = config.QUERY_LOG_AUTH_TOKEN
-    except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-
-    if not auth_token:
-        raise HTTPException(
-            status_code=503, detail="Query log access is not configured. Set QUERY_LOG_AUTH_TOKEN environment variable."
-        )
-
-    token = str(credentials.credentials)
-    if not hmac.compare_digest(token, auth_token):
-        raise HTTPException(status_code=403, detail="Invalid authorization token")
-
-    return token
+# Authentication is now handled by session-based admin auth
 
 
 @router.get("/query-logs")
+@limiter.limit("60/minute")  # Reasonable rate limit for log viewing
 async def get_query_logs(
-    _token: str = Depends(verify_token),
+    request: Request,
+    session: dict = Depends(require_admin_auth),
     limit: Optional[int] = FastAPIQuery(default=100, ge=1, le=1000, description="Maximum number of logs to return"),
     start_date: Optional[str] = FastAPIQuery(default=None, description="Start date filter (YYYY-MM-DD format)"),
     end_date: Optional[str] = FastAPIQuery(default=None, description="End date filter (YYYY-MM-DD format)"),
@@ -125,8 +105,10 @@ async def get_query_logs(
 
 
 @router.get("/query-logs/stats")
+@limiter.limit("30/minute")  # Stats endpoint rate limit
 async def get_query_log_stats(
-    _token: str = Depends(verify_token),
+    request: Request,
+    session: dict = Depends(require_admin_auth),
     exclude_ips: Optional[str] = FastAPIQuery(
         default=None, description="Comma-separated list of IPs to exclude from stats"
     ),
@@ -153,7 +135,8 @@ async def get_query_log_stats(
 
 
 @router.delete("/query-logs")
-async def clear_query_logs(_token: str = Depends(verify_token)) -> Dict[str, Any]:
+@limiter.limit("5/minute")  # Restrictive rate limit for destructive operations
+async def clear_query_logs(request: Request, session: dict = Depends(require_admin_auth)) -> Dict[str, Any]:
     """
     Clear all query logs (use with caution).
 
@@ -171,7 +154,7 @@ async def clear_query_logs(_token: str = Depends(verify_token)) -> Dict[str, Any
 
 
 @router.get("/query-logs/download")
-async def download_query_logs(_token: str = Depends(verify_token)) -> FileResponse:
+async def download_query_logs(session: dict = Depends(require_admin_auth)) -> FileResponse:
     """
     Download the raw JSONL query log file as an attachment.
 
