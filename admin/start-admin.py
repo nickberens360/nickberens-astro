@@ -15,12 +15,8 @@ def main():
     # Set default environment variables
     os.environ.setdefault("ADMIN_PORT", "8001")
 
-    # Check if admin token is set
-    if not os.environ.get("ADMIN_TOKEN"):
-        print("⚠️  WARNING: ADMIN_TOKEN environment variable is not set!")
-        print("   Set it with: export ADMIN_TOKEN='your-secure-token-here'")
-        print("   Or create a .env file in the admin directory")
-        print()
+    # Admin dashboard uses session-based authentication
+    print("🔐 Admin authentication: Session-based (no tokens required)")
 
     try:
         import uvicorn
@@ -33,10 +29,8 @@ def main():
         print(f"   Health Check: http://localhost:{port}/admin/api/health")
         print()
 
-        if os.environ.get("ADMIN_TOKEN"):
-            print("✅ Admin token is configured")
-
         print("📊 Dashboard will be available at the frontend URL after building")
+        print("🔑 Login with admin credentials to access the dashboard")
         print()
 
         uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=True, log_level="info")
