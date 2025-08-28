@@ -183,9 +183,9 @@ class AdminDatabaseManager:
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
         # Default credentials (require secure password via env var)
-        username = "admin"
+        username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
         password = os.getenv("ADMIN_DEFAULT_PASSWORD")
-        email = "admin@localhost"
+        email = os.getenv("ADMIN_DEFAULT_EMAIL", "admin@localhost")
         role = "admin"
 
         if not password:
