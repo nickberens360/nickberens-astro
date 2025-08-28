@@ -14,8 +14,6 @@ import './styles/typography.css'
 // Admin API setup
 import { adminAPI } from './services/api'
 
-// Authentication is now handled via HTTPOnly cookies exclusively
-// No development token injection needed - use proper login flow
 
 const app = createApp(App)
 
