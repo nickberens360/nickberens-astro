@@ -178,9 +178,7 @@ class AdminDatabaseManager:
         import secrets
         import string
 
-        from passlib.context import CryptContext
-
-        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        import bcrypt
 
         # Default credentials (require secure password via env var)
         username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
@@ -198,14 +196,16 @@ class AdminDatabaseManager:
         elif len(password) < 12:
             raise ValueError("ADMIN_DEFAULT_PASSWORD must be at least 12 characters long")
 
-        password_hash = pwd_context.hash(password)
+        # Use the same bcrypt method as authentication for consistency
+        password_bytes = password.encode("utf-8")
+        password_hash = bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
         cursor.execute(
             """
             INSERT INTO admin_users (username, email, password_hash, role, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (username, email, password_hash, role, datetime.now(), datetime.now()),
+            (username.lower(), email, password_hash, role, datetime.now(), datetime.now()),
         )
 
         logger.info(f"Created default admin user: {username}")
