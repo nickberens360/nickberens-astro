@@ -231,16 +231,6 @@
             <p>Manage and view query logs for Nick Berens Portfolio API</p>
         </div>
 
-        <div class="auth-section">
-            <h2>Authentication</h2>
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <input type="password" id="authToken" placeholder="Enter your auth token" style="flex: 1; min-width: 200px;">
-                <button onclick="authenticate()">Connect</button>
-                <button onclick="disconnect()" style="background: #6c757d;">Disconnect</button>
-            </div>
-            <div id="authStatus" style="margin-top: 10px;"></div>
-        </div>
-
         <div class="main-content" id="mainContent">
             <div class="stats-grid" id="statsGrid">
                 <!-- Stats will be populated here -->
@@ -296,57 +286,8 @@
     </div>
 
     <script>
-        let authToken = '';
         let currentStats = null;
         let hideMyIP = true; // Default to hiding your IP
-
-        // Authentication
-        function authenticate() {
-            const token = document.getElementById('authToken').value.trim();
-            if (!token) {
-                showAuthStatus('Please enter an auth token', 'error');
-                return;
-            }
-
-            authToken = token;
-
-            // Test the token by fetching stats
-            fetch('/admin/query-logs/stats', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    showAuthStatus('✅ Authentication successful!', 'success');
-                    document.getElementById('mainContent').style.display = 'block';
-                    // Load with default filter (hideMyIP is true by default)
-                    loadStats();
-                    loadLogs();
-                } else if (response.status === 403) {
-                    showAuthStatus('❌ Invalid token', 'error');
-                } else {
-                    showAuthStatus('❌ Authentication failed', 'error');
-                }
-            })
-            .catch(err => {
-                console.error('Auth error:', err);
-                showAuthStatus('❌ Connection failed', 'error');
-            });
-        }
-
-        function disconnect() {
-            authToken = '';
-            document.getElementById('authToken').value = '';
-            document.getElementById('mainContent').style.display = 'none';
-            showAuthStatus('Disconnected', '');
-        }
-
-        function showAuthStatus(message, type) {
-            const statusEl = document.getElementById('authStatus');
-            statusEl.textContent = message;
-            statusEl.className = type;
-        }
 
         // Helper function to build exclude_ips parameter
         function buildExcludeIpsParam(hideMyIP) {
@@ -361,18 +302,14 @@
 
         // Stats loading
         function loadStats() {
-            if (!authToken) return;
-
-            let url = '/admin/query-logs/stats';
+            let url = '/api/admin/query-logs/stats';
             const excludeParam = buildExcludeIpsParam(hideMyIP);
             if (excludeParam) {
                 url += `?${excludeParam}`;
             }
 
             fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                credentials: 'include'
             })
             .then(response => response.json())
             .then(data => {
@@ -439,13 +376,11 @@
 
         // Logs loading
         function loadLogs() {
-            if (!authToken) return;
-
             const limit = document.getElementById('limitFilter').value;
             const startDate = document.getElementById('startDateFilter').value;
             const endDate = document.getElementById('endDateFilter').value;
             const queryType = document.getElementById('queryTypeFilter').value;
-            let url = `/admin/query-logs?limit=${limit}`;
+            let url = `/api/admin/query-logs?limit=${limit}`;
             if (startDate) url += `&start_date=${startDate}`;
             if (endDate) url += `&end_date=${endDate}`;
             if (queryType) url += `&query_type=${queryType}`;
@@ -458,9 +393,7 @@
             document.getElementById('logsContainer').innerHTML = '<div class="loading">Loading logs...</div>';
 
             fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                credentials: 'include'
             })
             .then(response => response.json())
             .then(data => {
@@ -512,17 +445,13 @@
 
         // Clear logs
         function clearLogs() {
-            if (!authToken) return;
-
             if (!confirm('Are you sure you want to clear ALL logs? This action cannot be undone.')) {
                 return;
             }
 
-            fetch('/admin/query-logs', {
+            fetch('/api/admin/query-logs', {
                 method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                credentials: 'include'
             })
             .then(response => response.json())
             .then(data => {
@@ -584,12 +513,18 @@
             return '<span class="location-unknown">📍 Location Unknown</span>';
         }
 
-        // Auto-refresh every 30 seconds if authenticated
+        // Auto-refresh every 30 seconds
         setInterval(() => {
-            if (authToken && document.getElementById('mainContent').style.display !== 'none') {
+            if (document.getElementById('mainContent').style.display !== 'none') {
                 loadStats();
             }
         }, 30000);
+
+        // Load data immediately when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadLogs();
+        });
     </script>
 </body>
 </html>

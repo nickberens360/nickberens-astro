@@ -1,7 +1,7 @@
 <template>
   <div class="knowledge-view">
     <div class="d-flex justify-space-between align-center mb-6">
-      <h1 class="text-h4">Knowledge Base</h1>
+      <h1 class="dashboard-title">Knowledge Base</h1>
       <v-btn
         color="primary"
         prepend-icon="$refresh"

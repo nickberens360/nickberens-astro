@@ -89,7 +89,6 @@ class AppConfig:
     CACHE_TTL: int
     MAX_CACHE_SIZE: int
     EXCLUDED_IPS: List[str]
-    # QUERY_LOG_AUTH_TOKEN removed - using session-based auth only
     IP_HASH_SALT: str
     QUERY_LOG_FILE: str
 
@@ -320,9 +319,6 @@ class AppConfig:
                     logger.warning(f"Invalid IP address in EXCLUDED_IPS: {ip}")
 
         return excluded_ips
-
-    # Query Log Authentication
-    # Query log auth token method removed - using session-based auth only
 
     # IP Anonymization Settings (GDPR/CCPA compliance)
     ANONYMIZE_IPS = os.getenv("ANONYMIZE_IPS", "true").lower() == "true"  # Enable IP anonymization by default

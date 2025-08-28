@@ -5,7 +5,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
   margin: 0;
   padding: 0;
   /* Font rendering optimization */
@@ -19,12 +19,12 @@ body {
 /* Font face declarations with display swap for performance */
 @supports (font-display: swap) {
   @font-face {
-    font-family: 'Inter';
+    font-family: 'JetBrains Mono';
     font-display: swap;
   }
   
   @font-face {
-    font-family: 'JetBrains Mono';
+    font-family: 'Inter';
     font-display: swap;
   }
 }
@@ -162,11 +162,13 @@ body {
 .v-card-title {
   font-family: var(--font-family-display);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 .v-card-text {
   font-family: var(--font-family-body);
   line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 /* Monaco Editor typography integration */
@@ -177,14 +179,15 @@ body {
 /* Performance optimization: Prevent layout shift */
 .v-application {
   font-family: var(--font-family-body);
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 /* Print styles for typography */
 @media print {
   body {
-    font-family: 'Inter', serif;
-    font-size: 12pt;
-    line-height: 1.5;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 11pt;
+    line-height: 1.4;
   }
   
   .typography-code-inline,

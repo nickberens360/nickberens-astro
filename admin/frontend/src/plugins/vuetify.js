@@ -61,98 +61,98 @@ const themes = {
 
 // Custom typography configuration for Vuetify
 const typography = {
-  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
   h1: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '1.875rem',
     fontWeight: 700,
-    lineHeight: '1.25',
-    letterSpacing: '-0.025em'
+    lineHeight: '1.3',
+    letterSpacing: '0em'
   },
   h2: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '1.5rem',
     fontWeight: 600,
-    lineHeight: '1.375',
-    letterSpacing: '-0.025em'
+    lineHeight: '1.4',
+    letterSpacing: '0em'
   },
   h3: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '1.25rem',
     fontWeight: 600,
-    lineHeight: '1.375',
+    lineHeight: '1.4',
     letterSpacing: '0em'
   },
   h4: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '1.125rem',
     fontWeight: 500,
-    lineHeight: '1.375',
+    lineHeight: '1.4',
     letterSpacing: '0em'
   },
   h5: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '1rem',
     fontWeight: 500,
     lineHeight: '1.5',
     letterSpacing: '0em'
   },
   h6: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '0.875rem',
     fontWeight: 500,
     lineHeight: '1.5',
-    letterSpacing: '0.025em'
+    letterSpacing: '0.01em'
   },
   subtitle1: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '1rem',
     fontWeight: 400,
-    lineHeight: '1.625',
+    lineHeight: '1.6',
     letterSpacing: '0em'
   },
   subtitle2: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '0.875rem',
     fontWeight: 500,
-    lineHeight: '1.375',
-    letterSpacing: '0.025em'
+    lineHeight: '1.4',
+    letterSpacing: '0.01em'
   },
   body1: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '1rem',
     fontWeight: 400,
-    lineHeight: '1.625',
+    lineHeight: '1.6',
     letterSpacing: '0em'
   },
   body2: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '0.875rem',
     fontWeight: 400,
     lineHeight: '1.5',
     letterSpacing: '0em'
   },
   button: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '0.875rem',
     fontWeight: 500,
-    lineHeight: '1.75',
-    letterSpacing: '0.025em',
+    lineHeight: '1.6',
+    letterSpacing: '0.01em',
     textTransform: 'none' // Remove uppercase transformation
   },
   caption: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '0.75rem',
     fontWeight: 400,
     lineHeight: '1.5',
-    letterSpacing: '0.025em'
+    letterSpacing: '0.01em'
   },
   overline: {
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace',
     fontSize: '0.75rem',
     fontWeight: 500,
     lineHeight: '1.5',
-    letterSpacing: '0.1em',
+    letterSpacing: '0.05em',
     textTransform: 'uppercase'
   }
 }

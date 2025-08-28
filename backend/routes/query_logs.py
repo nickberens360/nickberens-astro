@@ -16,8 +16,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
 from fastapi import Request
 from fastapi.responses import FileResponse, HTMLResponse
-
-# HTTPBearer security is now handled by unified_auth
 from fastapi.templating import Jinja2Templates
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -37,9 +35,6 @@ template_dir = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(template_dir))
 
 
-# Authentication is now handled by session-based admin auth
-
-
 @router.get("/query-logs")
 @limiter.limit("60/minute")  # Reasonable rate limit for log viewing
 async def get_query_logs(
@@ -56,7 +51,7 @@ async def get_query_logs(
     """
     Retrieve query logs with optional filtering.
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
 
     Query Parameters:
     - limit: Maximum number of logs to return (1-1000, default: 100)
@@ -116,7 +111,7 @@ async def get_query_log_stats(
     """
     Get statistics about query logs.
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
 
     Returns summary statistics including:
     - Total number of queries
@@ -140,7 +135,7 @@ async def clear_query_logs(request: Request, session: dict = Depends(require_adm
     """
     Clear all query logs (use with caution).
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
 
     This action is irreversible and will delete all logged queries.
     """
@@ -158,7 +153,7 @@ async def download_query_logs(session: dict = Depends(require_admin_auth)) -> Fi
     """
     Download the raw JSONL query log file as an attachment.
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
     """
     logger = get_query_logger()
     log_path = logger.log_file_path
@@ -192,7 +187,7 @@ async def query_logs_health() -> Dict[str, Any]:
             "log_file_exists": logger.log_file_path.exists(),
             "total_logs": stats.get("total_queries", 0),
             "excluded_ips_count": len(logger.excluded_ips),
-            "auth_configured": bool(getattr(AppConfig(), "QUERY_LOG_AUTH_TOKEN", None)),
+            "auth_method": "session-based",
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}

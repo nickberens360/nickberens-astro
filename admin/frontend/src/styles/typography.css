@@ -3,9 +3,9 @@
 
 :root {
   /* Font Family Variables */
-  --font-family-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-family-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-family-mono: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Source Code Pro', Consolas, 'Courier New', monospace;
+  --font-family-display: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
+  --font-family-body: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
+  --font-family-mono: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
 
   /* Font Weight Scale */
   --font-weight-light: 300;
@@ -26,21 +26,21 @@
   --font-size-4xl: 2.25rem;  /* 36px */
   --font-size-5xl: 3rem;     /* 48px */
 
-  /* Line Height Scale */
+  /* Line Height Scale - Adjusted for monospace readability */
   --line-height-none: 1;
-  --line-height-tight: 1.25;
-  --line-height-snug: 1.375;
+  --line-height-tight: 1.3;
+  --line-height-snug: 1.4;
   --line-height-normal: 1.5;
-  --line-height-relaxed: 1.625;
-  --line-height-loose: 2;
+  --line-height-relaxed: 1.6;
+  --line-height-loose: 1.8;
 
-  /* Letter Spacing */
-  --letter-spacing-tighter: -0.05em;
-  --letter-spacing-tight: -0.025em;
+  /* Letter Spacing - Optimized for monospace */
+  --letter-spacing-tighter: -0.02em;
+  --letter-spacing-tight: -0.01em;
   --letter-spacing-normal: 0em;
-  --letter-spacing-wide: 0.025em;
-  --letter-spacing-wider: 0.05em;
-  --letter-spacing-widest: 0.1em;
+  --letter-spacing-wide: 0.01em;
+  --letter-spacing-wider: 0.02em;
+  --letter-spacing-widest: 0.05em;
 }
 
 /* Base Typography */
@@ -275,7 +275,7 @@ body {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
-  letter-spacing: var(--letter-spacing-tight);
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 .dashboard-section-title {
@@ -291,7 +291,7 @@ body {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-none);
-  letter-spacing: var(--letter-spacing-tight);
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 .metric-label {

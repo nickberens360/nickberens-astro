@@ -421,7 +421,7 @@ export default {
 }
 
 .monospace-content :deep(textarea) {
-  font-family: 'Roboto Mono', Monaco, 'Lucida Console', monospace;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.4;
 }
