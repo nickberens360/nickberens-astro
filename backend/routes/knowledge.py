@@ -59,7 +59,7 @@ class SourceUpdateRequest(BaseModel):
     content_type: Optional[str] = None
 
 
-@router.get("/api/knowledge/documents", response_model=IndexedDocumentsResponse)
+@router.get("/knowledge/documents", response_model=IndexedDocumentsResponse)
 async def get_indexed_documents(
     request: Request,
     limit: int = Query(50, ge=1, le=500, description="Maximum number of documents to return"),
@@ -148,7 +148,7 @@ async def get_indexed_documents(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.get("/api/knowledge/stats", response_model=KnowledgeStats)
+@router.get("/knowledge/stats", response_model=KnowledgeStats)
 async def get_knowledge_stats(request: Request):
     """
     Get statistics about the knowledge base.
@@ -222,7 +222,7 @@ async def get_knowledge_stats(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.get("/api/knowledge/sources")
+@router.get("/knowledge/sources")
 async def get_knowledge_sources(request: Request):
     """
     Get list of all unique sources in the knowledge base.
@@ -285,7 +285,7 @@ async def get_knowledge_sources(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.get("/api/knowledge/documents/{document_id}")
+@router.get("/knowledge/documents/{document_id}")
 async def get_document_content(request: Request, document_id: str):
     """
     Get full content of a specific document by ID.
@@ -339,7 +339,7 @@ async def get_document_content(request: Request, document_id: str):
         raise HTTPException(status_code=500, detail=f"Failed to get document content: {str(e)}")
 
 
-@router.put("/api/knowledge/sources/{source_path:path}")
+@router.put("/knowledge/sources/{source_path:path}")
 async def update_knowledge_source(request: Request, source_path: str, update_data: SourceUpdateRequest):
     """
     Update metadata for a knowledge source.
@@ -406,7 +406,7 @@ async def update_knowledge_source(request: Request, source_path: str, update_dat
         raise HTTPException(status_code=500, detail=f"Failed to update knowledge source: {str(e)}")
 
 
-@router.delete("/api/knowledge/sources/{source_path:path}")
+@router.delete("/knowledge/sources/{source_path:path}")
 async def delete_knowledge_source(request: Request, source_path: str):
     """
     Delete a knowledge source and all its associated chunks.
@@ -478,7 +478,7 @@ async def delete_knowledge_source(request: Request, source_path: str):
         raise HTTPException(status_code=500, detail=f"Failed to delete knowledge source: {str(e)}")
 
 
-@router.get("/api/knowledge/files/{file_path:path}/content")
+@router.get("/knowledge/files/{file_path:path}/content")
 async def get_knowledge_file_content(file_path: str):
     """
     Get the content of a specific knowledge file.
@@ -535,7 +535,7 @@ async def get_knowledge_file_content(file_path: str):
         raise HTTPException(status_code=500, detail=f"Failed to read file content: {str(e)}")
 
 
-@router.put("/api/knowledge/files/{file_path:path}/content")
+@router.put("/knowledge/files/{file_path:path}/content")
 async def update_knowledge_file_content(file_path: str, request: Request):
     """
     Update the content of a specific knowledge file.
@@ -626,7 +626,7 @@ async def update_knowledge_file_content(file_path: str, request: Request):
         raise HTTPException(status_code=500, detail=f"Failed to update file content: {str(e)}")
 
 
-@router.post("/api/knowledge/upload")
+@router.post("/knowledge/upload")
 async def upload_knowledge_files(
     request: Request, files: List[UploadFile] = File(...), session: dict = Depends(require_admin_auth)
 ):

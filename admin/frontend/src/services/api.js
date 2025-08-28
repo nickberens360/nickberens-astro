@@ -187,23 +187,7 @@ class AdminAPI {
     return response
   }
 
-  // Knowledge base endpoints
-  async uploadKnowledgeFiles(formData) {
-    return await this.client.post('/knowledge/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-  }
-
-  async getKnowledgeFiles() {
-    return await this.client.get('/knowledge/files')
-  }
-
-  async deleteKnowledgeFile(filename) {
-    return await this.client.delete(`/knowledge/files/${encodeURIComponent(filename)}`)
-  }
-
+  // Knowledge base endpoints (available on both public and admin APIs)
   async getKnowledgeStats() {
     return await this.client.get('/knowledge/stats')
   }
@@ -220,6 +204,26 @@ class AdminAPI {
     return await this.client.get(`/knowledge/documents/${documentId}`)
   }
 
+  async getKnowledgeFileContent(filename) {
+    return await this.client.get(`/knowledge/files/${encodeURIComponent(filename)}/content`)
+  }
+
+  async uploadKnowledgeFiles(formData) {
+    return await this.client.post('/knowledge/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  }
+
+  async getKnowledgeFiles() {
+    return await this.client.get('/knowledge/files')
+  }
+
+  async deleteKnowledgeFile(filename) {
+    return await this.client.delete(`/knowledge/files/${encodeURIComponent(filename)}`)
+  }
+
   async refreshKnowledgeBase(forceReindex = true) {
     return await this.client.post(`/knowledge/refresh?force_reindex=${forceReindex}`)
   }
@@ -230,10 +234,6 @@ class AdminAPI {
 
   async waitForRefreshCompletion(timeout = 300) {
     return await this.client.post(`/knowledge/refresh/wait?timeout=${timeout}`)
-  }
-
-  async getKnowledgeFileContent(filename) {
-    return await this.client.get(`/knowledge/files/${encodeURIComponent(filename)}/content`)
   }
 
   async updateKnowledgeFileContent(filename, content) {

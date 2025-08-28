@@ -629,8 +629,8 @@ const updateCharts = () => {
 const loadStats = async () => {
   loading.value = true
   try {
-    // Call the knowledge stats endpoint directly since it's on the main API, not admin API
-    const response = await fetch('http://localhost:8000/api/knowledge/stats')
+    // Call the knowledge stats endpoint through the public API
+    const response = await fetch('http://localhost:8000/api/public/knowledge/stats')
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }

@@ -32,7 +32,6 @@ def verify_admin_token(request: Request):
 
 
 router = APIRouter(
-    prefix="/admin",
     tags=["admin"],
     dependencies=[Depends(verify_admin_token)],
 )

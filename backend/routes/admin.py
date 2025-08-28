@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # Initialize audit logger
 audit_logger = AuditLogger()
 
-router = APIRouter(prefix="/admin/api", tags=["admin"])
+router = APIRouter(tags=["admin"])
 
 
 # Authentication endpoints

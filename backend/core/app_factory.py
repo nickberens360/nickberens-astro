@@ -94,24 +94,23 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
         stats,
     )
 
-    # Core routes
+    # Core public routes (no prefix)
     app.include_router(health.router)
     app.include_router(query.router)
-    app.include_router(smart_query.router, prefix="/api")
-    app.include_router(content.router, prefix="/api")
-    app.include_router(knowledge.router)
-    app.include_router(admin_refresh.router)
 
-    # Stats and performance routes
-    app.include_router(stats.router, prefix="/api")
-    app.include_router(performance.router, prefix="/api")
+    # Public API routes
+    app.include_router(smart_query.router, prefix="/api/public")
+    app.include_router(content.router, prefix="/api/public")
+    app.include_router(stats.router, prefix="/api/public")
+    app.include_router(performance.router, prefix="/api/public")
+    app.include_router(knowledge.router, prefix="/api/public")
 
-    # Admin routes - consolidated into single comprehensive admin router
-    app.include_router(admin.router)  # Handles all /admin/api/* endpoints
-
-    # Legacy admin routes for backward compatibility (if needed)
-    app.include_router(query_logs.router, prefix="/admin")
-    app.include_router(knowledge.router, prefix="/admin")
+    # Admin API routes - consolidated under /api/admin
+    app.include_router(admin.router, prefix="/api/admin")
+    app.include_router(query_logs.router, prefix="/api/admin")
+    app.include_router(admin_refresh.router, prefix="/api/admin")
+    app.include_router(queries.router, prefix="/api/admin")
+    app.include_router(knowledge.router, prefix="/api/admin")  # Admin write operations
 
     # Serve admin frontend static files (mount after API routes to avoid conflicts)
     admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"
