@@ -166,6 +166,9 @@ class AdminDatabaseManager:
                 if user_count == 0:
                     logger.info("Creating default admin user")
                     self._create_default_admin_user(cursor)
+                else:
+                    # Check if we need to recreate the default admin user due to password format change
+                    self._ensure_default_admin_user(cursor)
 
                 logger.info("Admin database initialized successfully")
 
@@ -213,6 +216,50 @@ class AdminDatabaseManager:
             logger.info("Using admin password from ADMIN_DEFAULT_PASSWORD environment variable")
         else:
             logger.warning("Random password generated - check logs above for password")
+
+    def _ensure_default_admin_user(self, cursor):
+        """Ensure the default admin user exists and has correct password format."""
+        import os
+
+        import bcrypt
+
+        default_username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin").lower()
+        default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
+
+        if not default_password:
+            # If no default password is set, don't modify existing users
+            return
+
+        # Check if the default admin user exists
+        cursor.execute("SELECT id, password_hash FROM admin_users WHERE username = ?", (default_username,))
+        result = cursor.fetchone()
+
+        if result:
+            user_id, current_hash = result
+
+            # Test if the current hash works with direct bcrypt verification
+            try:
+                test_password_bytes = default_password.encode("utf-8")
+                hash_bytes = current_hash.encode("utf-8")
+                bcrypt_works = bcrypt.checkpw(test_password_bytes, hash_bytes)
+            except Exception:
+                bcrypt_works = False
+
+            if not bcrypt_works:
+                # Hash is in wrong format (probably passlib), recreate with bcrypt
+                logger.info(f"Updating password hash format for default admin user: {default_username}")
+                new_password_bytes = default_password.encode("utf-8")
+                new_password_hash = bcrypt.hashpw(new_password_bytes, bcrypt.gensalt()).decode("utf-8")
+
+                cursor.execute(
+                    "UPDATE admin_users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                    (new_password_hash, datetime.now(), user_id),
+                )
+                logger.info(f"Updated password hash for default admin user: {default_username}")
+        else:
+            # Default admin user doesn't exist, create it
+            logger.info("Default admin user not found, creating it")
+            self._create_default_admin_user(cursor)
 
     def get_admin_user(self, username: str) -> Optional[Dict]:
         """Get admin user by username."""
