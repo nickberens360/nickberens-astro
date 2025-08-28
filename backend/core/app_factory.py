@@ -115,7 +115,9 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     # Serve admin frontend static files (mount after API routes to avoid conflicts)
     admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"
     if admin_static_path.exists():
-        # Mount static files at /admin (API routes are at /api/admin so no conflict)
+        # Mount static assets first (more specific route)
+        app.mount("/assets", StaticFiles(directory=str(admin_static_path / "assets")), name="admin_assets")
+        # Mount admin frontend HTML (catch-all for SPA routing)
         app.mount("/admin", StaticFiles(directory=str(admin_static_path), html=True), name="admin_frontend")
 
     return app
