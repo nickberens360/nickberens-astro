@@ -118,6 +118,18 @@ class ResponseCacheWarmer:
         """Check if cache warming is complete."""
         return self.warming_complete
 
+    def reset_warming_state(self) -> None:
+        """Reset the warming state to allow re-warming if needed."""
+        if self.warming_in_progress:
+            logger.warning("Cannot reset warming state while warming is in progress")
+            return
+
+        self.warming_complete = False
+        self.warmed_questions.clear()
+        self.successful_warmups = 0
+        self.failed_warmups = 0
+        logger.info("Cache warming state reset - ready for re-warming")
+
     def get_status(self) -> Dict[str, Any]:
         """Get the current cache warming status."""
         return {
