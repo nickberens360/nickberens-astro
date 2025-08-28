@@ -47,7 +47,7 @@ class AdminAuthManager:
     """
 
     def __init__(self):
-        # Use bcrypt directly instead of passlib to avoid version compatibility issues
+
         self._bcrypt_rounds = 12
         # Session expiry time (24 hours)
         self.session_expiry_hours = 24

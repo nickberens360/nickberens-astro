@@ -25,6 +25,7 @@ export default defineConfig({
     port: 3000
     // No proxy needed - frontend calls backend directly
   },
+  base: process.env.NODE_ENV === 'production' ? '/admin/' : '/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
