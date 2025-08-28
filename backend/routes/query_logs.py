@@ -7,64 +7,39 @@ This module provides a protected endpoint to:
 - Clear logs (admin function)
 """
 
-import hmac
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
 from fastapi import Request
 from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.templating import Jinja2Templates
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-from ..core.config import AppConfig
+from ..core.admin_auth import require_admin_auth
 from ..core.query_logger import get_query_logger
 
 # Initialize router and security
 router = APIRouter()
-security = HTTPBearer()
+limiter = Limiter(key_func=get_remote_address)
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 # Initialize templates
 template_dir = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(template_dir))
 
 
-async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """
-    Verify the authorization token for accessing query logs.
-
-    Args:
-        credentials: HTTP Authorization credentials
-
-    Returns:
-        The verified token
-
-    Raises:
-        HTTPException: If token is invalid or missing
-    """
-    config = AppConfig()
-    try:
-        auth_token = config.QUERY_LOG_AUTH_TOKEN
-    except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-
-    if not auth_token:
-        raise HTTPException(
-            status_code=503, detail="Query log access is not configured. Set QUERY_LOG_AUTH_TOKEN environment variable."
-        )
-
-    token = str(credentials.credentials)
-    if not hmac.compare_digest(token, auth_token):
-        raise HTTPException(status_code=403, detail="Invalid authorization token")
-
-    return token
-
-
 @router.get("/query-logs")
+@limiter.limit("60/minute")  # Reasonable rate limit for log viewing
 async def get_query_logs(
-    _token: str = Depends(verify_token),
+    request: Request,
+    session: dict = Depends(require_admin_auth),
     limit: Optional[int] = FastAPIQuery(default=100, ge=1, le=1000, description="Maximum number of logs to return"),
     start_date: Optional[str] = FastAPIQuery(default=None, description="Start date filter (YYYY-MM-DD format)"),
     end_date: Optional[str] = FastAPIQuery(default=None, description="End date filter (YYYY-MM-DD format)"),
@@ -72,11 +47,11 @@ async def get_query_logs(
     exclude_ips: Optional[str] = FastAPIQuery(
         default=None, description="Comma-separated list of IP addresses to exclude (anonymized hashes)"
     ),
-):
+) -> Dict[str, Any]:
     """
     Retrieve query logs with optional filtering.
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
 
     Query Parameters:
     - limit: Maximum number of logs to return (1-1000, default: 100)
@@ -90,14 +65,16 @@ async def get_query_logs(
     # Validate date formats if provided
     if start_date:
         try:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").isoformat()
+            _sd = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start_date = _sd.isoformat()
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD format.")
 
     if end_date:
         try:
             # Add time component to include the entire end date
-            end_date = datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S").isoformat()
+            _ed = datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            end_date = _ed.isoformat()
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD format.")
 
@@ -123,16 +100,18 @@ async def get_query_logs(
 
 
 @router.get("/query-logs/stats")
+@limiter.limit("30/minute")  # Stats endpoint rate limit
 async def get_query_log_stats(
-    _token: str = Depends(verify_token),
+    request: Request,
+    session: dict = Depends(require_admin_auth),
     exclude_ips: Optional[str] = FastAPIQuery(
         default=None, description="Comma-separated list of IPs to exclude from stats"
     ),
-):
+) -> Dict[str, Any]:
     """
     Get statistics about query logs.
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
 
     Returns summary statistics including:
     - Total number of queries
@@ -147,15 +126,16 @@ async def get_query_log_stats(
     logger = get_query_logger()
     stats = logger.get_log_stats(exclude_ips=exclude_ips)
 
-    return {"stats": stats, "generated_at": datetime.utcnow().isoformat(), "excluded_ips": exclude_ips}
+    return {"stats": stats, "generated_at": datetime.now(timezone.utc).isoformat(), "excluded_ips": exclude_ips}
 
 
 @router.delete("/query-logs")
-async def clear_query_logs(_token: str = Depends(verify_token)):
+@limiter.limit("5/minute")  # Restrictive rate limit for destructive operations
+async def clear_query_logs(request: Request, session: dict = Depends(require_admin_auth)) -> Dict[str, Any]:
     """
     Clear all query logs (use with caution).
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
 
     This action is irreversible and will delete all logged queries.
     """
@@ -163,17 +143,17 @@ async def clear_query_logs(_token: str = Depends(verify_token)):
     success = logger.clear_logs()
 
     if success:
-        return {"message": "Query logs cleared successfully", "cleared_at": datetime.utcnow().isoformat()}
+        return {"message": "Query logs cleared successfully", "cleared_at": datetime.now(timezone.utc).isoformat()}
     else:
         raise HTTPException(status_code=500, detail="Failed to clear query logs")
 
 
 @router.get("/query-logs/download")
-async def download_query_logs(_token: str = Depends(verify_token)):
+async def download_query_logs(session: dict = Depends(require_admin_auth)) -> FileResponse:
     """
     Download the raw JSONL query log file as an attachment.
 
-    Requires authentication via Bearer token.
+    Requires admin session authentication.
     """
     logger = get_query_logger()
     log_path = logger.log_file_path
@@ -189,7 +169,7 @@ async def download_query_logs(_token: str = Depends(verify_token)):
 
 
 @router.get("/query-logs/health")
-async def query_logs_health():
+async def query_logs_health() -> Dict[str, Any]:
     """
     Health check endpoint for query logging system.
 
@@ -207,14 +187,14 @@ async def query_logs_health():
             "log_file_exists": logger.log_file_path.exists(),
             "total_logs": stats.get("total_queries", 0),
             "excluded_ips_count": len(logger.excluded_ips),
-            "auth_configured": bool(getattr(AppConfig(), "QUERY_LOG_AUTH_TOKEN", None)),
+            "auth_method": "session-based",
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
 
 
 @router.get("/query-logs/admin", response_class=HTMLResponse)
-async def query_logs_admin_page(request: Request):
+async def query_logs_admin_page(request: Request) -> HTMLResponse:
     """
     Serve the query logs admin web interface.
 

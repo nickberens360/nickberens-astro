@@ -9,16 +9,18 @@ This module handles:
 - Security middleware application
 """
 
+from pathlib import Path
 from typing import AsyncContextManager, Callable, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
-from ..middleware.security import add_security_headers
 from .config import AppConfig
+from .security_middleware import add_security_middleware
 
 
 # Initialize the limiter - centralized application-wide rate limiting
@@ -65,24 +67,55 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
     # Add security middleware
-    app.middleware("http")(add_security_headers)
+    add_security_middleware(app)
 
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
         allow_origins=AppConfig.get_cors_origins(),
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type"],
         expose_headers=["X-Model-Used", "X-Followup-Questions"],
     )
 
     # Register routers - import here to avoid circular imports
-    from ..routes import health, query, query_logs, smart_query
+    from ..routes import (
+        admin,
+        admin_refresh,
+        content,
+        health,
+        knowledge,
+        performance,
+        queries,
+        query,
+        query_logs,
+        smart_query,
+        stats,
+    )
 
+    # Core public routes (no prefix)
     app.include_router(health.router)
     app.include_router(query.router)
-    app.include_router(query_logs.router, prefix="/admin")
-    app.include_router(smart_query.router, prefix="/api")
+
+    # Public API routes
+    app.include_router(smart_query.router, prefix="/api/public")
+    app.include_router(content.router, prefix="/api/public")
+    app.include_router(stats.router, prefix="/api/public")
+    app.include_router(performance.router, prefix="/api/public")
+    app.include_router(knowledge.router, prefix="/api/public")
+
+    # Admin API routes - consolidated under /api/admin
+    app.include_router(admin.router, prefix="/api/admin")
+    app.include_router(query_logs.router, prefix="/api/admin")
+    app.include_router(admin_refresh.router, prefix="/api/admin")
+    app.include_router(queries.router, prefix="/api/admin")
+    app.include_router(knowledge.router, prefix="/api/admin")  # Admin write operations
+
+    # Serve admin frontend static files (mount after API routes to avoid conflicts)
+    admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"
+    if admin_static_path.exists():
+        # Mount static files at /admin/dashboard to avoid API route conflicts
+        app.mount("/admin/dashboard", StaticFiles(directory=str(admin_static_path), html=True), name="admin_frontend")
 
     return app

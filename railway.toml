@@ -1,0 +1,16 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# NOTE: Do NOT put actual secrets here! 
+# Set environment variables in Railway dashboard instead:
+# - ANTHROPIC_API_KEY
+# - GOOGLE_API_KEY  
+# - ADMIN_TOKEN
+# - Any other secrets from your .env file

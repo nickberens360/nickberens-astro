@@ -78,13 +78,17 @@
     {
       "name": "Atlassian Software",
       "category": "Software Tools"
+    },
+    {
+      "name": "GitHub Actions",
+      "category": "DevOps"
     }
   ],
   "experience": [
     {
       "company": "Hillman Group, Robotics & Digital Solutions",
       "role": "Frontend Developer",
-      "dates": "10/2021 – 3/2025",
+      "dates": "10/2021 – 2/2025",
       "location": "Boulder, CO",
       "points": [
         "Led successful migration of enterprise CRM dashboard from Vue/Vuetify 2 to 3, modernizing codebase and improving application maintainability.",

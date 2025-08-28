@@ -65,8 +65,84 @@ class UnifiedRetriever:
         logger.info(f"Indexing complete: {files_processed} files, {total_chunks} chunks")
         return files_processed, total_chunks
 
+    def reindex_file(self, file_path: str) -> bool:
+        """
+        Reindex a specific file by removing existing entries and re-adding it.
+
+        Args:
+            file_path: Path to the file to reindex
+
+        Returns:
+            bool: True if reindexing was successful, False otherwise
+        """
+        try:
+            import json
+            from pathlib import Path
+
+            from ..ingest.chunking import splitter_for_ext
+            from ..ingest.loaders import load_doc
+
+            file_path_obj = Path(file_path)
+            if not file_path_obj.exists():
+                logger.error(f"File does not exist: {file_path}")
+                return False
+
+            logger.info(f"Reindexing file: {file_path}")
+
+            # Remove existing documents with this file path from vector store
+            try:
+                self.semantic_searcher.delete_where({"source": str(file_path_obj)})
+                logger.info(f"Removed existing entries for: {file_path}")
+            except Exception as e:
+                logger.warning(f"Could not remove existing entries: {e}")
+
+            # Process the file like in process_directory
+            docs = load_doc(file_path_obj)
+            if not docs:
+                logger.warning(f"No documents loaded from {file_path}")
+                return False
+
+            # Use appropriate splitter based on file type
+            splitter = splitter_for_ext(file_path_obj.suffix)
+            chunks = splitter.split_documents(docs)
+
+            # Add rich metadata to each chunk
+            for chunk in chunks:
+                base_metadata = self.content_indexer.extract_content_metadata(chunk, file_path_obj)
+                chunk.metadata.update(base_metadata)
+
+            # Add to vector store
+            if chunks:
+                self.semantic_searcher.add_documents(chunks)
+                logger.info(f"Successfully reindexed {file_path}: {len(chunks)} chunks")
+
+                # Update the index metadata to mark as processed
+                index_metadata_path = Path(self.persist_dir) / "index_metadata.json"
+                indexed_files = {}
+                if index_metadata_path.exists():
+                    with open(index_metadata_path, "r", encoding="utf-8") as f:
+                        indexed_files = json.load(f)
+
+                # Update hash
+                file_hash = self.content_indexer.compute_file_hash(file_path_obj)
+                indexed_files[str(file_path_obj)] = file_hash
+
+                # Save updated metadata
+                Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
+                with open(index_metadata_path, "w", encoding="utf-8") as f:
+                    json.dump(indexed_files, f)
+
+                return True
+            else:
+                logger.warning(f"No chunks created from {file_path}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to reindex file {file_path}: {e}")
+            return False
+
     def get_retriever(
-        self, search_kwargs: Optional[Dict] = None, filter_content_types: Optional[List[str]] = None
+        self, search_kwargs: Optional[Dict[str, Any]] = None, filter_content_types: Optional[List[str]] = None
     ) -> BaseRetriever:
         """
         Get a retriever with optional filtering.
@@ -78,7 +154,7 @@ class UnifiedRetriever:
         return self.semantic_searcher.get_retriever(search_kwargs, filter_content_types)
 
     def get_relevant_documents(
-        self, query: str, k: int = None, filter_content_types: Optional[List[str]] = None
+        self, query: str, k: Optional[int] = None, filter_content_types: Optional[List[str]] = None
     ) -> List[Document]:
         """
         Get relevant documents for a query (compatibility method).
@@ -88,7 +164,11 @@ class UnifiedRetriever:
         return self.semantic_search(query, k, filter_content_types)
 
     def semantic_search(
-        self, query: str, k: int = None, filter_content_types: Optional[List[str]] = None, score_threshold: float = None
+        self,
+        query: str,
+        k: Optional[int] = None,
+        filter_content_types: Optional[List[str]] = None,
+        score_threshold: Optional[float] = None,
     ) -> List[Document]:
         """
         Perform semantic search with optional filtering and scoring.
@@ -113,7 +193,7 @@ class UnifiedRetriever:
         """
         return self.content_router.auto_route_query(query)
 
-    def get_search_strategy(self, query: str) -> dict:
+    def get_search_strategy(self, query: str) -> Dict[str, Any]:
         """
         Get the optimal search strategy for a query.
 
@@ -121,7 +201,7 @@ class UnifiedRetriever:
         """
         return self.content_router.get_search_strategy(query)
 
-    def route_with_strategy(self, query: str, custom_strategy: Optional[dict] = None) -> List[Document]:
+    def route_with_strategy(self, query: str, custom_strategy: Optional[Dict[str, Any]] = None) -> List[Document]:
         """
         Route query using a specific strategy.
 

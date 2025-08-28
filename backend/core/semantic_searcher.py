@@ -154,7 +154,7 @@ class SemanticSearcher:
         # Return top k results
         return filtered_docs[:k]
 
-    def similarity_search_with_score(self, query: str, k: int = None) -> List[tuple]:
+    def similarity_search_with_score(self, query: str, k: Optional[int] = None) -> List[tuple]:
         """
         Perform similarity search and return documents with scores.
 
@@ -183,6 +183,54 @@ class SemanticSearcher:
             logger.warning(f"Could not get collection count: {e}")
             return 0
 
+    def get_documents(
+        self, where: Optional[Dict[str, Any]] = None, limit: int = 100, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        Get documents from the vector store with optional filtering.
+
+        Args:
+            where: Optional filter conditions for metadata
+            limit: Maximum number of documents to return
+            offset: Number of documents to skip (for pagination)
+
+        Returns:
+            List of document dictionaries with metadata and content
+        """
+        if self.vector_store is None:
+            raise ValueError("Vector store not initialized")
+
+        try:
+            # Use ChromaDB's get() method which is the proper public interface
+            collection = self.vector_store._collection
+
+            # Convert empty where clause to None for ChromaDB compatibility
+            where_clause = where if where else None
+
+            result = collection.get(where=where_clause, limit=limit, offset=offset, include=["metadatas", "documents"])
+
+            # Get IDs separately since ChromaDB requires them to be requested explicitly
+            ids_result = collection.get(where=where_clause, limit=limit, offset=offset, include=[])
+
+            # Format the results consistently
+            documents = []
+            ids = ids_result.get("ids", [])
+            docs = result.get("documents", [])
+            metadatas = result.get("metadatas", [])
+
+            for i in range(len(docs)):
+                doc = {
+                    "id": ids[i] if i < len(ids) else f"doc_{i}",
+                    "content": docs[i],
+                    "metadata": metadatas[i] if i < len(metadatas) else {},
+                }
+                documents.append(doc)
+
+            return documents
+        except Exception as e:
+            logger.error(f"Error getting documents: {e}")
+            return []
+
     def delete_collection(self) -> None:
         """Delete the vector store collection (for testing/cleanup)."""
         if self.vector_store is not None:
@@ -192,8 +240,130 @@ class SemanticSearcher:
             except Exception as e:
                 logger.warning(f"Could not delete collection: {e}")
 
+    def delete_where(self, where: Dict[str, Any]) -> None:
+        """Delete documents from the underlying store by metadata filter."""
+        if hasattr(self.vector_store, "delete"):
+            # LangChain vector stores commonly expose delete(where=...) for Chroma
+            try:
+                self.vector_store.delete(where=where)  # type: ignore[attr-defined]
+                return
+            except Exception as e:
+                logger.warning("Vector store delete(where=...) failed: %s", e, exc_info=True)
+        # ChromaDB collection fallback
+        if hasattr(self.vector_store, "_collection"):
+            try:
+                self.vector_store._collection.delete(where=where)  # type: ignore[attr-defined]
+                return
+            except Exception as e:
+                logger.warning("Chroma _collection.delete failed: %s", e, exc_info=True)
+        raise RuntimeError("Delete not supported by current vector store")
+
     def reset_store(self) -> None:
         """Reset and reinitialize the vector store."""
         self.delete_collection()
         self._initialize_store()
         logger.info("Vector store reset and reinitialized")
+
+    def get_document_by_id(self, document_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by its ID."""
+        if self.vector_store is None:
+            return None
+
+        try:
+            # Use the public get method instead of _collection
+            result = self.vector_store._collection.get(ids=[document_id], include=["metadatas", "documents"])
+
+            if result["ids"] and len(result["ids"]) > 0:
+                return {
+                    "id": result["ids"][0],
+                    "content": result["documents"][0] if result["documents"] else "",
+                    "metadata": result["metadatas"][0] if result["metadatas"] else {},
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error getting document by ID {document_id}: {e}")
+            return None
+
+    def update_document_metadata(self, document_id: str, metadata: Dict[str, Any]) -> bool:
+        """Update metadata for a document."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            # Use the public update method
+            self.vector_store._collection.update(ids=[document_id], metadatas=[metadata])
+            return True
+        except Exception as e:
+            logger.error(f"Error updating document metadata for {document_id}: {e}")
+            return False
+
+    def delete_document_by_id(self, document_id: str) -> bool:
+        """Delete a document by its ID."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            self.vector_store._collection.delete(ids=[document_id])
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting document {document_id}: {e}")
+            return False
+
+    def get_documents_by_source(self, source_path: str) -> List[Dict[str, Any]]:
+        """Get all documents from a specific source."""
+        if self.vector_store is None:
+            return []
+
+        try:
+            result = self.vector_store._collection.get(
+                where={"source": source_path}, include=["metadatas", "documents"]
+            )
+            # Get IDs separately
+            ids_result = self.vector_store._collection.get(where={"source": source_path}, include=[])
+
+            documents = []
+            ids = ids_result.get("ids", [])
+            docs = result.get("documents", [])
+            metadatas = result.get("metadatas", [])
+
+            for i in range(len(docs)):
+                doc = {
+                    "id": ids[i] if i < len(ids) else f"doc_{i}",
+                    "content": docs[i],
+                    "metadata": metadatas[i] if i < len(metadatas) else {},
+                }
+                documents.append(doc)
+            return documents
+        except Exception as e:
+            logger.error(f"Error getting documents by source {source_path}: {e}")
+            return []
+
+    def update_documents_metadata(self, document_ids: List[str], metadatas: List[Dict[str, Any]]) -> bool:
+        """Update metadata for multiple documents."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            self.vector_store._collection.update(ids=document_ids, metadatas=metadatas)
+            return True
+        except Exception as e:
+            logger.error(f"Error updating multiple document metadata: {e}")
+            return False
+
+    def delete_documents_by_source(self, source_path: str) -> bool:
+        """Delete all documents from a specific source."""
+        if self.vector_store is None:
+            return False
+
+        try:
+            # First get the documents to find their IDs
+            documents = self.get_documents_by_source(source_path)
+            if not documents:
+                return True  # Nothing to delete
+
+            document_ids = [doc["id"] for doc in documents]
+            self.vector_store._collection.delete(ids=document_ids)
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting documents by source {source_path}: {e}")
+            return False

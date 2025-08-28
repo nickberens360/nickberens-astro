@@ -12,7 +12,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
@@ -40,7 +40,7 @@ class ContentIndexer:
                 sha256_hash.update(byte_block)
         return sha256_hash.hexdigest()
 
-    def extract_content_metadata(self, doc: Document, file_path: Path) -> Dict:
+    def extract_content_metadata(self, doc: Document, file_path: Path) -> Dict[str, Any]:
         """Extract metadata using LLM topics plus deterministic fallbacks.
 
         Heuristics ensure key content remains discoverable even if LLM topic extraction fails.
@@ -107,7 +107,8 @@ class ContentIndexer:
             "file_path": str(file_path),
             "file_name": file_path.name,
             "file_type": file_path.suffix.lower(),
-            "content_types": ",".join(merged_types),
+            "content_type": ",".join(merged_types),
+            "content_types": ",".join(merged_types),  # Backward compatibility alias
             "content_length": len(content),
             "has_code": "```" in doc.page_content or "function" in text_lc,
             "is_illustration_data": is_illustration_data,
@@ -154,7 +155,7 @@ class ContentIndexer:
         indexed_files = {}
 
         if index_metadata_path.exists() and not force_reindex:
-            with open(index_metadata_path, "r") as f:
+            with open(index_metadata_path, "r", encoding="utf-8") as f:
                 indexed_files = json.load(f)
 
         all_documents = []
@@ -202,7 +203,7 @@ class ContentIndexer:
 
         # Save index metadata
         Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-        with open(index_metadata_path, "w") as f:
+        with open(index_metadata_path, "w", encoding="utf-8") as f:
             json.dump(indexed_files, f)
 
         return all_documents, files_processed, total_chunks

@@ -39,7 +39,6 @@ def reset_rate_limiter():
         # Create a new in-memory storage to ensure clean state
         limiter._storage = limits.storage.MemoryStorage()
     yield
-
     # Also reset after the test to ensure clean state for next test
     if hasattr(limiter, "_storage"):
         limiter._storage = limits.storage.MemoryStorage()
