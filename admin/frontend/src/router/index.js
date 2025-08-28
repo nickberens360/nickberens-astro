@@ -15,15 +15,6 @@ const router = createRouter({
       }
     },
     {
-      path: '/test-password',
-      name: 'test-password',
-      component: () => import('@/views/ChangePasswordSimple.vue'),
-      meta: {
-        title: 'Test Change Password',
-        public: true
-      }
-    },
-    {
       path: '/admin',
       component: AdminLayout,
       meta: { requiresAuth: true },
