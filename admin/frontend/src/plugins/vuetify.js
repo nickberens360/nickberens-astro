@@ -8,7 +8,7 @@ import {
   // Actions & Controls
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
   mdiDownload, mdiUpload, mdiCloudUpload, mdiPaperclip, mdiDelete,
-  mdiPencil, mdiNoteEdit, mdiUndo,
+  mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -90,6 +90,8 @@ const iconAliases = {
   edit: mdiPencil,
   'note-edit': mdiNoteEdit,
   undo: mdiUndo,
+  'chevron-left': mdiChevronLeft,
+  'chevron-right': mdiChevronRight,
   
   // Status
   alert: mdiAlert,
