@@ -456,6 +456,8 @@ async def stream_with_fallback(
     client_ip: Optional[str] = None,
     question: Optional[str] = None,
     request_id: Optional[str] = None,
+    start_time: Optional[float] = None,
+    additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
     Handle user input, perform retrieval (with caching),
@@ -464,36 +466,47 @@ async def stream_with_fallback(
     cache_key = CacheManager.get_cache_key(user_input)
     metadata = {"rate_limit_status": rate_limit_tracker.get_status()}
 
+    # Merge additional metadata from routes
+    if additional_metadata:
+        metadata.update(additional_metadata)
+
     # 1) Cached FINAL response?
     if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
         logger.debug(f"Cache hit: returning cached response for key: {cache_key}")
 
         async def cached_stream():
-            yield cached_response
-
-            # Log cached response with cache_hit=True
+            # Log cached response with cache_hit=True BEFORE yielding
             if client_ip and question:
                 try:
                     query_logger = get_query_logger()
+                    # Merge cache-specific metadata with passed metadata
+                    cache_metadata = {
+                        "cache_hit": True,
+                        "source_urls": [],
+                        "source_titles": [],
+                        "geo_info": None,
+                        "tokens_used": 0,
+                        "provider": "cached",
+                    }
+                    cache_metadata.update(metadata)
+
+                    # Calculate actual response time from start_time if provided
+                    actual_response_time = (time.time() - start_time) if start_time else 0.0
+
                     query_logger.log_query(
                         client_ip=client_ip,
                         question=question,
                         response=cached_response,
                         model_used="cached",
                         query_type="text",
-                        response_time=0.0,
-                        metadata={
-                            "cache_hit": True,
-                            "source_urls": [],
-                            "source_titles": [],
-                            "geo_info": None,
-                            "tokens_used": 0,
-                            "provider": "cached",
-                        },
+                        response_time=actual_response_time,
+                        metadata=cache_metadata,
                         request_id=request_id,
                     )
                 except Exception as e:
                     logger.warning(f"Failed to log cached response: {e}")
+
+            yield cached_response
 
         return cached_stream(), "cached", metadata
     else:
@@ -625,6 +638,9 @@ async def stream_with_fallback(
                         if client_ip and question:
                             try:
                                 complete_response = "".join(full_response_chunks)
+                                # Calculate actual response time from start_time if provided
+                                actual_response_time = (time.time() - start_time) if start_time else 0.0
+
                                 query_logger = get_query_logger()
                                 query_logger.update_streaming_response(
                                     cache_key=cache_key,
@@ -632,6 +648,9 @@ async def stream_with_fallback(
                                     question=question,
                                     actual_response=complete_response,
                                     request_id=request_id,
+                                    model_used=model_name,
+                                    response_time=actual_response_time,
+                                    metadata=metadata,
                                 )
                             except Exception as e:
                                 logger.warning(f"Failed to update streaming response log: {e}")

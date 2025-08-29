@@ -459,15 +459,15 @@ class QueryLogger:
 
 
 # Global instance
-_query_logger_instance: Optional[QueryLogger] = None
+_query_logger_instance: Optional[Any] = None
 
 
-def get_query_logger() -> QueryLogger:
+def get_query_logger() -> Any:
     """Get the global QueryLogger instance."""
     global _query_logger_instance
     if _query_logger_instance is None:
         # Import here to avoid circular imports
-        from .query_logger_dual import DualQueryLogger
+        from .sqlite_query_logger import SQLiteQueryLogger
 
-        _query_logger_instance = DualQueryLogger()
+        _query_logger_instance = SQLiteQueryLogger()
     return _query_logger_instance

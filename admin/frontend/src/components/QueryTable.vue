@@ -132,6 +132,7 @@
       :items="queries"
       :loading="loading"
       :items-per-page="itemsPerPage"
+      :items-per-page-options="itemsPerPageOptions"
       show-select
       :search="searchQuery"
       item-value="id"
@@ -305,16 +306,6 @@
         </v-card>
       </template>
 
-      <template #bottom>
-        <div class="d-flex align-center justify-space-between pa-4">
-          <div class="text-caption text-medium-emphasis">
-            Showing {{ queries.length }} queries
-            <span v-if="selectedQueries.length > 0">
-              ({{ selectedQueries.length }} selected)
-            </span>
-          </div>
-        </div>
-      </template>
     </v-data-table>
 
     <!-- Query Details Dialog -->
@@ -548,6 +539,13 @@ const selectedQueries = ref([]);
 const selectedQuery = ref(null);
 const showDetailsDialog = ref(false);
 const itemsPerPage = ref(25);
+const itemsPerPageOptions = ref([
+  { value: 10, title: '10' },
+  { value: 25, title: '25' },
+  { value: 50, title: '50' },
+  { value: 100, title: '100' },
+  { value: -1, title: 'All' }
+]);
 
 // Filters
 const filters = ref({
