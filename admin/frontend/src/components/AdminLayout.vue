@@ -277,31 +277,31 @@ const navigationItems = computed(() => [
   {
     name: 'dashboard',
     title: 'Dashboard',
-    to: '/admin',
+    to: '/',
     icon: '$dashboard'
   },
   {
     name: 'queries',
     title: 'Queries',
-    to: '/admin/queries',
+    to: '/queries',
     icon: '$search'
   },
   {
     name: 'performance',
     title: 'Performance',
-    to: '/admin/performance',
+    to: '/performance',
     icon: '$chart'
   },
   {
     name: 'sessions',
     title: 'Sessions',
-    to: '/admin/sessions',
+    to: '/sessions',
     icon: '$users'
   },
   {
     name: 'knowledge',
     title: 'Knowledge Base',
-    to: '/admin/knowledge/sources',
+    to: '/knowledge/sources',
     icon: '$knowledge',
     //do nest children
   }
