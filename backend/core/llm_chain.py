@@ -456,6 +456,8 @@ async def stream_with_fallback(
     client_ip: Optional[str] = None,
     question: Optional[str] = None,
     request_id: Optional[str] = None,
+    response_time: Optional[float] = None,
+    additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
     Handle user input, perform retrieval (with caching),
@@ -463,6 +465,10 @@ async def stream_with_fallback(
     """
     cache_key = CacheManager.get_cache_key(user_input)
     metadata = {"rate_limit_status": rate_limit_tracker.get_status()}
+
+    # Merge additional metadata from routes
+    if additional_metadata:
+        metadata.update(additional_metadata)
 
     # 1) Cached FINAL response?
     if cache_key and (cached_response := CacheManager.get_cached_response(cache_key)):
@@ -475,21 +481,25 @@ async def stream_with_fallback(
             if client_ip and question:
                 try:
                     query_logger = get_query_logger()
+                    # Merge cache-specific metadata with passed metadata
+                    cache_metadata = {
+                        "cache_hit": True,
+                        "source_urls": [],
+                        "source_titles": [],
+                        "geo_info": None,
+                        "tokens_used": 0,
+                        "provider": "cached",
+                    }
+                    cache_metadata.update(metadata)
+
                     query_logger.log_query(
                         client_ip=client_ip,
                         question=question,
                         response=cached_response,
                         model_used="cached",
                         query_type="text",
-                        response_time=0.0,
-                        metadata={
-                            "cache_hit": True,
-                            "source_urls": [],
-                            "source_titles": [],
-                            "geo_info": None,
-                            "tokens_used": 0,
-                            "provider": "cached",
-                        },
+                        response_time=response_time or 0.0,
+                        metadata=cache_metadata,
                         request_id=request_id,
                     )
                 except Exception as e:
@@ -632,6 +642,9 @@ async def stream_with_fallback(
                                     question=question,
                                     actual_response=complete_response,
                                     request_id=request_id,
+                                    model_used=model_name,
+                                    response_time=response_time,
+                                    metadata=metadata,
                                 )
                             except Exception as e:
                                 logger.warning(f"Failed to update streaming response log: {e}")

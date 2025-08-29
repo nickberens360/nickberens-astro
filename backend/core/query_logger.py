@@ -467,7 +467,7 @@ def get_query_logger() -> QueryLogger:
     global _query_logger_instance
     if _query_logger_instance is None:
         # Import here to avoid circular imports
-        from .query_logger_dual import DualQueryLogger
+        from .sqlite_query_logger import SQLiteQueryLogger
 
-        _query_logger_instance = DualQueryLogger()
+        _query_logger_instance = SQLiteQueryLogger()
     return _query_logger_instance

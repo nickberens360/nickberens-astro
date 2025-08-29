@@ -189,6 +189,15 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                     f"{intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
                 )
 
+        # Calculate response time for logging
+        response_time = time.time() - start_time
+
+        # Generate followup questions before streaming
+        followup_service = services.get("followup_service")
+        followup_questions = (
+            followup_service.generate_followups(sanitized_question, "", sanitized_history) if followup_service else []
+        )
+
         text_stream, actual_model_used, metadata = await stream_with_fallback(
             services["retrievers"],
             formatted_chat_history,
@@ -197,6 +206,12 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             client_ip=client_ip,
             question=sanitized_question,
             request_id=request_id,
+            response_time=response_time,
+            additional_metadata={
+                "preferred_model": query.preferred_model,
+                "chat_history_length": len(sanitized_history),
+                "followup_questions": followup_questions,
+            },
         )
 
         # If we get here, the LLM fallback succeeded, so return 200
@@ -205,26 +220,8 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
         logger.error(f"Both retrievers and LLM fallback failed: {e}")
         raise HTTPException(status_code=503, detail="AI service temporarily unavailable")
 
-    followup_service = services.get("followup_service")
-    followup_questions = (
-        followup_service.generate_followups(sanitized_question, "", sanitized_history) if followup_service else []
-    )
-
-    # Log the streaming text query (response will be marked as [STREAMING])
-    response_time = time.time() - start_time
-    query_logger.log_streaming_query(
-        client_ip=client_ip,
-        question=sanitized_question,
-        model_used=actual_model_used,
-        response_time=response_time,
-        metadata={
-            "preferred_model": query.preferred_model,
-            "chat_history_length": len(sanitized_history),
-            "followup_questions": followup_questions,
-            **metadata,
-        },
-        request_id=request_id,
-    )
+    # Note: Full response logging now happens in llm_chain.py after streaming completes
+    # This eliminates duplicate logging and ensures we capture complete responses
 
     # Include rate limit status in headers
     headers = {
