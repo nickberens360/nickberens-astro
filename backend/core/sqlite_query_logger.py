@@ -165,9 +165,15 @@ class SQLiteQueryLogger:
 
     @contextmanager
     def _get_sqlite_connection(self):
-        """Get a SQLite database connection with automatic cleanup."""
-        conn = sqlite3.connect(self.sqlite_db_path)
+        """Get a SQLite database connection with automatic cleanup and optimized settings."""
+        conn = sqlite3.connect(self.sqlite_db_path, timeout=15.0)
         conn.row_factory = sqlite3.Row
+
+        # Configure SQLite pragmas for better performance and reliability
+        conn.execute("PRAGMA foreign_keys = ON")  # Enforce foreign key constraints
+        conn.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging for better concurrency
+        conn.execute("PRAGMA synchronous = NORMAL")  # Balance between safety and performance
+
         try:
             yield conn
         finally:
@@ -537,8 +543,29 @@ class SQLiteQueryLogger:
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
 
-                # Convert to list of dicts for compatibility
-                return [dict(row) for row in rows]
+                # Convert to list of dicts with proper data type conversion
+                result = []
+                for row in rows:
+                    item = dict(row)
+
+                    # Decode JSON fields if present
+                    for key in ("sources_used", "follow_up_questions"):
+                        val = item.get(key)
+                        if isinstance(val, str) and val:
+                            try:
+                                item[key] = json.loads(val)
+                            except json.JSONDecodeError:
+                                # Keep as string if JSON parsing fails
+                                pass
+
+                    # Normalize booleans from SQLite (0/1 -> False/True)
+                    for key in ("cache_hit", "error_occurred"):
+                        if key in item and item[key] is not None:
+                            item[key] = bool(item[key])
+
+                    result.append(item)
+
+                return result
 
         except Exception as e:
             self.logger.error("Failed to retrieve logs: %s", e)
