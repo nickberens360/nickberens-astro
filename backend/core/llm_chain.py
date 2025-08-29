@@ -475,9 +475,7 @@ async def stream_with_fallback(
         logger.debug(f"Cache hit: returning cached response for key: {cache_key}")
 
         async def cached_stream():
-            yield cached_response
-
-            # Log cached response with cache_hit=True
+            # Log cached response with cache_hit=True BEFORE yielding
             if client_ip and question:
                 try:
                     query_logger = get_query_logger()
@@ -507,6 +505,8 @@ async def stream_with_fallback(
                     )
                 except Exception as e:
                     logger.warning(f"Failed to log cached response: {e}")
+
+            yield cached_response
 
         return cached_stream(), "cached", metadata
     else:
