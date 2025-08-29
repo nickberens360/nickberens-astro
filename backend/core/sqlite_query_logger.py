@@ -83,6 +83,7 @@ class SQLiteQueryLogger:
                     session_id TEXT,
                     user_query TEXT NOT NULL,
                     system_response TEXT,
+                    query_type TEXT DEFAULT 'text',
                     response_time_ms REAL,
                     llm_provider TEXT,
                     llm_model TEXT,
@@ -136,25 +137,29 @@ class SQLiteQueryLogger:
     def _migrate_schema(self, cursor):
         """Migrate database schema to add missing columns."""
         try:
-            # Check if location columns exist
+            # Check if columns exist
             cursor.execute("PRAGMA table_info(query_logs)")
             columns = [row[1] for row in cursor.fetchall()]
 
-            location_columns = [
-                "client_ip",
-                "location_city",
-                "location_region",
-                "location_country",
-                "location_country_code",
-            ]
+            # Define all columns that might need to be added
+            required_columns = {
+                "client_ip": "TEXT",
+                "location_city": "TEXT",
+                "location_region": "TEXT",
+                "location_country": "TEXT",
+                "location_country_code": "TEXT",
+                "query_type": "TEXT DEFAULT 'text'",
+            }
 
-            for column in location_columns:
-                if column not in columns:
-                    cursor.execute(f"ALTER TABLE query_logs ADD COLUMN {column} TEXT")
-                    self.logger.info(f"Added missing column: {column}")
+            for column_name, column_type in required_columns.items():
+                if column_name not in columns:
+                    # Use parameterized query construction for safety
+                    alter_query = f"ALTER TABLE query_logs ADD COLUMN {column_name} {column_type}"
+                    cursor.execute(alter_query)
+                    self.logger.info("Added missing column: %s", column_name)
 
         except Exception as e:
-            self.logger.error(f"Failed to migrate schema: {e}")
+            self.logger.error("Failed to migrate schema: %s", e)
 
     @contextmanager
     def _get_sqlite_connection(self):
@@ -243,7 +248,7 @@ class SQLiteQueryLogger:
                         location_data = {
                             "location_city": location_info.get("city"),
                             "location_region": location_info.get("region"),
-                            "location_country": location_info.get("country"),
+                            "location_country": location_info.get("country_name"),
                             "location_country_code": location_info.get("country_code"),
                         }
                 except Exception as e:
@@ -268,16 +273,17 @@ class SQLiteQueryLogger:
                 cursor.execute(
                     """
                     INSERT INTO query_logs (
-                        session_id, user_query, system_response, response_time_ms,
+                        session_id, user_query, system_response, query_type, response_time_ms,
                         llm_provider, llm_model, vector_search_score, sources_used,
                         follow_up_questions, cache_hit, error_occurred, error_message,
                         client_ip, location_city, location_region, location_country, location_country_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
                         session_id,
                         question,
                         response,
+                        query_type,
                         response_time_ms,
                         self._infer_llm_provider(model_used),
                         model_used,
@@ -505,21 +511,26 @@ class SQLiteQueryLogger:
                 if end_date:
                     conditions.append("timestamp <= ?")
                     params.append(end_date)
+                if query_type:
+                    conditions.append("query_type = ?")
+                    params.append(query_type)
                 if excluded_set:
                     placeholders = ",".join("?" * len(excluded_set))
                     conditions.append(f"client_ip NOT IN ({placeholders})")
                     params.extend(excluded_set)
 
-                where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
-                limit_clause = f" LIMIT {limit}" if limit else ""
+                # Build query safely
+                base_query = "SELECT * FROM query_logs"
+                where_clause = ""
+                if conditions:
+                    where_clause = " WHERE " + " AND ".join(conditions)
 
-                query = f"""
-                    SELECT * FROM query_logs
-                    {where_clause}
-                    ORDER BY timestamp DESC
-                    {limit_clause}
-                """
+                order_clause = " ORDER BY timestamp DESC"
+                limit_clause = ""
+                if limit and isinstance(limit, int) and limit > 0:
+                    limit_clause = f" LIMIT {limit}"
 
+                query = base_query + where_clause + order_clause + limit_clause
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
 
@@ -541,7 +552,7 @@ class SQLiteQueryLogger:
             with self._get_sqlite_connection() as conn:
                 cursor = conn.cursor()
 
-                # Build exclusion condition
+                # Build exclusion condition safely
                 exclude_condition = ""
                 params = []
                 if excluded_set:
@@ -550,28 +561,41 @@ class SQLiteQueryLogger:
                     params = list(excluded_set)
 
                 # Get basic stats
-                cursor.execute(f"SELECT COUNT(*) FROM query_logs{exclude_condition}", params)
+                total_count_query = "SELECT COUNT(*) FROM query_logs" + exclude_condition
+                cursor.execute(total_count_query, params)
                 total_queries = cursor.fetchone()[0]
 
                 if total_queries == 0:
                     return {"total_queries": 0}
 
-                cursor.execute(f"SELECT COUNT(DISTINCT client_ip) FROM query_logs{exclude_condition}", params)
+                unique_ip_query = "SELECT COUNT(DISTINCT client_ip) FROM query_logs" + exclude_condition
+                cursor.execute(unique_ip_query, params)
                 unique_ips = cursor.fetchone()[0]
 
-                cursor.execute(f"SELECT MIN(timestamp), MAX(timestamp) FROM query_logs{exclude_condition}", params)
+                date_range_query = "SELECT MIN(timestamp), MAX(timestamp) FROM query_logs" + exclude_condition
+                cursor.execute(date_range_query, params)
                 date_range = cursor.fetchone()
 
                 # Get model usage stats
-                cursor.execute(
-                    f"SELECT llm_model, COUNT(*) FROM query_logs{exclude_condition} GROUP BY llm_model", params
+                model_stats_query = (
+                    "SELECT llm_model, COUNT(*) FROM query_logs" + exclude_condition + " GROUP BY llm_model"
                 )
+                cursor.execute(model_stats_query, params)
                 models_used = dict(cursor.fetchall())
+
+                # Get query type stats
+                query_type_query = (
+                    "SELECT COALESCE(query_type, 'text') AS qt, COUNT(*) FROM query_logs"
+                    + exclude_condition
+                    + " GROUP BY qt"
+                )
+                cursor.execute(query_type_query, params)
+                query_types = dict(cursor.fetchall())
 
                 return {
                     "total_queries": total_queries,
                     "unique_ips": unique_ips,
-                    "query_types": {"text": total_queries},  # Simplified for now
+                    "query_types": query_types,
                     "models_used": models_used,
                     "date_range": {
                         "earliest": date_range[0] or "",
