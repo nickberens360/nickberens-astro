@@ -62,7 +62,6 @@ class AdminAuthManager:
         if len(password) < 12:
             raise ValueError("Password must be at least 12 characters long")
 
-        # Check for comprehensive password complexity
         has_upper = has_lower = has_digit = has_special = False
         special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
 
