@@ -189,9 +189,6 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
                     f"{intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
                 )
 
-        # Calculate response time for logging
-        response_time = time.time() - start_time
-
         # Generate followup questions before streaming
         followup_service = services.get("followup_service")
         followup_questions = (
@@ -206,7 +203,7 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             client_ip=client_ip,
             question=sanitized_question,
             request_id=request_id,
-            response_time=response_time,
+            start_time=start_time,
             additional_metadata={
                 "preferred_model": query.preferred_model,
                 "chat_history_length": len(sanitized_history),

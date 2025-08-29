@@ -459,10 +459,10 @@ class QueryLogger:
 
 
 # Global instance
-_query_logger_instance: Optional[QueryLogger] = None
+_query_logger_instance: Optional[Any] = None
 
 
-def get_query_logger() -> QueryLogger:
+def get_query_logger() -> Any:
     """Get the global QueryLogger instance."""
     global _query_logger_instance
     if _query_logger_instance is None:

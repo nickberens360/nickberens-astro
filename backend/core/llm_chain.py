@@ -456,7 +456,7 @@ async def stream_with_fallback(
     client_ip: Optional[str] = None,
     question: Optional[str] = None,
     request_id: Optional[str] = None,
-    response_time: Optional[float] = None,
+    start_time: Optional[float] = None,
     additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> Tuple[AsyncIterator[str], str, Dict[str, Any]]:
     """
@@ -492,13 +492,16 @@ async def stream_with_fallback(
                     }
                     cache_metadata.update(metadata)
 
+                    # Calculate actual response time from start_time if provided
+                    actual_response_time = (time.time() - start_time) if start_time else 0.0
+
                     query_logger.log_query(
                         client_ip=client_ip,
                         question=question,
                         response=cached_response,
                         model_used="cached",
                         query_type="text",
-                        response_time=response_time or 0.0,
+                        response_time=actual_response_time,
                         metadata=cache_metadata,
                         request_id=request_id,
                     )
@@ -635,6 +638,9 @@ async def stream_with_fallback(
                         if client_ip and question:
                             try:
                                 complete_response = "".join(full_response_chunks)
+                                # Calculate actual response time from start_time if provided
+                                actual_response_time = (time.time() - start_time) if start_time else 0.0
+
                                 query_logger = get_query_logger()
                                 query_logger.update_streaming_response(
                                     cache_key=cache_key,
@@ -643,7 +649,7 @@ async def stream_with_fallback(
                                     actual_response=complete_response,
                                     request_id=request_id,
                                     model_used=model_name,
-                                    response_time=response_time,
+                                    response_time=actual_response_time,
                                     metadata=metadata,
                                 )
                             except Exception as e:
