@@ -15,7 +15,7 @@ const router = createRouter({
       }
     },
     {
-      path: '/admin',
+      path: '/',
       component: AdminLayout,
       meta: { requiresAuth: true },
       children: [
@@ -126,12 +126,8 @@ const router = createRouter({
       ]
     },
     {
-      path: '/',
-      redirect: '/admin'
-    },
-    {
       path: '/:pathMatch(.*)*',
-      redirect: '/admin'
+      redirect: '/'
     }
   ]
 })
@@ -144,7 +140,7 @@ router.beforeEach(async (to, from, next) => {
   const adminStore = useAdminStore()
 
   // Check if route requires authentication
-  if (to.meta.requiresAuth || to.path.startsWith('/admin')) {
+  if (to.meta.requiresAuth) {
     // Use the store's authentication check, which calls the API
     if (!adminStore.isAuthenticated) {
       await adminStore.checkAuth()
@@ -170,7 +166,7 @@ router.beforeEach(async (to, from, next) => {
       !raw.startsWith('//') &&
       !/[^a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=]/.test(raw) 
         ? raw 
-        : '/admin'
+        : '/'
     next({ path: redirect })
     return
   }
