@@ -81,6 +81,7 @@ class SQLiteQueryLogger:
                 CREATE TABLE IF NOT EXISTS query_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     session_id TEXT,
+                    request_id TEXT,
                     user_query TEXT NOT NULL,
                     system_response TEXT,
                     query_type TEXT DEFAULT 'text',
@@ -149,6 +150,7 @@ class SQLiteQueryLogger:
                 "location_country": "TEXT",
                 "location_country_code": "TEXT",
                 "query_type": "TEXT DEFAULT 'text'",
+                "request_id": "TEXT",
             }
 
             for column_name, column_type in required_columns.items():
@@ -273,14 +275,15 @@ class SQLiteQueryLogger:
                 cursor.execute(
                     """
                     INSERT INTO query_logs (
-                        session_id, user_query, system_response, query_type, response_time_ms,
+                        session_id, request_id, user_query, system_response, query_type, response_time_ms,
                         llm_provider, llm_model, vector_search_score, sources_used,
                         follow_up_questions, cache_hit, error_occurred, error_message,
                         client_ip, location_city, location_region, location_country, location_country_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
                         session_id,
+                        request_id,
                         question,
                         response,
                         query_type,
