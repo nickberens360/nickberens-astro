@@ -233,10 +233,10 @@ class SQLiteQueryLogger:
             if processed_ip is None:
                 return  # IP was excluded
 
-            # Get location data
+            # Get location data using original IP before anonymization
             geolocation_service = get_geolocation_service()
             location_data = {}
-            if geolocation_service and not self.anonymize_ips:
+            if geolocation_service:
                 try:
                     location_info = geolocation_service.get_location(client_ip)
                     if location_info:
