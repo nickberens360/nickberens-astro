@@ -90,7 +90,6 @@ class AppConfig:
     MAX_CACHE_SIZE: int
     EXCLUDED_IPS: List[str]
     IP_HASH_SALT: str
-    QUERY_LOG_FILE: str
 
     # Smart Model Selection Configuration
     @classmethod
@@ -345,25 +344,6 @@ class AppConfig:
 
         return salt
 
-    # Query Log storage
-    @classmethod
-    def get_query_log_file(cls) -> str:
-        """Return the log file path, overridable via QUERY_LOG_FILE.
-
-        Use this to point logs at a persistent volume path in production
-        (e.g., "/data/query_logs/query_logs.json" on Railway with a mounted volume).
-        """
-        env_path = os.getenv("QUERY_LOG_FILE")
-        if env_path and env_path.strip():
-            return env_path.strip()
-
-        # Default to logs directory (directory creation handled during app initialization)
-        backend_dir = Path(__file__).parent.parent.resolve()  # Make it absolute
-        logs_dir = backend_dir / "logs"
-        log_file_path = str(logs_dir / "query_logs.json")
-        logger.info(f"Query log file path: {log_file_path}")
-        return log_file_path
-
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
     APP_DESCRIPTION = "API for AI-powered responses and illustration search with Claude as primary LLM"
@@ -378,4 +358,3 @@ AppConfig.MAX_CACHE_SIZE = AppConfig.get_max_cache_size()
 AppConfig.EXCLUDED_IPS = AppConfig.get_excluded_ips()
 # AppConfig.QUERY_LOG_AUTH_TOKEN assignment removed - using session-based auth only
 AppConfig.IP_HASH_SALT = AppConfig.get_ip_hash_salt()
-AppConfig.QUERY_LOG_FILE = AppConfig.get_query_log_file()

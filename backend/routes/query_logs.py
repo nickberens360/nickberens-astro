@@ -149,23 +149,25 @@ async def clear_query_logs(request: Request, session: dict = Depends(require_adm
 
 
 @router.get("/query-logs/download")
-async def download_query_logs(session: dict = Depends(require_admin_auth)) -> FileResponse:
+async def download_query_logs(session: dict = Depends(require_admin_auth)) -> Dict[str, Any]:
     """
-    Download the raw JSONL query log file as an attachment.
+    Export query logs from SQLite database as JSON.
 
     Requires admin session authentication.
+
+    Returns all logs from SQLite database in JSON format.
+    For large datasets, consider adding pagination or streaming.
     """
     logger = get_query_logger()
-    log_path = logger.log_file_path
-    if not log_path.exists() or not log_path.is_file():
-        raise HTTPException(status_code=404, detail="Log file not found")
 
-    # Serve as attachment for easy saving; JSON Lines format (ndjson)
-    return FileResponse(
-        path=str(log_path),
-        media_type="application/x-ndjson",
-        filename="query_logs.jsonl",
-    )
+    # Get all logs from SQLite database
+    logs = logger.get_logs(limit=None)  # Get all logs
+
+    if not logs:
+        raise HTTPException(status_code=404, detail="No logs found in database")
+
+    # Return as JSON response
+    return {"logs": logs, "count": len(logs), "exported_at": datetime.now(timezone.utc).isoformat(), "format": "json"}
 
 
 @router.get("/query-logs/health")
@@ -182,12 +184,20 @@ async def query_logs_health() -> Dict[str, Any]:
         # Test basic functionality
         stats = logger.get_log_stats()
 
+        # Check if SQLite database exists
+        from pathlib import Path
+
+        db_path = Path(logger.sqlite_db_path) if hasattr(logger, "sqlite_db_path") else None
+        db_exists = db_path.exists() if db_path else False
+
         return {
             "status": "healthy",
-            "log_file_exists": logger.log_file_path.exists(),
+            "database_exists": db_exists,
+            "database_path": str(db_path) if db_path else "unknown",
             "total_logs": stats.get("total_queries", 0),
             "excluded_ips_count": len(logger.excluded_ips),
             "auth_method": "session-based",
+            "storage_type": "sqlite",
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
