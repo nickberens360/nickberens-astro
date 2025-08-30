@@ -151,6 +151,7 @@ class SQLiteQueryLogger:
                 "location_country_code": "TEXT",
                 "query_type": "TEXT DEFAULT 'text'",
                 "request_id": "TEXT",
+                "timestamp": "DATETIME DEFAULT CURRENT_TIMESTAMP",
             }
 
             for column_name, column_type in required_columns.items():
@@ -276,7 +277,7 @@ class SQLiteQueryLogger:
             response_time_ms = response_time * 1000 if response_time else None
 
             # Get current UTC timestamp
-            current_utc_timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            current_utc_timestamp = datetime.now(timezone.utc).isoformat()
 
             # Insert into database
             with self._get_sqlite_connection() as conn:

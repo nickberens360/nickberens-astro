@@ -59,9 +59,11 @@ export const formatBytes = (bytes) => {
 export const formatDate = (date) => {
   // Parse the date - if it's a string without timezone info, assume it's UTC
   let dateObj
-  if (typeof date === 'string' && !date.includes('T') && !date.includes('Z') && !date.includes('+')) {
-    // Database timestamp format: "2025-08-30 12:26:29" - assume UTC
-    dateObj = new Date(date + 'Z') // Add Z to indicate UTC
+  if (typeof date === 'string') {
+    const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(date)
+    const hasT = date.includes('T')
+    const normalized = hasT ? date : date.replace(' ', 'T')
+    dateObj = new Date(hasTZ ? normalized : normalized + 'Z')
   } else {
     dateObj = new Date(date)
   }
