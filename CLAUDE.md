@@ -462,11 +462,11 @@ The system uses multiple SQLite databases for different purposes:
 - **Security**: Handles admin authentication, roles, and session management
 
 #### Query Log Storage
-The system uses SQLite database for all query logging:
+The system uses an SQLite database for all query logging:
 - **Database**: `/backend/logs/rag_monitoring.db`
-- **Table**: `query_logs` - Stores all user queries and responses
-- **Features**: IP filtering, anonymization, geolocation tracking
-- **Service**: `SQLiteQueryLogger` - Handles all logging operations
+- **Table**: `query_logs` — stores all user queries and responses
+- **Features**: IP filtering, anonymization, and geolocation tracking
+- **Service**: `SQLiteQueryLogger` — handles all logging operations
 - **Analytics**: Structured query analysis and performance metrics
 
 ### Database Separation Strategy
@@ -590,4 +590,3 @@ repos:
 10. **Analytics**: Query logging and analysis for continuous improvement
 
 The system now operates like a smart assistant that understands both your content and your users' intent, with enterprise-grade reliability and performance!
-- memorize
