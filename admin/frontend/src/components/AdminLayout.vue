@@ -84,38 +84,35 @@
         </v-list>
       </div>
 
-      <!-- Reports & Others Section -->
+      <!-- Settings Section -->
       <div class="px-4 mt-6">
         <div class="menu-label text-caption font-weight-medium text-medium-emphasis mb-3">
-          REPORTS & OTHERS
+          CONFIGURATION
         </div>
         <v-list nav density="compact" class="py-0">
           <v-list-item
-            to="/admin/reports"
-            rounded="lg"
-            class="mb-1 nav-item"
-            prepend-icon="$chart"
-            color="primary"
-          >
-            <v-list-item-title class="font-weight-medium">Report</v-list-item-title>
-          </v-list-item>
-          <v-list-item
-            @click="exportData"
-            rounded="lg"
-            class="mb-1 nav-item"
-            prepend-icon="$help"
-            color="primary"
-          >
-            <v-list-item-title class="font-weight-medium">Help</v-list-item-title>
-          </v-list-item>
-          <v-list-item
-            to="/admin/settings"
             rounded="lg"
             class="mb-1 nav-item"
             prepend-icon="$settings"
             color="primary"
+            disabled
           >
-            <v-list-item-title class="font-weight-medium">Setting</v-list-item-title>
+            <v-list-item-title class="font-weight-medium d-flex align-center justify-space-between">
+              <span>Settings</span>
+              <v-chip
+                size="x-small"
+                variant="tonal"
+                color="info"
+              >
+                Coming Soon
+              </v-chip>
+            </v-list-item-title>
+            <v-tooltip
+              activator="parent"
+              location="right"
+            >
+              Settings page coming soon
+            </v-tooltip>
           </v-list-item>
         </v-list>
       </div>

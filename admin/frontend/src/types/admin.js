@@ -57,12 +57,23 @@ export const formatBytes = (bytes) => {
 }
 
 export const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
+  // Parse the date - if it's a string without timezone info, assume it's UTC
+  let dateObj
+  if (typeof date === 'string' && !date.includes('T') && !date.includes('Z') && !date.includes('+')) {
+    // Database timestamp format: "2025-08-30 12:26:29" - assume UTC
+    dateObj = new Date(date + 'Z') // Add Z to indicate UTC
+  } else {
+    dateObj = new Date(date)
+  }
+  
+  // Use toLocaleString for proper date and time formatting in local timezone
+  return dateObj.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: true
   })
 }
 

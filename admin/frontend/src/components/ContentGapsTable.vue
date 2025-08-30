@@ -176,36 +176,61 @@
     </v-card>
 
     <!-- Notes Dialog -->
-    <v-dialog v-model="notesDialog.show" max-width="600px">
-      <v-card>
-        <v-card-title class="d-flex align-center gap-2">
-          <v-icon>$note-edit</v-icon>
-          Edit Notes
+    <v-dialog v-model="notesDialog.show" max-width="700px">
+      <v-card class="dialog-card" elevation="8">
+        <v-card-title class="dialog-header pa-6">
+          <div class="d-flex align-center">
+            <v-icon class="me-3" color="primary">$note-edit</v-icon>
+            <div>
+              <h2 class="text-h6 font-weight-bold">Edit Notes</h2>
+              <p class="text-body-2 text-medium-emphasis ma-0">Add notes for this content gap</p>
+            </div>
+          </div>
         </v-card-title>
 
-        <v-card-text>
-          <div class="mb-4">
-            <strong>Pattern:</strong> {{ notesDialog.gap?.pattern }}
+        <v-divider class="border-opacity-25"/>
+
+        <v-card-text class="pa-6">
+          <div class="mb-6">
+            <h3 class="text-h7 font-weight-bold mb-3 text-primary">Content Gap Pattern</h3>
+            <v-card variant="tonal" color="warning" class="pa-4 rounded-lg">
+              <div class="text-body-2 font-mono">{{ notesDialog.gap?.pattern }}</div>
+            </v-card>
           </div>
 
-          <v-textarea
-            v-model="notesDialog.notes"
-            label="Notes"
-            placeholder="Add notes about this content gap..."
-            rows="4"
-            variant="outlined"
-            counter
-            :rules="[v => !v || v.length <= 500 || 'Notes must be less than 500 characters']"
-          />
+          <div>
+            <h3 class="text-h7 font-weight-bold mb-3 text-primary">Notes</h3>
+            <v-textarea
+              v-model="notesDialog.notes"
+              placeholder="Add notes about this content gap, potential solutions, or action items..."
+              rows="5"
+              variant="outlined"
+              counter
+              :rules="[v => !v || v.length <= 500 || 'Notes must be less than 500 characters']"
+              class="rounded-lg"
+              auto-grow
+            />
+          </div>
         </v-card-text>
 
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="closeNotesDialog" color="grey">Cancel</v-btn>
+        <v-divider class="border-opacity-25"/>
+
+        <v-card-actions class="pa-6">
+          <v-spacer/>
+          <v-btn 
+            @click="closeNotesDialog" 
+            variant="outlined"
+            prepend-icon="$close"
+            class="rounded-lg"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             @click="saveNotes"
             color="primary"
+            prepend-icon="$save"
             :loading="notesDialog.saving"
+            class="rounded-lg"
           >
             Save Notes
           </v-btn>
@@ -414,5 +439,20 @@ onMounted(() => {
 
 .v-table tbody tr:hover {
   background-color: rgba(var(--v-theme-primary), 0.04);
+}
+
+/* Dialog Styles */
+.dialog-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.04), rgba(var(--v-theme-primary), 0.02));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+:deep(.v-textarea .v-field) {
+  border-radius: 12px;
 }
 </style>

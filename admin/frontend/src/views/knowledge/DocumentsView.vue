@@ -77,151 +77,158 @@
     <!-- Document Details Dialog -->
     <v-dialog
       v-model="showDocumentDialog"
-      max-width="800px"
+      max-width="900px"
       scrollable
     >
-      <v-card v-if="selectedDocument">
-        <v-card-title class="text-h5 d-flex align-center">
-          <v-icon class="me-2">$document</v-icon>
-          Document Details
-          <v-spacer></v-spacer>
+      <v-card v-if="selectedDocument" class="dialog-card" elevation="8">
+        <v-card-title class="dialog-header pa-6">
+          <div class="d-flex align-center">
+            <v-icon class="me-3" color="primary">$document</v-icon>
+            <div>
+              <h2 class="text-h6 font-weight-bold">Document Details</h2>
+              <p class="text-body-2 text-medium-emphasis ma-0">View indexed document information</p>
+            </div>
+          </div>
+          <v-spacer/>
           <v-btn
             icon="$close"
             variant="text"
+            size="small"
             @click="closeDocumentDialog"
-          ></v-btn>
+          />
         </v-card-title>
 
-        <v-divider></v-divider>
+        <v-divider class="border-opacity-25"/>
 
-        <v-card-text class="pa-0">
-          <v-container>
+        <v-card-text class="pa-6" style="max-height: 70vh;">
             <!-- Basic Information -->
-            <div class="mb-4">
-              <h3 class="text-h6 mb-3">Basic Information</h3>
-              <v-row>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    label="Document ID"
-                    :model-value="selectedDocument.id"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    label="Word Count"
-                    :model-value="selectedDocument.word_count + ' words'"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                  ></v-text-field>
-                </v-col>
-              </v-row>
-              <v-text-field
-                label="Source"
-                :model-value="selectedDocument.source"
-                readonly
-                density="compact"
-                variant="outlined"
-                class="mb-3"
-              ></v-text-field>
+            <div class="mb-6">
+              <h3 class="text-h7 font-weight-bold mb-4 text-primary">Basic Information</h3>
+              <v-card variant="outlined" class="pa-4 rounded-lg">
+                <v-row no-gutters>
+                  <v-col cols="12" sm="6" class="pa-2">
+                    <div class="metric-item">
+                      <v-label class="text-caption text-medium-emphasis mb-1">Document ID</v-label>
+                      <div class="text-body-2 font-mono">{{ selectedDocument.id }}</div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" sm="6" class="pa-2">
+                    <div class="metric-item">
+                      <v-label class="text-caption text-medium-emphasis mb-1">Word Count</v-label>
+                      <div class="text-body-2 font-weight-medium">{{ selectedDocument.word_count }} words</div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" class="pa-2">
+                    <div class="metric-item">
+                      <v-label class="text-caption text-medium-emphasis mb-1">Source</v-label>
+                      <div class="text-body-2 font-weight-medium">{{ selectedDocument.source }}</div>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card>
             </div>
 
             <!-- Content Types -->
-            <div class="mb-4" v-if="selectedDocument.metadata && selectedDocument.metadata.content_types">
-              <h3 class="text-h6 mb-3">Content Types</h3>
-              <div class="d-flex flex-wrap gap-2">
-                <v-chip
-                  v-for="type in getContentTypes(selectedDocument.metadata)"
-                  :key="type"
-                  :color="getContentTypeColor(type)"
-                  size="small"
-                >
-                  {{ type }}
-                </v-chip>
-              </div>
+            <div class="mb-6" v-if="selectedDocument.metadata && selectedDocument.metadata.content_types">
+              <h3 class="text-h7 font-weight-bold mb-4 text-primary">Content Types</h3>
+              <v-card variant="outlined" class="pa-4 rounded-lg">
+                <div class="d-flex flex-wrap gap-2">
+                  <v-chip
+                    v-for="type in getContentTypes(selectedDocument.metadata)"
+                    :key="type"
+                    :color="getContentTypeColor(type)"
+                    size="small"
+                    variant="tonal"
+                  >
+                    {{ type }}
+                  </v-chip>
+                </div>
+              </v-card>
             </div>
 
             <!-- Metadata -->
-            <div class="mb-4" v-if="selectedDocument.metadata">
-              <h3 class="text-h6 mb-3">Metadata</h3>
-              <v-row>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.file_name">
-                  <v-text-field
-                    label="File Name"
-                    :model-value="selectedDocument.metadata.file_name"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.file_type">
-                  <v-text-field
-                    label="File Type"
-                    :model-value="selectedDocument.metadata.file_type"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.content_length">
-                  <v-text-field
-                    label="Content Length"
-                    :model-value="selectedDocument.metadata.content_length + ' characters'"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.hasOwnProperty('has_code')">
-                  <v-text-field
-                    label="Contains Code"
-                    :model-value="selectedDocument.metadata.has_code ? 'Yes' : 'No'"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                  ></v-text-field>
-                </v-col>
-              </v-row>
+            <div class="mb-6" v-if="selectedDocument.metadata">
+              <h3 class="text-h7 font-weight-bold mb-4 text-primary">Metadata</h3>
+              <v-card variant="outlined" class="pa-4 rounded-lg">
+                <v-row no-gutters>
+                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.file_name">
+                    <div class="metric-item">
+                      <v-label class="text-caption text-medium-emphasis mb-1">File Name</v-label>
+                      <div class="text-body-2">{{ selectedDocument.metadata.file_name }}</div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.file_type">
+                    <div class="metric-item">
+                      <v-label class="text-caption text-medium-emphasis mb-1">File Type</v-label>
+                      <div class="text-body-2">{{ selectedDocument.metadata.file_type }}</div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.content_length">
+                    <div class="metric-item">
+                      <v-label class="text-caption text-medium-emphasis mb-1">Content Length</v-label>
+                      <div class="text-body-2">{{ selectedDocument.metadata.content_length }} characters</div>
+                    </div>
+                  </v-col>
+                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.hasOwnProperty('has_code')">
+                    <div class="metric-item">
+                      <v-label class="text-caption text-medium-emphasis mb-1">Contains Code</v-label>
+                      <div class="text-body-2">
+                        <v-chip
+                          :color="selectedDocument.metadata.has_code ? 'success' : 'default'"
+                          size="x-small"
+                          variant="flat"
+                        >
+                          {{ selectedDocument.metadata.has_code ? 'Yes' : 'No' }}
+                        </v-chip>
+                      </div>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card>
             </div>
 
             <!-- Full Content -->
-            <div class="mb-4">
-              <h3 class="text-h6 mb-3 d-flex align-center">
+            <div class="mb-6">
+              <h3 class="text-h7 font-weight-bold mb-4 text-primary d-flex align-center">
+                <v-icon class="me-2" color="primary">$text</v-icon>
                 Full Content
                 <v-progress-circular
                   v-if="loadingFullContent"
                   indeterminate
                   size="20"
                   width="2"
-                  class="ml-2"
-                ></v-progress-circular>
+                  class="ml-3"
+                  color="primary"
+                />
               </h3>
-              <v-textarea
-                :model-value="loadingFullContent ? 'Loading full content...' : fullDocumentContent"
-                readonly
-                variant="outlined"
-                rows="15"
-                auto-grow
-                no-resize
-                :loading="loadingFullContent"
-                :class="{'monospace-content': selectedDocument?.metadata?.has_code}"
-              ></v-textarea>
+              <v-card variant="outlined" class="rounded-lg overflow-hidden">
+                <v-textarea
+                  :model-value="loadingFullContent ? 'Loading full content...' : fullDocumentContent"
+                  readonly
+                  variant="plain"
+                  rows="15"
+                  auto-grow
+                  no-resize
+                  :loading="loadingFullContent"
+                  :class="{'monospace-content': selectedDocument?.metadata?.has_code}"
+                  class="pa-4"
+                />
+              </v-card>
             </div>
-          </v-container>
         </v-card-text>
 
-        <v-divider></v-divider>
+        <v-divider class="border-opacity-25"/>
 
-        <v-card-actions>
-          <v-spacer></v-spacer>
+        <v-card-actions class="pa-6">
+          <v-spacer/>
           <v-btn
-            text="Close"
-            variant="text"
+            prepend-icon="$close"
+            variant="outlined"
             @click="closeDocumentDialog"
-          ></v-btn>
+            class="rounded-lg"
+          >
+            Close
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -375,5 +382,27 @@ export default {
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.4;
+}
+
+/* Dialog Styles */
+.dialog-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.04), rgba(var(--v-theme-primary), 0.02));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.metric-item {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+:deep(.v-textarea .v-field) {
+  border-radius: 12px;
 }
 </style>

@@ -311,20 +311,28 @@
     <!-- Query Details Dialog -->
     <v-dialog
       v-model="showDetailsDialog"
-      max-width="800px"
+      max-width="900px"
       scrollable
     >
-      <v-card v-if="selectedQuery">
-        <v-card-title class="d-flex align-center justify-space-between">
-          Query Details
+      <v-card v-if="selectedQuery" class="dialog-card" elevation="8">
+        <v-card-title class="dialog-header pa-6 d-flex align-center">
+          <div class="d-flex align-center">
+            <v-icon class="me-3" color="primary">$search</v-icon>
+            <div>
+              <h2 class="text-h6 font-weight-bold">Query Details</h2>
+              <p class="text-body-2 text-medium-emphasis ma-0">View comprehensive query information</p>
+            </div>
+          </div>
+          <v-spacer/>
           <v-btn
             icon="$close"
             variant="text"
+            size="small"
             @click="showDetailsDialog = false"
           />
         </v-card-title>
 
-        <v-divider/>
+        <v-divider class="border-opacity-25"/>
 
         <v-card-text class="pa-6">
           <!-- Query details content here -->
@@ -511,6 +519,20 @@
             </v-card>
           </div>
         </v-card-text>
+
+        <v-divider class="border-opacity-25"/>
+
+        <v-card-actions class="pa-6">
+          <v-spacer/>
+          <v-btn
+            variant="outlined"
+            prepend-icon="$close"
+            @click="showDetailsDialog = false"
+            class="rounded-lg"
+          >
+            Close
+          </v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
   </v-card>
@@ -788,5 +810,16 @@ onMounted(async () => {
 :deep(.v-data-table-row--clickable:hover) {
   background-color: rgba(var(--v-theme-primary), 0.04);
   cursor: pointer;
+}
+
+/* Dialog Styles */
+.dialog-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.04), rgba(var(--v-theme-primary), 0.02));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
 }
 </style>

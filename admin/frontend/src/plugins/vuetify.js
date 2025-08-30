@@ -9,6 +9,7 @@ import {
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
   mdiDownload, mdiUpload, mdiCloudUpload, mdiPaperclip, mdiDelete,
   mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight, mdiChevronDown,
+  mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -93,6 +94,11 @@ const iconAliases = {
   'chevron-left': mdiChevronLeft,
   'chevron-right': mdiChevronRight,
   'chevron-down': mdiChevronDown,
+  save: mdiContentSave,
+  'format-text': mdiFormatTextVariant,
+  'map-marker': mdiMapMarker,
+  text: mdiText,
+  file: mdiFile,
   
   // Status
   alert: mdiAlert,
@@ -122,6 +128,7 @@ const iconAliases = {
   'insert_drive_file': mdiFileDocumentOutline,
   help: mdiHelpCircleOutline,
   settings: mdiCog,
+  pencil: mdiPencil,
   
   // User & Security
   account: mdiAccount,

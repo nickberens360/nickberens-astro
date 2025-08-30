@@ -275,6 +275,9 @@ class SQLiteQueryLogger:
             # Convert response_time to milliseconds
             response_time_ms = response_time * 1000 if response_time else None
 
+            # Get current UTC timestamp
+            current_utc_timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
             # Insert into database
             with self._get_sqlite_connection() as conn:
                 cursor = conn.cursor()
@@ -284,8 +287,8 @@ class SQLiteQueryLogger:
                         session_id, request_id, user_query, system_response, query_type, response_time_ms,
                         llm_provider, llm_model, vector_search_score, sources_used,
                         follow_up_questions, cache_hit, error_occurred, error_message,
-                        client_ip, location_city, location_region, location_country, location_country_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        client_ip, location_city, location_region, location_country, location_country_code, timestamp
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
                         session_id,
@@ -307,6 +310,7 @@ class SQLiteQueryLogger:
                         location_data.get("location_region"),
                         location_data.get("location_country"),
                         location_data.get("location_country_code"),
+                        current_utc_timestamp,
                     ),
                 )
                 conn.commit()
