@@ -1,6 +1,6 @@
 # Nick Berens - Portfolio Website
 
-This is the repository for my personal portfolio website, a project that showcases my skills in frontend development, UI/UX, AI integration, and backend services. It's more than just a portfolio; it's a playground for experimenting with modern web technologies.
+Nick Berens' personal website with an intelligent RAG-powered AI assistant. Backend built with FastAPI, frontend with Astro. The backend uses a **unified smart retriever system** that automatically discovers, indexes, and intelligently routes queries to relevant content without manual configuration. Features a comprehensive admin dashboard for monitoring and analytics.
 
 ---
 
@@ -8,19 +8,29 @@ This is the repository for my personal portfolio website, a project that showcas
 
 This website is packed with interactive and dynamic features designed to provide an engaging user experience:
 
-* **🤖 AI-Powered Chatbot ("nick.AI")**: A fully functional chatbot built with a Retrieval-Augmented Generation (RAG) system. It can answer questions about my skills, experience, and illustrations based on a structured knowledge base. It features:
-    * Dual LLM support with fallback (Anthropic Claude & Google Gemini).
-    * Streaming responses for real-time interaction.
-    * Follow-up question suggestions to guide the conversation.
-    * Image search capabilities for my illustration work.
+* **🤖 AI-Powered Chatbot ("nick.AI")**: A fully functional chatbot built with a Retrieval-Augmented Generation (RAG) system featuring:
+    * **Smart Auto-Discovery**: Automatically indexes content from directories without manual configuration
+    * **Intelligent Query Routing**: Analyzes query intent and routes to relevant content types
+    * **Dual LLM Support**: Anthropic Claude & Google Gemini with fallback
+    * **Streaming Responses**: Real-time interaction with progressive response building
+    * **Smart Follow-ups**: AI-generated follow-up question suggestions
+    * **Enhanced Image Search**: Fuzzy matching and caching for illustration queries
+    * **Geolocation Integration**: Location-aware query processing
 
-* **🖥️ Interactive Terminal**: A draggable, resizable, and minimizable terminal window that allows users to navigate the site and access information using command-line instructions. It includes commands like `git log` and `git graph` to fetch real-time data from the GitHub repository.
+* **📊 Admin Dashboard**: Comprehensive monitoring and analytics system featuring:
+    * **Vue.js + Vuetify Interface**: Modern, responsive admin UI
+    * **Real-time Query Analytics**: Monitor user queries, response times, and system performance
+    * **Knowledge Management**: Content gap analysis and indexed document overview
+    * **Session Management**: Secure admin authentication with session tracking
+    * **Performance Metrics**: System health monitoring and detailed analytics
 
-* **🎨 Illustrations Gallery**: A dynamic gallery page showcasing my artwork with engaging parallax scroll effects.
+* **🖥️ Interactive Terminal**: A draggable, resizable, and minimizable terminal window that allows users to navigate the site and access information using command-line instructions.
 
-* **📝 MDX-Powered Blog**: A blog that leverages MDX to allow for the seamless integration of Vue components directly within Markdown content, creating rich and interactive articles.
+* **🎨 Illustrations Gallery**: Dynamic gallery showcasing artwork with smart search capabilities and parallax effects.
 
-* **📄 Dynamic Resume Page**: An online resume page with the option to download a PDF version.
+* **📝 MDX-Powered Blog**: Blog with seamless Vue component integration within Markdown content.
+
+* **📄 Dynamic Resume Page**: Online resume with PDF download option.
 
 ---
 
@@ -38,137 +48,235 @@ This project utilizes a modern, full-stack technology setup.
 
 ### Backend
 
-* **Framework**: **Python** with **FastAPI** to create a robust and high-performance API backend.
-* **Asynchronous Processing**: The backend is fully asynchronous to handle multiple concurrent requests efficiently.
+* **Framework**: **FastAPI** with full async support for high-performance API operations
+* **Smart Retriever System**: **Unified auto-discovery** system that eliminates manual configuration
+* **Database**: **SQLite** for query logging, analytics, and admin management
+* **Security**: **Session-based authentication**, rate limiting, and admin access controls
+* **Monitoring**: **Comprehensive logging** and performance tracking
+
+### Admin Dashboard
+
+* **Frontend Framework**: **Vue.js 3** with **Vuetify 3** for modern Material Design UI
+* **State Management**: **Pinia** for reactive state across dashboard components
+* **Charts & Analytics**: **Chart.js** integration for data visualization
+* **Authentication**: **Secure session management** with fingerprinting and CSRF protection
 
 ### AI & Machine Learning
 
-* **Core AI Logic**: **LangChain** for building the RAG pipeline, managing prompts, and orchestrating LLM interactions.
+* **Core AI Logic**: **LangChain** for RAG pipeline with smart query routing and intent analysis
 * **Language Models (LLMs)**:
-    * **Anthropic Claude 3.5 Sonnet** as the primary model.
-    * **Google Gemini 1.5 Flash** as the fallback model.
-* **Embeddings**: **GoogleGenerativeAIEmbeddings** for creating vector representations of the source data.
-* **Vector Database**: **ChromaDB** for efficient similarity searches and retrieval of relevant information for the RAG system.
+    * **Anthropic Claude 3.5 Sonnet** (primary)
+    * **Google Gemini 1.5 Flash** (fallback)
+* **Embeddings**: **GoogleGenerativeAIEmbeddings** for semantic search capabilities
+* **Vector Database**: **ChromaDB** with intelligent content type filtering and caching
+* **Smart Features**: **Fuzzy matching**, geolocation integration, and response caching
 
 ---
 
 ## Project Structure
 
-The project is organized into two main parts: the Astro frontend and the FastAPI backend.
+The project features a modern full-stack architecture with auto-discovery content management and comprehensive admin dashboard.
 
 ```text
 /
 ├── .env.example                     # Environment variables template
-├── .gitignore                       # Git ignore rules
+├── .gitignore                       # Git ignore rules  
 ├── README.md                        # Project documentation
+├── CLAUDE.md                        # Development instructions for Claude Code
 ├── astro.config.mjs                 # Astro configuration
 ├── package.json                     # Node.js dependencies and scripts
-├── package-lock.json                # Locked dependency versions
-├── requirements.txt                 # Python dependencies
-├── tsconfig.json                    # TypeScript configuration
-├── server.log                       # Server log file
-├── public/                          # Static assets and knowledge base
+├── Makefile                         # Development workflow commands
+├── pyproject.toml                   # Python project configuration
+├── .pre-commit-config.yaml          # Pre-commit hooks configuration
+├── public/                          # Static assets (auto-indexed)
 │   ├── favicon.svg                  # Site favicon
 │   ├── Nick_Berens_Resume.pdf       # PDF resume
-│   ├── about-nick-berens.md         # About content
-│   ├── unified_data.json            # AI knowledge base
-│   └── ...                          # Other static assets
+│   ├── resume.json                  # Structured resume data
+│   ├── about.json                   # About information
 │   └── illustrations/               # Illustration image files
-├── src/                             # Frontend source code
+├── src/                             # Frontend source code (Astro)
 │   ├── assets/                      # Static assets
-│   │   └── images/                  # Image assets
-│   ├── components/                  # Reusable Vue components
-│   │   ├── blog/                    # Blog-specific components
+│   ├── components/                  # Vue components
 │   │   ├── ChatBot.vue              # Main chatbot component
 │   │   ├── ChatInput.vue            # Chat input interface
 │   │   ├── ChatMessageList.vue      # Message display
 │   │   ├── CustomLMGTFY.vue         # Terminal component
-│   │   ├── SiteHeader.vue           # Site navigation
-│   │   ├── SiteFooter.vue           # Site footer
 │   │   └── ...                      # Other UI components
-│   ├── composables/                 # Vue composables
-│   ├── config/                      # Configuration files
-│   ├── content/                     # Content management
-│   │   └── blog/                    # Blog posts
-│   ├── layouts/                     # Astro layout components
-│   ├── lib/                         # Utility libraries
 │   ├── pages/                       # Astro pages (routes)
-│   │   ├── blog/                    # Blog page routes
 │   │   ├── index.astro              # Homepage
 │   │   ├── illustrations.astro      # Gallery page
 │   │   ├── resume.astro             # Resume page
-│   │   └── nick-ai.astro            # Chatbot page
-│   ├── plugins/                     # Astro plugins
-│   ├── stores/                      # State management (Nanostores)
-│   ├── styles/                      # Global CSS styles
-│   └── utils/                       # Utility functions
-├── backend/                         # FastAPI backend
-│   ├── main.py                      # FastAPI application entrypoint
-│   ├── knowledge/                   # AI knowledge base and assets
-│   │   ├── illustrations.json       # Illustration metadata
-│   │   └── ...                      # Other knowledge files
-│   ├── core/                        # Core backend logic
-│   │   ├── __init__.py              # Package initialization
-│   │   ├── config.py                # Backend configuration
-│   │   ├── data_loader.py           # Data loading utilities
-│   │   ├── llm_chain.py             # LangChain LLM integration
-│   │   ├── query_router.py          # Query routing logic
-│   │   ├── followup_service.py      # Follow-up suggestions
-│   │   ├── illustration_service.py  # Image search service
-│   │   └── response_service.py      # Response formatting
-│   └── scripts/                     # Utility scripts
-├── tests/                           # Test suite
+│   │   ├── nick-ai.astro            # Chatbot page
+│   │   └── blog/                    # Blog routes
+│   ├── content/blog/                # MDX blog posts
+│   ├── layouts/                     # Astro layout components
+│   ├── stores/                      # Nanostores state management
+│   └── styles/                      # Global CSS styles
+├── backend/                         # FastAPI backend with unified smart retriever
+│   ├── main.py                      # FastAPI application entry point
+│   ├── knowledge/                   # Auto-indexed knowledge base
+│   │   ├── *.md                     # Markdown documentation  
+│   │   ├── *.pdf                    # PDF documents
+│   │   ├── *.json                   # Structured data (including illustrations.json)
+│   │   └── ...                      # Any content - automatically indexed!
+│   ├── core/                        # Core business logic
+│   │   ├── app_factory.py           # FastAPI application factory
+│   │   ├── app_initializer_v2.py    # Unified retriever initialization
+│   │   ├── unified_retriever.py     # Smart auto-discovery system
+│   │   ├── smart_query_handler.py   # Intelligent query processing
+│   │   ├── smart_illustration_service.py # Enhanced image search with caching
+│   │   ├── query_router.py          # Advanced query routing
+│   │   ├── response_service.py      # Response processing service  
+│   │   ├── followup_service.py      # Follow-up question service
+│   │   ├── geolocation_service.py   # Location-based services
+│   │   ├── sqlite_query_logger.py   # SQLite-based query logging
+│   │   ├── admin_auth.py            # Admin authentication service
+│   │   ├── admin_database.py        # Admin database operations
+│   │   ├── query_data_manager.py    # Query data management
+│   │   ├── config.py                # Centralized configuration
+│   │   └── ...                      # Other core modules
+│   ├── routes/                      # API routes
+│   │   ├── query.py                 # Main query endpoint
+│   │   ├── smart_query.py           # Advanced testing endpoints
+│   │   ├── admin.py                 # Admin dashboard API routes  
+│   │   ├── query_logs.py            # Protected query log interface
+│   │   ├── health.py                # Health check endpoint
+│   │   └── ...                      # Other route modules
+│   ├── templates/                   # Jinja2 templates for admin
+│   └── logs/                        # Database and log files
+├── admin/                           # Admin dashboard system
+│   ├── backend/                     # Python admin backend services
+│   │   ├── main.py                  # Admin FastAPI application
+│   │   ├── auth.py                  # Authentication and authorization
+│   │   ├── database.py              # Admin database operations
+│   │   ├── models.py                # Database models
+│   │   └── routes.py                # Admin API routes
+│   ├── frontend/                    # Vue.js + Vuetify admin frontend
+│   │   ├── src/
+│   │   │   ├── components/          # Vue components
+│   │   │   ├── views/               # Page components  
+│   │   │   ├── stores/              # Pinia state management
+│   │   │   ├── services/            # API services
+│   │   │   └── plugins/             # Vuetify configuration
+│   │   └── dist/                    # Built frontend files
+│   └── start-admin.py               # Admin server startup script
+├── scripts/                         # Utility scripts
+│   ├── copy-content-to-knowledge.sh # Content management
+│   └── ...                          # Other utility scripts
+├── tests/                           # Comprehensive test suite
+│   ├── unit/                        # Unit tests
 │   ├── integration/                 # Integration tests
-│   │   ├── test_vector_retrieval.py # RAG system integration tests
-│   │   ├── test_search.py           # Search functionality tests
-│   │   └── test_large_input.py      # Input handling tests
-│   ├── test_config.py               # Unit tests for config module
-│   ├── test_data_loader.py          # Unit tests for data loader
-│   ├── test_llm_chain.py            # Unit tests for LLM chain
-│   ├── test_query_router.py         # Unit tests for query router
-│   ├── test_followup_service.py     # Unit tests for followup service
-│   ├── test_illustration_service.py # Unit tests for illustration service
-│   └── test_response_service.py     # Unit tests for response service
-└── pytest.ini                      # Pytest configuration
+│   ├── security/                    # Security tests
+│   └── ...                          # Test files with pytest markers
+└── htmlcov/                         # Test coverage reports
 
 ---
 
-## Follow-up Modes and Logging
+## Development Commands
 
-The backend supports configurable follow-up question strategies via environment variables:
-- `FOLLOWUP_MODE=pre_generated` (default): instant follow-ups loaded from a cache pre-generated at startup.
-- `FOLLOWUP_MODE=optimized`: fast static suggestions first, optionally enhanced by an LLM with timeouts and caching.
-- `FOLLOWUP_MODE=static`: static suggestions only.
+### Build Commands
+- `npm run build` - Build the Astro frontend
+- `npm run dev` - Start Astro development server
+- `npm run backend:build` - Build backend container with Podman
+- `npm run backend:dev` - Run backend in development mode with hot reload
+- `npm run backend:stop` - Stop the backend container
 
-Control cold-start cost with `ENABLE_FOLLOWUP_PREGENERATION=true|false` (default true). When enabled, the backend generates and caches follow-up questions during startup. The cache file `backend/.followup_cache.json` is not committed.
+### Admin Commands
+- `npm run admin:backend` - Start admin backend server
+- `npm run admin:frontend` - Start admin frontend development server
+- `npm run admin:build` - Build admin frontend for production
+- `npm run admin` - Start both admin backend and frontend
+- `npm run admin:stop` - Stop admin backend processes
 
-Note: The project uses a single environment file at the repository root (`.env`) for local development. The backend loads this root `.env` at startup; there is no separate `backend/.env`.
+### Test Commands
+- `pytest` - Run Python tests with coverage (configured in pyproject.toml)
+- `pytest -m unit` - Run only unit tests (fast)
+- `pytest -m integration` - Run integration tests (slower)
+- `npm test` - Run frontend tests with Vitest
+- `PYTHONPATH=. pytest tests/` - Run tests with proper Python path
 
-Streaming responses are first logged as a placeholder and then completed with an append-only entry keyed by a per-request ID. This avoids log rewrites under load and keeps query logs consistent.
-
-### Additional Config
-- `FOLLOWUP_VALIDATION_SCORE_THRESHOLD` (default `0.5`): minimum similarity score used when validating LLM-generated follow-up questions against the retriever. Increase to make validation stricter; decrease to allow more suggestions.
-
-### Shutdown Behavior
-- In `FOLLOWUP_MODE=optimized`, the follow-up service uses a small `ThreadPoolExecutor` for background work. The FastAPI app registers a shutdown hook that calls `followup_service.close()` to cleanly release thread pool resources during application shutdown. No manual action is required for normal operation.
-
-### Environment Setup (example)
-Set these in your `.env` or shell to control follow-up behavior:
-
-```
-FOLLOWUP_MODE=pre_generated        # or optimized | static
-ENABLE_FOLLOWUP_PREGENERATION=true # reduce cold-starts by setting to false
-FOLLOWUP_VALIDATION_SCORE_THRESHOLD=0.5
-```
+### Makefile Commands
+- `make lint-fix` - Auto-format code with Black, isort, and autoflake
+- `make lint-check` - Check code formatting without making changes
+- `make type-check` - Run MyPy type checking on backend/core
+- `make lint` - Full lint pipeline: fix, check, and type-check
+- `make test-unit` - Run unit tests only (excludes integration and slow tests)
+- `make test-integration` - Run integration tests only
 
 ---
 
-## Manual Performance Scripts
+## Smart Retriever Architecture
 
-The repository includes several local scripts (not part of the pytest suite) to validate performance and follow-up quality. Run the backend first, then execute scripts from the project root:
-- `quick_performance_test.py` – one-off timing checks
-- `test_cache_performance.py` – cached vs. uncached comparison
-- `test_followups.py` / `test_followups.sh` – qualitative checks for follow-ups
-- `test_performance_followups.py` – multi-run timing stats
+### Unified System (NO MANUAL CONFIGURATION NEEDED!)
+The system now uses a **unified smart retriever** that:
+- ✅ **Automatically discovers** all content from directories
+- ✅ **Intelligently detects** content types (technical, experience, creative, etc.)
+- ✅ **Smart query routing** based on intent analysis
+- ✅ **No YAML configuration** required - just drop files in directories
+- ✅ **Zero manual setup** for new content sources
 
-Note: The backend applies rate limiting; scripts include delays between requests.
+### Adding New Content (SUPER SIMPLE!)
+1. **Text Content**: Just drop files in `backend/knowledge/` or `public/`
+   - Supports: `.md`, `.pdf`, `.json`, `.txt`, `.html`, `.docx`
+   - No configuration needed - automatically indexed and searchable!
+
+2. **Illustrations**: Add to `backend/knowledge/illustrations.json` with format:
+   ```json
+   {
+     "file": "filename.jpg",
+     "title": "Title", 
+     "tags": ["tag1", "tag2"]
+   }
+   ```
+
+3. **Restart Backend**: New content is automatically discovered on startup
+
+### Key Features
+- **Automatic Content Type Detection**: Technical, experience, skills, about, creative, project
+- **Intelligent Query Routing**: Analyzes intent, topics, complexity, and approach
+- **Smart Context Selection**: Semantic similarity + content type filtering + relevance ranking
+- **Built-in Caching**: Faster repeated queries with multi-level caching
+- **Performance**: Single vector store, smart filtering, context length optimization
+
+---
+
+## Environment Variables
+
+### Core Backend Variables
+- `ANTHROPIC_API_KEY` - Required for Anthropic Claude API access
+- `GOOGLE_API_KEY` - Required for Google Gemini API access (if used)
+- `FORCE_REBUILD_DATA=true` - Force rebuild of vector indices on startup (optional)
+- `ADMIN_DB_PATH` - Path to admin SQLite database (defaults to backend/logs/admin_monitoring.db)
+
+### Follow-up Configuration
+- `FOLLOWUP_MODE=pre_generated|optimized|static` - Follow-up question strategy (default: pre_generated)
+- `ENABLE_FOLLOWUP_PREGENERATION=true|false` - Cache follow-ups at startup (default: true)
+- `FOLLOWUP_VALIDATION_SCORE_THRESHOLD=0.5` - Minimum similarity score for follow-up validation
+
+### Development Setup
+1. **Copy environment template**: `cp .env.example .env` (if available)
+2. **Set API keys** in `.env` file
+3. **Install dependencies**: 
+   - Backend: `pip install -r backend/requirements.txt`
+   - Frontend: `npm install`
+   - Admin Frontend: `cd admin/frontend && npm install`
+
+---
+
+## Database Architecture
+
+The system uses multiple SQLite databases for different purposes:
+
+### Backend Databases
+- **`/backend/logs/rag_monitoring.db`** - Primary query logging and analytics
+- **`/backend/logs/auth_sessions.db`** - User session tracking
+
+### Admin System Databases  
+- **`/backend/logs/admin_monitoring.db`** - Admin user management and settings
+- **Query Log Storage** - SQLite-based logging with IP filtering, anonymization, geolocation
+
+### Features
+- **Admin Dashboard Access**: http://localhost:3000 (Vue.js + Vuetify)
+- **Backend API**: http://localhost:8000 (FastAPI with admin routes)
+- **Security**: Session-based authentication with fingerprinting
+- **Analytics**: Real-time query monitoring and performance metrics

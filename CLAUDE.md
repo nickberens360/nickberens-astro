@@ -115,7 +115,8 @@ backend/
 │   ├── unified_retriever.py       # Smart auto-discovery system
 │   ├── smart_illustration_service.py  # Enhanced smart image search with caching
 │   ├── smart_query_handler.py     # Intelligent query processing
-│   ├── query_logger.py            # Query logging service
+│   ├── query_logger.py            # Query logging factory (returns SQLiteQueryLogger)
+│   ├── sqlite_query_logger.py    # SQLite-based query logging implementation
 │   ├── query_logger_dual.py       # Dual-output query logging
 │   ├── query_router.py            # Query routing logic
 │   ├── response_service.py        # Response processing service
@@ -192,7 +193,7 @@ tests/             # Comprehensive test suite
 - `backend/core/smart_query_handler.py` - Query intent analysis and smart routing
 - `backend/core/smart_illustration_service.py` - Enhanced image search with caching and fuzzy matching
 - `backend/core/app_initializer_v2.py` - Unified system initialization
-- `backend/core/query_logger.py` - Query logging and analytics
+- `backend/core/sqlite_query_logger.py` - SQLite-based query logging and analytics
 - `backend/core/query_router.py` - Advanced query routing logic
 - `backend/core/response_service.py` - Response processing and enhancement
 - `backend/core/followup_service.py` - Intelligent follow-up question generation
@@ -381,7 +382,7 @@ cd admin/frontend && npm run build
 ```
 
 ### New Services & Modules
-- `query_logger.py` - Comprehensive query logging and analytics
+- `sqlite_query_logger.py` - SQLite-based query logging and analytics
 - `query_logger_dual.py` - Dual-output logging (JSON + SQLite)
 - `response_service.py` - Enhanced response processing pipeline
 - `response_cache_warmer.py` - Cache warming for improved performance
@@ -460,16 +461,13 @@ The system uses multiple SQLite databases for different purposes:
 - **Usage**: Used by `AdminDatabaseManager` for admin-specific operations
 - **Security**: Handles admin authentication, roles, and session management
 
-#### Query Log Storage Options
-The system supports two query logging approaches:
-1. **JSON File Logging**: Primary method using `/backend/logs/query_logs.json`
-   - Configurable via `QUERY_LOG_FILE` environment variable
-   - IP filtering and anonymization support
-   - Used by `QueryLogger` service
-   
-2. **SQLite Logging**: Alternative method in `rag_monitoring.db`
-   - Used for admin dashboard analytics
-   - Structured query analysis and performance metrics
+#### Query Log Storage
+The system uses an SQLite database for all query logging:
+- **Database**: `/backend/logs/rag_monitoring.db`
+- **Table**: `query_logs` — stores all user queries and responses
+- **Features**: IP filtering, anonymization, and geolocation tracking
+- **Service**: `SQLiteQueryLogger` — handles all logging operations
+- **Analytics**: Structured query analysis and performance metrics
 
 ### Database Separation Strategy
 - **Admin databases**: Isolated for security and admin-specific features

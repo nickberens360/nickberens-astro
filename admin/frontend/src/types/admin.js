@@ -57,13 +57,39 @@ export const formatBytes = (bytes) => {
 }
 
 export const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  // Handle null, undefined, or empty strings
+  if (!date) return 'Invalid Date'
+  
+  try {
+    // Parse the date - if it's a string without timezone info, assume it's UTC
+    let dateObj
+    if (typeof date === 'string') {
+      const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(date)
+      const hasT = date.includes('T')
+      const normalized = hasT ? date : date.replace(' ', 'T')
+      dateObj = new Date(hasTZ ? normalized : normalized + 'Z')
+    } else {
+      dateObj = new Date(date)
+    }
+    
+    // Check if the resulting date is valid
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid Date'
+    }
+    
+    // Use toLocaleString for proper date and time formatting in local timezone
+    return dateObj.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  } catch (error) {
+    console.warn('Date parsing error:', error, 'Input:', date)
+    return 'Invalid Date'
+  }
 }
 
 export const getStatusColor = (status) => {

@@ -1,37 +1,53 @@
 <template>
-  <v-dialog v-model="dialog" max-width="1200px" persistent>
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon class="me-2">$edit</v-icon>
-        Edit File: {{ filename }}
-        <v-spacer></v-spacer>
-        <v-chip 
-          :color="getFileTypeColor(fileType)" 
-          size="small" 
+  <v-dialog v-model="dialog" max-width="1400px" persistent>
+    <v-card class="dialog-card" elevation="12">
+      <v-card-title class="dialog-header pa-6 d-flex justify-space-between align-center">
+        <div class="d-flex align-center">
+          <v-icon class="me-3" color="primary">$edit</v-icon>
+          <div>
+            <h2 class="text-h6 font-weight-bold">File Editor</h2>
+            <p class="text-body-2 text-medium-emphasis ma-0">{{ filename }}</p>
+          </div>
+        </div>
+        <v-spacer/>
+        <v-chip
+          :color="getFileTypeColor(fileType)"
+          size="small"
           variant="flat"
+          class="me-2"
         >
           {{ fileType.toUpperCase() }}
         </v-chip>
       </v-card-title>
 
-      <v-card-text class="pa-0">
+      <v-divider class="border-opacity-25"/>
+
+      <v-card-text class="pa-6" style="background: rgba(var(--v-theme-surface), 0.3);">
         <v-alert
           v-if="error"
           type="error"
-          class="ma-4"
+          variant="tonal"
+          class="mb-4 rounded-lg"
           closable
           @click:close="error = null"
         >
+          <template #prepend>
+            <v-icon>$alert</v-icon>
+          </template>
           {{ error }}
         </v-alert>
 
         <v-alert
           v-if="success"
           type="success"
-          class="ma-4"
+          variant="tonal"
+          class="mb-4 rounded-lg"
           closable
           @click:close="success = null"
         >
+          <template #prepend>
+            <v-icon>$check</v-icon>
+          </template>
           {{ success }}
         </v-alert>
 
@@ -39,54 +55,72 @@
         <v-skeleton-loader
           v-if="loading"
           type="article"
-          class="ma-4"
-        ></v-skeleton-loader>
+          class="mb-4 rounded-lg"
+        />
 
         <!-- Editor container -->
-        <div 
+        <v-card
           v-else
-          ref="editorContainer"
-          style="height: 500px; width: 100%;"
-        ></div>
+          variant="outlined"
+          class="editor-container rounded-lg overflow-hidden"
+        >
+          <div
+            ref="editorContainer"
+            style="height: 500px; width: 100%;"
+          /></v-card>
       </v-card-text>
 
-      <v-card-actions class="justify-space-between">
-        <div class="d-flex align-center">
-          <v-chip size="small" variant="outlined" class="me-2">
-            Lines: {{ lineCount }}
+      <v-divider class="border-opacity-25"/>
+
+      <v-card-actions class="pa-6 justify-space-between">
+        <div class="d-flex align-center gap-2">
+          <v-chip size="small" variant="tonal" color="info" class="mr-4">
+            <v-icon start size="small">$text</v-icon>
+            {{ lineCount }} lines
           </v-chip>
-          <v-chip size="small" variant="outlined" class="me-2">
-            Size: {{ formatFileSize(fileSize) }}
+          <v-chip size="small" variant="tonal" color="info" class="mr-4">
+            <v-icon start size="small">$file</v-icon>
+            {{ formatFileSize(fileSize) }}
           </v-chip>
-          <v-chip 
+          <v-chip
             v-if="hasUnsavedChanges"
-            color="warning" 
-            size="small" 
+            color="warning"
+            size="small"
             variant="flat"
           >
+            <v-icon start size="small">$pencil</v-icon>
             Unsaved Changes
           </v-chip>
         </div>
 
-        <div>
+        <div class="d-flex gap-2">
           <v-btn
             v-if="fileType === '.json'"
-            text="Format JSON"
+            prepend-icon="$format-text"
             variant="outlined"
             @click="formatJson"
             :disabled="saving"
-            class="me-2"
-          ></v-btn>
+            class="rounded-lg"
+          >
+            Format JSON
+          </v-btn>
           <v-btn
-            text="Cancel"
+            prepend-icon="$close"
+            variant="outlined"
             @click="handleCancel"
             :disabled="saving"
-          ></v-btn>
+            class="rounded-lg mr-2"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="primary"
+            prepend-icon="$save"
             :loading="saving"
             @click="saveFile"
             :disabled="!hasUnsavedChanges"
+            class="rounded-lg"
+            variant="flat"
           >
             Save Changes
           </v-btn>
@@ -96,27 +130,45 @@
   </v-dialog>
 
   <!-- Unsaved Changes Confirmation Dialog -->
-  <v-dialog v-model="showCloseConfirm" max-width="400">
-    <v-card>
-      <v-card-title class="text-h6">
-        Discard unsaved changes?
+  <v-dialog v-model="showCloseConfirm" max-width="480">
+    <v-card class="dialog-card" elevation="8">
+      <v-card-title class="dialog-header pa-6">
+        <div class="d-flex align-center">
+          <v-icon class="me-3" color="warning">$alert</v-icon>
+          <div>
+            <h2 class="text-h6 font-weight-bold">Discard Changes?</h2>
+            <p class="text-body-2 text-medium-emphasis ma-0">Unsaved changes will be lost</p>
+          </div>
+        </div>
       </v-card-title>
-      
-      <v-card-text>
-        You have unsaved changes that will be lost if you close without saving.
+
+      <v-divider class="border-opacity-25"/>
+
+      <v-card-text class="pa-6">
+        <p class="text-body-2 mb-0">You have unsaved changes that will be lost if you close without saving. Are you sure you want to continue?</p>
       </v-card-text>
 
-      <v-card-actions>
-        <v-spacer></v-spacer>
+      <v-divider class="border-opacity-25"/>
+
+      <v-card-actions class="pa-6">
+        <v-spacer/>
         <v-btn
-          text="Cancel"
+          prepend-icon="$close"
+          variant="outlined"
           @click="cancelClose"
-        ></v-btn>
+          class="rounded-lg"
+        >
+          Cancel
+        </v-btn>
         <v-btn
           color="warning"
-          text="Discard Changes"
+          prepend-icon="$delete"
+          variant="flat"
           @click="confirmClose"
-        ></v-btn>
+          class="rounded-lg"
+        >
+          Discard Changes
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -149,7 +201,7 @@ export default {
     const hasUnsavedChanges = ref(false)
     const showCloseConfirm = ref(false)
     const editorContainer = ref(null)
-    
+
     let editor = null
     const originalContent = ref('')
     const currentContent = ref('')
@@ -215,15 +267,15 @@ export default {
 
     const loadFile = async () => {
       if (!props.filename) return
-      
+
       loading.value = true
       error.value = null
-      
+
       try {
         const response = await adminAPI.getKnowledgeFileContent(props.filename)
-        
+
         let content = response.content || ''
-        
+
         // Auto-format JSON content for better readability
         const ext = props.filename.split('.').pop()?.toLowerCase()
         if (ext === 'json' && content.trim()) {
@@ -235,13 +287,13 @@ export default {
             console.warn('Failed to parse JSON for formatting:', jsonError)
           }
         }
-        
+
         originalContent.value = content
         currentContent.value = content
         fileType.value = '.' + (ext || 'txt')
         fileSize.value = response.size || 0
         hasUnsavedChanges.value = false
-        
+
         await nextTick()
         // Small delay to ensure DOM is fully rendered
         setTimeout(() => {
@@ -261,7 +313,7 @@ export default {
       if (!editorContainer.value) {
         return
       }
-      
+
       // Cleanup existing editor
       if (editor) {
         editor.dispose()
@@ -269,7 +321,7 @@ export default {
 
       try {
         const language = getLanguage(props.filename)
-        
+
         editor = monaco.editor.create(editorContainer.value, {
           value: currentContent.value || '',
           language: language,
@@ -289,7 +341,7 @@ export default {
 
         // Update line count
         lineCount.value = editor.getModel().getLineCount()
-        
+
         // Listen for content changes
         editor.onDidChangeModelContent(() => {
           const newContent = editor.getValue()
@@ -312,30 +364,30 @@ export default {
 
     const saveFile = async () => {
       if (!hasUnsavedChanges.value) return
-      
+
       saving.value = true
       error.value = null
       success.value = null
-      
+
       try {
         const response = await adminAPI.updateKnowledgeFileContent(
-          props.filename, 
+          props.filename,
           currentContent.value
         )
-        
+
         originalContent.value = currentContent.value
         hasUnsavedChanges.value = false
         fileSize.value = response.size || fileSize.value
-        
+
         success.value = 'File saved successfully!'
         emit('file-saved', props.filename)
-        
+
         // Auto-close dialog after successful save
         setTimeout(() => {
           success.value = null
           dialog.value = false
         }, 1000)
-        
+
       } catch (err) {
         console.error('Failed to save file:', err)
         error.value = err.response?.data?.detail || 'Failed to save file'
@@ -346,25 +398,25 @@ export default {
 
     const formatJson = () => {
       if (!editor || fileType.value !== '.json') return
-      
+
       try {
         const content = editor.getValue()
         const parsed = JSON.parse(content)
         const formatted = JSON.stringify(parsed, null, 2)
-        
+
         // Update editor content
         editor.setValue(formatted)
-        
+
         // Update our refs
         currentContent.value = formatted
         hasUnsavedChanges.value = formatted !== originalContent.value
         lineCount.value = editor.getModel().getLineCount()
-        
+
         success.value = 'JSON formatted successfully!'
         setTimeout(() => {
           success.value = null
         }, 2000)
-        
+
       } catch (err) {
         error.value = 'Invalid JSON format. Cannot format the content.'
         setTimeout(() => {
@@ -447,9 +499,36 @@ export default {
   overflow: hidden;
 }
 
+/* Dialog Styles */
+.dialog-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.04), rgba(var(--v-theme-primary), 0.02));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.editor-container {
+  border: 2px solid rgba(var(--v-theme-primary), 0.12);
+  transition: border-color 0.3s ease;
+}
+
+.editor-container:hover {
+  border-color: rgba(var(--v-theme-primary), 0.24);
+}
+
 /* Ensure Monaco editor takes full container size */
 :deep(.monaco-editor) {
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
-  border-radius: 4px;
+  border-radius: 8px;
+}
+
+:deep(.monaco-editor .margin) {
+  background: rgba(var(--v-theme-surface), 0.8);
+}
+
+:deep(.monaco-editor .monaco-editor-background) {
+  background: rgba(var(--v-theme-surface-variant), 0.3);
 }
 </style>

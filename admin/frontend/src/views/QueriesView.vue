@@ -1,6 +1,5 @@
 <template>
   <div class="queries-view">
-    <h1 class="text-h4 font-weight-bold mb-6">Query Explorer</h1>
     
     <QueryTable
       title="All Queries"

@@ -1,6 +1,5 @@
 <template>
   <div class="sessions-view">
-    <h1 class="dashboard-title mb-6">Session Management</h1>
     
     <v-alert
       type="info"

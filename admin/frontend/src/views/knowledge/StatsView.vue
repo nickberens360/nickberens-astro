@@ -1,7 +1,6 @@
 <template>
   <div class="stats-view">
-    <div class="d-flex justify-space-between align-center mb-6">
-      <h2 class="text-h5">Knowledge Analytics</h2>
+    <div class="d-flex justify-end align-center mb-6">
       <v-btn
         color="primary"
         prepend-icon="$refresh"
@@ -16,56 +15,84 @@
     <!-- Key Metrics Row -->
     <v-row class="mb-6">
       <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text class="text-center">
-            <div class="text-h3 font-weight-bold" :class="getHealthColor()">
+        <v-card class="metric-style-card">
+          <v-card-text class="pa-6">
+            <div class="d-flex align-center justify-space-between mb-4">
+              <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                Content Health Score
+              </div>
+              <v-avatar size="40" :color="getHealthBackgroundColor()" variant="flat">
+                <v-icon :color="getHealthIconColor()" size="20">$check-circle</v-icon>
+              </v-avatar>
+            </div>
+            <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
               {{ contentHealthScore }}%
             </div>
-            <div class="text-subtitle-1">Content Health Score</div>
             <v-progress-linear
               :model-value="contentHealthScore"
-              :color="getHealthColor()"
-              height="4"
+              :color="getHealthIconColor()"
+              height="6"
               rounded
-              class="mt-2"
+              class="mt-3"
             />
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text class="text-center">
-            <div class="text-h3 font-weight-bold text-blue">
+        <v-card class="metric-style-card">
+          <v-card-text class="pa-6">
+            <div class="d-flex align-center justify-space-between mb-4">
+              <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                Total Documents
+              </div>
+              <v-avatar size="40" color="rgba(59, 130, 246, 0.1)" variant="flat">
+                <v-icon color="info" size="20">$document</v-icon>
+              </v-avatar>
+            </div>
+            <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
               {{ stats.total_documents || 0 }}
             </div>
-            <div class="text-subtitle-1">Total Documents</div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-caption text-medium-emphasis mt-2">
               {{ averageChunksPerSource }} chunks/source
             </div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text class="text-center">
-            <div class="text-h3 font-weight-bold text-purple">
+        <v-card class="metric-style-card">
+          <v-card-text class="pa-6">
+            <div class="d-flex align-center justify-space-between mb-4">
+              <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                Dominant Type
+              </div>
+              <v-avatar size="40" color="rgba(139, 120, 255, 0.1)" variant="flat">
+                <v-icon color="accent" size="20">$chart</v-icon>
+              </v-avatar>
+            </div>
+            <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
               {{ dominantContentType }}
             </div>
-            <div class="text-subtitle-1">Dominant Type</div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-caption text-medium-emphasis mt-2">
               {{ dominantPercentage }}% of content
             </div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="3">
-        <v-card elevation="2">
-          <v-card-text class="text-center">
-            <div class="text-h3 font-weight-bold text-orange">
+        <v-card class="metric-style-card">
+          <v-card-text class="pa-6">
+            <div class="d-flex align-center justify-space-between mb-4">
+              <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                Content Diversity
+              </div>
+              <v-avatar size="40" color="rgba(245, 158, 11, 0.1)" variant="flat">
+                <v-icon color="warning" size="20">$folder</v-icon>
+              </v-avatar>
+            </div>
+            <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
               {{ contentDiversity }}
             </div>
-            <div class="text-subtitle-1">Content Diversity</div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-caption text-medium-emphasis mt-2">
               {{ Object.keys(stats.content_types || {}).length }} unique types
             </div>
           </v-card-text>
@@ -76,7 +103,7 @@
     <!-- Charts Row -->
     <v-row class="mb-6">
       <v-col cols="12" md="6">
-        <v-card elevation="2">
+        <v-card>
           <v-card-title class="text-h6">
             <v-icon class="me-2">$chart</v-icon>
             Content Distribution
@@ -87,7 +114,7 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card elevation="2">
+        <v-card>
           <v-card-title class="text-h6">
             <v-icon class="me-2">$bar_chart</v-icon>
             Top Content Types
@@ -102,7 +129,7 @@
     <!-- Insights and Recommendations -->
     <v-row class="mb-6">
       <v-col cols="12" md="6">
-        <v-card elevation="2">
+        <v-card>
           <v-card-title class="text-h6">
             <v-icon class="me-2">$lightbulb</v-icon>
             Content Insights
@@ -129,7 +156,7 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card elevation="2">
+        <v-card>
           <v-card-title class="text-h6">
             <v-icon class="me-2">$recommend</v-icon>
             Recommendations
@@ -160,7 +187,7 @@
     </v-row>
 
     <!-- Detailed Content Type Table -->
-    <v-card elevation="2">
+    <v-card>
       <v-card-title class="text-h6 d-flex align-center">
         <v-icon class="me-2">$table</v-icon>
         Detailed Content Analysis
@@ -476,6 +503,18 @@ const getHealthColor = () => {
   return 'text-error'
 }
 
+const getHealthBackgroundColor = () => {
+  if (contentHealthScore.value >= 70) return 'rgba(16, 185, 129, 0.1)'
+  if (contentHealthScore.value >= 40) return 'rgba(245, 158, 11, 0.1)'
+  return 'rgba(239, 68, 68, 0.1)'
+}
+
+const getHealthIconColor = () => {
+  if (contentHealthScore.value >= 70) return 'success'
+  if (contentHealthScore.value >= 40) return 'warning'
+  return 'error'
+}
+
 const getStatusColor = (status) => {
   if (status === 'Balanced') return 'success'
   if (status === 'Dominant') return 'warning'
@@ -655,6 +694,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.stats-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.metric-style-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-style-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(var(--v-shadow-key-umbra-opacity), 0.08);
+}
+
+.metric-value {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
 
 .v-card {
   margin-bottom: 16px;

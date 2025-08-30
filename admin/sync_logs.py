@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-Script to sync query logs from the main backend's JSON file to the admin SQLite database.
+DEPRECATED: Script to sync query logs from JSON files to SQLite database.
+
+This script is now DEPRECATED as the system only uses SQLite logging (SQLiteQueryLogger).
+It's kept for historical data migration purposes only.
+
+WARNING: The main system no longer generates JSON log files. This script is only
+useful for migrating existing historical JSON log files to the SQLite database.
 """
 import hashlib
 import json

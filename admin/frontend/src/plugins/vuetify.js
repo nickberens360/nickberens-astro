@@ -8,16 +8,17 @@ import {
   // Actions & Controls
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
   mdiDownload, mdiUpload, mdiCloudUpload, mdiPaperclip, mdiDelete,
-  mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight,
+  mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight, mdiChevronDown,
+  mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
   mdiTrendingDown, mdiThumbUpOutline, mdiThumbUp, mdiThumbDown,
-  mdiAlertCircleOutline,
+  mdiAlertCircleOutline, mdiBell,
   
   // Content & Knowledge
   mdiBookOpenPageVariant, mdiInformation, mdiFolder, mdiFormatListBulleted,
-  mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb, mdiHelpCircleOutline,
+  mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb, mdiHelpCircleOutline, mdiCog,
   
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
@@ -27,41 +28,41 @@ import {
 // Import Vuetify styles
 import 'vuetify/styles'
 
-// Theme configurations
+// Theme configurations - Modern LMS colors
 const themes = {
   light: {
     dark: false,
     colors: {
-      primary: '#1976D2',
-      secondary: '#424242',
-      accent: '#82B1FF',
-      error: '#FF5252',
-      info: '#2196F3',
-      success: '#4CAF50',
-      warning: '#FFC107',
+      primary: '#6366F1', // Modern indigo
+      secondary: '#64748B', // Slate gray
+      accent: '#8B78FF', // Light purple accent
+      error: '#EF4444', // Modern red
+      info: '#3B82F6', // Blue
+      success: '#10B981', // Modern green
+      warning: '#F59E0B', // Modern amber
       surface: '#FFFFFF',
-      background: '#F5F5F5'
+      background: '#F8FAFC' // Very light gray background
     }
   },
   dark: {
     dark: true,
     colors: {
-      primary: '#2196F3',
-      secondary: '#616161',
-      accent: '#82B1FF',
-      error: '#FF5252',
-      info: '#2196F3',
-      success: '#4CAF50',
-      warning: '#FFC107',
-      surface: '#1E1E1E',
-      background: '#121212'
+      primary: '#8B78FF', // Lighter purple for dark mode
+      secondary: '#6B7280', // Medium gray
+      accent: '#A78BFA', // Light violet accent
+      error: '#F87171', // Lighter red
+      info: '#60A5FA', // Lighter blue
+      success: '#34D399', // Lighter green
+      warning: '#FBBF24', // Lighter amber
+      surface: '#1F2937', // Dark surface
+      background: '#111827' // Very dark background
     }
   }
 }
 
-// Simplified typography - just set global font family, let Vuetify handle the rest
+// Modern typography for LMS design
 const typography = {
-  fontFamily: '"JetBrains Mono", "SF Mono", Monaco, Inconsolata, "Source Code Pro", Consolas, "Courier New", monospace'
+  fontFamily: '"Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
 }
 
 // Icon aliases configuration
@@ -92,6 +93,12 @@ const iconAliases = {
   undo: mdiUndo,
   'chevron-left': mdiChevronLeft,
   'chevron-right': mdiChevronRight,
+  'chevron-down': mdiChevronDown,
+  save: mdiContentSave,
+  'format-text': mdiFormatTextVariant,
+  'map-marker': mdiMapMarker,
+  text: mdiText,
+  file: mdiFile,
   
   // Status
   alert: mdiAlert,
@@ -106,6 +113,7 @@ const iconAliases = {
   'thumb-up': mdiThumbUp,
   'thumb-down': mdiThumbDown,
   warning: mdiAlertCircleOutline,
+  bell: mdiBell,
   
   // Content types
   info: mdiInformation,
@@ -119,6 +127,8 @@ const iconAliases = {
   article: mdiFileDocumentOutline,
   'insert_drive_file': mdiFileDocumentOutline,
   help: mdiHelpCircleOutline,
+  settings: mdiCog,
+  pencil: mdiPencil,
   
   // User & Security
   account: mdiAccount,
@@ -141,7 +151,7 @@ const iconAliases = {
 
 export default createVuetify({
   theme: {
-    defaultTheme: 'dark',
+    defaultTheme: 'light',
     themes,
     variations: {
       colors: ['primary', 'secondary', 'accent', 'error', 'info', 'success', 'warning'],
@@ -160,7 +170,7 @@ export default createVuetify({
   },
   defaults: {
     VCard: {
-      elevation: 2,
+      elevation: 1,
       rounded: 'lg'
     },
     VBtn: {

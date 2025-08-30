@@ -1,7 +1,6 @@
 <template>
   <div class="sources-view">
-    <div class="d-flex justify-space-between align-center mb-6">
-      <h2 class="text-h5">Knowledge Sources</h2>
+    <div class="d-flex justify-end align-center mb-6">
       <div class="d-flex gap-2">
         <v-btn
           color="success"
@@ -24,7 +23,7 @@
       </div>
     </div>
 
-    <v-card elevation="2">
+    <v-card>
       <v-card-title class="text-h6 d-flex align-center">
         <v-icon class="me-2">$folder</v-icon>
         Source Files and Usage
@@ -570,6 +569,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.sources-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
 
 /* Ensure proper spacing for content type chips */
 .gap-1 > .v-chip {

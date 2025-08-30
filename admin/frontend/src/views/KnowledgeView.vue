@@ -1,17 +1,5 @@
 <template>
   <div class="knowledge-view">
-    <div class="d-flex justify-space-between align-center mb-6">
-      <h1 class="dashboard-title">Knowledge Base</h1>
-      <v-btn
-        color="primary"
-        prepend-icon="$refresh"
-        @click="refreshAll"
-        :loading="loading"
-        variant="outlined"
-      >
-        Refresh All
-      </v-btn>
-    </div>
 
     <!-- Navigation Metric Cards - Always Visible -->
     <v-row class="mb-6">
@@ -161,7 +149,8 @@ onMounted(() => {
 
 <style scoped>
 .knowledge-view {
-  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .cursor-pointer {

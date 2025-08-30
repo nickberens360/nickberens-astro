@@ -6,64 +6,116 @@
       :temporary="mobile"
       style="position: fixed;"
       color="surface"
+      width="280"
+      class="sidebar-drawer"
     >
-      <v-list>
-        <v-list-item class="px-4 py-0 pb-2">
-          <v-list-item-title class="text-h6 font-weight-bold">
-            RAG Admin
-          </v-list-item-title>
-          <v-list-item-subtitle>
-            Dashboard v{{ systemHealth.version }}
-          </v-list-item-subtitle>
-        </v-list-item>
+      <!-- Brand Logo Section -->
+      <div class="sidebar-header pa-6">
+        <div class="d-flex align-center">
+          <div class="brand-logo">
+            <v-avatar color="primary" size="40">
+              <v-icon size="24" color="white">$dashboard</v-icon>
+            </v-avatar>
+          </div>
+          <div class="ml-3">
+            <div class="brand-title text-h6 font-weight-bold">
+              RAG LMS
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <v-divider class="mb-2"/>
+      <v-divider class="mb-4"/>
 
-        <template v-for="item in navigationItems" :key="item.name">
-          <!-- Main navigation item -->
-          <v-list-item
-            v-if="!item.children"
-            :to="item.to"
-            :active="$route.name === item.name"
-            rounded="xl"
-            class="mx-2 mb-1"
-            :prepend-icon="item.icon"
-          >
-            <v-list-item-title>{{ item.title }}</v-list-item-title>
-          </v-list-item>
-
-          <!-- Navigation item with children -->
-          <v-list-group
-            v-else
-            :key="item.name"
-            :value="item.name"
-            class="mx-2 mb-1"
-          >
-            <template v-slot:activator="{ props }">
-              <v-list-item
-                v-bind="props"
-                :prepend-icon="item.icon"
-                rounded="xl"
-                :active="$route.name === item.name || item.children.some(child => $route.name === child.name)"
-                @click="navigateToParent(item)"
-              >
-                <v-list-item-title>{{ item.title }}</v-list-item-title>
-              </v-list-item>
-            </template>
-
+      <!-- Main Menu Section -->
+      <div class="px-4">
+        <div class="menu-label text-caption font-weight-medium text-medium-emphasis mb-3">
+          MAIN MENU
+        </div>
+        <v-list nav density="compact" class="py-0">
+          <template v-for="item in navigationItems" :key="item.name">
+            <!-- Main navigation item -->
             <v-list-item
-              v-for="child in item.children"
-              :key="child.name"
-              :to="child.to"
-              :active="$route.name === child.name"
-              rounded="xl"
-              class="ms-4"
+              v-if="!item.children"
+              :to="item.to"
+              :active="$route.name === item.name"
+              rounded="lg"
+              class="mb-1 nav-item"
+              :prepend-icon="item.icon"
+              color="primary"
             >
-              <v-list-item-title>{{ child.title }}</v-list-item-title>
+              <v-list-item-title class="font-weight-medium">{{ item.title }}</v-list-item-title>
             </v-list-item>
-          </v-list-group>
-        </template>
-      </v-list>
+
+            <!-- Navigation item with children -->
+            <v-list-group
+              v-else
+              :key="item.name"
+              :value="item.name"
+              class="mb-1"
+            >
+              <template v-slot:activator="{ props }">
+                <v-list-item
+                  v-bind="props"
+                  :prepend-icon="item.icon"
+                  rounded="lg"
+                  class="nav-item"
+                  color="primary"
+                  :active="$route.name === item.name || item.children.some(child => $route.name === child.name)"
+                  @click="navigateToParent(item)"
+                >
+                  <v-list-item-title class="font-weight-medium">{{ item.title }}</v-list-item-title>
+                </v-list-item>
+              </template>
+
+              <v-list-item
+                v-for="child in item.children"
+                :key="child.name"
+                :to="child.to"
+                :active="$route.name === child.name"
+                rounded="lg"
+                class="ms-4 nav-item"
+                color="primary"
+              >
+                <v-list-item-title class="font-weight-medium">{{ child.title }}</v-list-item-title>
+              </v-list-item>
+            </v-list-group>
+          </template>
+        </v-list>
+      </div>
+
+      <!-- Settings Section -->
+      <div class="px-4 mt-6">
+        <div class="menu-label text-caption font-weight-medium text-medium-emphasis mb-3">
+          CONFIGURATION
+        </div>
+        <v-list nav density="compact" class="py-0">
+          <v-list-item
+            rounded="lg"
+            class="mb-1 nav-item"
+            prepend-icon="$settings"
+            color="primary"
+            disabled
+          >
+            <v-list-item-title class="font-weight-medium d-flex align-center justify-space-between">
+              <span>Settings</span>
+              <v-chip
+                size="x-small"
+                variant="tonal"
+                color="info"
+              >
+                Coming Soon
+              </v-chip>
+            </v-list-item-title>
+            <v-tooltip
+              activator="parent"
+              location="right"
+            >
+              Settings page coming soon
+            </v-tooltip>
+          </v-list-item>
+        </v-list>
+      </div>
 
       <template #append>
         <v-divider class="mb-2"/>
@@ -99,53 +151,77 @@
 
     <v-app-bar
       style="position: fixed;"
-      color="surface"
-      elevation="1"
+      color="background"
+      elevation="0"
+      height="80"
+      class="modern-header px-8"
     >
       <v-app-bar-nav-icon
         v-if="mobile"
         @click="drawer = !drawer"
       />
 
-      <v-toolbar-title>
+      <v-toolbar-title class="text-h5 font-weight-bold">
         {{ currentPageTitle }}
       </v-toolbar-title>
 
       <v-spacer/>
 
-      <v-btn
-        :loading="isLoading"
-        icon="$refresh"
-        variant="text"
-        @click="refreshData"
-      >
-        <v-icon>$refresh</v-icon>
-        <v-tooltip
-          activator="parent"
-          location="bottom"
-        >
-          Refresh Data
-        </v-tooltip>
-      </v-btn>
-
+      <!-- Time Range Selector -->
       <TimeRangeSelector
         v-if="showTimeRangeSelector"
         :model-value="timeRange"
         @update:model-value="setTimeRange"
+        class="mr-4"
       />
 
+      <!-- Notifications (hidden until notification system is implemented) -->
+      <v-btn
+        v-if="false"
+        icon
+        variant="text"
+        size="large"
+        class="mr-2"
+      >
+        <v-badge
+          color="error"
+          :content="notificationCount"
+          :value="notificationCount > 0"
+          dot
+        >
+          <v-icon>$bell</v-icon>
+        </v-badge>
+        <v-tooltip
+          activator="parent"
+          location="bottom"
+        >
+          Notifications
+        </v-tooltip>
+      </v-btn>
+
+      <!-- User Profile -->
       <v-menu>
         <template #activator="{ props }">
-          <v-btn
-            icon="$menu"
-            variant="text"
-            v-bind="props"
-          >
-            <v-icon>$menu</v-icon>
-          </v-btn>
+          <div v-bind="props" class="user-profile-section d-flex align-center pa-2 rounded-lg cursor-pointer">
+            <v-avatar size="40" class="mr-3" color="primary">
+              <v-icon color="white">$account</v-icon>
+            </v-avatar>
+            <div class="user-info d-none d-sm-block">
+              <div class="user-name text-subtitle-1 font-weight-medium">{{ userDisplayName }}</div>
+              <div class="user-role text-caption text-medium-emphasis">{{ userRole }}</div>
+            </div>
+            <v-icon class="ml-2 d-none d-sm-block">$chevron-down</v-icon>
+          </div>
         </template>
 
-        <v-list>
+        <v-list width="200">
+          <v-list-item @click="refreshData">
+            <v-list-item-title>
+              <v-icon start>$refresh</v-icon>
+              Refresh Data
+            </v-list-item-title>
+          </v-list-item>
+          
           <v-list-item @click="exportData">
             <v-list-item-title>
               <v-icon start>$export</v-icon>
@@ -188,7 +264,8 @@
     <v-main>
       <v-container
         fluid
-        class="pa-6"
+        class="pa-8"
+        style="background-color: rgb(var(--v-theme-background));"
       >
         <router-view v-slot="{ Component }">
           <Transition
@@ -273,6 +350,24 @@ const {
 
 const isDark = computed(() => theme.global.current.value.dark)
 
+const userDisplayName = computed(() => {
+  // Get real user data from the admin store
+  return adminStore.user?.username || 'Admin User'
+})
+
+const userRole = computed(() => {
+  // Get real user role from the admin store
+  const role = adminStore.user?.role || 'viewer'
+  // Format role for display
+  return role.charAt(0).toUpperCase() + role.slice(1)
+})
+
+const notificationCount = computed(() => {
+  // Placeholder for future notification system
+  // TODO: Implement real notification counting from backend
+  return 0
+})
+
 const navigationItems = computed(() => [
   {
     name: 'dashboard',
@@ -308,17 +403,14 @@ const navigationItems = computed(() => [
 ]);
 
 const currentPageTitle = computed(() => {
-  // Check main navigation items
-  let item = navigationItems.value.find(item => item.name === route.name);
-  if (item) return item.title;
-
-  // Check nested children
-  for (const navItem of navigationItems.value) {
-    if (navItem.children) {
-      const childItem = navItem.children.find(child => child.name === route.name);
-      if (childItem) return childItem.title;
-    }
+  // First try to get title from route meta
+  if (route.meta?.title) {
+    return route.meta.title;
   }
+
+  // Fallback: Check main navigation items
+  const item = navigationItems.value.find(item => item.name === route.name);
+  if (item) return item.title;
 
   return 'Admin Dashboard';
 });
@@ -436,11 +528,48 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-.v-navigation-drawer {
-  border-right: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+.sidebar-drawer {
+  /* Clean drawer without border */
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
 }
 
-.v-app-bar {
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+.modern-header {
+  /* Clean header without border */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(10px);
+}
+
+.sidebar-header {
+  background: rgba(var(--v-theme-primary), 0.03);
+}
+
+.brand-title {
+  color: rgb(var(--v-theme-primary));
+}
+
+.menu-label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-item {
+  margin-bottom: 4px;
+}
+
+.nav-item.v-list-item--active {
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
+}
+
+.nav-item.v-list-item--active .v-icon {
+  color: rgb(var(--v-theme-primary));
+}
+
+.user-profile-section:hover {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.cursor-pointer {
+  cursor: pointer;
 }
 </style>
