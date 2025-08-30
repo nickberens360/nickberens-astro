@@ -178,8 +178,9 @@
         class="mr-4"
       />
 
-      <!-- Notifications -->
+      <!-- Notifications (hidden until notification system is implemented) -->
       <v-btn
+        v-if="false"
         icon
         variant="text"
         size="large"
@@ -187,7 +188,8 @@
       >
         <v-badge
           color="error"
-          content="2"
+          :content="notificationCount"
+          :value="notificationCount > 0"
           dot
         >
           <v-icon>$bell</v-icon>
@@ -209,7 +211,7 @@
             </v-avatar>
             <div class="user-info d-none d-sm-block">
               <div class="user-name text-subtitle-1 font-weight-medium">{{ userDisplayName }}</div>
-              <div class="user-role text-caption text-medium-emphasis">Super admin</div>
+              <div class="user-role text-caption text-medium-emphasis">{{ userRole }}</div>
             </div>
             <v-icon class="ml-2 d-none d-sm-block">$chevron-down</v-icon>
           </div>
@@ -352,8 +354,21 @@ const {
 const isDark = computed(() => theme.global.current.value.dark)
 
 const userDisplayName = computed(() => {
-  // You could get this from the admin store if user data is available
-  return 'Admin User'
+  // Get real user data from the admin store
+  return adminStore.user?.username || 'Admin User'
+})
+
+const userRole = computed(() => {
+  // Get real user role from the admin store
+  const role = adminStore.user?.role || 'viewer'
+  // Format role for display
+  return role.charAt(0).toUpperCase() + role.slice(1)
+})
+
+const notificationCount = computed(() => {
+  // Placeholder for future notification system
+  // TODO: Implement real notification counting from backend
+  return 0
 })
 
 const navigationItems = computed(() => [
