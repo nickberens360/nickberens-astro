@@ -24,13 +24,24 @@ from ..core.config import FollowUpSettings
 from ..core.query_data_manager import query_data_manager
 from ..models.admin_models import (
     AdminUser,
+    BulkQuestionRequest,
+    CategoryDeleteRequest,
+    CategoryWithStats,
     ChangePasswordRequest,
+    CreateFollowupCategoryRequest,
+    CreateFollowupQuestionRequest,
     CreateUserRequest,
     FeedbackUpdate,
+    FollowupCategory,
+    FollowupQuestion,
     LoginRequest,
     LoginResponse,
     OverviewStats,
     QueryResponse,
+    QuestionSearchRequest,
+    ReorderCategoriesRequest,
+    UpdateFollowupCategoryRequest,
+    UpdateFollowupQuestionRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -1007,3 +1018,824 @@ async def reset_followup_settings(
     except Exception as e:
         logger.error(f"Error resetting follow-up settings: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error resetting follow-up settings")
+
+
+@router.get("/settings/followup/questions")
+async def get_followup_questions(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current custom follow-up questions by category."""
+    try:
+        # Get settings from database
+        settings_json = admin_db_manager.get_admin_setting("followup_settings")
+        
+        if settings_json:
+            settings = FollowUpSettings.from_json(settings_json)
+            custom_questions = settings.custom_questions
+        else:
+            custom_questions = {}
+
+        # Also provide hardcoded questions as reference
+        from ..core.followup_service import FollowUpService
+        service = FollowUpService()
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "followup_questions", "custom_count": len(custom_questions)},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {
+            "custom_questions": custom_questions,
+            "default_questions": service.question_pools,
+            "fallback_questions": list(service.default_questions)
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting follow-up questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up questions")
+
+
+@router.put("/settings/followup/questions")
+async def update_followup_questions(
+    request: Request, 
+    questions_data: Dict[str, List[str]], 
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update custom follow-up questions by category."""
+    try:
+        # Get current settings
+        settings_json = admin_db_manager.get_admin_setting("followup_settings")
+        if settings_json:
+            settings = FollowUpSettings.from_json(settings_json)
+        else:
+            settings = FollowUpSettings()
+
+        # Update custom questions with validation
+        settings.custom_questions = questions_data
+        validated_settings = FollowUpSettings.from_dict(settings.to_dict())  # Re-validate
+
+        # Store updated settings
+        success = admin_db_manager.set_admin_setting(
+            setting_key="followup_settings", 
+            setting_value=validated_settings.to_json(), 
+            updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update questions")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_questions", 
+                "categories": list(questions_data.keys()),
+                "total_questions": sum(len(qs) for qs in questions_data.values())
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Follow-up questions updated by user {session['user_id']}: {len(questions_data)} categories")
+
+        return {
+            "success": True, 
+            "message": "Follow-up questions updated successfully", 
+            "custom_questions": validated_settings.custom_questions
+        }
+
+    except Exception as e:
+        logger.error(f"Error updating follow-up questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating follow-up questions")
+
+
+@router.post("/settings/followup/questions/reset")
+async def reset_followup_questions(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Reset custom questions to use default hardcoded questions."""
+    try:
+        # Get current settings
+        settings_json = admin_db_manager.get_admin_setting("followup_settings")
+        if settings_json:
+            settings = FollowUpSettings.from_json(settings_json)
+        else:
+            settings = FollowUpSettings()
+
+        # Clear custom questions
+        settings.custom_questions = {}
+
+        # Store updated settings
+        success = admin_db_manager.set_admin_setting(
+            setting_key="followup_settings", 
+            setting_value=settings.to_json(), 
+            updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to reset questions")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "followup_questions", "action": "reset_to_default"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Follow-up questions reset to defaults by user {session['user_id']}")
+
+        return {
+            "success": True,
+            "message": "Follow-up questions reset to defaults",
+        }
+
+    except Exception as e:
+        logger.error(f"Error resetting follow-up questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error resetting follow-up questions")
+
+
+# Follow-up category management endpoints
+@router.get("/settings/followup/categories", response_model=List[FollowupCategory])
+async def get_followup_categories(
+    include_inactive: bool = Query(False, description="Include inactive categories"),
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> List[FollowupCategory]:
+    """Get all follow-up categories."""
+    try:
+        categories = admin_db_manager.get_followup_categories(active_only=not include_inactive)
+        return [FollowupCategory(**category) for category in categories]
+    except Exception as e:
+        logger.error(f"Error getting followup categories: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up categories")
+
+
+@router.get("/settings/followup/categories/{category_id}", response_model=FollowupCategory)
+async def get_followup_category(
+    category_id: int,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> FollowupCategory:
+    """Get a single follow-up category by ID."""
+    if category_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid category ID")
+    
+    try:
+        category = admin_db_manager.get_followup_category(category_id)
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+        return FollowupCategory(**category)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting followup category {category_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up category")
+
+
+@router.post("/settings/followup/categories", response_model=Dict[str, Any])
+async def create_followup_category(
+    request: Request,
+    category_data: CreateFollowupCategoryRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Create a new follow-up category."""
+    try:
+        # Check if category name already exists
+        existing = admin_db_manager.get_followup_category_by_name(category_data.name)
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Category '{category_data.name}' already exists")
+        
+        category_id = admin_db_manager.create_followup_category(
+            name=category_data.name,
+            display_name=category_data.display_name,
+            description=category_data.description,
+            icon=category_data.icon,
+            sort_order=category_data.sort_order
+        )
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_category",
+                "action": "create",
+                "category_id": category_id,
+                "category_name": category_data.name
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Follow-up category '{category_data.name}' created by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": f"Category '{category_data.display_name}' created successfully",
+            "category_id": category_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating followup category: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating follow-up category")
+
+
+@router.put("/settings/followup/categories/{category_id}", response_model=Dict[str, Any])
+async def update_followup_category(
+    category_id: int,
+    request: Request,
+    category_data: UpdateFollowupCategoryRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update a follow-up category."""
+    if category_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid category ID")
+    
+    try:
+        # Check if category exists
+        existing = admin_db_manager.get_followup_category(category_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Category not found")
+        
+        # Prevent deactivating categories that have questions
+        if category_data.is_active is False:
+            # Get current settings to check for questions
+            settings_json = admin_db_manager.get_admin_setting("followup_settings")
+            if settings_json:
+                settings = FollowUpSettings.from_json(settings_json)
+                if existing["name"] in settings.custom_questions and settings.custom_questions[existing["name"]]:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Cannot deactivate category '{existing['display_name']}' - it contains questions. Remove questions first."
+                    )
+        
+        success = admin_db_manager.update_followup_category(
+            category_id=category_id,
+            display_name=category_data.display_name,
+            description=category_data.description,
+            icon=category_data.icon,
+            sort_order=category_data.sort_order,
+            is_active=category_data.is_active
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update category")
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_category",
+                "action": "update",
+                "category_id": category_id,
+                "category_name": existing["name"],
+                "changes": category_data.dict(exclude_unset=True)
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Follow-up category ID {category_id} updated by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": "Category updated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating followup category {category_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating follow-up category")
+
+
+@router.delete("/settings/followup/categories/{category_id}")
+async def delete_followup_category(
+    category_id: int,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Delete (deactivate) a follow-up category."""
+    if category_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid category ID")
+    
+    try:
+        # Check if category exists
+        existing = admin_db_manager.get_followup_category(category_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Category not found")
+        
+        # Prevent deleting categories that have questions
+        settings_json = admin_db_manager.get_admin_setting("followup_settings")
+        if settings_json:
+            settings = FollowUpSettings.from_json(settings_json)
+            if existing["name"] in settings.custom_questions and settings.custom_questions[existing["name"]]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete category '{existing['display_name']}' - it contains questions. Remove questions first."
+                )
+        
+        success = admin_db_manager.delete_followup_category(category_id)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete category")
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_category",
+                "action": "delete",
+                "category_id": category_id,
+                "category_name": existing["name"]
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Follow-up category ID {category_id} deleted by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": f"Category '{existing['display_name']}' deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting followup category {category_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting follow-up category")
+
+
+@router.post("/settings/followup/categories/reorder")
+async def reorder_followup_categories(
+    request: Request,
+    reorder_data: ReorderCategoriesRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Reorder follow-up categories by updating sort_order."""
+    try:
+        # Validate that all category IDs exist
+        for item in reorder_data.categories:
+            if not admin_db_manager.get_followup_category(item["id"]):
+                raise HTTPException(status_code=400, detail=f"Category ID {item['id']} not found")
+        
+        success = admin_db_manager.reorder_followup_categories(reorder_data.categories)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to reorder categories")
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_categories",
+                "action": "reorder",
+                "category_count": len(reorder_data.categories)
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Follow-up categories reordered by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": "Categories reordered successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reordering followup categories: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error reordering follow-up categories")
+
+
+# Enhanced category endpoints with question counts
+@router.get("/settings/followup/categories/with-stats", response_model=List[CategoryWithStats])
+async def get_categories_with_stats(
+    include_inactive: bool = Query(False, description="Include inactive categories"),
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> List[CategoryWithStats]:
+    """Get all categories with question counts and stats."""
+    try:
+        from ..core.followup_management_service import followup_management_service
+        categories = followup_management_service.get_categories_with_stats()
+        
+        if not include_inactive:
+            categories = [cat for cat in categories if cat['is_active']]
+            
+        return [CategoryWithStats(**category) for category in categories]
+    except Exception as e:
+        logger.error(f"Error getting categories with stats: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching categories with stats")
+
+
+@router.post("/settings/followup/categories/{category_id}/delete")
+async def delete_category_with_strategy(
+    category_id: int,
+    request: Request,
+    delete_request: CategoryDeleteRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Delete category with smart handling of questions."""
+    if category_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid category ID")
+    
+    try:
+        from ..core.followup_management_service import followup_management_service
+        
+        result = followup_management_service.delete_category_with_strategy(
+            category_id=category_id,
+            strategy=delete_request.strategy,
+            target_category_id=delete_request.target_category_id,
+            user_id=session.get('user_id')
+        )
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_category",
+                "action": f"delete_with_strategy_{delete_request.strategy}",
+                "category_id": category_id,
+                "questions_affected": result.get('questions_affected', 0),
+                "target_category_id": delete_request.target_category_id
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Category {category_id} deleted with strategy {delete_request.strategy} by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": f"Category '{result['category_name']}' {result['action']} successfully",
+            **result
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error deleting category {category_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting category")
+
+
+@router.get("/settings/followup/categories/{category_id}/validate-deletion")
+async def validate_category_deletion(
+    category_id: int,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Validate category deletion and return available options."""
+    if category_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid category ID")
+    
+    try:
+        from ..core.followup_management_service import followup_management_service
+        
+        result = followup_management_service.validate_category_deletion(category_id)
+        
+        if not result['valid']:
+            raise HTTPException(status_code=404, detail=result['error'])
+            
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error validating category deletion {category_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error validating category deletion")
+
+
+@router.get("/settings/followup/categories/{category_id}/stats")
+async def get_category_stats(
+    category_id: int,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get statistics for a specific follow-up category."""
+    if category_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid category ID")
+    
+    try:
+        # Verify category exists
+        category = admin_db_manager.get_followup_category(category_id)
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+        
+        # Get question count for this category
+        questions = admin_db_manager.get_followup_questions(
+            category_id=category_id,
+            active_only=False  # Get all questions for stats
+        )
+        
+        active_questions = [q for q in questions if q.get('is_active', True)]
+        inactive_questions = [q for q in questions if not q.get('is_active', True)]
+        
+        return {
+            "category_id": category_id,
+            "question_count": len(questions),
+            "active_questions": len(active_questions),
+            "inactive_questions": len(inactive_questions),
+            "category_name": category.get("name", ""),
+            "category_display_name": category.get("display_name", ""),
+            "is_category_active": category.get("is_active", True)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting category stats {category_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching category statistics")
+
+
+# New normalized question management endpoints
+@router.get("/settings/followup/questions", response_model=List[FollowupQuestion])
+async def get_followup_questions(
+    category_id: Optional[int] = Query(None, description="Filter by category ID"),
+    active_only: bool = Query(True, description="Only include active questions"),
+    search: Optional[str] = Query(None, min_length=3, description="Search question text"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum questions to return"),
+    offset: int = Query(0, ge=0, description="Number of questions to skip"),
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> List[FollowupQuestion]:
+    """Get follow-up questions with pagination and filtering."""
+    try:
+        questions = admin_db_manager.get_followup_questions(
+            category_id=category_id,
+            active_only=active_only,
+            search=search,
+            limit=limit,
+            offset=offset
+        )
+        return [FollowupQuestion(**question) for question in questions]
+    except Exception as e:
+        logger.error(f"Error getting followup questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up questions")
+
+
+@router.get("/settings/followup/questions/{question_id}", response_model=FollowupQuestion)
+async def get_followup_question(
+    question_id: int,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> FollowupQuestion:
+    """Get a single follow-up question by ID."""
+    if question_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid question ID")
+    
+    try:
+        question = admin_db_manager.get_followup_question(question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+        return FollowupQuestion(**question)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting followup question {question_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up question")
+
+
+@router.post("/settings/followup/questions", response_model=Dict[str, Any])
+async def create_followup_question(
+    request: Request,
+    question_data: CreateFollowupQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Create a new follow-up question."""
+    try:
+        question_id = admin_db_manager.create_followup_question(
+            category_id=question_data.category_id,
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            created_by=session.get('user_id')
+        )
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_question",
+                "action": "create",
+                "question_id": question_id,
+                "category_id": question_data.category_id
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Follow-up question {question_id} created by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": "Question created successfully",
+            "question_id": question_id
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating followup question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating follow-up question")
+
+
+@router.put("/settings/followup/questions/{question_id}", response_model=Dict[str, Any])
+async def update_followup_question(
+    question_id: int,
+    request: Request,
+    question_data: UpdateFollowupQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update a follow-up question."""
+    if question_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid question ID")
+    
+    try:
+        # Check if question exists
+        existing = admin_db_manager.get_followup_question(question_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        success = admin_db_manager.update_followup_question(
+            question_id=question_id,
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            is_active=question_data.is_active
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update question")
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_question",
+                "action": "update",
+                "question_id": question_id,
+                "changes": question_data.dict(exclude_unset=True)
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Follow-up question {question_id} updated by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": "Question updated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating followup question {question_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating follow-up question")
+
+
+@router.delete("/settings/followup/questions/{question_id}")
+async def delete_followup_question(
+    question_id: int,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Delete a follow-up question."""
+    if question_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid question ID")
+    
+    try:
+        # Check if question exists
+        existing = admin_db_manager.get_followup_question(question_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        success = admin_db_manager.delete_followup_question(question_id)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete question")
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_question",
+                "action": "delete",
+                "question_id": question_id,
+                "question_text": existing["question_text"][:100]
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Follow-up question {question_id} deleted by user {session['user_id']}")
+        
+        return {
+            "success": True,
+            "message": "Question deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting followup question {question_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting follow-up question")
+
+
+@router.post("/settings/followup/questions/bulk")
+async def bulk_update_questions(
+    request: Request,
+    bulk_data: BulkQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Perform bulk operations on questions."""
+    try:
+        from ..core.followup_management_service import followup_management_service
+        
+        result = followup_management_service.bulk_update_questions(bulk_data.operations)
+        
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+        
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_questions",
+                "action": "bulk_update",
+                "operations_count": len(bulk_data.operations),
+                "completed": result["operations_completed"],
+                "failed": result["operations_failed"]
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        
+        logger.info(f"Bulk question operations by user {session['user_id']}: {result['operations_completed']} completed, {result['operations_failed']} failed")
+        
+        return {
+            "success": result["operations_failed"] == 0,
+            "message": f"Bulk operations completed: {result['operations_completed']} successful, {result['operations_failed']} failed",
+            **result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in bulk question operations: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error performing bulk operations")
+
+
+@router.get("/settings/followup/questions/search")
+async def search_followup_questions(
+    query: str = Query(..., min_length=3, max_length=100),
+    category_id: Optional[int] = Query(None, gt=0),
+    limit: int = Query(20, ge=1, le=50),
+    session: Dict[str, Any] = Depends(require_admin_auth)
+) -> List[FollowupQuestion]:
+    """Search follow-up questions by text."""
+    try:
+        from ..core.followup_management_service import followup_management_service
+        
+        questions = followup_management_service.search_questions(
+            query=query,
+            category_id=category_id,
+            limit=limit
+        )
+        
+        return [FollowupQuestion(**question) for question in questions]
+        
+    except Exception as e:
+        logger.error(f"Error searching questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error searching follow-up questions")

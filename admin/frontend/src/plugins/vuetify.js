@@ -10,6 +10,7 @@ import {
   mdiDownload, mdiUpload, mdiCloudUpload, mdiPaperclip, mdiDelete,
   mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight, mdiChevronDown,
   mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
+  mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -19,7 +20,7 @@ import {
   // Content & Knowledge
   mdiBookOpenPageVariant, mdiInformation, mdiFolder, mdiFormatListBulleted,
   mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb, mdiHelpCircleOutline, mdiCog,
-  mdiBrain, mdiTune, mdiTarget, mdiNumeric,
+  mdiBrain, mdiTune, mdiTarget, mdiNumeric, mdiFormatListGroup, mdiPalette,
   
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
@@ -84,6 +85,7 @@ const iconAliases = {
   export: mdiExport,
   filter: mdiFilter,
   view: mdiEye,
+  eye: mdiEye,
   download: mdiDownload,
   upload: mdiUpload,
   'cloud_upload': mdiCloudUpload,
@@ -100,6 +102,13 @@ const iconAliases = {
   'map-marker': mdiMapMarker,
   text: mdiText,
   file: mdiFile,
+  plus: mdiPlus,
+  'drag-vertical': mdiDragVertical,
+  'eye-off': mdiEyeOff,
+  'arrow-up': mdiArrowUp,
+  'arrow-down': mdiArrowDown,
+  'dots-vertical': mdiDotsVertical,
+  'alert-triangle': mdiAlert,
   
   // Status
   alert: mdiAlert,
@@ -129,12 +138,16 @@ const iconAliases = {
   'insert_drive_file': mdiFileDocumentOutline,
   help: mdiHelpCircleOutline,
   'help-circle': mdiHelpCircleOutline,
+  'help-circle-outline': mdiHelpCircleOutline,
   settings: mdiCog,
   brain: mdiBrain,
   tune: mdiTune,
   target: mdiTarget,
   numeric: mdiNumeric,
   pencil: mdiPencil,
+  'format-list-group': mdiFormatListGroup,
+  palette: mdiPalette,
+  code: mdiCodeBraces,
   
   // User & Security
   account: mdiAccount,

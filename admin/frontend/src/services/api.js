@@ -343,6 +343,269 @@ class AdminAPI {
     }
   }
 
+  async getFollowupQuestions() {
+    try {
+      const response = await this.client.get('/settings/followup/questions')
+      return response
+    } catch (error) {
+      console.error('Failed to get follow-up questions:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupQuestions(questions) {
+    try {
+      const response = await this.client.put('/settings/followup/questions', questions)
+      return response
+    } catch (error) {
+      console.error('Failed to update follow-up questions:', error)
+      throw error
+    }
+  }
+
+  async resetFollowupQuestions() {
+    try {
+      const response = await this.client.post('/settings/followup/questions/reset')
+      return response
+    } catch (error) {
+      console.error('Failed to reset follow-up questions:', error)
+      throw error
+    }
+  }
+
+  // Follow-up category management endpoints
+  async getFollowupCategories(includeInactive = false) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories?include_inactive=${includeInactive}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get follow-up categories:', error)
+      throw error
+    }
+  }
+
+  async getFollowupCategory(categoryId) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/${categoryId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get follow-up category:', error)
+      throw error
+    }
+  }
+
+  async createFollowupCategory(categoryData) {
+    try {
+      const response = await this.client.post('/settings/followup/categories', categoryData)
+      return response
+    } catch (error) {
+      console.error('Failed to create follow-up category:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupCategory(categoryId, categoryData) {
+    try {
+      const response = await this.client.put(`/settings/followup/categories/${categoryId}`, categoryData)
+      return response
+    } catch (error) {
+      console.error('Failed to update follow-up category:', error)
+      throw error
+    }
+  }
+
+  async deleteFollowupCategory(categoryId) {
+    try {
+      const response = await this.client.delete(`/settings/followup/categories/${categoryId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to delete follow-up category:', error)
+      throw error
+    }
+  }
+
+  async reorderFollowupCategories(categories) {
+    try {
+      const response = await this.client.post('/settings/followup/categories/reorder', { categories })
+      return response
+    } catch (error) {
+      console.error('Failed to reorder follow-up categories:', error)
+      throw error
+    }
+  }
+
+  // Enhanced category management with stats
+  async getCategoriesWithStats(includeInactive = false) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/with-stats?include_inactive=${includeInactive}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get categories with stats:', error)
+      throw error
+    }
+  }
+
+  async validateCategoryDeletion(categoryId) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/${categoryId}/validate-deletion`)
+      return response
+    } catch (error) {
+      console.error('Failed to validate category deletion:', error)
+      throw error
+    }
+  }
+
+  async deleteCategoryWithStrategy(categoryId, strategy, targetCategoryId = null) {
+    try {
+      const response = await this.client.post(`/settings/followup/categories/${categoryId}/delete`, {
+        strategy,
+        target_category_id: targetCategoryId
+      })
+      return response
+    } catch (error) {
+      console.error('Failed to delete category with strategy:', error)
+      throw error
+    }
+  }
+
+  // New normalized question management
+  async getFollowupQuestionsNormalized(params = {}) {
+    try {
+      const searchParams = new URLSearchParams()
+      if (params.category_id) searchParams.append('category_id', params.category_id)
+      if (params.active_only !== undefined) searchParams.append('active_only', params.active_only)
+      if (params.search) searchParams.append('search', params.search)
+      if (params.limit) searchParams.append('limit', params.limit)
+      if (params.offset) searchParams.append('offset', params.offset)
+
+      const response = await this.client.get(`/settings/followup/questions?${searchParams}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup questions:', error)
+      throw error
+    }
+  }
+
+  async getFollowupQuestionNormalized(questionId) {
+    try {
+      const response = await this.client.get(`/settings/followup/questions/${questionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup question:', error)
+      throw error
+    }
+  }
+
+  async createFollowupQuestionNormalized(questionData) {
+    try {
+      const response = await this.client.post('/settings/followup/questions', questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to create followup question:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupQuestionNormalized(questionId, questionData) {
+    try {
+      const response = await this.client.put(`/settings/followup/questions/${questionId}`, questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to update followup question:', error)
+      throw error
+    }
+  }
+
+  async deleteFollowupQuestionNormalized(questionId) {
+    try {
+      const response = await this.client.delete(`/settings/followup/questions/${questionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to delete followup question:', error)
+      throw error
+    }
+  }
+
+  async bulkUpdateQuestions(operations) {
+    try {
+      const response = await this.client.post('/settings/followup/questions/bulk', { operations })
+      return response
+    } catch (error) {
+      console.error('Failed to bulk update questions:', error)
+      throw error
+    }
+  }
+
+  async searchFollowupQuestions(query, categoryId = null, limit = 20) {
+    try {
+      const searchParams = new URLSearchParams()
+      searchParams.append('query', query)
+      if (categoryId) searchParams.append('category_id', categoryId)
+      searchParams.append('limit', limit)
+
+      const response = await this.client.get(`/settings/followup/questions/search?${searchParams}`)
+      return response
+    } catch (error) {
+      console.error('Failed to search followup questions:', error)
+      throw error
+    }
+  }
+
+  // Additional normalized API methods for the unified interface
+  async getFollowupCategoriesNormalized(includeInactive = true) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories?include_inactive=${includeInactive}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup categories normalized:', error)
+      throw error
+    }
+  }
+
+  async createFollowupCategoryNormalized(categoryData) {
+    try {
+      const response = await this.client.post('/settings/followup/categories', categoryData)
+      return response
+    } catch (error) {
+      console.error('Failed to create followup category normalized:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupCategoryNormalized(categoryId, categoryData) {
+    try {
+      const response = await this.client.put(`/settings/followup/categories/${categoryId}`, categoryData)
+      return response
+    } catch (error) {
+      console.error('Failed to update followup category normalized:', error)
+      throw error
+    }
+  }
+
+  async deleteFollowupCategoryWithStrategyNormalized(deleteRequest) {
+    try {
+      const response = await this.client.post(`/settings/followup/categories/${deleteRequest.categoryId}/delete`, {
+        strategy: deleteRequest.strategy,
+        target_category_id: deleteRequest.targetCategoryId
+      })
+      return response
+    } catch (error) {
+      console.error('Failed to delete followup category with strategy:', error)
+      throw error
+    }
+  }
+
+  async getFollowupCategoryStatsNormalized(categoryId) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/${categoryId}/stats`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup category stats:', error)
+      // Return default stats instead of throwing to prevent UI breaking
+      return { question_count: 0, active_questions: 0 }
+    }
+  }
+
   // Utility methods
   async testConnection() {
     try {

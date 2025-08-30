@@ -4,8 +4,8 @@ import logging
 import os
 import re
 import secrets
-from dataclasses import asdict, dataclass
-from typing import List
+from dataclasses import asdict, dataclass, field
+from typing import Dict, List
 from urllib.parse import urlparse
 
 # Set up logging
@@ -24,6 +24,7 @@ class FollowUpSettings:
     include_personal: bool = True
     include_creative: bool = True
     question_style: str = "conversational"  # formal, conversational, exploratory
+    custom_questions: Dict[str, List[str]] = field(default_factory=dict)  # Custom questions by category
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -73,6 +74,28 @@ class FollowUpSettings:
         valid_styles = ["formal", "conversational", "exploratory"]
         if validated_data["question_style"] not in valid_styles:
             validated_data["question_style"] = defaults.question_style
+
+        # Validate custom_questions
+        if "custom_questions" in validated_data and validated_data["custom_questions"]:
+            custom_questions = validated_data["custom_questions"]
+            if not isinstance(custom_questions, dict):
+                validated_data["custom_questions"] = {}
+            else:
+                # Validate categories and questions
+                valid_categories = ["technical", "personal", "creative"]
+                cleaned_questions = {}
+                for category, questions in custom_questions.items():
+                    if category in valid_categories and isinstance(questions, list):
+                        # Filter and validate individual questions
+                        valid_questions = []
+                        for q in questions:
+                            if isinstance(q, str) and q.strip() and len(q.strip()) <= 200:
+                                valid_questions.append(q.strip())
+                        if valid_questions:
+                            cleaned_questions[category] = valid_questions[:20]  # Max 20 questions per category
+                validated_data["custom_questions"] = cleaned_questions
+        else:
+            validated_data["custom_questions"] = {}
 
         return cls(**validated_data)
 

@@ -12,7 +12,7 @@ class FollowUpService:
     """Service for generating smart follow-up question suggestions with configurable settings."""
 
     def __init__(self) -> None:
-        # Question pools for different categories
+        # Fallback question pools for different categories (kept for backward compatibility)
         self.question_pools = {
             "technical": [
                 "What technologies do you work with?",
@@ -54,6 +54,9 @@ class FollowUpService:
         # Cache settings to avoid frequent database calls
         self._cached_settings: Optional[FollowUpSettings] = None
         self._settings_cache_timestamp: float = 0
+        # Cache categories to avoid frequent database calls
+        self._cached_categories: Optional[List[Dict]] = None
+        self._categories_cache_timestamp: float = 0
 
     def _get_settings(self) -> FollowUpSettings:
         """Get current settings with caching."""
@@ -78,22 +81,97 @@ class FollowUpService:
 
         return self._cached_settings
 
+    def _get_active_categories(self) -> List[Dict]:
+        """Get active categories from database with caching."""
+        import time
+
+        current_time = time.time()
+        # Cache categories for 60 seconds to reduce database calls
+        if self._cached_categories is None or current_time - self._categories_cache_timestamp > 60:
+            try:
+                self._cached_categories = admin_db_manager.get_followup_categories(active_only=True)
+                self._categories_cache_timestamp = current_time
+                logger.info(f"FollowUpService: Loaded {len(self._cached_categories)} active categories")
+            except Exception as e:
+                logger.warning(f"Failed to load categories, using fallback: {e}")
+                # Create fallback category structure from hardcoded pools
+                self._cached_categories = [
+                    {"name": "technical", "display_name": "Technical", "is_active": True},
+                    {"name": "personal", "display_name": "Personal", "is_active": True},
+                    {"name": "creative", "display_name": "Creative", "is_active": True},
+                ]
+                self._categories_cache_timestamp = current_time
+
+        return self._cached_categories
+
     def _build_question_pool(self, settings: FollowUpSettings) -> List[str]:
-        """Build question pool based on settings."""
+        """Build question pool based on settings and active categories, using normalized questions table."""
         questions = []
 
-        # Add questions from enabled categories
-        if settings.include_technical:
-            questions.extend(self.question_pools["technical"])
-        if settings.include_personal:
-            questions.extend(self.question_pools["personal"])
-        if settings.include_creative:
-            questions.extend(self.question_pools["creative"])
+        # Get active categories from database
+        active_categories = self._get_active_categories()
+        
+        # First try to get questions from normalized database structure
+        try:
+            for category in active_categories:
+                category_id = category.get("id")
+                category_name = category.get("name", "")
+                
+                # Check if this category type should be included based on settings
+                should_include = (
+                    (category_name == "technical" and settings.include_technical) or
+                    (category_name == "personal" and settings.include_personal) or
+                    (category_name == "creative" and settings.include_creative) or
+                    (category_name not in ["technical", "personal", "creative"])  # Include custom categories by default
+                )
+                
+                if should_include and category_id:
+                    # Get active questions for this category from normalized table
+                    category_questions = admin_db_manager.get_followup_questions(
+                        category_id=category_id,
+                        active_only=True
+                    )
+                    # Extract just the question text
+                    questions.extend([q["question_text"] for q in category_questions])
+        except Exception as e:
+            logger.warning(f"Failed to load questions from normalized structure: {e}")
+            
+        # Fallback to legacy custom_questions if no questions from normalized structure
+        if not questions and settings.custom_questions:
+            logger.info("Falling back to legacy custom_questions from settings")
+            for category in active_categories:
+                category_name = category.get("name", "")
+                
+                # Check if this category type should be included based on settings
+                if (
+                    (category_name == "technical" and settings.include_technical) or
+                    (category_name == "personal" and settings.include_personal) or
+                    (category_name == "creative" and settings.include_creative) or
+                    (category_name not in ["technical", "personal", "creative"])  # Include custom categories by default
+                ):
+                    if category_name in settings.custom_questions:
+                        questions.extend(settings.custom_questions[category_name])
+        
+        # Final fallback to hardcoded question pools for active categories
+        if not questions:
+            logger.info("Falling back to hardcoded question pools")
+            for category in active_categories:
+                category_name = category.get("name", "")
+                
+                # Check if this category type should be included and exists in hardcoded pools
+                if category_name in self.question_pools:
+                    if (
+                        (category_name == "technical" and settings.include_technical) or
+                        (category_name == "personal" and settings.include_personal) or
+                        (category_name == "creative" and settings.include_creative)
+                    ):
+                        questions.extend(self.question_pools[category_name])
 
-        # If no categories enabled, use defaults
+        # If still no questions available, use defaults
         if not questions:
             questions = list(self.default_questions)
 
+        logger.debug(f"FollowUpService: Built question pool with {len(questions)} questions from {len(active_categories)} categories")
         return questions
 
     def _generate_static_questions(self, settings: FollowUpSettings) -> List[str]:
@@ -197,3 +275,13 @@ class FollowUpService:
         self._cached_settings = None
         self._settings_cache_timestamp = 0
         logger.info("Follow-up settings cache cleared, will reload on next request")
+
+    def reload_categories(self) -> None:
+        """Force reload of categories from database."""
+        self._cached_categories = None
+        self._categories_cache_timestamp = 0
+        logger.info("Follow-up categories cache cleared, will reload on next request")
+
+    def get_available_categories(self) -> List[Dict]:
+        """Get all available categories for admin UI."""
+        return self._get_active_categories()
