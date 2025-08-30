@@ -1,14 +1,7 @@
 <template>
   <div class="content-view">
     <!-- Header -->
-    <div class="d-flex justify-space-between align-center mb-6">
-      <div>
-        <h2 class="text-h5">Content Gaps</h2>
-        <p class="text-body-1 text-medium-emphasis mt-1">
-          Monitor and manage content gaps in your knowledge base
-        </p>
-      </div>
-      
+    <div class="d-flex justify-end align-center mb-6">
       <v-btn
         color="primary"
         variant="outlined"
@@ -23,37 +16,73 @@
     <div v-show="showAnalytics" class="mb-6">
       <v-row>
         <v-col cols="12" md="3">
-          <v-card variant="outlined">
-            <v-card-text class="text-center">
-              <div class="text-h4 font-weight-bold text-warning">{{ stats.total || 0 }}</div>
-              <div class="text-body-2 text-medium-emphasis">Total Gaps</div>
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                  Total Gaps
+                </div>
+                <v-avatar size="40" color="rgba(245, 158, 11, 0.1)" variant="flat">
+                  <v-icon color="warning" size="20">$alert</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ stats.total || 0 }}
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
         
         <v-col cols="12" md="3">
-          <v-card variant="outlined">
-            <v-card-text class="text-center">
-              <div class="text-h4 font-weight-bold text-error">{{ stats.unresolved || 0 }}</div>
-              <div class="text-body-2 text-medium-emphasis">Unresolved</div>
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                  Unresolved
+                </div>
+                <v-avatar size="40" color="rgba(239, 68, 68, 0.1)" variant="flat">
+                  <v-icon color="error" size="20">$close</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ stats.unresolved || 0 }}
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
         
         <v-col cols="12" md="3">
-          <v-card variant="outlined">
-            <v-card-text class="text-center">
-              <div class="text-h4 font-weight-bold text-success">{{ stats.resolved || 0 }}</div>
-              <div class="text-body-2 text-medium-emphasis">Resolved</div>
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                  Resolved
+                </div>
+                <v-avatar size="40" color="rgba(16, 185, 129, 0.1)" variant="flat">
+                  <v-icon color="success" size="20">$check-circle</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ stats.resolved || 0 }}
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
         
         <v-col cols="12" md="3">
-          <v-card variant="outlined">
-            <v-card-text class="text-center">
-              <div class="text-h4 font-weight-bold text-info">{{ stats.avgScore || '0.00' }}</div>
-              <div class="text-body-2 text-medium-emphasis">Avg Score</div>
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+                  Avg Score
+                </div>
+                <v-avatar size="40" color="rgba(59, 130, 246, 0.1)" variant="flat">
+                  <v-icon color="info" size="20">$chart</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ stats.avgScore || '0.00' }}
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
@@ -64,7 +93,7 @@
     <ContentGapsTable @stats-updated="updateStats" />
 
     <!-- Help Section -->
-    <v-card class="mt-6" variant="tonal" color="info">
+    <v-card class="mt-6">
       <v-card-text>
         <div class="d-flex align-start gap-3">
           <v-icon color="info">$info</v-icon>
@@ -110,5 +139,19 @@ const updateStats = (newStats) => {
 .content-view {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.metric-style-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-style-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(var(--v-shadow-key-umbra-opacity), 0.08);
+}
+
+.metric-value {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 </style>

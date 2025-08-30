@@ -1,7 +1,6 @@
 <template>
   <div class="indexed-documents-view">
-    <div class="d-flex justify-space-between align-center mb-6">
-      <h2 class="text-h5">Indexed Documents</h2>
+    <div class="d-flex justify-end align-center mb-6">
       <v-btn
         color="primary"
         prepend-icon="$refresh"
@@ -14,7 +13,7 @@
     </div>
 
     <!-- Indexed Documents Section -->
-    <v-card elevation="2">
+    <v-card>
       <v-card-title class="text-h6 d-flex align-center">
         <v-icon class="me-2">$search</v-icon>
         Indexed Documents
@@ -363,6 +362,10 @@ export default {
 </script>
 
 <style scoped>
+.indexed-documents-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
 
 .v-card {
   margin-bottom: 16px;

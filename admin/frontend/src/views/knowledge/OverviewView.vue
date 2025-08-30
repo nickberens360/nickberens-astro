@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <div class="overview-view">
     <!-- Upload Section -->
-    <v-card class="mb-6" elevation="2">
+    <v-card class="mb-6">
       <v-card-title class="text-h6">
         <v-icon class="me-2">$upload</v-icon>
         Upload Documents
@@ -101,7 +101,7 @@
     </v-card>
 
     <!-- File List -->
-    <v-card elevation="2">
+    <v-card>
       <v-card-title class="text-h6 d-flex align-center">
         <v-icon class="me-2">$list</v-icon>
         Knowledge Base Files
@@ -393,6 +393,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.overview-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
 .v-file-input :deep(.v-field__input) {
   padding-top: 8px;
 }

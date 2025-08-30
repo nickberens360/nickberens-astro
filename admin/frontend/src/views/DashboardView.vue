@@ -1,6 +1,5 @@
 <template>
   <div class="dashboard">
-    <h1 class="dashboard-title mb-6">Dashboard Overview</h1>
     
     <!-- Metric Cards Grid -->
     <v-row class="mb-6">
@@ -26,32 +25,34 @@
     </v-row>
     
     <!-- Charts Row -->
-    <v-row>
-      <v-col cols="12" md="8">
+    <v-row class="mb-6">
+      <!-- Left Side: Response Time Chart -->
+      <v-col cols="12" lg="8">
         <PerformanceChart
-          title="Response Time Trend"
+          title="Response Time Timeline"
           :data="responseTimeChartData"
           :loading="isLoading || performanceLoading"
           type="line"
         />
       </v-col>
       
-      <v-col cols="12" md="4">
+      <!-- Right Side: Donut Chart -->
+      <v-col cols="12" lg="4">
         <PerformanceChart
           title="Query Status Distribution"
           :data="statusChartData"
           :loading="isLoading"
           type="doughnut"
-          :height="350"
+          :height="400"
         />
       </v-col>
     </v-row>
     
-    <!-- Recent Queries Table -->
-    <v-row class="mt-6">
+    <!-- Full Width Queries Table -->
+    <v-row>
       <v-col cols="12">
         <QueryTable
-          title="Recent Queries"
+          title="All Queries"
           @query-selected="handleQuerySelected"
         />
       </v-col>
@@ -156,7 +157,10 @@ const statusChartData = computed(() => {
     labels: ['Success', 'Error'],
     datasets: [{
       data: [successRate, errorRate],
-      backgroundColor: ['#4CAF50', '#FF5252']
+      backgroundColor: ['#4CAF50', '#FF5252'],
+      borderWidth: 0,
+      hoverBorderWidth: 3,
+      hoverBorderColor: '#fff'
     }]
   }
 })

@@ -1,6 +1,5 @@
 <template>
   <div class="performance-view">
-    <h1 class="dashboard-title mb-6">Performance Analytics</h1>
     
     <v-row class="mb-6">
       <v-col
@@ -65,15 +64,18 @@ const performanceMetrics = computed(() => {
     {
       key: 'responseTime',
       title: 'Avg Response Time',
-      value: `${metrics.value?.responseTime?.current || 0}ms`,
+      value: metrics.value?.responseTime?.current || 0,
+      unit: 'ms',
       icon: '$clock',
       color: 'primary',
-      change: metrics.value?.responseTime?.change || 0
+      change: metrics.value?.responseTime?.change || 0,
+      inverse: true
     },
     {
       key: 'throughput',
       title: 'Throughput',
-      value: `${metrics.value?.throughput?.current || 0}/hr`,
+      value: metrics.value?.throughput?.current || 0,
+      unit: '/hr',
       icon: '$trendUp',
       color: 'success',
       change: metrics.value?.throughput?.change || 0
@@ -81,7 +83,8 @@ const performanceMetrics = computed(() => {
     {
       key: 'errorRate',
       title: 'Error Rate',
-      value: `${metrics.value?.errorRate?.current || 0}%`,
+      value: metrics.value?.errorRate?.current || 0,
+      unit: '%',
       icon: '$alert',
       color: 'error',
       change: metrics.value?.errorRate?.change || 0,
@@ -90,7 +93,8 @@ const performanceMetrics = computed(() => {
     {
       key: 'cacheHitRate',
       title: 'Cache Hit Rate',
-      value: `${metrics.value?.cacheHitRate?.current || 0}%`,
+      value: metrics.value?.cacheHitRate?.current || 0,
+      unit: '%',
       icon: '$check',
       color: 'info',
       change: metrics.value?.cacheHitRate?.change || 0

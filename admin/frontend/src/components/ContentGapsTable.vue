@@ -43,7 +43,7 @@
     </div>
 
     <!-- Empty State -->
-    <v-card v-else-if="!loading && gaps.length === 0" variant="outlined">
+    <v-card v-else-if="!loading && gaps.length === 0">
       <v-card-text class="text-center py-8">
         <v-icon size="64" color="success" class="mb-4">$check-circle</v-icon>
         <h3 class="text-h6 mb-2">No Content Gaps Found</h3>
@@ -54,7 +54,7 @@
     </v-card>
 
     <!-- Gaps Table -->
-    <v-card v-else variant="outlined">
+    <v-card v-else>
       <v-table hover>
         <thead>
           <tr>
