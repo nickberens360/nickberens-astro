@@ -1,19 +1,7 @@
 <template>
   <div class="content-view">
-    <!-- Header -->
-    <div class="d-flex justify-end align-center mb-6">
-      <v-btn
-        color="primary"
-        variant="outlined"
-        prepend-icon="$chart"
-        @click="showAnalytics = !showAnalytics"
-      >
-        {{ showAnalytics ? 'Hide' : 'Show' }} Analytics
-      </v-btn>
-    </div>
-
-    <!-- Analytics Cards (Optional) -->
-    <div v-show="showAnalytics" class="mb-6">
+    <!-- Analytics Cards -->
+    <div class="mb-6">
       <v-row>
         <v-col cols="12" md="3">
           <v-card class="metric-style-card">
@@ -121,7 +109,6 @@ import { ref, computed } from 'vue'
 import ContentGapsTable from '@/components/ContentGapsTable.vue'
 
 // Reactive state
-const showAnalytics = ref(true)
 const stats = ref({
   total: 0,
   unresolved: 0,
