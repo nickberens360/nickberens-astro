@@ -13,12 +13,15 @@
             :rules="[
               v => !!v || 'Name is required',
               v => (v && v.length >= 2) || 'Name must be at least 2 characters',
-              v => (v && v.length <= 50) || 'Name must be 50 characters or less'
+              v => (v && v.length <= 50) || 'Name must be 50 characters or less',
+              v => /^[a-z_][a-z0-9_]*$/.test(v) || 'Name must start with lowercase letter or underscore, and contain only lowercase letters, numbers, and underscores'
             ]"
             variant="outlined"
             maxlength="50"
             counter
             required
+            hint="Use snake_case format (e.g., technical_questions, general_help)"
+            persistent-hint
           ></v-text-field>
 
           <v-text-field
@@ -164,7 +167,20 @@ export default {
       }
     }, { immediate: true })
 
-    // Auto-generate display_name from name if not manually set
+    // Auto-generate name from display_name if not manually set
+    watch(() => categoryData.value.display_name, (newDisplayName) => {
+      if (!isEdit.value && newDisplayName && !categoryData.value.name) {
+        // Convert display name to snake_case format
+        const snakeCase = newDisplayName
+          .toLowerCase()
+          .replace(/[^\w\s]/g, '') // Remove special characters
+          .replace(/\s+/g, '_')     // Replace spaces with underscores
+          .replace(/^(\d)/, '_$1')  // Prefix with underscore if starts with number
+        categoryData.value.name = snakeCase
+      }
+    })
+
+    // Auto-generate display_name from name if not manually set (for reverse case)
     watch(() => categoryData.value.name, (newName) => {
       if (!isEdit.value && newName && !categoryData.value.display_name) {
         // Convert snake_case or kebab-case to Title Case
