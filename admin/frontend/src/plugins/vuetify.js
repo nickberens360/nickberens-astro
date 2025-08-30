@@ -11,6 +11,7 @@ import {
   mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight, mdiChevronDown,
   mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
   mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
+  mdiToggleSwitch, mdiSort, mdiCheckboxMarked,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -109,6 +110,10 @@ const iconAliases = {
   'arrow-down': mdiArrowDown,
   'dots-vertical': mdiDotsVertical,
   'alert-triangle': mdiAlert,
+  'toggle-switch': mdiToggleSwitch,
+  'sort': mdiSort,
+  'checkbox-marked': mdiCheckboxMarked,
+  'trending-up': mdiTrendingUp,
   
   // Status
   alert: mdiAlert,

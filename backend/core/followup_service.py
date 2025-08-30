@@ -110,60 +110,68 @@ class FollowUpService:
 
         # Get active categories from database
         active_categories = self._get_active_categories()
-        
-        # First try to get questions from normalized database structure
+
+        # Get questions from normalized database structure (primary source)
         try:
             for category in active_categories:
                 category_id = category.get("id")
                 category_name = category.get("name", "")
-                
+
                 # Check if this category type should be included based on settings
                 should_include = (
-                    (category_name == "technical" and settings.include_technical) or
-                    (category_name == "personal" and settings.include_personal) or
-                    (category_name == "creative" and settings.include_creative) or
-                    (category_name not in ["technical", "personal", "creative"])  # Include custom categories by default
+                    (category_name == "technical" and settings.include_technical)
+                    or (category_name == "personal" and settings.include_personal)
+                    or (category_name == "creative" and settings.include_creative)
+                    or (
+                        category_name not in ["technical", "personal", "creative"]
+                    )  # Include custom categories by default
                 )
-                
+
                 if should_include and category_id:
                     # Get active questions for this category from normalized table
                     category_questions = admin_db_manager.get_followup_questions(
-                        category_id=category_id,
-                        active_only=True
+                        category_id=category_id, active_only=True
                     )
                     # Extract just the question text
                     questions.extend([q["question_text"] for q in category_questions])
+                    logger.debug(
+                        f"Loaded {len(category_questions)} questions from category '{category_name}' (ID: {category_id})"
+                    )
         except Exception as e:
             logger.warning(f"Failed to load questions from normalized structure: {e}")
-            
-        # Fallback to legacy custom_questions if no questions from normalized structure
+
+        # Secondary fallback: legacy custom_questions from settings
         if not questions and settings.custom_questions:
-            logger.info("Falling back to legacy custom_questions from settings")
+            logger.info("No database questions found, falling back to legacy custom_questions from settings")
             for category in active_categories:
                 category_name = category.get("name", "")
-                
+
                 # Check if this category type should be included based on settings
                 if (
-                    (category_name == "technical" and settings.include_technical) or
-                    (category_name == "personal" and settings.include_personal) or
-                    (category_name == "creative" and settings.include_creative) or
-                    (category_name not in ["technical", "personal", "creative"])  # Include custom categories by default
+                    (category_name == "technical" and settings.include_technical)
+                    or (category_name == "personal" and settings.include_personal)
+                    or (category_name == "creative" and settings.include_creative)
+                    or (
+                        category_name not in ["technical", "personal", "creative"]
+                    )  # Include custom categories by default
                 ):
                     if category_name in settings.custom_questions:
                         questions.extend(settings.custom_questions[category_name])
-        
-        # Final fallback to hardcoded question pools for active categories
+
+        # Final fallback: hardcoded question pools (backward compatibility only)
         if not questions:
-            logger.info("Falling back to hardcoded question pools")
+            logger.warning(
+                "No database or legacy questions found, falling back to hardcoded question pools (consider running migration)"
+            )
             for category in active_categories:
                 category_name = category.get("name", "")
-                
+
                 # Check if this category type should be included and exists in hardcoded pools
                 if category_name in self.question_pools:
                     if (
-                        (category_name == "technical" and settings.include_technical) or
-                        (category_name == "personal" and settings.include_personal) or
-                        (category_name == "creative" and settings.include_creative)
+                        (category_name == "technical" and settings.include_technical)
+                        or (category_name == "personal" and settings.include_personal)
+                        or (category_name == "creative" and settings.include_creative)
                     ):
                         questions.extend(self.question_pools[category_name])
 
@@ -171,7 +179,9 @@ class FollowUpService:
         if not questions:
             questions = list(self.default_questions)
 
-        logger.debug(f"FollowUpService: Built question pool with {len(questions)} questions from {len(active_categories)} categories")
+        logger.debug(
+            f"FollowUpService: Built question pool with {len(questions)} questions from {len(active_categories)} categories"
+        )
         return questions
 
     def _generate_static_questions(self, settings: FollowUpSettings) -> List[str]:
