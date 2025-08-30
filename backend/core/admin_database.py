@@ -196,19 +196,31 @@ class AdminDatabaseManager:
 
                 # Create indices for follow-up categories
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_categories_name ON followup_categories(name)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_categories_active ON followup_categories(is_active)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_categories_order ON followup_categories(sort_order)")
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_categories_active ON followup_categories(is_active)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_categories_order ON followup_categories(sort_order)"
+                )
 
                 # Create indices for follow-up questions
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_questions_category ON followup_questions(category_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_questions_active ON followup_questions(is_active)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_questions_order ON followup_questions(category_id, sort_order)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_questions_text ON followup_questions(question_text)")
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_category ON followup_questions(category_id)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_active ON followup_questions(is_active)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_order ON followup_questions(category_id, sort_order)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_text ON followup_questions(question_text)"
+                )
 
                 # Seed default categories if table is empty
                 cursor.execute("SELECT COUNT(*) FROM followup_categories")
                 category_count = cursor.fetchone()[0]
-                
+
                 if category_count == 0:
                     logger.info("Creating default followup categories")
                     self._create_default_categories(cursor)
@@ -329,7 +341,7 @@ class AdminDatabaseManager:
                 "sort_order": 1,
             },
             {
-                "name": "personal", 
+                "name": "personal",
                 "display_name": "Personal",
                 "description": "Experience, background, and contact information",
                 "icon": "account",
@@ -337,13 +349,13 @@ class AdminDatabaseManager:
             },
             {
                 "name": "creative",
-                "display_name": "Creative", 
+                "display_name": "Creative",
                 "description": "Illustrations, art, and design work",
                 "icon": "palette",
                 "sort_order": 3,
             },
         ]
-        
+
         for category in default_categories:
             cursor.execute(
                 """
@@ -360,7 +372,7 @@ class AdminDatabaseManager:
                     datetime.now(),
                 ),
             )
-        
+
         logger.info(f"Created {len(default_categories)} default followup categories")
 
     def _migrate_questions_to_normalized_structure(self, cursor):
@@ -369,49 +381,45 @@ class AdminDatabaseManager:
             # Check if we have any questions in the normalized table
             cursor.execute("SELECT COUNT(*) FROM followup_questions")
             question_count = cursor.fetchone()[0]
-            
+
             if question_count > 0:
                 logger.info("Questions already migrated to normalized structure")
                 return
-            
+
             # Get existing questions from JSON settings
-            cursor.execute(
-                "SELECT setting_value FROM admin_settings WHERE setting_key = 'followup_settings'"
-            )
+            cursor.execute("SELECT setting_value FROM admin_settings WHERE setting_key = 'followup_settings'")
             settings_row = cursor.fetchone()
-            
+
             if not settings_row:
                 logger.info("No existing followup settings to migrate")
                 return
-                
+
             import json
+
             try:
                 settings_data = json.loads(settings_row[0])
-                custom_questions = settings_data.get('custom_questions', {})
-                
+                custom_questions = settings_data.get("custom_questions", {})
+
                 if not custom_questions:
                     logger.info("No custom questions to migrate")
                     return
-                    
+
                 # Migrate questions for each category
                 migrated_count = 0
                 for category_name, questions in custom_questions.items():
                     if not questions:
                         continue
-                        
+
                     # Get category ID
-                    cursor.execute(
-                        "SELECT id FROM followup_categories WHERE name = ?",
-                        (category_name,)
-                    )
+                    cursor.execute("SELECT id FROM followup_categories WHERE name = ?", (category_name,))
                     category_row = cursor.fetchone()
-                    
+
                     if not category_row:
                         logger.warning(f"Category '{category_name}' not found for migration")
                         continue
-                        
+
                     category_id = category_row[0]
-                    
+
                     # Insert questions
                     for sort_order, question_text in enumerate(questions):
                         cursor.execute(
@@ -420,26 +428,26 @@ class AdminDatabaseManager:
                             (category_id, question_text, sort_order, created_at, updated_at)
                             VALUES (?, ?, ?, ?, ?)
                             """,
-                            (category_id, question_text, sort_order, datetime.now(), datetime.now())
+                            (category_id, question_text, sort_order, datetime.now(), datetime.now()),
                         )
                         migrated_count += 1
-                
+
                 if migrated_count > 0:
                     # Clear the custom_questions from JSON settings to avoid confusion
-                    del settings_data['custom_questions']
+                    del settings_data["custom_questions"]
                     cursor.execute(
                         "UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'followup_settings'",
-                        (json.dumps(settings_data),)
+                        (json.dumps(settings_data),),
                     )
                     logger.info(f"Migrated {migrated_count} questions to normalized structure")
                 else:
                     logger.info("No questions needed migration")
-                    
+
             except json.JSONDecodeError as e:
                 logger.error(f"Error parsing followup settings JSON: {e}")
             except Exception as e:
                 logger.error(f"Error during question migration: {e}")
-                
+
         except Exception as e:
             logger.error(f"Error in question migration: {str(e)}", exc_info=True)
 
@@ -449,7 +457,7 @@ class AdminDatabaseManager:
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                
+
                 if active_only:
                     cursor.execute(
                         """
@@ -467,7 +475,7 @@ class AdminDatabaseManager:
                         ORDER BY sort_order, display_name  
                         """
                     )
-                
+
                 return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             logger.error(f"Error getting followup categories: {str(e)}", exc_info=True)
@@ -484,7 +492,7 @@ class AdminDatabaseManager:
                     FROM followup_categories 
                     WHERE id = ?
                     """,
-                    (category_id,)
+                    (category_id,),
                 )
                 row = cursor.fetchone()
                 return dict(row) if row else None
@@ -503,7 +511,7 @@ class AdminDatabaseManager:
                     FROM followup_categories 
                     WHERE name = ?
                     """,
-                    (name,)
+                    (name,),
                 )
                 row = cursor.fetchone()
                 return dict(row) if row else None
@@ -512,12 +520,12 @@ class AdminDatabaseManager:
             return None
 
     def create_followup_category(
-        self, 
-        name: str, 
-        display_name: str, 
+        self,
+        name: str,
+        display_name: str,
         description: Optional[str] = None,
         icon: str = "help-circle",
-        sort_order: int = 0
+        sort_order: int = 0,
     ) -> int:
         """Create a new follow-up category."""
         try:
@@ -528,7 +536,7 @@ class AdminDatabaseManager:
                     INSERT INTO followup_categories (name, display_name, description, icon, sort_order, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (name, display_name, description, icon, sort_order, datetime.now(), datetime.now())
+                    (name, display_name, description, icon, sort_order, datetime.now(), datetime.now()),
                 )
                 category_id = cursor.lastrowid
                 logger.info(f"Created followup category: {name} (ID: {category_id})")
@@ -544,50 +552,47 @@ class AdminDatabaseManager:
         description: Optional[str] = None,
         icon: Optional[str] = None,
         sort_order: Optional[int] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> bool:
         """Update a follow-up category."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                
+
                 # Build dynamic update query
                 updates = []
                 params = []
-                
+
                 if display_name is not None:
                     updates.append("display_name = ?")
                     params.append(display_name)
-                
+
                 if description is not None:
                     updates.append("description = ?")
                     params.append(description)
-                    
+
                 if icon is not None:
                     updates.append("icon = ?")
                     params.append(icon)
-                    
+
                 if sort_order is not None:
                     updates.append("sort_order = ?")
                     params.append(sort_order)
-                    
+
                 if is_active is not None:
                     updates.append("is_active = ?")
                     params.append(1 if is_active else 0)
-                
+
                 if not updates:
                     return False
-                    
+
                 # Always update timestamp
                 updates.append("updated_at = ?")
                 params.append(datetime.now())
                 params.append(category_id)
-                
-                cursor.execute(
-                    f"UPDATE followup_categories SET {', '.join(updates)} WHERE id = ?",
-                    params
-                )
-                
+
+                cursor.execute(f"UPDATE followup_categories SET {', '.join(updates)} WHERE id = ?", params)
+
                 success = cursor.rowcount > 0
                 if success:
                     logger.info(f"Updated followup category ID: {category_id}")
@@ -597,17 +602,23 @@ class AdminDatabaseManager:
             return False
 
     def delete_followup_category(self, category_id: int) -> bool:
-        """Delete a follow-up category (soft delete by setting is_active=0)."""
+        """Delete a follow-up category (hard delete - completely removes from database)."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE followup_categories SET is_active = 0, updated_at = ? WHERE id = ?",
-                    (datetime.now(), category_id)
-                )
+
+                # First, delete any associated questions
+                cursor.execute("DELETE FROM followup_questions WHERE category_id = ?", (category_id,))
+                deleted_questions = cursor.rowcount
+
+                # Then delete the category itself
+                cursor.execute("DELETE FROM followup_categories WHERE id = ?", (category_id,))
                 success = cursor.rowcount > 0
+
                 if success:
-                    logger.info(f"Soft deleted followup category ID: {category_id}")
+                    logger.info(
+                        f"Hard deleted followup category ID: {category_id} and {deleted_questions} associated questions"
+                    )
                 return success
         except Exception as e:
             logger.error(f"Error deleting followup category {category_id}: {str(e)}", exc_info=True)
@@ -621,7 +632,7 @@ class AdminDatabaseManager:
                 for item in category_orders:
                     cursor.execute(
                         "UPDATE followup_categories SET sort_order = ?, updated_at = ? WHERE id = ?",
-                        (item["sort_order"], datetime.now(), item["id"])
+                        (item["sort_order"], datetime.now(), item["id"]),
                     )
                 logger.info(f"Reordered {len(category_orders)} followup categories")
                 return True
@@ -631,38 +642,38 @@ class AdminDatabaseManager:
 
     # Follow-up question management methods (normalized)
     def get_followup_questions(
-        self, 
+        self,
         category_id: Optional[int] = None,
         active_only: bool = True,
         search: Optional[str] = None,
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[Dict]:
         """Get follow-up questions with pagination and filtering."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                
+
                 # Build query with filters
                 where_conditions = []
                 params = []
-                
+
                 if active_only:
                     where_conditions.append("fq.is_active = 1")
-                
+
                 if category_id is not None:
                     where_conditions.append("fq.category_id = ?")
                     params.append(category_id)
-                
+
                 if search:
                     where_conditions.append("fq.question_text LIKE ?")
                     params.append(f"%{search}%")
-                
+
                 where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
-                
+
                 # Add pagination params
                 params.extend([limit, offset])
-                
+
                 cursor.execute(
                     f"""
                     SELECT 
@@ -675,10 +686,16 @@ class AdminDatabaseManager:
                     ORDER BY fq.category_id, fq.sort_order, fq.id
                     LIMIT ? OFFSET ?
                     """,
-                    params
+                    params,
                 )
-                
-                return [dict(row) for row in cursor.fetchall()]
+
+                results = []
+                for row in cursor.fetchall():
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    results.append(row_dict)
+                return results
         except Exception as e:
             logger.error(f"Error getting followup questions: {str(e)}", exc_info=True)
             return []
@@ -698,46 +715,44 @@ class AdminDatabaseManager:
                     LEFT JOIN followup_categories fc ON fq.category_id = fc.id
                     WHERE fq.id = ?
                     """,
-                    (question_id,)
+                    (question_id,),
                 )
                 row = cursor.fetchone()
-                return dict(row) if row else None
+                if row:
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    return row_dict
+                return None
         except Exception as e:
             logger.error(f"Error getting followup question {question_id}: {str(e)}", exc_info=True)
             return None
 
     def create_followup_question(
-        self, 
-        category_id: int, 
-        question_text: str, 
-        sort_order: Optional[int] = None,
-        created_by: Optional[int] = None
+        self, category_id: int, question_text: str, sort_order: Optional[int] = None, created_by: Optional[int] = None
     ) -> int:
         """Create a new follow-up question."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                
+
                 # Validate category exists and is active
-                cursor.execute(
-                    "SELECT id, is_active FROM followup_categories WHERE id = ?",
-                    (category_id,)
-                )
+                cursor.execute("SELECT id, is_active FROM followup_categories WHERE id = ?", (category_id,))
                 category = cursor.fetchone()
-                
+
                 if not category:
                     raise ValueError(f"Category {category_id} not found")
-                if not category['is_active']:
+                if not category["is_active"]:
                     raise ValueError("Cannot add questions to inactive category")
-                
+
                 # Get next sort order if not provided
                 if sort_order is None:
                     cursor.execute(
                         "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM followup_questions WHERE category_id = ?",
-                        (category_id,)
+                        (category_id,),
                     )
                     sort_order = cursor.fetchone()[0]
-                
+
                 # Insert question
                 cursor.execute(
                     """
@@ -745,13 +760,13 @@ class AdminDatabaseManager:
                     (category_id, question_text, sort_order, created_at, updated_at, created_by)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (category_id, question_text, sort_order, datetime.now(), datetime.now(), created_by)
+                    (category_id, question_text, sort_order, datetime.now(), datetime.now(), created_by),
                 )
-                
+
                 question_id = cursor.lastrowid
                 logger.info(f"Created followup question {question_id} in category {category_id}")
                 return question_id
-                
+
         except Exception as e:
             logger.error(f"Error creating followup question: {str(e)}", exc_info=True)
             raise
@@ -761,42 +776,39 @@ class AdminDatabaseManager:
         question_id: int,
         question_text: Optional[str] = None,
         sort_order: Optional[int] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> bool:
         """Update a follow-up question."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                
+
                 # Build dynamic update query
                 updates = []
                 params = []
-                
+
                 if question_text is not None:
                     updates.append("question_text = ?")
                     params.append(question_text)
-                    
+
                 if sort_order is not None:
                     updates.append("sort_order = ?")
                     params.append(sort_order)
-                    
+
                 if is_active is not None:
                     updates.append("is_active = ?")
                     params.append(1 if is_active else 0)
-                
+
                 if not updates:
                     return False
-                    
+
                 # Always update timestamp
                 updates.append("updated_at = ?")
                 params.append(datetime.now())
                 params.append(question_id)
-                
-                cursor.execute(
-                    f"UPDATE followup_questions SET {', '.join(updates)} WHERE id = ?",
-                    params
-                )
-                
+
+                cursor.execute(f"UPDATE followup_questions SET {', '.join(updates)} WHERE id = ?", params)
+
                 success = cursor.rowcount > 0
                 if success:
                     logger.info(f"Updated followup question ID: {question_id}")
@@ -824,26 +836,23 @@ class AdminDatabaseManager:
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                
+
                 # Validate target category exists and is active
-                cursor.execute(
-                    "SELECT id, is_active FROM followup_categories WHERE id = ?",
-                    (target_category_id,)
-                )
+                cursor.execute("SELECT id, is_active FROM followup_categories WHERE id = ?", (target_category_id,))
                 target = cursor.fetchone()
-                
+
                 if not target:
                     raise ValueError(f"Target category {target_category_id} not found")
-                if not target['is_active']:
+                if not target["is_active"]:
                     raise ValueError("Cannot move questions to inactive category")
-                
+
                 # Get max sort order in target category
                 cursor.execute(
                     "SELECT COALESCE(MAX(sort_order), 0) FROM followup_questions WHERE category_id = ?",
-                    (target_category_id,)
+                    (target_category_id,),
                 )
                 max_sort_order = cursor.fetchone()[0]
-                
+
                 # Update questions with new category and sort orders
                 cursor.execute(
                     """
@@ -851,13 +860,13 @@ class AdminDatabaseManager:
                     SET category_id = ?, sort_order = sort_order + ?, updated_at = ?
                     WHERE category_id = ?
                     """,
-                    (target_category_id, max_sort_order, datetime.now(), source_category_id)
+                    (target_category_id, max_sort_order, datetime.now(), source_category_id),
                 )
-                
+
                 moved_count = cursor.rowcount
                 logger.info(f"Moved {moved_count} questions from category {source_category_id} to {target_category_id}")
                 return moved_count
-                
+
         except Exception as e:
             logger.error(f"Error moving questions: {str(e)}", exc_info=True)
             raise
@@ -868,8 +877,7 @@ class AdminDatabaseManager:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "SELECT COUNT(*) FROM followup_questions WHERE category_id = ? AND is_active = 1",
-                    (category_id,)
+                    "SELECT COUNT(*) FROM followup_questions WHERE category_id = ? AND is_active = 1", (category_id,)
                 )
                 return cursor.fetchone()[0]
         except Exception as e:
