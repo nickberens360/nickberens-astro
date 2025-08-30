@@ -1,5 +1,5 @@
 <template>
-  <v-card class="query-table-card">
+  <v-card class="query-table-card pt-4">
     <v-card-title class="d-flex align-center justify-space-between">
       <span>{{ title }}</span>
       <v-spacer/>
@@ -473,7 +473,7 @@
           <div v-if="selectedQuery.follow_up_questions" class="mb-4">
             <v-label class="mb-2 font-weight-bold">Follow-up Questions:</v-label>
             <v-list density="compact" class="ml-2">
-              <v-list-item 
+              <v-list-item
                 v-for="(question, index) in parseFollowUpQuestions(selectedQuery.follow_up_questions)"
                 :key="index"
                 class="text-body-2"
