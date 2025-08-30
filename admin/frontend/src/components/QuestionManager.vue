@@ -24,24 +24,32 @@
           :key="question.id"
           class="question-item px-0"
           :class="{ 'question-item--inactive': !question.is_active }"
+          @dragover="handleDragOver($event)"
+          @drop="handleDrop($event, index)"
         >
-          <!-- Selection Checkbox -->
+          <!-- Drag Handle and Selection Checkbox -->
           <template v-slot:prepend>
-            <v-checkbox
-              :model-value="selectedQuestions.includes(question)"
-              @update:model-value="toggleQuestionSelection(question, $event)"
-              hide-details
-              density="compact"
-            ></v-checkbox>
+            <div class="d-flex align-center">
+              <!-- Drag Handle -->
+              <div 
+                class="drag-handle mr-2"
+                draggable="true"
+                @dragstart="handleDragStart($event, index, question)"
+                @dragend="handleDragEnd"
+              >
+                <v-icon size="20" color="grey">$drag-vertical</v-icon>
+              </div>
+              
+              <!-- Selection Checkbox -->
+              <v-checkbox
+                :model-value="selectedQuestions.includes(question)"
+                @update:model-value="toggleQuestionSelection(question, $event)"
+                hide-details
+                density="compact"
+                class="mr-4"
+              ></v-checkbox>
+            </div>
           </template>
-
-          <!-- Drag Handle -->
-          <div 
-            class="drag-handle mr-3"
-            @mousedown="startDrag($event, index)"
-          >
-            <v-icon size="20" color="grey">$drag-vertical</v-icon>
-          </div>
 
           <!-- Question Content -->
           <div class="flex-grow-1">
@@ -205,6 +213,59 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon icon="$delete" color="error" class="mr-2"></v-icon>
+          Delete Question
+        </v-card-title>
+
+        <v-card-text>
+          <div class="text-body-1 mb-4">
+            Are you sure you want to delete this question?
+          </div>
+          
+          <v-card 
+            variant="outlined" 
+            class="mb-4 pa-3"
+            color="error"
+            style="border: 1px solid rgba(var(--v-theme-error), 0.3);"
+          >
+            <div class="text-body-2 text-medium-emphasis mb-1">Question to be deleted:</div>
+            <div class="text-body-1">{{ questionToDelete?.question_text }}</div>
+          </v-card>
+
+          <v-alert
+            type="warning" 
+            variant="tonal"
+            class="text-body-2"
+            :icon="false"
+          >
+            <strong>Warning:</strong> This action cannot be undone. The question will be permanently removed from this category.
+          </v-alert>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn 
+            @click="cancelDelete"
+            :disabled="loading"
+          >
+            Cancel
+          </v-btn>
+          <v-btn 
+            color="error"
+            variant="elevated"
+            :loading="loading"
+            @click="confirmDelete"
+          >
+            Delete Question
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -229,6 +290,8 @@ export default {
     const loading = ref(false)
     const questions = ref([])
     const showAddDialog = ref(false)
+    const showDeleteDialog = ref(false)
+    const questionToDelete = ref(null)
     const editingQuestion = ref(null)
     const editingText = ref('')
     const newQuestionText = ref('')
@@ -365,27 +428,36 @@ export default {
       }
     }
 
-    const deleteQuestion = async (question) => {
-      if (!confirm(`Are you sure you want to delete this question? This action cannot be undone.`)) {
-        return
-      }
+    const deleteQuestion = (question) => {
+      questionToDelete.value = question
+      showDeleteDialog.value = true
+    }
+
+    const confirmDelete = async () => {
+      if (!questionToDelete.value) return
 
       try {
         loading.value = true
-        await api.deleteFollowupQuestionNormalized(question.id)
+        await api.deleteFollowupQuestionNormalized(questionToDelete.value.id)
         
         // Remove from local list
-        const index = questions.value.findIndex(q => q.id === question.id)
+        const index = questions.value.findIndex(q => q.id === questionToDelete.value.id)
         if (index !== -1) {
           questions.value.splice(index, 1)
         }
         
         emit('questions-updated')
+        cancelDelete()
       } catch (err) {
         console.error('Failed to delete question:', err)
       } finally {
         loading.value = false
       }
+    }
+
+    const cancelDelete = () => {
+      showDeleteDialog.value = false
+      questionToDelete.value = null
     }
 
     // Add new question
@@ -432,10 +504,97 @@ export default {
       return new Date(dateString).toLocaleDateString()
     }
 
-    // Drag and drop (placeholder - could be enhanced)
-    const startDrag = (event, index) => {
-      // Basic drag functionality could be implemented here
-      console.log('Drag started for question at index:', index)
+    // Drag and drop functionality
+    const draggedItem = ref(null)
+    const draggedIndex = ref(-1)
+
+    const handleDragStart = (event, index, question) => {
+      draggedItem.value = question
+      draggedIndex.value = index
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/html', event.target.outerHTML)
+      
+      // Add visual feedback to the list item
+      const listItem = event.target.closest('.question-item')
+      if (listItem) {
+        listItem.classList.add('dragging')
+      }
+    }
+
+    const handleDragOver = (event) => {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+      
+      // Add visual feedback for valid drop targets
+      const listItem = event.target.closest('.question-item')
+      if (listItem && !listItem.classList.contains('dragging')) {
+        // Clear previous drag-over states
+        document.querySelectorAll('.drag-over').forEach(el => {
+          el.classList.remove('drag-over')
+        })
+        listItem.classList.add('drag-over')
+      }
+    }
+
+    const handleDrop = async (event, dropIndex) => {
+      event.preventDefault()
+      
+      if (draggedIndex.value === dropIndex || draggedIndex.value === -1) {
+        return
+      }
+
+      try {
+        loading.value = true
+        
+        // Reorder questions in local array
+        const questionsCopy = [...questions.value]
+        const draggedQuestion = questionsCopy.splice(draggedIndex.value, 1)[0]
+        questionsCopy.splice(dropIndex, 0, draggedQuestion)
+        
+        // Update sort orders for all affected questions
+        const updates = []
+        for (let i = 0; i < questionsCopy.length; i++) {
+          if (questionsCopy[i].sort_order !== i) {
+            updates.push(
+              api.updateFollowupQuestionNormalized(questionsCopy[i].id, {
+                sort_order: i
+              })
+            )
+            questionsCopy[i].sort_order = i
+          }
+        }
+        
+        // Execute all updates
+        await Promise.all(updates)
+        
+        // Update local state
+        questions.value = questionsCopy
+        
+        emit('questions-updated')
+        
+      } catch (err) {
+        console.error('Failed to reorder questions:', err)
+        // Reload questions on error to reset state
+        await loadQuestions()
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const handleDragEnd = (event) => {
+      // Reset visual feedback
+      const listItem = event.target.closest('.question-item')
+      if (listItem) {
+        listItem.classList.remove('dragging')
+      }
+      
+      // Clear all drag-over states
+      document.querySelectorAll('.drag-over').forEach(el => {
+        el.classList.remove('drag-over')
+      })
+      
+      draggedItem.value = null
+      draggedIndex.value = -1
     }
 
     // Watch category changes
@@ -451,6 +610,8 @@ export default {
       loading,
       questions,
       showAddDialog,
+      showDeleteDialog,
+      questionToDelete,
       editingQuestion,
       editingText,
       newQuestionText,
@@ -464,10 +625,15 @@ export default {
       moveQuestionUp,
       moveQuestionDown,
       deleteQuestion,
+      confirmDelete,
+      cancelDelete,
       saveQuestion,
       cancelAddQuestion,
       formatDate,
-      startDrag
+      handleDragStart,
+      handleDragOver,
+      handleDrop,
+      handleDragEnd
     }
   }
 }
@@ -500,10 +666,35 @@ export default {
   cursor: grab;
   display: flex;
   align-items: center;
+  border-radius: 4px;
+  padding: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.drag-handle:hover {
+  background-color: rgba(var(--v-theme-primary), 0.1);
 }
 
 .drag-handle:active {
   cursor: grabbing;
+}
+
+/* Drag feedback styles */
+.question-item[draggable="true"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.15);
+}
+
+.drag-over {
+  border-color: rgba(var(--v-theme-primary), 0.8) !important;
+  background-color: rgba(var(--v-theme-primary), 0.05) !important;
+  transform: translateY(-2px);
+}
+
+.dragging {
+  opacity: 0.5 !important;
+  transform: rotate(5deg);
+  z-index: 1000;
 }
 
 .question-text {
