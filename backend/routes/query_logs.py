@@ -149,7 +149,8 @@ async def clear_query_logs(request: Request, session: dict = Depends(require_adm
 
 
 @router.get("/query-logs/download")
-async def download_query_logs(session: dict = Depends(require_admin_auth)) -> Dict[str, Any]:
+@limiter.limit("5/minute")
+async def download_query_logs(request: Request, session: dict = Depends(require_admin_auth)) -> Dict[str, Any]:
     """
     Export query logs from SQLite database as JSON.
 
@@ -160,14 +161,18 @@ async def download_query_logs(session: dict = Depends(require_admin_auth)) -> Di
     """
     logger = get_query_logger()
 
+    # Get count efficiently from database stats before loading all logs
+    stats = logger.get_log_stats()
+    total_count = stats.get("total_queries", 0)
+
+    if total_count == 0:
+        raise HTTPException(status_code=404, detail="No logs found in database")
+
     # Get all logs from SQLite database
     logs = logger.get_logs(limit=None)  # Get all logs
 
-    if not logs:
-        raise HTTPException(status_code=404, detail="No logs found in database")
-
     # Return as JSON response
-    return {"logs": logs, "count": len(logs), "exported_at": datetime.now(timezone.utc).isoformat(), "format": "json"}
+    return {"logs": logs, "count": total_count, "exported_at": datetime.now(timezone.utc).isoformat(), "format": "json"}
 
 
 @router.get("/query-logs/health")
