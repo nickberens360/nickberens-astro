@@ -112,6 +112,15 @@ const router = createRouter({
             icon: 'lock'
           }
         },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/views/SettingsView.vue'),
+          meta: {
+            title: 'Settings',
+            icon: 'settings'
+          }
+        },
         // Development-only route for typography testing
         ...(import.meta.env.DEV ? [{
           path: 'typography-demo',

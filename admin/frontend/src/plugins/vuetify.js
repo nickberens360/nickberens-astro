@@ -19,6 +19,7 @@ import {
   // Content & Knowledge
   mdiBookOpenPageVariant, mdiInformation, mdiFolder, mdiFormatListBulleted,
   mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb, mdiHelpCircleOutline, mdiCog,
+  mdiBrain, mdiTune, mdiTarget, mdiNumeric,
   
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
@@ -127,7 +128,12 @@ const iconAliases = {
   article: mdiFileDocumentOutline,
   'insert_drive_file': mdiFileDocumentOutline,
   help: mdiHelpCircleOutline,
+  'help-circle': mdiHelpCircleOutline,
   settings: mdiCog,
+  brain: mdiBrain,
+  tune: mdiTune,
+  target: mdiTarget,
+  numeric: mdiNumeric,
   pencil: mdiPencil,
   
   // User & Security

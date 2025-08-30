@@ -17,11 +17,17 @@ class TestFollowupService:
         """Test that FollowUpService initializes correctly."""
         service = FollowUpService()
 
-        # Verify questions are initialized as tuple (immutable)
-        assert isinstance(service.questions, tuple)
-        assert len(service.questions) == 6
+        # Verify question pools are initialized
+        assert isinstance(service.question_pools, dict)
+        assert "technical" in service.question_pools
+        assert "personal" in service.question_pools
+        assert "creative" in service.question_pools
 
-        # Verify expected questions are present
+        # Verify default questions are initialized as tuple (immutable)
+        assert isinstance(service.default_questions, tuple)
+        assert len(service.default_questions) == 6
+
+        # Verify expected default questions are present
         expected_questions = (
             "Show me your illustrations",
             "Tell me about your experience",
@@ -30,16 +36,22 @@ class TestFollowupService:
             "What's your development philosophy?",
             "How can I contact Nick?",
         )
-        assert service.questions == expected_questions
+        assert service.default_questions == expected_questions
 
         # Verify initial state
         assert service.current_index == 0
         assert hasattr(service, "_lock")
         assert service._lock is not None
+        assert service._cached_settings is None
+        assert service._settings_cache_timestamp == 0
 
     @pytest.mark.unit
-    def test_generate_followups_basic_functionality(self):
-        """Test basic follow-up generation with expected parameters."""
+    @patch("backend.core.followup_service.admin_db_manager")
+    def test_generate_followups_with_default_settings(self, mock_db_manager):
+        """Test basic follow-up generation with default settings."""
+        # Mock database to return None (no saved settings)
+        mock_db_manager.get_admin_setting.return_value = None
+
         service = FollowUpService()
 
         # Test with all parameters (as would be called in production)
@@ -49,11 +61,17 @@ class TestFollowupService:
             conversation_history=[{"user": "Hello", "assistant": "Hi there!"}],
         )
 
-        # Should return list with exactly one question
+        # Should return list with exactly one question (default max_questions=1)
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], str)
-        assert result[0] == "Show me your illustrations"  # First question
+        # Should be from the available questions
+        all_questions = (
+            service.question_pools["technical"]
+            + service.question_pools["personal"]
+            + service.question_pools["creative"]
+        )
+        assert result[0] in all_questions
 
     @pytest.mark.unit
     def test_sequential_ordering(self):

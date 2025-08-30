@@ -17,7 +17,8 @@ from fastapi.responses import StreamingResponse
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
-from ..core.audit_logger import AuditLogger
+from ..core.audit_logger import AuditAction, AuditLogger
+from ..core.config import FollowUpSettings
 
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
 from ..core.query_data_manager import query_data_manager
@@ -886,3 +887,123 @@ async def get_all_users(session: Dict[str, Any] = Depends(require_admin_role)) -
     except Exception as e:
         logger.error(f"Error fetching users: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error fetching users")
+
+
+# Settings endpoints
+@router.get("/settings/followup")
+async def get_followup_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current follow-up question settings."""
+    try:
+        # Get settings from database
+        settings_json = admin_db_manager.get_admin_setting("followup_settings")
+
+        if settings_json:
+            # Parse existing settings
+            settings = FollowUpSettings.from_json(settings_json)
+        else:
+            # Return defaults if no settings exist
+            settings = FollowUpSettings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "followup_settings", "settings_exists": settings_json is not None},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting follow-up settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up settings")
+
+
+@router.put("/settings/followup")
+async def update_followup_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update follow-up question settings."""
+    try:
+        # Validate and create settings object
+        settings = FollowUpSettings.from_dict(settings_data)
+
+        # Store in database
+        success = admin_db_manager.set_admin_setting(
+            setting_key="followup_settings", setting_value=settings.to_json(), updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "followup_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        # Reload settings in the follow-up service
+        # Note: Settings will be reloaded automatically on next request due to cache expiry
+
+        logger.info(f"Follow-up settings updated by user {session['user_id']}: {settings.to_dict()}")
+
+        return {"success": True, "message": "Follow-up settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating follow-up settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating follow-up settings")
+
+
+@router.post("/settings/followup/reset")
+async def reset_followup_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Reset follow-up settings to defaults."""
+    try:
+        # Create default settings
+        default_settings = FollowUpSettings()
+
+        # Store in database
+        success = admin_db_manager.set_admin_setting(
+            setting_key="followup_settings", setting_value=default_settings.to_json(), updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to reset settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_settings",
+                "action": "reset_to_defaults",
+                "reset_to": default_settings.to_dict(),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Follow-up settings reset to defaults by user {session['user_id']}")
+
+        return {
+            "success": True,
+            "message": "Follow-up settings reset to defaults",
+            "settings": default_settings.to_dict(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error resetting follow-up settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error resetting follow-up settings")

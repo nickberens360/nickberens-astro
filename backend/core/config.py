@@ -1,14 +1,94 @@
 import ipaddress
+import json
 import logging
 import os
 import re
 import secrets
-from pathlib import Path
+from dataclasses import asdict, dataclass
 from typing import List
 from urllib.parse import urlparse
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FollowUpSettings:
+    """Configuration for follow-up question generation."""
+
+    enabled: bool = True
+    service_type: str = "static"  # static, dynamic, contextual
+    max_questions: int = 1
+    relevance_threshold: float = 0.7
+    include_technical: bool = True
+    include_personal: bool = True
+    include_creative: bool = True
+    question_style: str = "conversational"  # formal, conversational, exploratory
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "FollowUpSettings":
+        """Create from dictionary with validation."""
+        # Validate and set defaults for missing keys
+        defaults = cls()
+        validated_data = {}
+
+        for key, default_value in asdict(defaults).items():
+            if key in data:
+                validated_data[key] = data[key]
+            else:
+                validated_data[key] = default_value
+
+        # Type validation
+        if not isinstance(validated_data["enabled"], bool):
+            validated_data["enabled"] = str(validated_data["enabled"]).lower() == "true"
+
+        if not isinstance(validated_data["max_questions"], int):
+            try:
+                validated_data["max_questions"] = int(validated_data["max_questions"])
+            except (ValueError, TypeError):
+                validated_data["max_questions"] = defaults.max_questions
+
+        # Ensure max_questions is within reasonable bounds
+        validated_data["max_questions"] = max(1, min(5, validated_data["max_questions"]))
+
+        if not isinstance(validated_data["relevance_threshold"], float):
+            try:
+                validated_data["relevance_threshold"] = float(validated_data["relevance_threshold"])
+            except (ValueError, TypeError):
+                validated_data["relevance_threshold"] = defaults.relevance_threshold
+
+        # Ensure relevance_threshold is within bounds
+        validated_data["relevance_threshold"] = max(0.1, min(1.0, validated_data["relevance_threshold"]))
+
+        # Validate service_type
+        valid_service_types = ["static", "dynamic", "contextual"]
+        if validated_data["service_type"] not in valid_service_types:
+            validated_data["service_type"] = defaults.service_type
+
+        # Validate question_style
+        valid_styles = ["formal", "conversational", "exploratory"]
+        if validated_data["question_style"] not in valid_styles:
+            validated_data["question_style"] = defaults.question_style
+
+        return cls(**validated_data)
+
+    def to_json(self) -> str:
+        """Convert to JSON string for database storage."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "FollowUpSettings":
+        """Create from JSON string with error handling."""
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse follow-up settings from JSON: {e}")
+            return cls()  # Return defaults on error
 
 
 class AppConfig:

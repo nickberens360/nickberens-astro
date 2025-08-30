@@ -477,7 +477,7 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: .5rem;
+  margin-bottom: .5rem;
   scroll-snap-align: start;
 }
 

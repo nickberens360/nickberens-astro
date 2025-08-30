@@ -399,6 +399,12 @@ const navigationItems = computed(() => [
     to: '/knowledge/sources',
     icon: '$knowledge',
     //do nest children
+  },
+  {
+    name: 'settings',
+    title: 'Settings',
+    to: '/settings',
+    icon: '$settings'
   }
 ]);
 

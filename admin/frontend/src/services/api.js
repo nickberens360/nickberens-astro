@@ -312,6 +312,37 @@ class AdminAPI {
     }
   }
 
+  // Settings API methods
+  async getFollowupSettings() {
+    try {
+      const response = await this.client.get('/settings/followup')
+      return response
+    } catch (error) {
+      console.error('Failed to get follow-up settings:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupSettings(settings) {
+    try {
+      const response = await this.client.put('/settings/followup', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update follow-up settings:', error)
+      throw error
+    }
+  }
+
+  async resetFollowupSettings() {
+    try {
+      const response = await this.client.post('/settings/followup/reset')
+      return response
+    } catch (error) {
+      console.error('Failed to reset follow-up settings:', error)
+      throw error
+    }
+  }
+
   // Utility methods
   async testConnection() {
     try {
