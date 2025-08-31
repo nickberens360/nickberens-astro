@@ -5,9 +5,7 @@ This script will create categories and questions based on the hardcoded values i
 """
 
 import logging
-import os
 import sys
-from datetime import datetime
 from pathlib import Path
 
 # Add the backend directory to the Python path

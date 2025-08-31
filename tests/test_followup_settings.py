@@ -158,10 +158,19 @@ class TestFollowUpServiceConfigurable:
         )
         mock_db_manager.get_admin_setting.return_value = settings.to_json()
 
+        # Mock database to provide fallback categories but no database questions
+        # This will trigger fallback to hardcoded question pools
+        mock_db_manager.get_followup_categories.return_value = [
+            {"id": 1, "name": "technical", "display_name": "Technical", "is_active": True},
+            {"id": 2, "name": "personal", "display_name": "Personal", "is_active": True},
+            {"id": 3, "name": "creative", "display_name": "Creative", "is_active": True},
+        ]
+        mock_db_manager.get_followup_questions.return_value = []  # No database questions
+
         service = FollowUpService()
         result = service.generate_followups("test question", "test response")
 
-        # All returned questions should be from technical category
+        # All returned questions should be from technical category since other categories are disabled
         for question in result:
             assert question in service.question_pools["technical"]
 

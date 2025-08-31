@@ -107,8 +107,8 @@ class FollowUpManagementService:
             # Rollback on error
             try:
                 cursor.execute("ROLLBACK")
-            except:
-                pass
+            except Exception as rollback_error:
+                logger.warning(f"Failed to rollback transaction: {rollback_error}")
             logger.error(f"Error deleting category {category_id}: {str(e)}")
             raise
 
@@ -127,7 +127,12 @@ class FollowUpManagementService:
                 cursor = conn.cursor()
                 cursor.execute("BEGIN TRANSACTION")
 
-                results = {"success": True, "operations_completed": 0, "operations_failed": 0, "errors": []}
+                results: Dict[str, Any] = {
+                    "success": True,
+                    "operations_completed": 0,
+                    "operations_failed": 0,
+                    "errors": [],
+                }
 
                 for operation in operations:
                     try:
@@ -165,8 +170,8 @@ class FollowUpManagementService:
         except Exception as e:
             try:
                 cursor.execute("ROLLBACK")
-            except:
-                pass
+            except Exception as rollback_error:
+                logger.warning(f"Failed to rollback transaction: {rollback_error}")
             logger.error(f"Error in bulk operations: {str(e)}")
             raise
 
@@ -200,8 +205,8 @@ class FollowUpManagementService:
         except Exception as e:
             try:
                 cursor.execute("ROLLBACK")
-            except:
-                pass
+            except Exception as rollback_error:
+                logger.warning(f"Failed to rollback transaction: {rollback_error}")
             logger.error(f"Error reordering questions: {str(e)}")
             return False
 

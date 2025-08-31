@@ -9,7 +9,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -560,8 +560,8 @@ class AdminDatabaseManager:
                 cursor = conn.cursor()
 
                 # Build dynamic update query
-                updates = []
-                params = []
+                updates: List[str] = []
+                params: List[Any] = []
 
                 if display_name is not None:
                     updates.append("display_name = ?")
@@ -655,8 +655,8 @@ class AdminDatabaseManager:
                 cursor = conn.cursor()
 
                 # Build query with filters
-                where_conditions = []
-                params = []
+                where_conditions: List[str] = []
+                params: List[Any] = []
 
                 if active_only:
                     where_conditions.append("fq.is_active = 1")
@@ -784,8 +784,8 @@ class AdminDatabaseManager:
                 cursor = conn.cursor()
 
                 # Build dynamic update query
-                updates = []
-                params = []
+                updates: List[str] = []
+                params: List[Any] = []
 
                 if question_text is not None:
                     updates.append("question_text = ?")

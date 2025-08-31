@@ -111,6 +111,9 @@ class FollowUpService:
         # Get active categories from database
         active_categories = self._get_active_categories()
 
+        # Sort categories by sort_order and then by name to ensure consistent ordering
+        active_categories = sorted(active_categories, key=lambda c: (c.get("sort_order", 0), c.get("name", "")))
+
         # Get questions from normalized database structure (primary source)
         try:
             for category in active_categories:
@@ -132,6 +135,10 @@ class FollowUpService:
                     category_questions = admin_db_manager.get_followup_questions(
                         category_id=category_id, active_only=True
                     )
+                    # Sort questions by sort_order and id to ensure consistent ordering within category
+                    category_questions = sorted(
+                        category_questions, key=lambda q: (q.get("sort_order", 0), q.get("id", 0))
+                    )
                     # Extract just the question text
                     questions.extend([q["question_text"] for q in category_questions])
                     logger.debug(
@@ -143,6 +150,7 @@ class FollowUpService:
         # Secondary fallback: legacy custom_questions from settings
         if not questions and settings.custom_questions:
             logger.info("No database questions found, falling back to legacy custom_questions from settings")
+            # Use already sorted active_categories for consistent ordering
             for category in active_categories:
                 category_name = category.get("name", "")
 
@@ -163,6 +171,7 @@ class FollowUpService:
             logger.warning(
                 "No database or legacy questions found, falling back to hardcoded question pools (consider running migration)"
             )
+            # Use already sorted active_categories for consistent ordering
             for category in active_categories:
                 category_name = category.get("name", "")
 

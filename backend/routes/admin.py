@@ -38,7 +38,6 @@ from ..models.admin_models import (
     LoginResponse,
     OverviewStats,
     QueryResponse,
-    QuestionSearchRequest,
     ReorderCategoriesRequest,
     UpdateFollowupCategoryRequest,
     UpdateFollowupQuestionRequest,
@@ -1183,62 +1182,6 @@ async def update_followup_category(
     except Exception as e:
         logger.error(f"Error updating followup category {category_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating follow-up category")
-
-
-@router.delete("/settings/followup/categories/{category_id}")
-async def delete_followup_category(
-    category_id: int, request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
-) -> Dict[str, Any]:
-    """Delete (deactivate) a follow-up category."""
-    if category_id <= 0:
-        raise HTTPException(status_code=400, detail="Invalid category ID")
-
-    try:
-        # Check if category exists
-        existing = admin_db_manager.get_followup_category(category_id)
-        if not existing:
-            raise HTTPException(status_code=404, detail="Category not found")
-
-        # Prevent deleting categories that have questions
-        settings_json = admin_db_manager.get_admin_setting("followup_settings")
-        if settings_json:
-            settings = FollowUpSettings.from_json(settings_json)
-            if existing["name"] in settings.custom_questions and settings.custom_questions[existing["name"]]:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Cannot delete category '{existing['display_name']}' - it contains questions. Remove questions first.",
-                )
-
-        success = admin_db_manager.delete_followup_category(category_id)
-
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to delete category")
-
-        client_ip = request.client.host if request.client else "unknown"
-        user_agent = request.headers.get("User-Agent", "")
-
-        audit_logger.log_action(
-            action=AuditAction.CONFIG_UPDATE,
-            username=session["username"],
-            details={
-                "resource": "followup_category",
-                "action": "delete",
-                "category_id": category_id,
-                "category_name": existing["name"],
-            },
-            ip_address=client_ip,
-            user_agent=user_agent,
-        )
-
-        logger.info(f"Follow-up category ID {category_id} deleted by user {session['user_id']}")
-
-        return {"success": True, "message": f"Category '{existing['display_name']}' deleted successfully"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting followup category {category_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error deleting follow-up category")
 
 
 @router.post("/settings/followup/categories/reorder")
