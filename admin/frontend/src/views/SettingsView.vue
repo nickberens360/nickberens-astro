@@ -463,6 +463,78 @@
       @confirm="confirmDeleteCategory"
       @cancel="cancelDeleteCategory"
     />
+
+    <!-- Bulk Delete Confirmation Dialog -->
+    <v-dialog v-model="showBulkDeleteDialog" max-width="500px" persistent>
+      <v-card>
+        <v-card-title class="text-h5 d-flex align-center">
+          <v-icon color="warning" class="mr-2">$alert-triangle</v-icon>
+          Bulk Delete Categories
+        </v-card-title>
+
+        <v-card-text>
+          <v-alert
+            type="warning"
+            variant="tonal"
+            class="mb-4"
+          >
+            You are about to delete <strong>{{ selectedCategories.length }} categories</strong> 
+            and <strong>all their questions permanently</strong>.
+          </v-alert>
+
+          <div class="mb-4">
+            <div class="text-subtitle-2 mb-2">Categories to be deleted:</div>
+            <div class="text-body-2">
+              <div v-for="category in selectedCategories" :key="category.id" class="mb-1">
+                • {{ category.display_name }} 
+                <span v-if="categoryStats[category.id]" class="text-medium-emphasis">
+                  ({{ categoryStats[category.id].question_count }} questions)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <v-alert
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
+            <strong>Warning:</strong> This action cannot be undone. All questions in these categories will be permanently deleted.
+          </v-alert>
+
+          <v-checkbox
+            v-model="confirmBulkDelete"
+            hide-details
+            class="mt-4"
+          >
+            <template v-slot:label>
+              <span class="text-error">
+                I understand this will permanently delete all selected categories and their questions
+              </span>
+            </template>
+          </v-checkbox>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            text
+            @click="cancelBulkDelete"
+            :disabled="loading"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="loading"
+            :disabled="!confirmBulkDelete"
+            @click="confirmBulkDeleteCategories"
+          >
+            Delete {{ selectedCategories.length }} Categories
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -513,8 +585,10 @@ export default {
     const showCreateCategoryDialog = ref(false)
     const showCategoryDialog = ref(false)
     const showDeleteDialog = ref(false)
+    const showBulkDeleteDialog = ref(false)
     const editingCategory = ref(null)
     const deletingCategory = ref(null)
+    const confirmBulkDelete = ref(false)
 
     // Messages
     const showSuccess = ref(false)
@@ -547,10 +621,9 @@ export default {
         Object.assign(settings, settingsResponse)
         categories.value = categoriesResponse || []
 
-        // Open all expansion panels by default so QuestionManager components load
-        if (categories.value.length > 0) {
-          expandedPanels.value = categories.value.map(cat => cat.id)
-        }
+        // Keep expansion panels closed by default
+        // QuestionManager components will load when panels are opened by user
+        expandedPanels.value = []
 
         // Load stats for each category
         const statsPromises = categories.value.map(async (category) => {
@@ -690,29 +763,38 @@ export default {
       }
     }
 
-    const bulkDeleteCategories = async () => {
-      if (!confirm(`Are you sure you want to delete ${selectedCategories.value.length} categories?`)) {
-        return
-      }
+    const bulkDeleteCategories = () => {
+      // Reset confirmation state and show dialog
+      confirmBulkDelete.value = false
+      showBulkDeleteDialog.value = true
+    }
 
+    const confirmBulkDeleteCategories = async () => {
       try {
         loading.value = true
         await Promise.all(
           selectedCategories.value.map(category =>
             api.deleteFollowupCategoryWithStrategyNormalized({
               categoryId: category.id,
-              strategy: 'delete_all'
+              strategy: 'delete'
             })
           )
         )
         showSuccessMessage(`${selectedCategories.value.length} categories deleted!`)
         selectedCategories.value = []
+        showBulkDeleteDialog.value = false
+        confirmBulkDelete.value = false
         await loadData()
       } catch (err) {
         showErrorMessage('Failed to delete categories')
       } finally {
         loading.value = false
       }
+    }
+
+    const cancelBulkDelete = () => {
+      showBulkDeleteDialog.value = false
+      confirmBulkDelete.value = false
     }
 
     // Question selection management
@@ -754,8 +836,10 @@ export default {
       showCreateCategoryDialog,
       showCategoryDialog,
       showDeleteDialog,
+      showBulkDeleteDialog,
       editingCategory,
       deletingCategory,
+      confirmBulkDelete,
       showSuccess,
       showError,
       successMessage,
@@ -773,6 +857,8 @@ export default {
       bulkActivateCategories,
       bulkDeactivateCategories,
       bulkDeleteCategories,
+      confirmBulkDeleteCategories,
+      cancelBulkDelete,
       updateQuestionSelection,
       handleCreateCategoryDialog
     }
