@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
@@ -204,10 +204,14 @@ async def change_password(
             session["username"], session["username"], client_ip, request.headers.get("User-Agent", ""), success=True
         )
 
-        # Expire all sessions for this user (except current one)
+        # SECURITY FIX: Force complete re-authentication after password change
+        # This prevents session fixation attacks
         admin_auth_manager.expire_user_sessions(user["id"])
 
-        return {"success": True, "message": "Password changed successfully"}
+        # Force logout by clearing the current session cookie
+        response = JSONResponse({"success": True, "message": "Password changed successfully. Please log in again."})
+        response.delete_cookie("admin_session", path="/", httponly=True, secure=True, samesite="lax")
+        return response
 
     except HTTPException:
         raise

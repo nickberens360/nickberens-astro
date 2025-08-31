@@ -295,36 +295,47 @@ class AdminDatabaseManager:
         default_username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin").lower()
         default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
 
-        if not default_password:
-            # If no default password is set, don't modify existing users
-            return
-
+        # SECURITY FIX: Always verify admin user integrity
         # Check if the default admin user exists
-        cursor.execute("SELECT id, password_hash FROM admin_users WHERE username = ?", (default_username,))
+        cursor.execute("SELECT id, password_hash, role FROM admin_users WHERE username = ?", (default_username,))
         result = cursor.fetchone()
 
         if result:
-            user_id, current_hash = result
+            user_id, current_hash, role = result
 
-            # Test if the current hash works with direct bcrypt verification
-            try:
-                test_password_bytes = default_password.encode("utf-8")
-                hash_bytes = current_hash.encode("utf-8")
-                bcrypt_works = bcrypt.checkpw(test_password_bytes, hash_bytes)
-            except Exception:
-                bcrypt_works = False
-
-            if not bcrypt_works:
-                # Hash is in wrong format (probably passlib), recreate with bcrypt
-                logger.info(f"Updating password hash format for default admin user: {default_username}")
-                new_password_bytes = default_password.encode("utf-8")
-                new_password_hash = bcrypt.hashpw(new_password_bytes, bcrypt.gensalt()).decode("utf-8")
-
+            # SECURITY: Ensure admin user has proper role
+            if role != "admin":
+                logger.warning(f"Default admin user {default_username} has incorrect role: {role}. Fixing...")
                 cursor.execute(
-                    "UPDATE admin_users SET password_hash = ?, updated_at = ? WHERE id = ?",
-                    (new_password_hash, datetime.now(), user_id),
+                    "UPDATE admin_users SET role = 'admin', updated_at = ? WHERE id = ?",
+                    (datetime.now(), user_id),
                 )
-                logger.info(f"Updated password hash for default admin user: {default_username}")
+                logger.info(f"Restored admin role for user: {default_username}")
+
+            # Only update password if one is provided and different
+            if default_password:
+                # Test if the current hash works with direct bcrypt verification
+                try:
+                    test_password_bytes = default_password.encode("utf-8")
+                    hash_bytes = current_hash.encode("utf-8")
+                    bcrypt_works = bcrypt.checkpw(test_password_bytes, hash_bytes)
+                except Exception:
+                    bcrypt_works = False
+
+                if not bcrypt_works:
+                    # Hash is in wrong format (probably passlib), recreate with bcrypt
+                    logger.info(f"Updating password hash format for default admin user: {default_username}")
+                    new_password_bytes = default_password.encode("utf-8")
+                    new_password_hash = bcrypt.hashpw(new_password_bytes, bcrypt.gensalt()).decode("utf-8")
+
+                    cursor.execute(
+                        "UPDATE admin_users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                        (new_password_hash, datetime.now(), user_id),
+                    )
+                    logger.info(f"Updated password hash for default admin user: {default_username}")
+            else:
+                # SECURITY: Log when default admin exists without password validation
+                logger.info(f"Default admin user {default_username} exists. No password update requested.")
         else:
             # Default admin user doesn't exist, create it
             logger.info("Default admin user not found, creating it")
@@ -559,29 +570,26 @@ class AdminDatabaseManager:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Build dynamic update query
+                # Build dynamic update query with field whitelisting to prevent SQL injection
+                # Define allowed fields to prevent injection of arbitrary SQL
+                allowed_fields = {"display_name", "description", "icon", "sort_order", "is_active"}
                 updates: List[str] = []
                 params: List[Any] = []
 
-                if display_name is not None:
-                    updates.append("display_name = ?")
-                    params.append(display_name)
+                # Build field updates with validation
+                field_values = {
+                    "display_name": display_name,
+                    "description": description,
+                    "icon": icon,
+                    "sort_order": sort_order,
+                    "is_active": (1 if is_active else 0) if is_active is not None else None,
+                }
 
-                if description is not None:
-                    updates.append("description = ?")
-                    params.append(description)
-
-                if icon is not None:
-                    updates.append("icon = ?")
-                    params.append(icon)
-
-                if sort_order is not None:
-                    updates.append("sort_order = ?")
-                    params.append(sort_order)
-
-                if is_active is not None:
-                    updates.append("is_active = ?")
-                    params.append(1 if is_active else 0)
+                for field, value in field_values.items():
+                    if value is not None and field in allowed_fields:
+                        # Field name is from our whitelist, safe to use
+                        updates.append(f"{field} = ?")
+                        params.append(value)
 
                 if not updates:
                     return False
@@ -591,7 +599,9 @@ class AdminDatabaseManager:
                 params.append(datetime.now())
                 params.append(category_id)
 
-                cursor.execute(f"UPDATE followup_categories SET {', '.join(updates)} WHERE id = ?", params)
+                # Build and execute query with validated field names only
+                query = f"UPDATE followup_categories SET {', '.join(updates)} WHERE id = ?"
+                cursor.execute(query, params)
 
                 success = cursor.rowcount > 0
                 if success:
@@ -783,21 +793,24 @@ class AdminDatabaseManager:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Build dynamic update query
+                # Build dynamic update query with field whitelisting to prevent SQL injection
+                # Define allowed fields to prevent injection of arbitrary SQL
+                allowed_fields = {"question_text", "sort_order", "is_active"}
                 updates: List[str] = []
                 params: List[Any] = []
 
-                if question_text is not None:
-                    updates.append("question_text = ?")
-                    params.append(question_text)
+                # Build field updates with validation
+                field_values = {
+                    "question_text": question_text,
+                    "sort_order": sort_order,
+                    "is_active": (1 if is_active else 0) if is_active is not None else None,
+                }
 
-                if sort_order is not None:
-                    updates.append("sort_order = ?")
-                    params.append(sort_order)
-
-                if is_active is not None:
-                    updates.append("is_active = ?")
-                    params.append(1 if is_active else 0)
+                for field, value in field_values.items():
+                    if value is not None and field in allowed_fields:
+                        # Field name is from our whitelist, safe to use
+                        updates.append(f"{field} = ?")
+                        params.append(value)
 
                 if not updates:
                     return False
@@ -807,7 +820,9 @@ class AdminDatabaseManager:
                 params.append(datetime.now())
                 params.append(question_id)
 
-                cursor.execute(f"UPDATE followup_questions SET {', '.join(updates)} WHERE id = ?", params)
+                # Build and execute query with validated field names only
+                query = f"UPDATE followup_questions SET {', '.join(updates)} WHERE id = ?"
+                cursor.execute(query, params)
 
                 success = cursor.rowcount > 0
                 if success:
@@ -1035,12 +1050,16 @@ class AdminDatabaseManager:
         self, identifier: str, identifier_type: str, lockout_duration_minutes: int = 5
     ) -> bool:
         """Record a failed attempt and return True if identifier should be locked out."""
+        import random
+
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 now = datetime.now()
-                lockout_until = datetime.now().replace(second=0, microsecond=0)  # Round to minute
-                lockout_until = lockout_until.replace(minute=lockout_until.minute + lockout_duration_minutes)
+                # SECURITY FIX: Add randomization to prevent timing attacks
+                # Add 0-60 seconds of random jitter to lockout duration
+                jitter_seconds = random.randint(0, 60)
+                lockout_until = now + timedelta(minutes=lockout_duration_minutes, seconds=jitter_seconds)
 
                 # Check if identifier already exists
                 cursor.execute(

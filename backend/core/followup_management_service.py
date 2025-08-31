@@ -42,8 +42,8 @@ class FollowUpManagementService:
             with self.db_manager.get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Begin transaction
-                cursor.execute("BEGIN TRANSACTION")
+                # SECURITY FIX: Transaction handled automatically by context manager
+                # No manual BEGIN TRANSACTION needed with proper context usage
 
                 # Validate category exists and get question count
                 category = self.db_manager.get_followup_category(category_id)
@@ -77,8 +77,7 @@ class FollowUpManagementService:
                     if not success:
                         raise ValueError("Failed to deactivate category")
 
-                    # Commit and return early for deactivate
-                    cursor.execute("COMMIT")
+                    # Transaction commits automatically at end of context
                     return {
                         "success": True,
                         "action": "deactivated",
@@ -92,8 +91,7 @@ class FollowUpManagementService:
                     if not success:
                         raise ValueError("Failed to delete category")
 
-                # Commit transaction
-                cursor.execute("COMMIT")
+                # Transaction commits automatically at end of context
 
                 return {
                     "success": True,
@@ -104,11 +102,7 @@ class FollowUpManagementService:
                 }
 
         except Exception as e:
-            # Rollback on error
-            try:
-                cursor.execute("ROLLBACK")
-            except Exception as rollback_error:
-                logger.warning(f"Failed to rollback transaction: {rollback_error}")
+            # SECURITY FIX: Transaction automatically rolls back on exception with context manager
             logger.error(f"Error deleting category {category_id}: {str(e)}")
             raise
 
@@ -123,9 +117,8 @@ class FollowUpManagementService:
             Dictionary with results summary
         """
         try:
-            with self.db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("BEGIN TRANSACTION")
+            with self.db_manager.get_connection():
+                # SECURITY FIX: Transaction handled automatically by context manager
 
                 results: Dict[str, Any] = {
                     "success": True,
@@ -164,14 +157,11 @@ class FollowUpManagementService:
                         results["operations_failed"] += 1
                         results["errors"].append(f"Error in operation: {str(e)}")
 
-                cursor.execute("COMMIT")
+                # Transaction commits automatically at end of context
                 return results
 
         except Exception as e:
-            try:
-                cursor.execute("ROLLBACK")
-            except Exception as rollback_error:
-                logger.warning(f"Failed to rollback transaction: {rollback_error}")
+            # SECURITY FIX: Transaction automatically rolls back with context manager
             logger.error(f"Error in bulk operations: {str(e)}")
             raise
 
@@ -186,7 +176,7 @@ class FollowUpManagementService:
         try:
             with self.db_manager.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("BEGIN TRANSACTION")
+                # SECURITY FIX: Transaction handled automatically by context manager
 
                 for item in question_orders:
                     cursor.execute(
@@ -198,15 +188,12 @@ class FollowUpManagementService:
                         (item["sort_order"], datetime.now(), item["question_id"], category_id),
                     )
 
-                cursor.execute("COMMIT")
+                # Transaction commits automatically at end of context
                 logger.info(f"Reordered {len(question_orders)} questions in category {category_id}")
                 return True
 
         except Exception as e:
-            try:
-                cursor.execute("ROLLBACK")
-            except Exception as rollback_error:
-                logger.warning(f"Failed to rollback transaction: {rollback_error}")
+            # SECURITY FIX: Transaction automatically rolls back with context manager
             logger.error(f"Error reordering questions: {str(e)}")
             return False
 

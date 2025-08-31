@@ -114,8 +114,33 @@ class FollowUpSettings:
             return cls()  # Return defaults on error
 
 
+def sanitize_error_message(error: Exception, user_message: str = "An error occurred") -> str:
+    """
+    Sanitize error messages for production use.
+
+    Args:
+        error: The exception that occurred
+        user_message: Safe message to show to users in production
+
+    Returns:
+        str: Sanitized error message
+    """
+    # In development or debug mode, show detailed errors
+    if not AppConfig.IS_PRODUCTION or AppConfig.DEBUG_MODE:
+        return str(error)
+
+    # In production, return generic message and log actual error
+    logger.error(f"Error sanitized for production: {str(error)}", exc_info=True)
+    return user_message
+
+
 class AppConfig:
     """Centralized configuration management with enhanced security."""
+
+    # Environment detection for security
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+    IS_PRODUCTION = ENVIRONMENT == "production"
+    DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true" and not IS_PRODUCTION
 
     # LLM Configuration - keep it simple for now
     PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")

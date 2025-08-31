@@ -44,10 +44,13 @@ class AdminAPI {
         
         // Handle common error cases
         if (error.response?.status === 401) {
-          // Handle unauthorized access
+          // SECURITY FIX: Better authentication state management
           if (import.meta.env.DEV) {
             console.debug('Unauthorized access - authentication required')
           }
+          
+          // Trigger logout and redirect for authentication errors
+          this.handleAuthenticationError()
         } else if (error.response?.status === 404) {
           if (import.meta.env.DEV) {
             console.error('API endpoint not found')
@@ -279,6 +282,22 @@ class AdminAPI {
       console.error('Logout failed:', error)
       // Cookie should still be cleared by server even if logout fails
       throw error
+    }
+  }
+
+  // SECURITY FIX: Handle authentication errors properly
+  handleAuthenticationError() {
+    if (import.meta.env.DEV) {
+      console.debug('Handling authentication error - redirecting to login')
+    }
+    
+    // In a real Vue app, you'd use router here
+    // For now, trigger a page reload to the login page
+    if (typeof window !== 'undefined' && window.location) {
+      // Only redirect if we're not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/admin/'
+      }
     }
   }
 
