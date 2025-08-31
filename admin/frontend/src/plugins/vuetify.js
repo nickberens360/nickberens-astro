@@ -11,7 +11,8 @@ import {
   mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight, mdiChevronDown,
   mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
   mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
-  mdiToggleSwitch, mdiSort, mdiCheckboxMarked,
+  mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
+  mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -92,6 +93,7 @@ const iconAliases = {
   'cloud_upload': mdiCloudUpload,
   'attach_file': mdiPaperclip,
   delete: mdiDelete,
+  'delete-forever': mdiDeleteForever,
   edit: mdiPencil,
   'note-edit': mdiNoteEdit,
   undo: mdiUndo,
@@ -108,12 +110,19 @@ const iconAliases = {
   'eye-off': mdiEyeOff,
   'arrow-up': mdiArrowUp,
   'arrow-down': mdiArrowDown,
+  'arrow-right': mdiArrowRight,
   'dots-vertical': mdiDotsVertical,
   'alert-triangle': mdiAlert,
   'toggle-switch': mdiToggleSwitch,
   'sort': mdiSort,
   'checkbox-marked': mdiCheckboxMarked,
   'trending-up': mdiTrendingUp,
+  tag: mdiTag,
+  'tag-outline': mdiTagOutline,
+  cog: mdiCog,
+  'clipboard-list': mdiClipboardList,
+  'alert-octagon': mdiAlertOctagon,
+  'format-list-bulleted': mdiFormatListBulleted,
   
   // Status
   alert: mdiAlert,

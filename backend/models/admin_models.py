@@ -174,7 +174,7 @@ class BulkQuestionOperation(BaseModel):
 
 
 class BulkQuestionRequest(BaseModel):
-    operations: List[BulkQuestionOperation] = Field(..., min_items=1, max_items=50)
+    operations: List[BulkQuestionOperation] = Field(..., min_length=1, max_length=50)
 
 
 class CategoryDeleteRequest(BaseModel):

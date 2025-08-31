@@ -17,10 +17,10 @@ from langchain_core.retrievers import BaseRetriever
 
 # Prefer the newer Chroma package
 try:
-    from langchain_chroma import Chroma
+    from langchain_chroma import Chroma  # type: ignore
 except ImportError:
     # Fallback to community version if new package not available
-    from langchain_community.vectorstores import Chroma
+    from langchain_community.vectorstores import Chroma  # type: ignore
 
 from .config import AppConfig
 
@@ -344,7 +344,22 @@ class SemanticSearcher:
             return False
 
         try:
-            self.vector_store._collection.update(ids=document_ids, metadatas=metadatas)
+            # Convert metadata to compatible format for ChromaDB
+            from typing import Union
+
+            compatible_metadatas: List[Dict[str, Union[str, int, float, bool, None]]] = []
+            for metadata in metadatas:
+                compatible_metadata: Dict[str, Union[str, int, float, bool, None]] = {}
+                for key, value in metadata.items():
+                    # ChromaDB only accepts str, int, float, bool, or None values
+                    if isinstance(value, (str, int, float, bool)) or value is None:
+                        compatible_metadata[key] = value
+                    else:
+                        # Convert other types to string
+                        compatible_metadata[key] = str(value)
+                compatible_metadatas.append(compatible_metadata)
+
+            self.vector_store._collection.update(ids=document_ids, metadatas=compatible_metadatas)  # type: ignore
             return True
         except Exception as e:
             logger.error(f"Error updating multiple document metadata: {e}")

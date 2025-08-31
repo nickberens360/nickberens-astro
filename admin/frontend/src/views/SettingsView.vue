@@ -465,70 +465,163 @@
     />
 
     <!-- Bulk Delete Confirmation Dialog -->
-    <v-dialog v-model="showBulkDeleteDialog" max-width="500px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 d-flex align-center">
-          <v-icon color="warning" class="mr-2">$alert-triangle</v-icon>
-          Bulk Delete Categories
+    <v-dialog v-model="showBulkDeleteDialog" max-width="580px" persistent>
+      <v-card class="bulk-delete-dialog" elevation="12" rounded="xl">
+        <v-card-title class="dialog-header pa-6">
+          <div class="d-flex align-center">
+            <v-avatar 
+              size="48" 
+              color="error" 
+              variant="tonal" 
+              class="mr-4"
+            >
+              <v-icon size="24">$alert-triangle</v-icon>
+            </v-avatar>
+            <div class="flex-grow-1">
+              <h2 class="text-h5 font-weight-bold mb-1">Bulk Delete Categories</h2>
+              <p class="text-body-2 text-medium-emphasis ma-0">
+                {{ selectedCategories.length }} categories selected for deletion
+              </p>
+            </div>
+            <v-chip
+              color="error"
+              variant="tonal"
+              size="small"
+            >
+              High Risk
+            </v-chip>
+          </div>
         </v-card-title>
 
-        <v-card-text>
-          <v-alert
-            type="warning"
-            variant="tonal"
-            class="mb-4"
-          >
-            You are about to delete <strong>{{ selectedCategories.length }} categories</strong> 
-            and <strong>all their questions permanently</strong>.
-          </v-alert>
+        <v-divider class="border-opacity-12"></v-divider>
 
-          <div class="mb-4">
-            <div class="text-subtitle-2 mb-2">Categories to be deleted:</div>
-            <div class="text-body-2">
-              <div v-for="category in selectedCategories" :key="category.id" class="mb-1">
-                • {{ category.display_name }} 
-                <span v-if="categoryStats[category.id]" class="text-medium-emphasis">
-                  ({{ categoryStats[category.id].question_count }} questions)
-                </span>
+        <v-card-text class="pa-6">
+          <div class="bulk-delete-content">
+            <!-- Warning Alert -->
+            <v-card
+              color="error"
+              variant="tonal" 
+              elevation="0"
+              rounded="lg"
+              class="mb-6"
+            >
+              <v-card-text class="pa-4">
+                <div class="d-flex align-center mb-3">
+                  <v-icon color="error" size="20" class="mr-2">$alert</v-icon>
+                  <span class="font-weight-bold text-body-1">Destructive Action</span>
+                </div>
+                <p class="text-body-2 ma-0">
+                  You are about to delete <strong>{{ selectedCategories.length }} categories</strong> 
+                  and <strong>all their questions permanently</strong>.
+                </p>
+              </v-card-text>
+            </v-card>
+
+            <!-- Categories List -->
+            <div class="categories-list-section mb-6">
+              <div class="section-title text-subtitle-1 font-weight-bold mb-4 d-flex align-center">
+                <v-icon size="18" class="mr-2">$list</v-icon>
+                Categories to be deleted
+              </div>
+              
+              <div class="categories-to-delete">
+                <v-card 
+                  v-for="category in selectedCategories" 
+                  :key="category.id" 
+                  class="category-item mb-2" 
+                  elevation="0" 
+                  variant="outlined"
+                  rounded="lg"
+                >
+                  <v-card-text class="pa-3">
+                    <div class="d-flex align-center">
+                      <v-avatar size="32" color="error" variant="tonal" class="mr-3">
+                        <v-icon size="16">$folder</v-icon>
+                      </v-avatar>
+                      <div class="flex-grow-1">
+                        <div class="font-weight-medium text-body-1">{{ category.display_name }}</div>
+                        <div v-if="categoryStats[category.id]" class="text-caption text-medium-emphasis">
+                          {{ categoryStats[category.id].question_count }} questions will be deleted
+                        </div>
+                      </div>
+                      <v-chip
+                        color="error"
+                        variant="tonal"
+                        size="small"
+                      >
+                        <v-icon start size="12">$delete</v-icon>
+                        Delete
+                      </v-chip>
+                    </div>
+                  </v-card-text>
+                </v-card>
               </div>
             </div>
+
+            <!-- Final Warning -->
+            <v-card
+              color="error"
+              variant="tonal"
+              elevation="1"
+              rounded="lg"
+              class="mb-6"
+            >
+              <v-card-text class="pa-4">
+                <div class="d-flex align-center mb-3">
+                  <v-icon color="error" size="20" class="mr-2">$warning</v-icon>
+                  <span class="font-weight-bold text-error">Final Warning</span>
+                </div>
+                <p class="text-body-2 text-error ma-0">
+                  This action cannot be undone. All questions in these categories will be permanently deleted.
+                </p>
+              </v-card-text>
+            </v-card>
+
+            <!-- Confirmation Checkbox -->
+            <v-card
+              color="error"
+              variant="tonal"
+              elevation="0"
+              rounded="lg"
+            >
+              <v-card-text class="pa-4">
+                <v-checkbox
+                  v-model="confirmBulkDelete"
+                  color="error"
+                  class="confirmation-checkbox"
+                >
+                  <template v-slot:label>
+                    <span class="text-error font-weight-medium">
+                      I understand this will permanently delete all selected categories and their questions
+                    </span>
+                  </template>
+                </v-checkbox>
+              </v-card-text>
+            </v-card>
           </div>
-
-          <v-alert
-            type="error"
-            variant="tonal"
-            class="mb-4"
-          >
-            <strong>Warning:</strong> This action cannot be undone. All questions in these categories will be permanently deleted.
-          </v-alert>
-
-          <v-checkbox
-            v-model="confirmBulkDelete"
-            hide-details
-            class="mt-4"
-          >
-            <template v-slot:label>
-              <span class="text-error">
-                I understand this will permanently delete all selected categories and their questions
-              </span>
-            </template>
-          </v-checkbox>
         </v-card-text>
 
-        <v-card-actions>
+        <v-divider class="border-opacity-12"></v-divider>
+        
+        <v-card-actions class="dialog-actions pa-6">
           <v-spacer></v-spacer>
           <v-btn
-            text
+            variant="outlined"
+            size="large"
             @click="cancelBulkDelete"
             :disabled="loading"
+            class="mr-3"
           >
             Cancel
           </v-btn>
           <v-btn
             color="error"
+            variant="elevated"
+            size="large"
             :loading="loading"
             :disabled="!confirmBulkDelete"
             @click="confirmBulkDeleteCategories"
+            prepend-icon="$delete"
           >
             Delete {{ selectedCategories.length }} Categories
           </v-btn>
@@ -1068,5 +1161,114 @@ export default {
 
 .settings-page > *:nth-child(4) {
   animation-delay: 0.3s;
+}
+
+/* Bulk Delete Dialog Styling */
+.bulk-delete-dialog {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-theme-outline), 0.08);
+}
+
+.bulk-delete-dialog .dialog-header {
+  background: linear-gradient(135deg, rgb(var(--v-theme-surface)) 0%, rgba(var(--v-theme-error), 0.02) 100%);
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.08);
+}
+
+.bulk-delete-content {
+  padding: 0;
+}
+
+.categories-list-section {
+  padding: 20px;
+  background: rgba(var(--v-theme-surface-variant), 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-outline), 0.06);
+}
+
+.categories-list-section .section-title {
+  color: rgb(var(--v-theme-primary));
+}
+
+.categories-to-delete {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0 2px;
+}
+
+.category-item {
+  transition: all 0.2s ease;
+  border: 1px solid rgba(var(--v-theme-error), 0.12);
+}
+
+.category-item:hover {
+  border-color: rgba(var(--v-theme-error), 0.3);
+  box-shadow: 0 2px 8px rgba(var(--v-theme-error), 0.1);
+}
+
+.bulk-delete-dialog .confirmation-checkbox :deep(.v-selection-control__wrapper) {
+  margin-right: 12px;
+}
+
+.bulk-delete-dialog .dialog-actions {
+  background: rgba(var(--v-theme-surface-variant), 0.02);
+  border-top: 1px solid rgba(var(--v-theme-outline), 0.08);
+}
+
+/* Bulk Delete Dialog Animation */
+.bulk-delete-dialog {
+  animation: dialogSlideIn 0.3s ease-out;
+}
+
+/* Mobile responsiveness for bulk delete dialog */
+@media (max-width: 600px) {
+  .categories-list-section {
+    padding: 16px;
+    margin: 0 -6px 16px -6px;
+  }
+  
+  .categories-to-delete {
+    max-height: 150px;
+  }
+  
+  .bulk-delete-dialog .dialog-header {
+    padding: 20px !important;
+  }
+  
+  .bulk-delete-dialog .dialog-actions {
+    padding: 20px !important;
+  }
+  
+  .category-item {
+    margin-bottom: 8px;
+  }
+}
+
+/* Remove focus outline from all input elements globally in dialogs */
+:deep(.v-field__input),
+:deep(.v-field__field),
+:deep(.v-input__control),
+:deep(.v-text-field input),
+:deep(.v-textarea textarea),
+:deep(.v-select input),
+:deep(.v-btn:focus-visible),
+:deep(.v-text-field:focus-within),
+:deep(.v-select:focus-within) {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+:deep(.v-field__input:focus),
+:deep(.v-field__field:focus),
+:deep(.v-input__control:focus),
+:deep(.v-text-field input:focus),
+:deep(.v-textarea textarea:focus),
+:deep(.v-select input:focus),
+:deep(.v-btn:focus),
+:deep(.v-btn:focus-visible),
+:deep(.v-text-field:focus-within),
+:deep(.v-select:focus-within) {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
 }
 </style>
