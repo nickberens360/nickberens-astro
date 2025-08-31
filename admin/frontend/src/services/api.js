@@ -343,25 +343,6 @@ class AdminAPI {
     }
   }
 
-  async getFollowupQuestions() {
-    try {
-      const response = await this.client.get('/settings/followup/questions')
-      return response
-    } catch (error) {
-      console.error('Failed to get follow-up questions:', error)
-      throw error
-    }
-  }
-
-  async updateFollowupQuestions(questions) {
-    try {
-      const response = await this.client.put('/settings/followup/questions', questions)
-      return response
-    } catch (error) {
-      console.error('Failed to update follow-up questions:', error)
-      throw error
-    }
-  }
 
   async resetFollowupQuestions() {
     try {
@@ -373,56 +354,6 @@ class AdminAPI {
     }
   }
 
-  // Follow-up category management endpoints
-  async getFollowupCategories(includeInactive = false) {
-    try {
-      const response = await this.client.get(`/settings/followup/categories?include_inactive=${includeInactive}`)
-      return response
-    } catch (error) {
-      console.error('Failed to get follow-up categories:', error)
-      throw error
-    }
-  }
-
-  async getFollowupCategory(categoryId) {
-    try {
-      const response = await this.client.get(`/settings/followup/categories/${categoryId}`)
-      return response
-    } catch (error) {
-      console.error('Failed to get follow-up category:', error)
-      throw error
-    }
-  }
-
-  async createFollowupCategory(categoryData) {
-    try {
-      const response = await this.client.post('/settings/followup/categories', categoryData)
-      return response
-    } catch (error) {
-      console.error('Failed to create follow-up category:', error)
-      throw error
-    }
-  }
-
-  async updateFollowupCategory(categoryId, categoryData) {
-    try {
-      const response = await this.client.put(`/settings/followup/categories/${categoryId}`, categoryData)
-      return response
-    } catch (error) {
-      console.error('Failed to update follow-up category:', error)
-      throw error
-    }
-  }
-
-  async deleteFollowupCategory(categoryId) {
-    try {
-      const response = await this.client.delete(`/settings/followup/categories/${categoryId}`)
-      return response
-    } catch (error) {
-      console.error('Failed to delete follow-up category:', error)
-      throw error
-    }
-  }
 
   async reorderFollowupCategories(categories) {
     try {
@@ -469,7 +400,7 @@ class AdminAPI {
   }
 
   // New normalized question management
-  async getFollowupQuestionsNormalized(params = {}) {
+  async getFollowupQuestions(params = {}) {
     try {
       const searchParams = new URLSearchParams()
       if (params.category_id) searchParams.append('category_id', params.category_id)
@@ -486,7 +417,7 @@ class AdminAPI {
     }
   }
 
-  async getFollowupQuestionNormalized(questionId) {
+  async getFollowupQuestion(questionId) {
     try {
       const response = await this.client.get(`/settings/followup/questions/${questionId}`)
       return response
@@ -496,7 +427,7 @@ class AdminAPI {
     }
   }
 
-  async createFollowupQuestionNormalized(questionData) {
+  async createFollowupQuestion(questionData) {
     try {
       const response = await this.client.post('/settings/followup/questions', questionData)
       return response
@@ -506,7 +437,7 @@ class AdminAPI {
     }
   }
 
-  async updateFollowupQuestionNormalized(questionId, questionData) {
+  async updateFollowupQuestion(questionId, questionData) {
     try {
       const response = await this.client.put(`/settings/followup/questions/${questionId}`, questionData)
       return response
@@ -516,7 +447,7 @@ class AdminAPI {
     }
   }
 
-  async deleteFollowupQuestionNormalized(questionId) {
+  async deleteFollowupQuestion(questionId) {
     try {
       const response = await this.client.delete(`/settings/followup/questions/${questionId}`)
       return response
@@ -552,7 +483,7 @@ class AdminAPI {
   }
 
   // Additional normalized API methods for the unified interface
-  async getFollowupCategoriesNormalized(includeInactive = true) {
+  async getFollowupCategories(includeInactive = true) {
     try {
       const response = await this.client.get(`/settings/followup/categories?include_inactive=${includeInactive}`)
       return response
@@ -562,7 +493,7 @@ class AdminAPI {
     }
   }
 
-  async createFollowupCategoryNormalized(categoryData) {
+  async createFollowupCategory(categoryData) {
     try {
       const response = await this.client.post('/settings/followup/categories', categoryData)
       return response
@@ -572,7 +503,7 @@ class AdminAPI {
     }
   }
 
-  async updateFollowupCategoryNormalized(categoryId, categoryData) {
+  async updateFollowupCategory(categoryId, categoryData) {
     try {
       const response = await this.client.put(`/settings/followup/categories/${categoryId}`, categoryData)
       return response
@@ -582,7 +513,7 @@ class AdminAPI {
     }
   }
 
-  async deleteFollowupCategoryWithStrategyNormalized(deleteRequest) {
+  async deleteFollowupCategoryWithStrategy(deleteRequest) {
     try {
       const response = await this.client.post(`/settings/followup/categories/${deleteRequest.categoryId}/delete`, {
         strategy: deleteRequest.strategy,
@@ -595,7 +526,7 @@ class AdminAPI {
     }
   }
 
-  async getFollowupCategoryStatsNormalized(categoryId) {
+  async getFollowupCategoryStats(categoryId) {
     try {
       const response = await this.client.get(`/settings/followup/categories/${categoryId}/stats`)
       return response

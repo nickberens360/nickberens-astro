@@ -708,7 +708,7 @@ export default {
         // Load settings, categories, and stats in parallel
         const [settingsResponse, categoriesResponse] = await Promise.all([
           api.getFollowupSettings(),
-          api.getFollowupCategoriesNormalized()
+          api.getFollowupCategories()
         ])
 
         Object.assign(settings, settingsResponse)
@@ -760,11 +760,11 @@ export default {
 
         if (editingCategory.value) {
           // Update existing category
-          await api.updateFollowupCategoryNormalized(editingCategory.value.id, categoryData)
+          await api.updateFollowupCategory(editingCategory.value.id, categoryData)
           showSuccessMessage('Category updated successfully!')
         } else {
           // Create new category
-          await api.createFollowupCategoryNormalized(categoryData)
+          await api.createFollowupCategory(categoryData)
           showSuccessMessage('Category created successfully!')
         }
 
@@ -825,7 +825,7 @@ export default {
         loading.value = true
         await Promise.all(
           selectedCategories.value.map(category =>
-            api.updateFollowupCategoryNormalized(category.id, { is_active: true })
+            api.updateFollowupCategory(category.id, { is_active: true })
           )
         )
         showSuccessMessage(`${selectedCategories.value.length} categories activated!`)
@@ -843,7 +843,7 @@ export default {
         loading.value = true
         await Promise.all(
           selectedCategories.value.map(category =>
-            api.updateFollowupCategoryNormalized(category.id, { is_active: false })
+            api.updateFollowupCategory(category.id, { is_active: false })
           )
         )
         showSuccessMessage(`${selectedCategories.value.length} categories deactivated!`)

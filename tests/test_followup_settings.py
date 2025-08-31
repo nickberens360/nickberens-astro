@@ -111,8 +111,8 @@ class TestFollowUpSettings:
     def test_followup_settings_json_error_handling(self):
         """Test JSON parsing error handling."""
         # Invalid JSON should return defaults
-        invalid_json = "{"  # Invalid JSON
-        settings = FollowUpSettings.from_json(invalid_json)
+        incomplete_json = "{"  # Incomplete JSON: opening brace without closing brace
+        settings = FollowUpSettings.from_json(incomplete_json)
 
         # Should be default settings
         default_settings = FollowUpSettings()

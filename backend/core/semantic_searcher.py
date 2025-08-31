@@ -10,7 +10,7 @@ This module provides focused functionality for:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from langchain.docstore.document import Document
 from langchain_core.retrievers import BaseRetriever
@@ -345,8 +345,6 @@ class SemanticSearcher:
 
         try:
             # Convert metadata to compatible format for ChromaDB
-            from typing import Union
-
             compatible_metadatas: List[Dict[str, Union[str, int, float, bool, None]]] = []
             for metadata in metadatas:
                 compatible_metadata: Dict[str, Union[str, int, float, bool, None]] = {}

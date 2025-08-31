@@ -302,7 +302,7 @@ export default {
     const loadQuestions = async () => {
       try {
         loading.value = true
-        const response = await api.getFollowupQuestionsNormalized({
+        const response = await api.getFollowupQuestions({
           category_id: props.category.id,
           active_only: false
         })
@@ -348,7 +348,7 @@ export default {
 
       try {
         loading.value = true
-        await api.updateFollowupQuestionNormalized(question.id, {
+        await api.updateFollowupQuestion(question.id, {
           question_text: editingText.value.trim()
         })
         
@@ -371,7 +371,7 @@ export default {
     const toggleQuestionStatus = async (question) => {
       try {
         loading.value = true
-        await api.updateFollowupQuestionNormalized(question.id, {
+        await api.updateFollowupQuestion(question.id, {
           is_active: !question.is_active
         })
         
@@ -408,8 +408,8 @@ export default {
         
         // Swap sort orders
         await Promise.all([
-          api.updateFollowupQuestionNormalized(q1.id, { sort_order: q2.sort_order }),
-          api.updateFollowupQuestionNormalized(q2.id, { sort_order: q1.sort_order })
+          api.updateFollowupQuestion(q1.id, { sort_order: q2.sort_order }),
+          api.updateFollowupQuestion(q2.id, { sort_order: q1.sort_order })
         ])
         
         // Update local state
@@ -438,7 +438,7 @@ export default {
 
       try {
         loading.value = true
-        await api.deleteFollowupQuestionNormalized(questionToDelete.value.id)
+        await api.deleteFollowupQuestion(questionToDelete.value.id)
         
         // Remove from local list
         const index = questions.value.findIndex(q => q.id === questionToDelete.value.id)
@@ -476,7 +476,7 @@ export default {
           sort_order: newQuestionOrder.value || questions.value.length
         }
 
-        const response = await api.createFollowupQuestionNormalized(questionData)
+        const response = await api.createFollowupQuestion(questionData)
         
         if (response.success) {
           await loadQuestions() // Refresh questions
@@ -556,7 +556,7 @@ export default {
         for (let i = 0; i < questionsCopy.length; i++) {
           if (questionsCopy[i].sort_order !== i) {
             updates.push(
-              api.updateFollowupQuestionNormalized(questionsCopy[i].id, {
+              api.updateFollowupQuestion(questionsCopy[i].id, {
                 sort_order: i
               })
             )

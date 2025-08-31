@@ -1,4 +1,5 @@
 import logging
+import random
 import threading
 from typing import Dict, List, Optional, Tuple
 
@@ -227,8 +228,6 @@ class FollowUpService:
 
         # Simple implementation: prefer questions that aren't too similar to current query
         # This could be enhanced with semantic similarity in the future
-        import random
-
         random.seed(hash(user_question.lower()) % 1000)  # Deterministic randomness based on question
 
         selected = random.sample(questions_pool, min(settings.max_questions, len(questions_pool)))
