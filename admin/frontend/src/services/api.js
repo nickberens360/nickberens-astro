@@ -626,6 +626,11 @@ class AdminAPI {
     }
   }
 
+  // Backward-compatible alias used by some views
+  async deleteFollowupCategoryWithStrategyNormalized(deleteRequest) {
+    return this.deleteFollowupCategoryWithStrategy(deleteRequest)
+  }
+
   async getFollowupCategoryStats(categoryId) {
     try {
       const response = await this.client.get(`/settings/followup/categories/${categoryId}/stats`)

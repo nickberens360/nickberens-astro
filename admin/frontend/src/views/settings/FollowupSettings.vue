@@ -273,120 +273,12 @@
         </v-card-title>
 
         <v-card-text class="pa-6">
-          <!-- Categories with Expansion Panels -->
-          <v-expansion-panels
+          <FollowupAccordion
             v-if="categories.length > 0"
-            :modelValue="expandedPanels"
-            @update:modelValue="updateExpandedPanels"
-            multiple
-            variant="accordion"
-          >
-            <v-expansion-panel
-              v-for="category in categories"
-              :key="category.id"
-              :value="category.id"
-              class="category-panel mb-4"
-              :class="{ 'category-panel--inactive': !category.is_active }"
-              elevation="0"
-              rounded="lg"
-            >
-              <v-expansion-panel-title class="category-panel-header">
-                <div class="d-flex align-center w-100" @click.stop>
-                  <!-- Selection Checkbox -->
-                  <v-checkbox
-                    :model-value="selectedCategories"
-                    :value="category"
-                    hide-details
-                    density="compact"
-                    class="mr-4 flex-shrink-0"
-                    @click.stop
-                    @update:model-value="updateSelectedCategories"
-                  />
-
-                  <!-- Category Info -->
-                  <div class="flex-grow-1 d-flex align-center">
-                    <v-avatar
-                      size="40"
-                      :color="category.is_active ? 'primary' : 'grey-lighten-1'"
-                      variant="tonal"
-                      class="mr-4"
-                    >
-                      <v-icon size="20">
-                        ${{ category.icon || 'help-circle' }}
-                      </v-icon>
-                    </v-avatar>
-
-                    <div class="category-info">
-                      <div class="d-flex align-center mb-1">
-                        <span class="text-subtitle-1 font-weight-bold">
-                          {{ category.display_name }}
-                        </span>
-                        <v-chip
-                          v-if="!category.is_active"
-                          size="small"
-                          color="warning"
-                          variant="tonal"
-                          class="ml-3"
-                        >
-                          <v-icon start size="12">$alert</v-icon>
-                          Inactive
-                        </v-chip>
-                      </div>
-                      <div class="text-caption text-medium-emphasis">
-                        <v-icon size="12" class="mr-1">$help-circle</v-icon>
-                        {{ categoryStats[category.id]?.question_count || 0 }} questions
-                        <span class="mx-2">•</span>
-                        <v-icon size="12" class="mr-1">$sort</v-icon>
-                        Order: {{ category.sort_order }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Quick Actions -->
-                  <div class="d-flex align-center" @click.stop>
-                    <v-tooltip text="Edit Category" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          icon="$edit"
-                          size="small"
-                          variant="text"
-                          @click="$emit('edit-category', category)"
-                          :disabled="loading"
-                          class="mr-1"
-                        />
-                      </template>
-                    </v-tooltip>
-
-                    <v-tooltip text="Delete Category" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          icon="$delete"
-                          size="small"
-                          variant="text"
-                          color="error"
-                          @click="showDeleteCategoryDialog(category)"
-                          :disabled="loading"
-                        />
-                      </template>
-                    </v-tooltip>
-                  </div>
-                </div>
-              </v-expansion-panel-title>
-
-              <v-expansion-panel-text class="category-panel-content">
-                <div class="pt-4">
-                  <QuestionManager
-                    :category="category"
-                    :selected-questions="selectedQuestions[category.id] || []"
-                    @questions-updated="loadData"
-                    @selection-changed="(questions) => updateQuestionSelection(category.id, questions)"
-                  />
-                </div>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
+            @update-selected-categories="updateSelectedCategories"
+            @update-question-selection="updateQuestionSelection"
+            @changed="loadData"
+          />
 
           <!-- Empty State -->
           <div v-else class="empty-state text-center py-16">
@@ -416,12 +308,12 @@
 </template>
 
 <script>
-import QuestionManager from '@/components/QuestionManager.vue'
+import FollowupAccordion from '@/components/FollowupAccordion.vue'
 
 export default {
   name: 'FollowupSettings',
   components: {
-    QuestionManager
+    FollowupAccordion
   },
   props: {
     loading: Boolean,
@@ -448,7 +340,27 @@ export default {
     'load-data'
   ],
   computed: {
-    // Other computed properties could go here
+    // Bridge v-model for expansion panels directly to parent prop
+    panelModel: {
+      get() {
+        return this.expandedPanels || []
+      },
+      set(val) {
+        // Emit up to parent; parent owns the source of truth
+        this.$emit('update-expanded-panels', val)
+      }
+    }
+  },
+  watch: {
+    categories: {
+      handler(newVal) {
+        console.log('FollowupSettings: categories changed, count:', newVal?.length || 0, newVal)
+      },
+      immediate: true
+    }
+  },
+  mounted() {
+    console.log('FollowupSettings mounted with categories:', this.categories?.length || 0)
   },
   methods: {
     saveSettings() {
@@ -475,9 +387,6 @@ export default {
     },
     updateSelectedCategories(newValue) {
       this.$emit('update-selected-categories', newValue)
-    },
-    updateExpandedPanels(newValue) {
-      this.$emit('update-expanded-panels', newValue)
     },
     loadData() {
       this.$emit('load-data')

@@ -236,16 +236,15 @@ class FollowUpManagementService:
             return []
 
     def validate_category_deletion(self, category_id: int) -> Dict[str, Any]:
-        """
-        Validate if a category can be safely deleted and provide options.
+        """Validate whether a category can be deleted and provide options.
 
-        Returns:
-            Dictionary with validation results and available options
+        Returns a dict that is backward-compatible with callers expecting
+        either `can_delete` or `valid` boolean flags.
         """
         try:
             category = self.db_manager.get_followup_category(category_id)
             if not category:
-                return {"valid": False, "error": "Category not found"}
+                return {"valid": False, "can_delete": False, "error": "Category not found"}
 
             question_count = self.db_manager.get_category_question_count(category_id)
 
@@ -253,21 +252,26 @@ class FollowUpManagementService:
             target_categories = [
                 cat
                 for cat in self.db_manager.get_followup_categories()
-                if cat["id"] != category_id and cat["is_active"]
+                if cat["id"] != category_id and cat.get("is_active", True)
             ]
 
-            return {
+            result = {
                 "valid": True,
+                "can_delete": True,  # Backward-compat for older route usage
                 "category": category,
                 "questions_count": question_count,
                 "can_delete_directly": question_count == 0,
-                "available_strategies": {"move": len(target_categories) > 0, "delete": True, "deactivate": True},
+                "available_strategies": {
+                    "move": len(target_categories) > 0,
+                    "delete": True,
+                    "deactivate": True,
+                },
                 "target_categories": target_categories,
             }
-
+            return result
         except Exception as e:
             logger.error(f"Error validating category deletion: {str(e)}")
-            return {"valid": False, "error": str(e)}
+            return {"valid": False, "can_delete": False, "error": str(e)}
 
 
 # Global instance

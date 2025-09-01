@@ -812,8 +812,10 @@ class AdminDatabaseManager:
                         updates.append(f"{field} = ?")
                         params.append(value)
 
+                # If nothing to update, treat as successful no-op
                 if not updates:
-                    return False
+                    logger.debug(f"No-op update for followup question ID: {question_id} (no fields changed)")
+                    return True
 
                 # Always update timestamp
                 updates.append("updated_at = ?")
@@ -824,10 +826,12 @@ class AdminDatabaseManager:
                 query = f"UPDATE followup_questions SET {', '.join(updates)} WHERE id = ?"
                 cursor.execute(query, params)
 
-                success = cursor.rowcount > 0
-                if success:
+                # Consider idempotent updates successful even if rowcount == 0
+                if cursor.rowcount == 0:
+                    logger.debug(f"Idempotent update for followup question ID: {question_id} (no data changed)")
+                else:
                     logger.info(f"Updated followup question ID: {question_id}")
-                return success
+                return True
         except Exception as e:
             logger.error(f"Error updating followup question {question_id}: {str(e)}", exc_info=True)
             return False
@@ -910,6 +914,64 @@ class AdminDatabaseManager:
         except Exception as e:
             logger.error(f"Error getting admin user {username}: {str(e)}", exc_info=True)
             return None
+
+    # Security events and rate limiting helpers used by audit logger and auth flows
+    def record_security_event(
+        self,
+        event_type: str,
+        identifier: str,
+        severity: str,
+        details: str,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> bool:
+        """Persist a security/audit event to the database."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO security_events (event_type, identifier, details, severity, ip_address, user_agent, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        event_type,
+                        identifier,
+                        details,
+                        severity,
+                        ip_address,
+                        (user_agent[:500] if user_agent else None),
+                        datetime.now(),
+                    ),
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error recording security event: {str(e)}", exc_info=True)
+            return False
+
+    def get_security_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
+        """Return security events within the last N hours."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, event_type, identifier, details, severity, ip_address, user_agent, created_at
+                    FROM security_events
+                    WHERE created_at >= datetime('now', ?)
+                    ORDER BY created_at DESC
+                    """,
+                    (f"-{int(hours)} hours",),
+                )
+                rows = cursor.fetchall()
+                result = []
+                for row in rows:
+                    d = dict(row)
+                    result.append(d)
+                return result
+        except Exception as e:
+            logger.error(f"Error fetching security alerts: {str(e)}", exc_info=True)
+            return []
 
     def create_admin_user(self, username: str, email: Optional[str], password_hash: str, role: str = "viewer") -> int:
         """Create a new admin user."""

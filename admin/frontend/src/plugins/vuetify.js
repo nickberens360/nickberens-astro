@@ -9,6 +9,7 @@ import {
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
   mdiDownload, mdiUpload, mdiCloudUpload, mdiPaperclip, mdiDelete,
   mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight, mdiChevronDown,
+  mdiChevronUp,
   mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
   mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
   mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
@@ -27,7 +28,7 @@ import {
   
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
-  mdiLightbulbOutline, mdiLightbulb, mdiTableLarge
+  mdiLightbulbOutline, mdiLightbulb, mdiTableLarge, mdiTestTube
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -101,6 +102,7 @@ const iconAliases = {
   'chevron-left': mdiChevronLeft,
   'chevron-right': mdiChevronRight,
   'chevron-down': mdiChevronDown,
+  'chevron-up': mdiChevronUp,
   save: mdiContentSave,
   'format-text': mdiFormatTextVariant,
   'map-marker': mdiMapMarker,
@@ -167,6 +169,7 @@ const iconAliases = {
   'format-list-group': mdiFormatListGroup,
   palette: mdiPalette,
   code: mdiCodeBraces,
+  test: mdiTestTube,
   
   // User & Security
   account: mdiAccount,

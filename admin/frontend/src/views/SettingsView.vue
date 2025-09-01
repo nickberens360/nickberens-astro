@@ -423,7 +423,6 @@ export default {
 
     // Methods
     const loadData = async () => {
-      console.log('SettingsView loadData() called')
       try {
         loading.value = true
 
@@ -458,14 +457,6 @@ export default {
           cacheStatusResponse
         ] = await Promise.all(promises)
 
-        console.log('API Responses:', {
-          followup: settingsResponse,
-          categories: categoriesResponse,
-          response: responseSettingsResponse,
-          routing: routingSettingsResponse,
-          features: featureFlagsResponse,
-          cache: cacheStatusResponse
-        })
 
         Object.assign(settings, settingsResponse)
         categories.value = categoriesResponse || []
@@ -474,9 +465,7 @@ export default {
         if (responseSettingsResponse) Object.assign(responseSettings, responseSettingsResponse)
         if (routingSettingsResponse) Object.assign(routingSettings, routingSettingsResponse)
         if (featureFlagsResponse) {
-          console.log('Assigning feature flags:', featureFlagsResponse)
           Object.assign(featureFlags, featureFlagsResponse)
-          console.log('Feature flags after assignment:', featureFlags)
         }
         if (cacheStatusResponse) cacheStatus.value = cacheStatusResponse
 
@@ -487,6 +476,11 @@ export default {
 
         // Remove panels for categories that no longer exist
         expandedPanels.value = currentPanelIds.filter(id => categoryIds.includes(id))
+
+        // Open all accordions by default on initial load
+        if ((expandedPanels.value?.length || 0) === 0 && categoryIds.length > 0) {
+          expandedPanels.value = [...categoryIds]
+        }
 
         // Load stats for each category
         const statsPromises = categories.value.map(async (category) => {
@@ -500,6 +494,34 @@ export default {
         })
 
         await Promise.all(statsPromises)
+
+        // Dev-only: log follow-up questions for each category
+        if (import.meta.env.DEV) {
+          try {
+            await Promise.all(
+              categories.value.map(async (category) => {
+                try {
+                  const qs = await api.getFollowupQuestions({
+                    category_id: category.id,
+                    active_only: false
+                  })
+                  console.group(
+                    `Follow-up questions for category ${category.id} (${category.display_name})`
+                  )
+                  console.log(qs)
+                  console.groupEnd()
+                } catch (err) {
+                  console.warn(
+                    `Failed to fetch follow-up questions for category ${category.id} (${category.display_name}):`,
+                    err
+                  )
+                }
+              })
+            )
+          } catch (e) {
+            console.warn('Dev logging of follow-up questions failed:', e)
+          }
+        }
 
       } catch (err) {
         console.error('Failed to load data:', err)
@@ -743,19 +765,9 @@ export default {
       showCategoryDialog.value = true
     }
 
-    // Watch for route changes to load data
-    watch(
-      () => route.name,
-      (newRouteName) => {
-        if (newRouteName && newRouteName.startsWith('settings-')) {
-          loadData()
-        }
-      }
-    )
 
     // Initialize
     onMounted(() => {
-      console.log('SettingsView mounted, initial featureFlags:', featureFlags)
       loadData()
     })
 

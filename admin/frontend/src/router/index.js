@@ -168,7 +168,7 @@ const router = createRouter({
             }
           ]
         },
-        // Development-only route for typography testing
+        // Development-only routes
         ...(import.meta.env.DEV ? [{
           path: 'typography-demo',
           name: 'typography-demo',
@@ -177,6 +177,15 @@ const router = createRouter({
             title: 'Typography Demo',
             icon: 'article',
             hidden: true // Hide from main navigation
+          }
+        }, {
+          path: 'accordion-test',
+          name: 'accordion-test',
+          component: () => import('@/components/FollowupAccordion.vue'),
+          meta: {
+            title: 'Accordion Test',
+            icon: 'list',
+            hidden: true
           }
         }] : [])
       ]
