@@ -12,7 +12,8 @@ import {
   mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
   mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
   mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
-  mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon,
+  mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon, mdiReply, mdiRoad,
+  mdiFlag, mdiCached,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -123,6 +124,10 @@ const iconAliases = {
   'clipboard-list': mdiClipboardList,
   'alert-octagon': mdiAlertOctagon,
   'format-list-bulleted': mdiFormatListBulleted,
+  'message-reply': mdiReply,
+  route: mdiRoad,
+  'feature-flag': mdiFlag,
+  cached: mdiCached,
   
   // Status
   alert: mdiAlert,
@@ -184,7 +189,7 @@ const iconAliases = {
 
 export default createVuetify({
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: 'dark',
     themes,
     variations: {
       colors: ['primary', 'secondary', 'accent', 'error', 'info', 'success', 'warning'],

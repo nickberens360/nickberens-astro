@@ -29,18 +29,34 @@ body {
   width: 8px;
 }
 
-::-webkit-scrollbar-track {
+/* Light theme scrollbar */
+.v-theme--light ::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb {
+.v-theme--light ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+.v-theme--light ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Dark theme scrollbar */
+.v-theme--dark ::-webkit-scrollbar-track {
+  background: #374151;
+  border-radius: 4px;
+}
+
+.v-theme--dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 4px;
+}
+
+.v-theme--dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 /* Utility classes */

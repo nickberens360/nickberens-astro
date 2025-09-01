@@ -119,7 +119,54 @@ const router = createRouter({
           meta: {
             title: 'Settings',
             icon: 'settings'
-          }
+          },
+          children: [
+            {
+              path: '',
+              name: 'settings-overview',
+              redirect: 'followup'
+            },
+            {
+              path: 'followup',
+              name: 'settings-followup',
+              component: () => import('@/views/settings/FollowupSettings.vue'),
+              meta: {
+                title: 'Follow-up Questions'
+              }
+            },
+            {
+              path: 'response',
+              name: 'settings-response',
+              component: () => import('@/views/settings/ResponseSettings.vue'),
+              meta: {
+                title: 'Response Settings'
+              }
+            },
+            {
+              path: 'routing',
+              name: 'settings-routing',
+              component: () => import('@/views/settings/RoutingSettings.vue'),
+              meta: {
+                title: 'Query Routing'
+              }
+            },
+            {
+              path: 'features',
+              name: 'settings-features',
+              component: () => import('@/views/settings/FeatureSettings.vue'),
+              meta: {
+                title: 'Feature Flags'
+              }
+            },
+            {
+              path: 'cache',
+              name: 'settings-cache',
+              component: () => import('@/views/settings/CacheSettings.vue'),
+              meta: {
+                title: 'Cache Status'
+              }
+            }
+          ]
         },
         // Development-only route for typography testing
         ...(import.meta.env.DEV ? [{

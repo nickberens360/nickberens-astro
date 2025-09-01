@@ -3,10 +3,10 @@
     <v-card class="dialog-card" elevation="12" rounded="xl">
       <v-card-title class="dialog-header pa-6">
         <div class="d-flex align-center">
-          <v-avatar 
-            size="40" 
-            :color="isEdit ? 'info' : 'primary'" 
-            variant="tonal" 
+          <v-avatar
+            size="40"
+            :color="isEdit ? 'info' : 'primary'"
+            variant="tonal"
             class="mr-4"
           >
             <v-icon size="20">{{ isEdit ? '$edit' : '$plus' }}</v-icon>
@@ -133,7 +133,7 @@
       </v-card-text>
 
       <v-divider class="border-opacity-12"></v-divider>
-      
+
       <v-card-actions class="dialog-actions pa-6">
         <v-spacer></v-spacer>
         <v-btn
@@ -184,7 +184,7 @@ export default {
   setup(props, { emit }) {
     const form = ref(null)
     const valid = ref(false)
-    
+
     const categoryData = ref({
       name: '',
       display_name: '',
@@ -225,7 +225,7 @@ export default {
     // Dynamic snake case formatting
     const onDisplayNameChange = (event) => {
       const newDisplayName = event.target.value
-      
+
       // Only auto-generate category name for new categories
       if (!isEdit.value && newDisplayName) {
         // Convert display name to snake_case format
@@ -236,14 +236,14 @@ export default {
           .replace(/^(\d)/, '_$1')  // Prefix with underscore if starts with number
           .replace(/_+/g, '_')      // Replace multiple underscores with single
           .replace(/^_|_$/g, '')    // Remove leading/trailing underscores
-        
+
         categoryData.value.name = snakeCase
       }
     }
 
     const save = async () => {
       if (!form.value) return
-      
+
       const validation = await form.value.validate()
       if (!validation.valid) return
 
@@ -386,15 +386,15 @@ export default {
   .form-section {
     padding: 16px;
   }
-  
+
   .dialog-header {
     padding: 20px !important;
   }
-  
+
   .dialog-actions {
     padding: 20px !important;
   }
-  
+
   :deep(.v-btn) {
     min-width: 100px;
   }

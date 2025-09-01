@@ -22,6 +22,8 @@ from ..core.config import FollowUpSettings
 
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
 from ..core.query_data_manager import query_data_manager
+from ..core.settings_manager import get_settings_manager
+from ..core.settings_schemas import FeatureFlags, QueryRoutingSettings, ResponseSettings
 from ..models.admin_models import (
     AdminUser,
     BulkQuestionRequest,
@@ -910,15 +912,9 @@ async def get_followup_settings(
 ) -> Dict[str, Any]:
     """Get current follow-up question settings."""
     try:
-        # Get settings from database
-        settings_json = admin_db_manager.get_admin_setting("followup_settings")
-
-        if settings_json:
-            # Parse existing settings
-            settings = FollowUpSettings.from_json(settings_json)
-        else:
-            # Return defaults if no settings exist
-            settings = FollowUpSettings()
+        # Use settings manager for cached access
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_followup_settings()
 
         client_ip = request.client.host if request.client else "unknown"
         user_agent = request.headers.get("User-Agent", "")
@@ -926,7 +922,7 @@ async def get_followup_settings(
         audit_logger.log_action(
             action=AuditAction.DATA_VIEW,
             username=session["username"],
-            details={"resource": "followup_settings", "settings_exists": settings_json is not None},
+            details={"resource": "followup_settings"},
             ip_address=client_ip,
             user_agent=user_agent,
         )
@@ -947,10 +943,9 @@ async def update_followup_settings(
         # Validate and create settings object
         settings = FollowUpSettings.from_dict(settings_data)
 
-        # Store in database
-        success = admin_db_manager.set_admin_setting(
-            setting_key="followup_settings", setting_value=settings.to_json(), updated_by=session["user_id"]
-        )
+        # Use settings manager to store settings
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_followup_settings(settings, session["user_id"])
 
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update settings")
@@ -987,10 +982,9 @@ async def reset_followup_settings(
         # Create default settings
         default_settings = FollowUpSettings()
 
-        # Store in database
-        success = admin_db_manager.set_admin_setting(
-            setting_key="followup_settings", setting_value=default_settings.to_json(), updated_by=session["user_id"]
-        )
+        # Use settings manager to store settings
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_followup_settings(default_settings, session["user_id"])
 
         if not success:
             raise HTTPException(status_code=500, detail="Failed to reset settings")
@@ -1029,7 +1023,235 @@ async def reset_followup_settings(
 # OLD ROUTE REMOVED - Using normalized database-driven endpoints below
 
 
-# OLD ROUTE REMOVED - Using normalized database-driven endpoints below
+# Additional settings endpoints for new functionality
+@router.get("/settings/response")
+async def get_response_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current response generation settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_response_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "response_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting response settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching response settings")
+
+
+@router.put("/settings/response")
+async def update_response_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update response generation settings."""
+    try:
+        settings = ResponseSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_response_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update response settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "response_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Response settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Response settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating response settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating response settings")
+
+
+@router.get("/settings/routing")
+async def get_routing_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current query routing settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_routing_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "routing_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting routing settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching routing settings")
+
+
+@router.put("/settings/routing")
+async def update_routing_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update query routing settings."""
+    try:
+        settings = QueryRoutingSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_routing_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update routing settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "routing_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Routing settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Routing settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating routing settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating routing settings")
+
+
+@router.get("/settings/features")
+async def get_feature_flags(request: Request, session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get current feature flags."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_feature_flags()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "feature_flags"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting feature flags: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching feature flags")
+
+
+@router.put("/settings/features")
+async def update_feature_flags(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update feature flags."""
+    try:
+        settings = FeatureFlags.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_feature_flags(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update feature flags")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "feature_flags", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Feature flags updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Feature flags updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating feature flags: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating feature flags")
+
+
+@router.get("/settings/cache/status")
+async def get_settings_cache_status(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get settings cache status for monitoring."""
+    try:
+        settings_mgr = get_settings_manager()
+        cache_status = settings_mgr.get_cache_status()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "settings_cache_status"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return cache_status
+
+    except Exception as e:
+        logger.error(f"Error getting settings cache status: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching cache status")
+
+
+@router.post("/settings/cache/invalidate")
+async def invalidate_settings_cache(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Invalidate settings cache to force refresh."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings_mgr.invalidate_cache()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "settings_cache_invalidation"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Settings cache invalidated by user {session['user_id']}")
+        return {"success": True, "message": "Settings cache invalidated successfully"}
+
+    except Exception as e:
+        logger.error(f"Error invalidating settings cache: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error invalidating cache")
 
 
 # Follow-up category management endpoints

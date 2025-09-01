@@ -4,428 +4,89 @@
     <div class="page-header mb-8">
       <div class="d-flex align-center justify-space-between">
         <div>
-<!--          <h1 class="page-title text-h4 font-weight-bold mb-2">Settings</h1>-->
+          <h1 class="page-title text-h4 font-weight-bold mb-2">Settings</h1>
           <p class="page-subtitle text-body-1 text-medium-emphasis">
-            Manage follow-up question system configuration and categories
+            Manage system configuration, follow-up questions, and feature settings
           </p>
         </div>
-        <v-btn
-          color="primary"
-          prepend-icon="$refresh"
-          @click="loadData"
-          :loading="loading"
-          variant="elevated"
-        >
-          Refresh
-        </v-btn>
-      </div>
-    </div>
-
-    <!-- Overview Cards -->
-    <v-row class="mb-8">
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  ACTIVE CATEGORIES
-                </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ stats.active_categories }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-success">
-                    <v-icon size="12">$trending-up</v-icon>
-                    Ready for use
-                  </span>
-                </div>
-              </div>
-              <v-avatar size="48" color="success" variant="tonal">
-                <v-icon size="24">$folder</v-icon>
-              </v-avatar>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  TOTAL QUESTIONS
-                </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ stats.total_questions }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-primary">
-                    <v-icon size="12">$help-circle</v-icon>
-                    Available
-                  </span>
-                </div>
-              </div>
-              <v-avatar size="48" color="primary" variant="tonal">
-                <v-icon size="24">$help-circle</v-icon>
-              </v-avatar>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  INACTIVE CATEGORIES
-                </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ stats.inactive_categories }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-warning">
-                    <v-icon size="12">$alert</v-icon>
-                    Need attention
-                  </span>
-                </div>
-              </div>
-              <v-avatar size="48" color="warning" variant="tonal">
-                <v-icon size="24">$alert</v-icon>
-              </v-avatar>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
-            <div class="d-flex align-center justify-space-between">
-              <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  SERVICE MODE
-                </div>
-                <div class="metric-value text-h6 font-weight-bold mt-1 text-capitalize">
-                  {{ settings.service_type || 'Static' }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-info">
-                    <v-icon size="12">$brain</v-icon>
-                    {{ settings.enabled ? 'Active' : 'Inactive' }}
-                  </span>
-                </div>
-              </div>
-              <v-avatar size="48" color="info" variant="tonal">
-                <v-icon size="24">$brain</v-icon>
-              </v-avatar>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- System Settings Section -->
-    <div class="settings-section mb-8">
-      <div class="section-header mb-6">
-        <h2 class="section-title text-h5 font-weight-bold">System Configuration</h2>
-        <p class="section-subtitle text-body-2 text-medium-emphasis">
-          Configure follow-up question generation behavior and limits
-        </p>
-      </div>
-
-      <v-card class="settings-card" elevation="2">
-        <v-card-text class="pa-6">
-          <v-row>
-            <!-- Enable/Disable Toggle -->
-            <v-col cols="12" md="4">
-              <div class="setting-group">
-                <div class="setting-label text-subtitle-1 font-weight-medium mb-3">
-                  <v-icon class="mr-2" size="20">$toggle-switch</v-icon>
-                  Service Status
-                </div>
-                <v-switch
-                  v-model="settings.enabled"
-                  :label="settings.enabled ? 'Enabled' : 'Disabled'"
-                  color="primary"
-                  inset
-                  hide-details
-                  @change="saveSettings"
-                />
-                <div class="setting-helper text-caption text-medium-emphasis mt-2">
-                  Toggle the follow-up question system on or off
-                </div>
-              </div>
-            </v-col>
-
-            <!-- Generation Method -->
-            <v-col cols="12" md="4">
-              <div class="setting-group">
-                <div class="setting-label text-subtitle-1 font-weight-medium mb-3">
-                  <v-icon class="mr-2" size="20">$brain</v-icon>
-                  Generation Method
-                </div>
-                <v-select
-                  v-model="settings.service_type"
-                  :items="serviceTypeOptions"
-                  variant="outlined"
-                  density="comfortable"
-                  hide-details
-                  @update:model-value="saveSettings"
-                />
-                <div class="setting-helper text-caption text-medium-emphasis mt-2">
-                  Choose how questions are generated and selected
-                </div>
-              </div>
-            </v-col>
-
-            <!-- Maximum Questions -->
-            <v-col cols="12" md="4">
-              <div class="setting-group">
-                <div class="setting-label text-subtitle-1 font-weight-medium mb-3">
-                  <v-icon class="mr-2" size="20">$numeric</v-icon>
-                  Question Limit
-                </div>
-                <v-slider
-                  v-model="settings.max_questions"
-                  :min="1"
-                  :max="5"
-                  :step="1"
-                  thumb-label="always"
-                  show-ticks="always"
-                  color="primary"
-                  track-color="grey-lighten-3"
-                  thumb-color="primary"
-                  hide-details
-                  @end="saveSettings"
-                />
-                <div class="setting-helper text-caption text-medium-emphasis mt-2">
-                  Maximum number of follow-up questions to display
-                </div>
-              </div>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-    </div>
-
-    <!-- Categories Management Section -->
-    <div class="categories-section">
-      <div class="section-header mb-6">
-        <div class="d-flex align-center justify-space-between">
-          <div>
-            <h2 class="section-title text-h5 font-weight-bold">Category Management</h2>
-            <p class="section-subtitle text-body-2 text-medium-emphasis">
-              Manage question categories and their associated follow-up questions
-            </p>
-          </div>
+        <v-btn-group variant="outlined" density="comfortable">
+          <v-btn
+            color="warning"
+            prepend-icon="$refresh"
+            @click="invalidateCache"
+            :loading="cacheInvalidating"
+            variant="elevated"
+            class="mr-3"
+          >
+            Clear Cache
+          </v-btn>
           <v-btn
             color="primary"
-            prepend-icon="$plus"
-            @click="handleCreateCategoryDialog"
-            :disabled="loading"
+            prepend-icon="$refresh"
+            @click="loadData"
+            :loading="loading"
             variant="elevated"
           >
-            Add Category
+            Refresh
           </v-btn>
-        </div>
+        </v-btn-group>
       </div>
-
-      <!-- Bulk Actions Banner -->
-      <v-card
-        v-if="selectedCategories.length > 0"
-        class="bulk-actions-card mb-6"
-        elevation="1"
-        color="primary"
-        variant="tonal"
-      >
-        <v-card-text class="pa-4">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center">
-              <v-icon class="mr-2">$checkbox-marked</v-icon>
-              <span class="font-weight-medium">
-                {{ selectedCategories.length }} {{ selectedCategories.length === 1 ? 'category' : 'categories' }} selected
-              </span>
-            </div>
-            <v-btn-group variant="outlined" density="compact">
-              <v-btn
-                prepend-icon="$eye"
-                @click="bulkActivateCategories"
-                :loading="loading"
-              >
-                Activate
-              </v-btn>
-              <v-btn
-                prepend-icon="$eye-off"
-                @click="bulkDeactivateCategories"
-                :loading="loading"
-              >
-                Deactivate
-              </v-btn>
-              <v-btn
-                color="error"
-                prepend-icon="$delete"
-                @click="bulkDeleteCategories"
-                :loading="loading"
-              >
-                Delete
-              </v-btn>
-            </v-btn-group>
-          </div>
-        </v-card-text>
-      </v-card>
-
-      <!-- Categories List -->
-      <v-card class="categories-card" elevation="2">
-        <v-card-title class="pa-6 pb-0">
-          <div class="d-flex align-center">
-            <v-icon class="mr-3">$format-list-group</v-icon>
-            <span class="text-h6 font-weight-bold">Question Categories</span>
-            <v-spacer/>
-            <v-chip
-              :text="`${categories.length} total`"
-              variant="tonal"
-              size="small"
-            />
-          </div>
-        </v-card-title>
-
-        <v-card-text class="pa-6">
-          <!-- Categories with Expansion Panels -->
-          <v-expansion-panels v-if="categories.length > 0" v-model="expandedPanels" multiple variant="accordion">
-            <v-expansion-panel
-              v-for="category in categories"
-              :key="category.id"
-              :value="category.id"
-              class="category-panel mb-4"
-              :class="{ 'category-panel--inactive': !category.is_active }"
-              elevation="0"
-              rounded="lg"
-            >
-              <v-expansion-panel-title class="category-panel-header">
-                <div class="d-flex align-center w-100">
-                  <!-- Selection Checkbox -->
-                  <v-checkbox
-                    v-model="selectedCategories"
-                    :value="category"
-                    hide-details
-                    density="compact"
-                    class="mr-4 flex-shrink-0"
-                    @click.stop
-                  />
-
-                  <!-- Category Info -->
-                  <div class="flex-grow-1 d-flex align-center">
-                    <v-avatar
-                      size="40"
-                      :color="category.is_active ? 'primary' : 'grey-lighten-1'"
-                      variant="tonal"
-                      class="mr-4"
-                    >
-                      <v-icon size="20">
-                        ${{ category.icon || 'help-circle' }}
-                      </v-icon>
-                    </v-avatar>
-
-                    <div class="category-info">
-                      <div class="d-flex align-center mb-1">
-                        <span class="text-subtitle-1 font-weight-bold">
-                          {{ category.display_name }}
-                        </span>
-                        <v-chip
-                          v-if="!category.is_active"
-                          size="small"
-                          color="warning"
-                          variant="tonal"
-                          class="ml-3"
-                        >
-                          <v-icon start size="12">$alert</v-icon>
-                          Inactive
-                        </v-chip>
-                      </div>
-                      <div class="text-caption text-medium-emphasis">
-                        <v-icon size="12" class="mr-1">$help-circle</v-icon>
-                        {{ categoryStats[category.id]?.question_count || 0 }} questions
-                        <span class="mx-2">•</span>
-                        <v-icon size="12" class="mr-1">$sort</v-icon>
-                        Order: {{ category.sort_order }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Quick Actions -->
-                  <div class="d-flex align-center" @click.stop>
-                    <v-tooltip text="Edit Category" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          icon="$edit"
-                          size="small"
-                          variant="text"
-                          @click="editCategory(category)"
-                          :disabled="loading"
-                          class="mr-1"
-                        />
-                      </template>
-                    </v-tooltip>
-
-                    <v-tooltip text="Delete Category" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          icon="$delete"
-                          size="small"
-                          variant="text"
-                          color="error"
-                          @click="showDeleteCategoryDialog(category)"
-                          :disabled="loading"
-                        />
-                      </template>
-                    </v-tooltip>
-                  </div>
-                </div>
-              </v-expansion-panel-title>
-
-              <v-expansion-panel-text class="category-panel-content">
-                <div class="pt-4">
-                  <QuestionManager
-                    :category="category"
-                    :selected-questions="selectedQuestions[category.id] || []"
-                    @questions-updated="loadData"
-                    @selection-changed="(questions) => updateQuestionSelection(category.id, questions)"
-                  />
-                </div>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
-
-          <!-- Empty State -->
-          <div v-else class="empty-state text-center py-16">
-            <v-avatar size="120" color="grey-lighten-3" class="mb-6">
-              <v-icon size="60" color="grey-lighten-1">$format-list-group</v-icon>
-            </v-avatar>
-
-            <h3 class="text-h5 font-weight-bold mb-3">No Categories Yet</h3>
-            <p class="text-body-1 text-medium-emphasis mb-8 mx-auto" style="max-width: 400px;">
-              Create your first category to start organizing and managing follow-up questions for your system.
-            </p>
-
-            <v-btn
-              color="primary"
-              size="large"
-              prepend-icon="$plus"
-              @click="handleCreateCategoryDialog"
-              variant="elevated"
-            >
-              Create First Category
-            </v-btn>
-          </div>
-        </v-card-text>
-      </v-card>
     </div>
+
+    <!-- Settings Tabs -->
+    <v-tabs :model-value="currentTab" @update:model-value="navigateToTab" class="mb-6" color="primary">
+      <v-tab value="followup">
+        <v-icon class="mr-2">$help-circle</v-icon>
+        Follow-up Questions
+      </v-tab>
+      <v-tab value="response">
+        <v-icon class="mr-2">$message-reply</v-icon>
+        Response Settings
+      </v-tab>
+      <v-tab value="routing">
+        <v-icon class="mr-2">$route</v-icon>
+        Query Routing
+      </v-tab>
+      <v-tab value="features">
+        <v-icon class="mr-2">$feature-flag</v-icon>
+        Feature Flags
+      </v-tab>
+      <v-tab value="cache">
+        <v-icon class="mr-2">$cached</v-icon>
+        Cache Status
+      </v-tab>
+    </v-tabs>
+
+    <!-- Router View for Child Components -->
+    <router-view
+      :loading="loading"
+      :categories="categories"
+      :category-stats="categoryStats"
+      :expanded-panels="expandedPanels"
+      :settings="settings"
+      :service-type-options="serviceTypeOptions"
+      :selected-categories="selectedCategories"
+      :selected-questions="selectedQuestions"
+      :stats="stats"
+      :response-settings="responseSettings"
+      :routing-settings="routingSettings"
+      :feature-flags="featureFlags"
+      :cache-status="cacheStatus"
+      @save-settings="saveSettings"
+      @create-category="handleCreateCategoryDialog"
+      @edit-category="editCategory"
+      @delete-category="showDeleteCategoryDialog"
+      @bulk-activate="bulkActivateCategories"
+      @bulk-deactivate="bulkDeactivateCategories"
+      @bulk-delete="bulkDeleteCategories"
+      @update-question-selection="updateQuestionSelection"
+      @update-selected-categories="updateSelectedCategories"
+      @update-expanded-panels="updateExpandedPanels"
+      @load-data="loadData"
+      @save-response-settings="saveResponseSettings"
+      @save-routing-settings="saveRoutingSettings"
+      @save-feature-flags="saveFeatureFlags"
+    />
 
     <!-- Status Messages -->
     <v-snackbar
@@ -469,10 +130,10 @@
       <v-card class="bulk-delete-dialog" elevation="12" rounded="xl">
         <v-card-title class="dialog-header pa-6">
           <div class="d-flex align-center">
-            <v-avatar 
-              size="48" 
-              color="error" 
-              variant="tonal" 
+            <v-avatar
+              size="48"
+              color="error"
+              variant="tonal"
               class="mr-4"
             >
               <v-icon size="24">$alert-triangle</v-icon>
@@ -500,7 +161,7 @@
             <!-- Warning Alert -->
             <v-card
               color="error"
-              variant="tonal" 
+              variant="tonal"
               elevation="0"
               rounded="lg"
               class="mb-6"
@@ -511,7 +172,7 @@
                   <span class="font-weight-bold text-body-1">Destructive Action</span>
                 </div>
                 <p class="text-body-2 ma-0">
-                  You are about to delete <strong>{{ selectedCategories.length }} categories</strong> 
+                  You are about to delete <strong>{{ selectedCategories.length }} categories</strong>
                   and <strong>all their questions permanently</strong>.
                 </p>
               </v-card-text>
@@ -523,13 +184,13 @@
                 <v-icon size="18" class="mr-2">$list</v-icon>
                 Categories to be deleted
               </div>
-              
+
               <div class="categories-to-delete">
-                <v-card 
-                  v-for="category in selectedCategories" 
-                  :key="category.id" 
-                  class="category-item mb-2" 
-                  elevation="0" 
+                <v-card
+                  v-for="category in selectedCategories"
+                  :key="category.id"
+                  class="category-item mb-2"
+                  elevation="0"
                   variant="outlined"
                   rounded="lg"
                 >
@@ -602,7 +263,7 @@
         </v-card-text>
 
         <v-divider class="border-opacity-12"></v-divider>
-        
+
         <v-card-actions class="dialog-actions pa-6">
           <v-spacer></v-spacer>
           <v-btn
@@ -628,11 +289,13 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
   </div>
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
 import MetricCard from '@/components/MetricCard.vue'
 import QuestionManager from '@/components/QuestionManager.vue'
@@ -648,11 +311,16 @@ export default {
     CategoryDeleteDialog
   },
   setup() {
+    const route = useRoute()
+    const router = useRouter()
+
     // Reactive state
     const loading = ref(false)
     const categories = ref([])
     const categoryStats = ref({})
     const expandedPanels = ref([])
+    const cacheInvalidating = ref(false)
+    const cacheStatus = ref(null)
 
     // Settings
     const settings = reactive({
@@ -662,6 +330,32 @@ export default {
       include_technical: true,
       include_personal: true,
       include_creative: true
+    })
+
+    // New settings for additional tabs
+    const responseSettings = reactive({
+      max_context_length: 2000,
+      max_context_documents: 3,
+      context_fill_ratio: 0.7,
+      enable_caching: true,
+      cache_ttl_seconds: 3600
+    })
+
+    const routingSettings = reactive({
+      enable_smart_routing: true,
+      similarity_threshold: 0.3,
+      max_search_results: 15,
+      enable_fuzzy_matching: true,
+      fuzzy_threshold: 0.7
+    })
+
+    const featureFlags = reactive({
+      enable_illustrations: true,
+      enable_geolocation: true,
+      enable_analytics: true,
+      enable_debug_logging: false,
+      enable_response_caching: true,
+      enable_query_preprocessing: true
     })
 
     const serviceTypeOptions = [
@@ -700,23 +394,99 @@ export default {
       categories.value.filter(c => c.id !== deletingCategory.value?.id && c.is_active)
     )
 
+    // Get current tab from route
+    const currentTab = computed(() => {
+      const routeName = route.name
+      if (routeName === 'settings-followup') return 'followup'
+      if (routeName === 'settings-response') return 'response'
+      if (routeName === 'settings-routing') return 'routing'
+      if (routeName === 'settings-features') return 'features'
+      if (routeName === 'settings-cache') return 'cache'
+      return 'followup' // default
+    })
+
+    // Navigate to tab
+    const navigateToTab = (tabValue) => {
+      const routeMap = {
+        'followup': 'settings-followup',
+        'response': 'settings-response',
+        'routing': 'settings-routing',
+        'features': 'settings-features',
+        'cache': 'settings-cache'
+      }
+
+      const routeName = routeMap[tabValue]
+      if (routeName && route.name !== routeName) {
+        router.push({ name: routeName })
+      }
+    }
+
     // Methods
     const loadData = async () => {
+      console.log('SettingsView loadData() called')
       try {
         loading.value = true
 
-        // Load settings, categories, and stats in parallel
-        const [settingsResponse, categoriesResponse] = await Promise.all([
+        // Load all settings and categories in parallel - always load all for consistency
+        const promises = [
           api.getFollowupSettings(),
-          api.getFollowupCategories()
-        ])
+          api.getFollowupCategories(),
+          api.getResponseSettings().catch((err) => {
+            console.error('Failed to load response settings:', err)
+            return {}
+          }),
+          api.getRoutingSettings().catch((err) => {
+            console.error('Failed to load routing settings:', err)
+            return {}
+          }),
+          api.getFeatureFlags().catch((err) => {
+            console.error('Failed to load feature flags:', err)
+            return {}
+          }),
+          api.getSettingsCacheStatus().catch((err) => {
+            console.error('Failed to load cache status:', err)
+            return null
+          })
+        ]
+
+        const [
+          settingsResponse,
+          categoriesResponse,
+          responseSettingsResponse,
+          routingSettingsResponse,
+          featureFlagsResponse,
+          cacheStatusResponse
+        ] = await Promise.all(promises)
+
+        console.log('API Responses:', {
+          followup: settingsResponse,
+          categories: categoriesResponse,
+          response: responseSettingsResponse,
+          routing: routingSettingsResponse,
+          features: featureFlagsResponse,
+          cache: cacheStatusResponse
+        })
 
         Object.assign(settings, settingsResponse)
         categories.value = categoriesResponse || []
 
-        // Keep expansion panels closed by default
-        // QuestionManager components will load when panels are opened by user
-        expandedPanels.value = []
+        // Update additional settings if received
+        if (responseSettingsResponse) Object.assign(responseSettings, responseSettingsResponse)
+        if (routingSettingsResponse) Object.assign(routingSettings, routingSettingsResponse)
+        if (featureFlagsResponse) {
+          console.log('Assigning feature flags:', featureFlagsResponse)
+          Object.assign(featureFlags, featureFlagsResponse)
+          console.log('Feature flags after assignment:', featureFlags)
+        }
+        if (cacheStatusResponse) cacheStatus.value = cacheStatusResponse
+
+        // Only reset expanded panels on initial load (when categories change)
+        // This preserves the user's accordion state during refresh operations
+        const categoryIds = categories.value.map(c => c.id)
+        const currentPanelIds = expandedPanels.value || []
+
+        // Remove panels for categories that no longer exist
+        expandedPanels.value = currentPanelIds.filter(id => categoryIds.includes(id))
 
         // Load stats for each category
         const statsPromises = categories.value.map(async (category) => {
@@ -742,10 +512,61 @@ export default {
     const saveSettings = async () => {
       try {
         await api.updateFollowupSettings(settings)
-        showSuccessMessage('Settings saved successfully!')
+        showSuccessMessage('Followup settings saved successfully!')
       } catch (err) {
         console.error('Failed to save settings:', err)
-        showErrorMessage('Failed to save settings')
+        showErrorMessage('Failed to save followup settings')
+      }
+    }
+
+    // New save methods for additional settings
+    const saveResponseSettings = async () => {
+      try {
+        await api.updateResponseSettings(responseSettings)
+        showSuccessMessage('Response settings saved successfully!')
+      } catch (err) {
+        console.error('Failed to save response settings:', err)
+        showErrorMessage('Failed to save response settings')
+      }
+    }
+
+    const saveRoutingSettings = async () => {
+      try {
+        await api.updateRoutingSettings(routingSettings)
+        showSuccessMessage('Routing settings saved successfully!')
+      } catch (err) {
+        console.error('Failed to save routing settings:', err)
+        showErrorMessage('Failed to save routing settings')
+      }
+    }
+
+    const saveFeatureFlags = async (updatedFlags) => {
+      try {
+        // If updatedFlags are provided, update the reactive object
+        if (updatedFlags) {
+          Object.assign(featureFlags, updatedFlags)
+        }
+        await api.updateFeatureFlags(featureFlags)
+        showSuccessMessage('Feature flags updated successfully!')
+      } catch (err) {
+        console.error('Failed to save feature flags:', err)
+        showErrorMessage('Failed to save feature flags')
+      }
+    }
+
+    const invalidateCache = async () => {
+      try {
+        cacheInvalidating.value = true
+        await api.invalidateSettingsCache()
+        showSuccessMessage('Settings cache invalidated successfully!')
+        // Reload cache status
+        const cacheStatusResponse = await api.getSettingsCacheStatus()
+        cacheStatus.value = cacheStatusResponse
+      } catch (err) {
+        console.error('Failed to invalidate cache:', err)
+        showErrorMessage('Failed to invalidate settings cache')
+      } finally {
+        cacheInvalidating.value = false
       }
     }
 
@@ -895,6 +716,16 @@ export default {
       selectedQuestions[categoryId] = questions
     }
 
+    // Category selection management
+    const updateSelectedCategories = (newValue) => {
+      selectedCategories.value = newValue
+    }
+
+    // Expanded panels management
+    const updateExpandedPanels = (newValue) => {
+      expandedPanels.value = newValue
+    }
+
     // Message helpers
     const showSuccessMessage = (message) => {
       successMessage.value = message
@@ -912,8 +743,19 @@ export default {
       showCategoryDialog.value = true
     }
 
+    // Watch for route changes to load data
+    watch(
+      () => route.name,
+      (newRouteName) => {
+        if (newRouteName && newRouteName.startsWith('settings-')) {
+          loadData()
+        }
+      }
+    )
+
     // Initialize
     onMounted(() => {
+      console.log('SettingsView mounted, initial featureFlags:', featureFlags)
       loadData()
     })
 
@@ -939,8 +781,21 @@ export default {
       errorMessage,
       stats,
       availableCategoriesForMove,
+      // New reactive data
+      currentTab,
+      cacheInvalidating,
+      cacheStatus,
+      responseSettings,
+      routingSettings,
+      featureFlags,
+      // Methods
+      navigateToTab,
       loadData,
       saveSettings,
+      saveResponseSettings,
+      saveRoutingSettings,
+      saveFeatureFlags,
+      invalidateCache,
       editCategory,
       saveCategory,
       cancelCategoryEdit,
@@ -953,6 +808,8 @@ export default {
       confirmBulkDeleteCategories,
       cancelBulkDelete,
       updateQuestionSelection,
+      updateSelectedCategories,
+      updateExpandedPanels,
       handleCreateCategoryDialog
     }
   }
@@ -1135,33 +992,6 @@ export default {
   }
 }
 
-/* Animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.settings-page > * {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.settings-page > *:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.settings-page > *:nth-child(3) {
-  animation-delay: 0.2s;
-}
-
-.settings-page > *:nth-child(4) {
-  animation-delay: 0.3s;
-}
 
 /* Bulk Delete Dialog Styling */
 .bulk-delete-dialog {
@@ -1225,19 +1055,19 @@ export default {
     padding: 16px;
     margin: 0 -6px 16px -6px;
   }
-  
+
   .categories-to-delete {
     max-height: 150px;
   }
-  
+
   .bulk-delete-dialog .dialog-header {
     padding: 20px !important;
   }
-  
+
   .bulk-delete-dialog .dialog-actions {
     padding: 20px !important;
   }
-  
+
   .category-item {
     margin-bottom: 8px;
   }

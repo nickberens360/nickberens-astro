@@ -84,38 +84,6 @@
         </v-list>
       </div>
 
-      <!-- Settings Section -->
-      <div class="px-4 mt-6">
-        <div class="menu-label text-caption font-weight-medium text-medium-emphasis mb-3">
-          CONFIGURATION
-        </div>
-        <v-list nav density="compact" class="py-0">
-          <v-list-item
-            rounded="lg"
-            class="mb-1 nav-item"
-            prepend-icon="$settings"
-            color="primary"
-            disabled
-          >
-            <v-list-item-title class="font-weight-medium d-flex align-center justify-space-between">
-              <span>Settings</span>
-              <v-chip
-                size="x-small"
-                variant="tonal"
-                color="info"
-              >
-                Coming Soon
-              </v-chip>
-            </v-list-item-title>
-            <v-tooltip
-              activator="parent"
-              location="right"
-            >
-              Settings page coming soon
-            </v-tooltip>
-          </v-list-item>
-        </v-list>
-      </div>
 
       <template #append>
         <v-divider class="mb-2"/>
@@ -403,7 +371,7 @@ const navigationItems = computed(() => [
   {
     name: 'settings',
     title: 'Settings',
-    to: '/settings',
+    to: '/settings/followup',
     icon: '$settings'
   }
 ]);

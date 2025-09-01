@@ -18,6 +18,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
+from .settings_manager import get_settings_manager
 from .smart_illustration_service import SmartIllustrationService
 from .unified_retriever import UnifiedRetriever
 
@@ -106,6 +107,14 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
 
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
+
+    # Warmup settings cache during app initialization
+    try:
+        settings_manager = get_settings_manager()
+        settings_manager.warmup_cache()
+        logger.info("Settings cache warmed up during app initialization")
+    except Exception as e:
+        logger.warning(f"Failed to warm up settings cache: {e}")
 
     return all_retrievers, smart_illustration_service, user_query_llm
 

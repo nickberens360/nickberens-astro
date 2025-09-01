@@ -1193,6 +1193,35 @@ class AdminDatabaseManager:
             logger.error(f"Error cleaning up old rate limits: {str(e)}", exc_info=True)
             return 0
 
+    def get_admin_setting(self, setting_key: str) -> Optional[str]:
+        """Get an admin setting value by key."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT setting_value FROM admin_settings WHERE setting_key = ?", (setting_key,))
+                row = cursor.fetchone()
+                return row[0] if row else None
+        except Exception as e:
+            logger.error(f"Error getting admin setting {setting_key}: {str(e)}", exc_info=True)
+            return None
+
+    def set_admin_setting(self, setting_key: str, setting_value: str, updated_by: int) -> bool:
+        """Set an admin setting value."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO admin_settings (setting_key, setting_value, updated_by, updated_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (setting_key, setting_value, updated_by, datetime.now()),
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error setting admin setting {setting_key}: {str(e)}", exc_info=True)
+            return False
+
 
 # Global database manager instance
 admin_db_manager = AdminDatabaseManager()

@@ -362,6 +362,87 @@ class AdminAPI {
     }
   }
 
+  // New settings API methods for the hybrid configuration system
+  async getResponseSettings() {
+    try {
+      const response = await this.client.get('/settings/response')
+      return response
+    } catch (error) {
+      console.error('Failed to get response settings:', error)
+      throw error
+    }
+  }
+
+  async updateResponseSettings(settings) {
+    try {
+      const response = await this.client.put('/settings/response', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update response settings:', error)
+      throw error
+    }
+  }
+
+  async getRoutingSettings() {
+    try {
+      const response = await this.client.get('/settings/routing')
+      return response
+    } catch (error) {
+      console.error('Failed to get routing settings:', error)
+      throw error
+    }
+  }
+
+  async updateRoutingSettings(settings) {
+    try {
+      const response = await this.client.put('/settings/routing', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update routing settings:', error)
+      throw error
+    }
+  }
+
+  async getFeatureFlags() {
+    try {
+      const response = await this.client.get('/settings/features')
+      return response
+    } catch (error) {
+      console.error('Failed to get feature flags:', error)
+      throw error
+    }
+  }
+
+  async updateFeatureFlags(settings) {
+    try {
+      const response = await this.client.put('/settings/features', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update feature flags:', error)
+      throw error
+    }
+  }
+
+  async getSettingsCacheStatus() {
+    try {
+      const response = await this.client.get('/settings/cache/status')
+      return response
+    } catch (error) {
+      console.error('Failed to get settings cache status:', error)
+      throw error
+    }
+  }
+
+  async invalidateSettingsCache() {
+    try {
+      const response = await this.client.post('/settings/cache/invalidate')
+      return response
+    } catch (error) {
+      console.error('Failed to invalidate settings cache:', error)
+      throw error
+    }
+  }
+
 
   async resetFollowupQuestions() {
     try {
@@ -551,6 +632,17 @@ class AdminAPI {
       return response
     } catch (error) {
       console.error('Failed to get followup category stats:', error)
+      // Return default stats instead of throwing to prevent UI breaking
+      return { question_count: 0, active_questions: 0 }
+    }
+  }
+
+  async getFollowupCategoryStatsNormalized(categoryId) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/${categoryId}/stats`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup category stats normalized:', error)
       // Return default stats instead of throwing to prevent UI breaking
       return { question_count: 0, active_questions: 0 }
     }
