@@ -183,6 +183,21 @@ class SemanticSearcher:
             logger.warning(f"Could not get collection count: {e}")
             return 0
 
+    def get_count(self, where: Optional[Dict[str, Any]] = None) -> int:
+        """Get the number of documents in the vector store with optional filtering."""
+        if self.vector_store is None:
+            return 0
+        try:
+            if where:
+                # Try to use count with filter if supported
+                return self.vector_store._collection.count(where=where)
+            else:
+                return self.vector_store._collection.count()
+        except AttributeError:
+            # Fallback: fetch documents and count them
+            docs = self.get_documents(where=where, limit=100000, offset=0)
+            return len(docs or [])
+
     def get_documents(
         self, where: Optional[Dict[str, Any]] = None, limit: int = 100, offset: int = 0
     ) -> List[Dict[str, Any]]:

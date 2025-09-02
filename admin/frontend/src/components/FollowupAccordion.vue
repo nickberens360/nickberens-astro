@@ -49,6 +49,19 @@
                   />
                 </template>
               </v-tooltip>
+              <v-tooltip text="Delete Category" location="top">
+                <template #activator="{ props }">
+                  <v-btn
+                    v-bind="props"
+                    icon="$delete"
+                    size="small"
+                    variant="text"
+                    color="error"
+                    :disabled="saving || loading"
+                    @click.stop="openDeleteCategoryDialog(cat)"
+                  />
+                </template>
+              </v-tooltip>
               <v-icon :icon="expanded ? '$chevron-up' : '$chevron-down'" />
             </div>
           </template>

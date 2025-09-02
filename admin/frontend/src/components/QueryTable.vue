@@ -801,8 +801,9 @@ onMounted(async () => {
 }
 
 /* Allow table to auto-size columns */
-:deep(.v-table__wrapper table) {
+:deep(.v-data-table__wrapper table) {
   width: 100% !important;
+  table-layout: fixed;
 }
 
 :deep(.v-data-table-row--clickable:hover) {

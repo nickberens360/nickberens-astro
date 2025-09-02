@@ -19,8 +19,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def migrate_hardcoded_questions():
-    """Migrate hardcoded questions from followup_service.py to database."""
+def migrate_hardcoded_questions() -> bool:
+    """Migrate hardcoded questions to the database.
+
+    Returns:
+        bool: True on success, False on error.
+    """
 
     # Hardcoded question pools from followup_service.py
     question_pools = {

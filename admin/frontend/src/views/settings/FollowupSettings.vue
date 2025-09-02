@@ -225,6 +225,7 @@
                 prepend-icon="$eye"
                 @click="bulkActivateCategories"
                 :loading="props.loading"
+                class="mr-3"
               >
                 Activate
               </v-btn>
@@ -232,6 +233,7 @@
                 prepend-icon="$eye-off"
                 @click="bulkDeactivateCategories"
                 :loading="props.loading"
+                class="mr-3"
               >
                 Deactivate
               </v-btn>
@@ -255,11 +257,11 @@
             <v-icon class="mr-3">$format-list-group</v-icon>
             <span class="text-h6 font-weight-bold">Question Categories</span>
             <v-spacer/>
-            
+
             <v-btn color="primary" size="small" @click="onAddCategoryClick" prepend-icon="$plus" class="mr-2">
               Add Category
             </v-btn>
-            
+
             <v-chip
               :text="`${props.categories.length} total`"
               variant="tonal"

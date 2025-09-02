@@ -45,7 +45,6 @@
               hint="This will be shown in the user interface"
               persistent-hint
               class="mb-4"
-              @input="onDisplayNameChange"
             ></v-text-field>
 
             <v-text-field
@@ -234,24 +233,19 @@ export default {
       }
     }, { immediate: true })
 
-    // Dynamic snake case formatting
-    const onDisplayNameChange = (event) => {
-      const newDisplayName = event.target.value
-
-      // Only auto-generate category name for new categories
+    // Auto-generate name from display_name in create mode
+    watch(() => categoryData.value.display_name, (newDisplayName) => {
       if (!isEdit.value && newDisplayName) {
-        // Convert display name to snake_case format
         const snakeCase = newDisplayName
           .toLowerCase()
-          .replace(/[^\w\s]/g, '') // Remove special characters
-          .replace(/\s+/g, '_')     // Replace spaces with underscores
-          .replace(/^(\d)/, '_$1')  // Prefix with underscore if starts with number
-          .replace(/_+/g, '_')      // Replace multiple underscores with single
-          .replace(/^_|_$/g, '')    // Remove leading/trailing underscores
-
+          .replace(/[^\w\s]/g, '')
+          .replace(/\s+/g, '_')
+          .replace(/^(\d)/, '_$1')
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '')
         categoryData.value.name = snakeCase
       }
-    }
+    })
 
     const save = async () => {
       if (!form.value) return
@@ -286,8 +280,7 @@ export default {
       dialog,
       isEdit,
       save,
-      cancel,
-      onDisplayNameChange
+      cancel
     }
   }
 }

@@ -149,7 +149,7 @@
               </div>
               <v-select
                 v-model="targetCategoryId"
-                :items="availableCategories"
+                :items="availableCategories.filter(c => c.id !== category?.id)"
                 item-title="display_name"
                 item-value="id"
                 label="Move questions to"
@@ -366,12 +366,13 @@ export default {
 
     const canProceed = computed(() => {
       // No questions - can always proceed
-      if (!props.categoryStats?.question_count) return true
+      if (!props.categoryStats?.question_count) return !!props.category?.id
+      if (!props.category?.id) return false
       
       // Strategy-specific validation
       switch (deleteStrategy.value) {
         case 'move':
-          return !!targetCategoryId.value
+          return !!targetCategoryId.value && targetCategoryId.value !== props.category.id
         case 'delete_all':
           return confirmDestructive.value
         case 'deactivate':
@@ -389,15 +390,18 @@ export default {
         targetCategoryId.value = null
         confirmDestructive.value = false
         
-        // Auto-select first available category for move
-        if (props.availableCategories.length > 0) {
-          targetCategoryId.value = props.availableCategories[0].id
-        }
+        // Auto-select first available category that isn't the current one
+        const firstOther = props.availableCategories.find(c => c.id !== props.category?.id)
+        targetCategoryId.value = firstOther ? firstOther.id : null
       }
     })
 
     const confirmDelete = () => {
       if (!canProceed.value) return
+      if (!props.category?.id) {
+        console.warn('CategoryDeleteDialog: missing category id')
+        return
+      }
 
       const deleteRequest = {
         categoryId: props.category.id,

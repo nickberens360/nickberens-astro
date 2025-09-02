@@ -445,18 +445,15 @@ class TestAdminAttackScenarios:
         ]
 
         for endpoint in recon_endpoints:
-            try:
-                response = client.get(endpoint)
-                # Should not return sensitive information in error messages
-                if response.status_code in [500, 200]:
-                    response_text = response.text.lower()
-                    has_sensitive_info = any(
-                        word in response_text
-                        for word in ["password", "secret", "key", "token", "database", "admin_users", "session"]
-                    )
-                    attack_results.append(("recon_info_leak", endpoint, has_sensitive_info))
-            except Exception:
-                pass
+            response = client.get(endpoint)
+            # Should not return sensitive information in error messages
+            if response.status_code in [500, 200]:
+                response_text = response.text.lower()
+                has_sensitive_info = any(
+                    word in response_text
+                    for word in ["password", "secret", "key", "token", "database", "admin_users", "session"]
+                )
+                attack_results.append(("recon_info_leak", endpoint, has_sensitive_info))
 
         # Phase 2: Authentication bypass attempts
         auth_bypass_attempts = [
@@ -467,16 +464,13 @@ class TestAdminAttackScenarios:
         ]
 
         for method, endpoint, data in auth_bypass_attempts:
-            try:
-                if method == "POST":
-                    response = client.post(endpoint, json=data)
-                else:
-                    response = client.get(endpoint)
+            if method == "POST":
+                response = client.post(endpoint, json=data)
+            else:
+                response = client.get(endpoint)
 
-                # Should not allow unauthorized access (not 200)
-                attack_results.append(("auth_bypass", endpoint, response.status_code == 200))
-            except Exception:
-                pass
+            # Should not allow unauthorized access (not 200)
+            attack_results.append(("auth_bypass", endpoint, response.status_code == 200))
 
         # Phase 3: Input validation attacks
         injection_endpoints = [
@@ -485,29 +479,23 @@ class TestAdminAttackScenarios:
         ]
 
         for method, endpoint, data in injection_endpoints:
-            try:
-                if method == "POST":
-                    response = client.post(endpoint, json=data)
-                else:
-                    response = client.get(endpoint, params=data)
+            if method == "POST":
+                response = client.post(endpoint, json=data)
+            else:
+                response = client.get(endpoint, params=data)
 
-                # Should not return 500 errors (injection blocked) or execute scripts
-                server_error = response.status_code == 500
-                script_execution = "<script>" in response.text or "alert(" in response.text
-                attack_results.append(("injection_attack", endpoint, server_error or script_execution))
-            except Exception:
-                pass
+            # Should not return 500 errors (injection blocked) or execute scripts
+            server_error = response.status_code == 500
+            script_execution = "<script>" in response.text or "alert(" in response.text
+            attack_results.append(("injection_attack", endpoint, server_error or script_execution))
 
         # Phase 4: Rate limiting bypass attempts
         for i in range(10):
-            try:
-                response = client.post("/api/admin/auth/login", json={"username": "admin", "password": "wrong"})
-                # After multiple attempts, should get rate limited (not keep returning same error)
-                if i > 5 and response.status_code != 429:  # No rate limiting
-                    attack_results.append(("rate_limit_bypass", "login", True))
-                    break
-            except Exception:
-                pass
+            response = client.post("/api/admin/auth/login", json={"username": "admin", "password": "wrong"})
+            # After multiple attempts, should get rate limited (not keep returning same error)
+            if i > 5 and response.status_code != 429:  # No rate limiting
+                attack_results.append(("rate_limit_bypass", "login", True))
+                break
 
         # Analyze results - no attacks should succeed
         successful_attacks = [result for result in attack_results if len(result) > 2 and result[2]]

@@ -117,8 +117,8 @@ async def get_indexed_documents(
                 )
             )
 
-        # Get total count using proper method
-        total_count = retriever.semantic_searcher.get_collection_count()
+        # Get total count using filtered count if applicable
+        total_count = retriever.semantic_searcher.get_count(where=where_clause or None)
 
         # Get collection info
         collection_name = "unified_knowledge"  # This is hardcoded in SemanticSearcher
@@ -255,18 +255,17 @@ async def get_knowledge_sources(request: Request):
                         display_path = source.replace("public/", "")
 
                     source_counts[source] = {
-                        "path": source,  # Full path for backend operations
                         "display_path": display_path,  # Clean path for frontend display
                         "content_type": content_type,
                         "chunk_count": 0,
                     }
                 source_counts[source]["chunk_count"] += 1
 
-        # Convert to list and sort by path
+        # Convert to list and sort by display_path
         sources = list(source_counts.values())
-        sources.sort(key=lambda x: x["path"])
+        sources.sort(key=lambda x: x["display_path"])
 
-        return {"sources": sources, "total": len(sources)}
+        return {"sources": sources, "total_count": len(sources)}
 
     except HTTPException:
         raise
