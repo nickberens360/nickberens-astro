@@ -510,7 +510,6 @@ export default {
                   console.group(
                     `Follow-up questions for category ${category.id} (${category.display_name})`
                   )
-                  console.log(qs)
                   console.groupEnd()
                 } catch (err) {
                   console.warn(

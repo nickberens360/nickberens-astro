@@ -4,7 +4,7 @@ import threading
 from typing import Dict, List, Optional, Tuple
 
 from .admin_database import admin_db_manager
-from .config import FollowUpSettings
+from .settings_schemas import FollowUpSettings
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,11 @@ class FollowUpService:
         # Cache categories to avoid frequent database calls
         self._cached_categories: Optional[List[Dict]] = None
         self._categories_cache_timestamp: float = 0
+
+    @property
+    def questions(self) -> Tuple[str, ...]:
+        """Return immutable default questions tuple for backward compatibility and testing."""
+        return self.default_questions
 
     def _get_settings(self) -> FollowUpSettings:
         """Get current settings with caching."""

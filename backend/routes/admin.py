@@ -18,12 +18,11 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
 from ..core.audit_logger import AuditAction, AuditLogger
-from ..core.config import FollowUpSettings
 
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
 from ..core.query_data_manager import query_data_manager
 from ..core.settings_manager import get_settings_manager
-from ..core.settings_schemas import FeatureFlags, QueryRoutingSettings, ResponseSettings
+from ..core.settings_schemas import FeatureFlags, FollowUpSettings, QueryRoutingSettings, ResponseSettings
 from ..models.admin_models import (
     AdminUser,
     BulkQuestionRequest,

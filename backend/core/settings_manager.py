@@ -9,8 +9,14 @@ from threading import Lock
 from typing import Any, Dict, Optional, Type, TypeVar
 
 from .admin_database import admin_db_manager
-from .config import FollowUpSettings
-from .settings_schemas import FeatureFlags, QueryRoutingSettings, ResponseSettings, SettingKeys, SystemSettings
+from .settings_schemas import (
+    FeatureFlags,
+    FollowUpSettings,
+    QueryRoutingSettings,
+    ResponseSettings,
+    SettingKeys,
+    SystemSettings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +55,13 @@ class SettingsCache:
                 self._cache.pop(key, None)
             else:
                 self._cache.clear()
+
+    def get_status(self) -> Dict[str, Any]:
+        """Get cache status information safely."""
+        with self._lock:
+            cache_keys = list(self._cache.keys())
+            cache_size = len(cache_keys)
+            return {"keys": cache_keys, "size": cache_size}
 
 
 class SettingsManager:
@@ -193,26 +206,26 @@ class SettingsManager:
 
     def get_cache_status(self) -> Dict[str, Any]:
         """Get cache status for monitoring."""
-        with self.cache._lock:
-            cache_keys = list(self.cache._cache.keys())
-            cache_size = len(cache_keys)
+        cache_status = self.cache.get_status()
+        cache_keys = cache_status["keys"]
+        cache_size = cache_status["size"]
 
-            # Check which settings are cached
-            cached_settings = {}
-            for key in [
-                SettingKeys.FOLLOWUP_SETTINGS,
-                SettingKeys.RESPONSE_SETTINGS,
-                SettingKeys.ROUTING_SETTINGS,
-                SettingKeys.FEATURE_FLAGS,
-            ]:
-                cached_settings[key] = key in cache_keys
+        # Check which settings are cached
+        cached_settings = {}
+        for key in [
+            SettingKeys.FOLLOWUP_SETTINGS,
+            SettingKeys.RESPONSE_SETTINGS,
+            SettingKeys.ROUTING_SETTINGS,
+            SettingKeys.FEATURE_FLAGS,
+        ]:
+            cached_settings[key] = key in cache_keys
 
-            return {
-                "cache_size": cache_size,
-                "cached_keys": cache_keys,
-                "cached_settings": cached_settings,
-                "ttl_seconds": self.cache.ttl_seconds,
-            }
+        return {
+            "cache_size": cache_size,
+            "cached_keys": cache_keys,
+            "cached_settings": cached_settings,
+            "ttl_seconds": self.cache.ttl_seconds,
+        }
 
     # Convenience methods for backward compatibility
     def is_feature_enabled(self, feature_name: str) -> bool:

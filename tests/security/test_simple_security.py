@@ -110,8 +110,7 @@ class TestSimpleSecurity:
 
     def test_xss_protection_in_responses(self, client):
         """Test that responses don't reflect unescaped user input."""
-        # Test payloads for XSS protection validation - these contain potentially dangerous
-        # JavaScript code that should be properly escaped/sanitized by the application
+        # XSS test payloads: should not be reflected unescaped in responses
         xss_payloads = [
             "<script>alert('xss')</script>",
             "javascript:alert('xss')",

@@ -591,12 +591,14 @@ class AdminDatabaseManager:
                         updates.append(f"{field} = ?")
                         params.append(value)
 
-                if not updates:
-                    return False
-
-                # Always update timestamp
+                # Always update timestamp, even for no-op updates
                 updates.append("updated_at = ?")
                 params.append(datetime.now())
+
+                # If only timestamp is being updated, it's still a successful operation
+                if len(updates) == 1:
+                    # Only timestamp update - this is a valid no-op that succeeds
+                    logger.debug(f"No field changes for category {category_id}, updating timestamp only")
                 params.append(category_id)
 
                 # Build and execute query with validated field names only
