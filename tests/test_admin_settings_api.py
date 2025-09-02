@@ -1,6 +1,6 @@
 """Tests for admin settings API endpoints."""
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import status
@@ -53,8 +53,8 @@ class TestAdminSettingsAPI:
         assert data["max_questions"] == default_settings.max_questions
 
     @pytest.mark.unit
-    @patch("backend.routes.admin.admin_db_manager")
-    def test_get_followup_settings_existing_settings(self, mock_db_manager, client, mock_session):
+    @patch("backend.routes.admin.get_settings_manager")
+    def test_get_followup_settings_existing_settings(self, mock_get_settings_manager, client, mock_session):
         """Test GET /settings/followup when settings exist."""
         from backend.core.admin_auth import require_admin_auth
         from backend.main import app
@@ -62,8 +62,11 @@ class TestAdminSettingsAPI:
         # Override the dependency
         app.dependency_overrides[require_admin_auth] = lambda: mock_session
 
+        # Mock the settings manager to return specific settings
         existing_settings = FollowUpSettings(enabled=False, service_type="dynamic", max_questions=3)
-        mock_db_manager.get_admin_setting.return_value = existing_settings.to_json()
+        mock_settings_manager = Mock()
+        mock_settings_manager.get_followup_settings.return_value = existing_settings
+        mock_get_settings_manager.return_value = mock_settings_manager
 
         try:
             response = client.get("/api/admin/settings/followup")
@@ -152,15 +155,19 @@ class TestAdminSettingsAPI:
         assert data["settings"]["question_style"] == "conversational"  # Invalid style defaulted
 
     @pytest.mark.unit
-    @patch("backend.routes.admin.admin_db_manager")
-    def test_update_followup_settings_database_error(self, mock_db_manager, client, mock_session):
+    @patch("backend.routes.admin.get_settings_manager")
+    def test_update_followup_settings_database_error(self, mock_get_settings_manager, client, mock_session):
         """Test PUT /settings/followup when database save fails."""
         from backend.core.admin_auth import require_admin_auth
         from backend.main import app
 
         # Override the dependency
         app.dependency_overrides[require_admin_auth] = lambda: mock_session
-        mock_db_manager.set_admin_setting.return_value = False
+
+        # Mock the settings manager to return failure on set
+        mock_settings_manager = Mock()
+        mock_settings_manager.set_followup_settings.return_value = False
+        mock_get_settings_manager.return_value = mock_settings_manager
 
         settings_data = {"enabled": False, "service_type": "static"}
 
@@ -204,15 +211,19 @@ class TestAdminSettingsAPI:
         assert data["settings"]["max_questions"] == default_settings.max_questions
 
     @pytest.mark.unit
-    @patch("backend.routes.admin.admin_db_manager")
-    def test_reset_followup_settings_database_error(self, mock_db_manager, client, mock_session):
+    @patch("backend.routes.admin.get_settings_manager")
+    def test_reset_followup_settings_database_error(self, mock_get_settings_manager, client, mock_session):
         """Test POST /settings/followup/reset when database save fails."""
         from backend.core.admin_auth import require_admin_auth
         from backend.main import app
 
         # Override the dependency
         app.dependency_overrides[require_admin_auth] = lambda: mock_session
-        mock_db_manager.set_admin_setting.return_value = False
+
+        # Mock the settings manager to return failure on set
+        mock_settings_manager = Mock()
+        mock_settings_manager.set_followup_settings.return_value = False
+        mock_get_settings_manager.return_value = mock_settings_manager
 
         try:
             response = client.post("/api/admin/settings/followup/reset")
@@ -225,35 +236,42 @@ class TestAdminSettingsAPI:
         assert "Error resetting follow-up settings" in data["detail"]
 
     @pytest.mark.unit
-    @patch("backend.routes.admin.admin_auth_manager")
+    @patch("backend.routes.admin.require_admin_auth")
     def test_settings_authentication_required(self, mock_auth, client):
         """Test that all settings endpoints require authentication."""
-        mock_auth.side_effect = Exception("Authentication required")
+        from fastapi import HTTPException
+
+        mock_auth.side_effect = HTTPException(status_code=401, detail="Authentication required")
 
         # Test GET endpoint
         response = client.get("/api/admin/settings/followup")
-        assert response.status_code != status.HTTP_200_OK
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Test PUT endpoint
         response = client.put("/api/admin/settings/followup", json={})
-        assert response.status_code != status.HTTP_200_OK
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Test POST endpoint
         response = client.post("/api/admin/settings/followup/reset")
-        assert response.status_code != status.HTTP_200_OK
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.unit
-    @patch("backend.routes.admin.admin_db_manager")
+    @patch("backend.routes.admin.get_settings_manager")
     @patch("backend.routes.admin.audit_logger")
-    def test_settings_audit_logging(self, mock_audit, mock_db_manager, client, mock_session):
+    def test_settings_audit_logging(self, mock_audit, mock_get_settings_manager, client, mock_session):
         """Test that settings changes are properly audited."""
         from backend.core.admin_auth import require_admin_auth
         from backend.main import app
 
         # Override the dependency
         app.dependency_overrides[require_admin_auth] = lambda: mock_session
-        mock_db_manager.get_admin_setting.return_value = None
-        mock_db_manager.set_admin_setting.return_value = True
+
+        # Mock the settings manager
+        mock_settings_manager = Mock()
+        default_settings = FollowUpSettings()
+        mock_settings_manager.get_followup_settings.return_value = default_settings
+        mock_settings_manager.set_followup_settings.return_value = True
+        mock_get_settings_manager.return_value = mock_settings_manager
 
         try:
             # Test GET request audit
@@ -266,8 +284,7 @@ class TestAdminSettingsAPI:
             first_call = mock_audit.log_action.call_args_list[0]
             call_kwargs = first_call[1]  # Get keyword arguments
             assert call_kwargs["username"] == mock_session["username"]
-            assert "followup_settings" in call_kwargs["details"]["resource"]
-            assert call_kwargs["details"]["settings_exists"] is False
+            assert call_kwargs["details"]["resource"] == "followup_settings"
 
             # Test PUT request audit
             settings_data = {"enabled": False}
