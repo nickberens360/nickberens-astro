@@ -189,14 +189,24 @@ export default {
       name: '',
       display_name: '',
       description: '',
+      icon: 'help-circle',
       sort_order: 0,
       is_active: true
     })
 
     const dialog = computed({
-      get: () => props.modelValue,
-      set: (value) => emit('update:modelValue', value)
+      get: () => {
+        return props.modelValue
+      },
+      set: (value) => {
+        emit('update:modelValue', value)
+      }
     })
+    
+    // Watch for modelValue changes
+    watch(() => props.modelValue, (newValue) => {
+      // Dialog visibility changed
+    }, { immediate: true })
 
     const isEdit = computed(() => props.category && props.category.id)
 
@@ -207,6 +217,7 @@ export default {
           name: newCategory.name || '',
           display_name: newCategory.display_name || '',
           description: newCategory.description || '',
+          icon: newCategory.icon || 'help-circle',
           sort_order: newCategory.sort_order || 0,
           is_active: newCategory.is_active !== undefined ? newCategory.is_active : true
         }
@@ -216,6 +227,7 @@ export default {
           name: '',
           display_name: '',
           description: '',
+          icon: 'help-circle',
           sort_order: 0,
           is_active: true
         }
@@ -247,18 +259,24 @@ export default {
       const validation = await form.value.validate()
       if (!validation.valid) return
 
-      const saveData = {
+      let saveData = {
         ...categoryData.value,
         // Include ID for edit operations
         ...(isEdit.value && { id: props.category.id })
+      }
+      
+      // Remove is_active for create requests (not in CreateFollowupCategoryRequest model)
+      if (!isEdit.value) {
+        const { is_active, ...createData } = saveData
+        saveData = createData
       }
 
       emit('save', saveData)
     }
 
     const cancel = () => {
+      // Only emit cancel event - let parent handle the model update
       emit('cancel')
-      emit('update:modelValue', false)
     }
 
     return {

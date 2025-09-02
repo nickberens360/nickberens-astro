@@ -1,12 +1,12 @@
 <template>
   <div class="pa-6">
     <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
-
     <div class="mb-3 d-flex align-center">
       <v-btn class="mr-2" @click="openAll" :disabled="!categories.length" prepend-icon="$chevron-down">Open All</v-btn>
       <v-btn class="mr-4" @click="closeAll" :disabled="!categories.length" prepend-icon="$chevron-up">Close All</v-btn>
       <v-chip v-if="categories.length" size="small" variant="tonal">{{ categories.length }} categories</v-chip>
       <v-spacer />
+      
       <v-progress-circular v-if="loading" indeterminate color="primary" size="20" />
     </div>
 
@@ -36,16 +36,16 @@
           </div>
           <template #actions="{ expanded }">
             <div class="actions-icons d-flex align-center">
-              <v-tooltip text="Delete Category" location="top">
+              <v-tooltip text="Edit Category" location="top">
                 <template #activator="{ props }">
                   <v-btn
                     v-bind="props"
-                    icon="$delete"
+                    icon="$edit"
                     size="small"
                     variant="text"
-                    color="error"
+                    color="primary"
                     :disabled="saving || loading"
-                    @click.stop="openDeleteCategoryDialog(cat)"
+                    @click.stop="openEditCategoryDialog(cat)"
                   />
                 </template>
               </v-tooltip>
@@ -228,7 +228,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/services/api'
 
-const emit = defineEmits(['update-selected-categories', 'update-question-selection', 'changed'])
+const emit = defineEmits(['update-selected-categories', 'update-question-selection', 'changed', 'edit-category'])
 
 const loading = ref(false)
 const error = ref('')
@@ -256,6 +256,7 @@ const allIds = computed(() => categories.value.map(c => c.id))
 
 const openAll = () => { model.value = [...allIds.value] }
 const closeAll = () => { model.value = [] }
+
 
 const load = async () => {
   try {
@@ -349,6 +350,11 @@ const confirmDelete = async () => {
     saving.value = false
     cancelDelete()
   }
+}
+
+// category editing
+const openEditCategoryDialog = (cat) => {
+  emit('edit-category', cat)
 }
 
 // category deletion
@@ -475,6 +481,11 @@ const save = async () => {
     saving.value = false
   }
 }
+
+// Expose methods for parent component
+defineExpose({
+  load
+})
 </script>
 
 <style scoped>

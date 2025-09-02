@@ -11,7 +11,7 @@
                   ACTIVE CATEGORIES
                 </div>
                 <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ stats.active_categories }}
+                  {{ props.stats.active_categories }}
                 </div>
                 <div class="metric-trend text-caption mt-1">
                   <span class="text-success">
@@ -37,7 +37,7 @@
                   TOTAL QUESTIONS
                 </div>
                 <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ stats.total_questions }}
+                  {{ props.stats.total_questions }}
                 </div>
                 <div class="metric-trend text-caption mt-1">
                   <span class="text-primary">
@@ -63,7 +63,7 @@
                   INACTIVE CATEGORIES
                 </div>
                 <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ stats.inactive_categories }}
+                  {{ props.stats.inactive_categories }}
                 </div>
                 <div class="metric-trend text-caption mt-1">
                   <span class="text-warning">
@@ -89,12 +89,12 @@
                   SERVICE MODE
                 </div>
                 <div class="metric-value text-h6 font-weight-bold mt-1 text-capitalize">
-                  {{ settings.service_type || 'Static' }}
+                  {{ props.settings.service_type || 'Static' }}
                 </div>
                 <div class="metric-trend text-caption mt-1">
                   <span class="text-info">
                     <v-icon size="12">$brain</v-icon>
-                    {{ settings.enabled ? 'Active' : 'Inactive' }}
+                    {{ props.settings.enabled ? 'Active' : 'Inactive' }}
                   </span>
                 </div>
               </div>
@@ -127,12 +127,12 @@
                   Service Status
                 </div>
                 <v-switch
-                  v-model="settings.enabled"
-                  :label="settings.enabled ? 'Enabled' : 'Disabled'"
+                  :model-value="props.settings.enabled"
+                  :label="props.settings.enabled ? 'Enabled' : 'Disabled'"
                   color="primary"
                   inset
                   hide-details
-                  @change="saveSettings"
+                  @update:model-value="() => saveSettings()"
                 />
                 <div class="setting-helper text-caption text-medium-emphasis mt-2">
                   Toggle the follow-up question system on or off
@@ -148,12 +148,12 @@
                   Generation Method
                 </div>
                 <v-select
-                  v-model="settings.service_type"
-                  :items="serviceTypeOptions"
+                  :model-value="props.settings.service_type"
+                  :items="props.serviceTypeOptions"
                   variant="outlined"
                   density="comfortable"
                   hide-details
-                  @update:model-value="saveSettings"
+                  @update:model-value="() => saveSettings()"
                 />
                 <div class="setting-helper text-caption text-medium-emphasis mt-2">
                   Choose how questions are generated and selected
@@ -169,7 +169,7 @@
                   Question Limit
                 </div>
                 <v-slider
-                  v-model="settings.max_questions"
+                  :model-value="props.settings.max_questions"
                   :min="1"
                   :max="5"
                   :step="1"
@@ -179,7 +179,7 @@
                   track-color="grey-lighten-3"
                   thumb-color="primary"
                   hide-details
-                  @end="saveSettings"
+                  @end="() => saveSettings()"
                 />
                 <div class="setting-helper text-caption text-medium-emphasis mt-2">
                   Maximum number of follow-up questions to display
@@ -201,21 +201,12 @@
               Manage question categories and their associated follow-up questions
             </p>
           </div>
-          <v-btn
-            color="primary"
-            prepend-icon="$plus"
-            @click="handleCreateCategoryDialog"
-            :disabled="loading"
-            variant="elevated"
-          >
-            Add Category
-          </v-btn>
         </div>
       </div>
 
       <!-- Bulk Actions Banner -->
       <v-card
-        v-if="selectedCategories.length > 0"
+        v-if="props.selectedCategories.length > 0"
         class="bulk-actions-card mb-6"
         elevation="1"
         color="primary"
@@ -226,21 +217,21 @@
             <div class="d-flex align-center">
               <v-icon class="mr-2">$checkbox-marked</v-icon>
               <span class="font-weight-medium">
-                {{ selectedCategories.length }} {{ selectedCategories.length === 1 ? 'category' : 'categories' }} selected
+                {{ props.selectedCategories.length }} {{ props.selectedCategories.length === 1 ? 'category' : 'categories' }} selected
               </span>
             </div>
             <v-btn-group variant="outlined" density="compact">
               <v-btn
                 prepend-icon="$eye"
                 @click="bulkActivateCategories"
-                :loading="loading"
+                :loading="props.loading"
               >
                 Activate
               </v-btn>
               <v-btn
                 prepend-icon="$eye-off"
                 @click="bulkDeactivateCategories"
-                :loading="loading"
+                :loading="props.loading"
               >
                 Deactivate
               </v-btn>
@@ -248,7 +239,7 @@
                 color="error"
                 prepend-icon="$delete"
                 @click="bulkDeleteCategories"
-                :loading="loading"
+                :loading="props.loading"
               >
                 Delete
               </v-btn>
@@ -264,8 +255,13 @@
             <v-icon class="mr-3">$format-list-group</v-icon>
             <span class="text-h6 font-weight-bold">Question Categories</span>
             <v-spacer/>
+            
+            <v-btn color="primary" size="small" @click="onAddCategoryClick" prepend-icon="$plus" class="mr-2">
+              Add Category
+            </v-btn>
+            
             <v-chip
-              :text="`${categories.length} total`"
+              :text="`${props.categories.length} total`"
               variant="tonal"
               size="small"
             />
@@ -274,10 +270,12 @@
 
         <v-card-text class="pa-6">
           <FollowupAccordion
-            v-if="categories.length > 0"
+            ref="followupAccordionRef"
+            v-if="props.categories.length > 0"
             @update-selected-categories="updateSelectedCategories"
             @update-question-selection="updateQuestionSelection"
             @changed="loadData"
+            @edit-category="editCategory"
           />
 
           <!-- Empty State -->
@@ -295,7 +293,7 @@
               color="primary"
               size="large"
               prepend-icon="$plus"
-              @click="handleCreateCategoryDialog"
+              @click="onAddCategoryClick"
               variant="elevated"
             >
               Create First Category
@@ -304,93 +302,117 @@
         </v-card-text>
       </v-card>
     </div>
+
   </div>
 </template>
 
-<script>
+<script setup>
 import FollowupAccordion from '@/components/FollowupAccordion.vue'
+import { computed, watch, onMounted, ref } from 'vue'
 
-export default {
-  name: 'FollowupSettings',
-  components: {
-    FollowupAccordion
+const props = defineProps({
+  loading: Boolean,
+  categories: Array,
+  categoryStats: Object,
+  expandedPanels: Array,
+  settings: Object,
+  serviceTypeOptions: Array,
+  selectedCategories: Array,
+  selectedQuestions: Object,
+  stats: Object
+})
+
+const emit = defineEmits([
+  'save-settings',
+  'create-category',
+  'edit-category',
+  'delete-category',
+  'bulk-activate',
+  'bulk-deactivate',
+  'bulk-delete',
+  'update-question-selection',
+  'update-selected-categories',
+  'update-expanded-panels',
+  'load-data',
+  'close-category-dialog'
+])
+
+// Template refs
+const followupAccordionRef = ref(null)
+
+// Computed
+const panelModel = computed({
+  get() {
+    return props.expandedPanels || []
   },
-  props: {
-    loading: Boolean,
-    categories: Array,
-    categoryStats: Object,
-    expandedPanels: Array,
-    settings: Object,
-    serviceTypeOptions: Array,
-    selectedCategories: Array,
-    selectedQuestions: Object,
-    stats: Object
-  },
-  emits: [
-    'save-settings',
-    'create-category',
-    'edit-category',
-    'delete-category',
-    'bulk-activate',
-    'bulk-deactivate',
-    'bulk-delete',
-    'update-question-selection',
-    'update-selected-categories',
-    'update-expanded-panels',
-    'load-data'
-  ],
-  computed: {
-    // Bridge v-model for expansion panels directly to parent prop
-    panelModel: {
-      get() {
-        return this.expandedPanels || []
-      },
-      set(val) {
-        // Emit up to parent; parent owns the source of truth
-        this.$emit('update-expanded-panels', val)
-      }
-    }
-  },
-  watch: {
-    categories: {
-      handler(newVal) {
-        console.log('FollowupSettings: categories changed, count:', newVal?.length || 0, newVal)
-      },
-      immediate: true
-    }
-  },
-  mounted() {
-    console.log('FollowupSettings mounted with categories:', this.categories?.length || 0)
-  },
-  methods: {
-    saveSettings() {
-      this.$emit('save-settings')
-    },
-    handleCreateCategoryDialog() {
-      this.$emit('create-category')
-    },
-    // Note: edit action handled inline in template via $emit
-    showDeleteCategoryDialog(category) {
-      this.$emit('delete-category', category)
-    },
-    bulkActivateCategories() {
-      this.$emit('bulk-activate')
-    },
-    bulkDeactivateCategories() {
-      this.$emit('bulk-deactivate')
-    },
-    bulkDeleteCategories() {
-      this.$emit('bulk-delete')
-    },
-    updateQuestionSelection(categoryId, questions) {
-      this.$emit('update-question-selection', categoryId, questions)
-    },
-    updateSelectedCategories(newValue) {
-      this.$emit('update-selected-categories', newValue)
-    },
-    loadData() {
-      this.$emit('load-data')
-    }
+  set(val) {
+    emit('update-expanded-panels', val)
+  }
+})
+
+// Watchers - refresh accordion when categories change
+watch(() => props.categories, (newVal, oldVal) => {
+  // Only refresh if categories array actually changed (not just reactive update)
+  if (newVal !== oldVal) {
+    refreshAccordion()
+  }
+}, { immediate: false })
+
+
+// Lifecycle
+onMounted(() => {
+  // Component mounted
+})
+
+// Methods
+const saveSettings = () => {
+  emit('save-settings')
+}
+
+const onAddCategoryClick = () => {
+  emit('create-category')
+}
+
+const editCategory = (category) => {
+  emit('edit-category', category)
+}
+
+const showDeleteCategoryDialog = (category) => {
+  emit('delete-category', category)
+}
+
+const bulkActivateCategories = () => {
+  emit('bulk-activate')
+}
+
+const bulkDeactivateCategories = () => {
+  emit('bulk-deactivate')
+}
+
+const bulkDeleteCategories = () => {
+  emit('bulk-delete')
+}
+
+const updateQuestionSelection = (categoryId, questions) => {
+  emit('update-question-selection', categoryId, questions)
+}
+
+const updateSelectedCategories = (newValue) => {
+  emit('update-selected-categories', newValue)
+}
+
+const loadData = () => {
+  emit('load-data')
+}
+
+const refreshAccordion = () => {
+  if (followupAccordionRef.value) {
+    followupAccordionRef.value.load()
   }
 }
+
+// Expose methods for parent component
+defineExpose({
+  refreshAccordion
+})
 </script>

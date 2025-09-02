@@ -59,6 +59,7 @@
 
     <!-- Router View for Child Components -->
     <router-view
+      ref="routerViewRef"
       :loading="loading"
       :categories="categories"
       :category-stats="categoryStats"
@@ -321,6 +322,7 @@ export default {
     const expandedPanels = ref([])
     const cacheInvalidating = ref(false)
     const cacheStatus = ref(null)
+    const routerViewRef = ref(null)
 
     // Settings
     const settings = reactive({
@@ -761,8 +763,11 @@ export default {
 
     // Handle create category dialog
     const handleCreateCategoryDialog = () => {
+      console.log('SettingsView: handleCreateCategoryDialog called!')
+      console.log('Before: showCategoryDialog.value =', showCategoryDialog.value)
       editingCategory.value = null
       showCategoryDialog.value = true
+      console.log('After: showCategoryDialog.value =', showCategoryDialog.value)
     }
 
 
