@@ -17,6 +17,53 @@
         "@modelcontextprotocol/server-github@latest"
       ],
       "env": {}
+    },
+    "docker": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-docker@latest"
+      ],
+      "env": {}
+    },
+    "fetch": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch@latest"
+      ],
+      "env": {}
+    },
+    "system": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-system@latest"
+      ],
+      "env": {}
+    },
+    "admin-db": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-sqlite",
+        "/Users/nickberens/Webstorm/nickberens/backend/logs/admin_monitoring.db"
+      ],
+      "env": {}
+    },
+    "query-logs-db": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-sqlite",
+        "/Users/nickberens/Webstorm/nickberens/backend/logs/rag_monitoring.db"
+      ],
+      "env": {}
     }
   }
 }

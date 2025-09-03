@@ -663,6 +663,47 @@ class AdminAPI {
     }
   }
 
+  // Welcome Questions API methods
+  async getWelcomeQuestions(activeOnly = false) {
+    try {
+      const response = await this.client.get(`/settings/welcome/questions?active_only=${activeOnly}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get welcome questions:', error)
+      throw error
+    }
+  }
+
+  async createWelcomeQuestion(questionData) {
+    try {
+      const response = await this.client.post('/settings/welcome/questions', questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to create welcome question:', error)
+      throw error
+    }
+  }
+
+  async updateWelcomeQuestion(questionId, questionData) {
+    try {
+      const response = await this.client.put(`/settings/welcome/questions/${questionId}`, questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to update welcome question:', error)
+      throw error
+    }
+  }
+
+  async deleteWelcomeQuestion(questionId) {
+    try {
+      const response = await this.client.delete(`/settings/welcome/questions/${questionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to delete welcome question:', error)
+      throw error
+    }
+  }
+
   formatError(error) {
     if (error.response?.data?.detail) {
       return error.response.data.detail

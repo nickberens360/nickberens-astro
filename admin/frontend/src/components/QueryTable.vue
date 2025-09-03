@@ -137,7 +137,6 @@
       :search="searchQuery"
       item-value="id"
       fixed-header
-      height="600"
       @click:row="handleRowClick"
     >
       <template #item.user_query="{ item }">

@@ -135,6 +135,14 @@ const router = createRouter({
               }
             },
             {
+              path: 'welcome',
+              name: 'settings-welcome',
+              component: () => import('@/views/settings/WelcomeSettings.vue'),
+              meta: {
+                title: 'Welcome Questions'
+              }
+            },
+            {
               path: 'response',
               name: 'settings-response',
               component: () => import('@/views/settings/ResponseSettings.vue'),

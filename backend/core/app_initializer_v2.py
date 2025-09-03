@@ -37,7 +37,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
             - illustration_service: SmartIllustrationService for image search
             - llm: BaseLanguageModel for user-facing queries
     """
-    logger.info("Initializing application with unified retriever system...")
+    logger.info("🚀 Initializing application with unified retriever system...")
 
     # Ensure logs directory exists during app initialization
     backend_dir = Path(__file__).parent.parent.resolve()
@@ -70,26 +70,26 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     # Check for admin-triggered refresh flag
     refresh_flag_file = backend_dir / ".refresh_required"
     if refresh_flag_file.exists():
-        logger.info("Admin refresh flag detected - forcing rebuild")
+        logger.info("🔄 Admin refresh flag detected - forcing rebuild")
         force_rebuild = True
         # Remove the flag file after processing
         try:
             refresh_flag_file.unlink()
-            logger.info("Admin refresh flag processed and removed")
+            logger.info("✅ Admin refresh flag processed and removed")
         except Exception as e:
-            logger.warning(f"Could not remove refresh flag file: {e}")
+            logger.warning(f"⚠️ Could not remove refresh flag file: {e}")
 
     for directory in directories_to_index:
         if os.path.exists(directory):
             files, chunks = unified_retriever.index_directory(directory, force_reindex=force_rebuild)
             total_files += files
             total_chunks += chunks
-            logger.info(f"Indexed {directory}: {files} files, {chunks} chunks")
+            logger.info(f"📁 Indexed {directory}: {files} files, {chunks} chunks")
 
-    logger.info(f"Total indexed: {total_files} files, {total_chunks} chunks")
+    logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
 
     # Follow-up pregeneration removed in simplification - using static questions only
-    logger.info("Using static follow-up questions for instant responses")
+    logger.info("⚡ Using static follow-up questions for instant responses")
 
     # Create retriever dictionary with only the unified retriever
     all_retrievers = {
@@ -101,9 +101,9 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
 
     is_valid, message = smart_illustration_service.validate_data()
     if not is_valid:
-        logger.warning(message)
+        logger.warning(f"⚠️ {message}")
     else:
-        logger.info(message)
+        logger.info(f"✅ {message}")
 
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
@@ -112,9 +112,9 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     try:
         settings_manager = get_settings_manager()
         settings_manager.warmup_cache()
-        logger.info("Settings cache warmed up during app initialization")
+        logger.info("✅ Settings cache warmed up during app initialization")
     except Exception as e:
-        logger.warning(f"Failed to warm up settings cache: {e}")
+        logger.warning(f"⚠️ Failed to warm up settings cache: {e}")
 
     return all_retrievers, smart_illustration_service, user_query_llm
 

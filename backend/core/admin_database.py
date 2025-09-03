@@ -217,6 +217,41 @@ class AdminDatabaseManager:
                     "CREATE INDEX IF NOT EXISTS idx_followup_questions_text ON followup_questions(question_text)"
                 )
 
+                # Welcome questions table for homepage suggestions
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS welcome_questions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        question_text TEXT NOT NULL,
+                        sort_order INTEGER DEFAULT 0,
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_by INTEGER,
+                        FOREIGN KEY (created_by) REFERENCES admin_users (id)
+                    )
+                """
+                )
+
+                # Create indices for welcome questions
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_welcome_questions_active ON welcome_questions(is_active)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_welcome_questions_order ON welcome_questions(sort_order)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_welcome_questions_text ON welcome_questions(question_text)"
+                )
+
+                # Seed default welcome questions if table is empty
+                cursor.execute("SELECT COUNT(*) FROM welcome_questions")
+                welcome_count = cursor.fetchone()[0]
+
+                if welcome_count == 0:
+                    logger.info("Creating default welcome questions")
+                    self._create_default_welcome_questions(cursor)
+
                 # Seed default categories if table is empty
                 cursor.execute("SELECT COUNT(*) FROM followup_categories")
                 category_count = cursor.fetchone()[0]
@@ -385,6 +420,39 @@ class AdminDatabaseManager:
             )
 
         logger.info(f"Created {len(default_categories)} default followup categories")
+
+    def _create_default_welcome_questions(self, cursor):
+        """Create default welcome questions for the homepage."""
+        default_questions = [
+            {
+                "question_text": "Tell me about yourself",
+                "sort_order": 1,
+            },
+            {
+                "question_text": "Show me your resume",
+                "sort_order": 2,
+            },
+            {
+                "question_text": "Show me your illustrations",
+                "sort_order": 3,
+            },
+        ]
+
+        for question in default_questions:
+            cursor.execute(
+                """
+                INSERT INTO welcome_questions (question_text, sort_order, created_at, updated_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    question["question_text"],
+                    question["sort_order"],
+                    datetime.now(),
+                    datetime.now(),
+                ),
+            )
+
+        logger.info(f"Created {len(default_questions)} default welcome questions")
 
     def _migrate_questions_to_normalized_structure(self, cursor):
         """Migrate questions from JSON storage to normalized table structure."""
@@ -904,6 +972,172 @@ class AdminDatabaseManager:
         except Exception as e:
             logger.error(f"Error getting question count for category {category_id}: {str(e)}", exc_info=True)
             return 0
+
+    # Welcome question management methods
+    def get_welcome_questions(self, active_only: bool = True, limit: int = 50, offset: int = 0) -> List[Dict]:
+        """Get welcome questions with pagination and filtering."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build query with filters
+                where_conditions: List[str] = []
+                params: List[Any] = []
+
+                if active_only:
+                    where_conditions.append("is_active = 1")
+
+                where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+
+                # Add pagination params
+                params.extend([limit, offset])
+
+                cursor.execute(
+                    f"""
+                    SELECT 
+                        id, question_text, sort_order, 
+                        is_active, created_at, updated_at, created_by
+                    FROM welcome_questions
+                    {where_clause}
+                    ORDER BY sort_order, id
+                    LIMIT ? OFFSET ?
+                    """,
+                    params,
+                )
+
+                results = []
+                for row in cursor.fetchall():
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    results.append(row_dict)
+                return results
+        except Exception as e:
+            logger.error(f"Error getting welcome questions: {str(e)}", exc_info=True)
+            return []
+
+    def get_welcome_question(self, question_id: int) -> Optional[Dict]:
+        """Get a single welcome question by ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT 
+                        id, question_text, sort_order, 
+                        is_active, created_at, updated_at, created_by
+                    FROM welcome_questions
+                    WHERE id = ?
+                    """,
+                    (question_id,),
+                )
+                row = cursor.fetchone()
+                if row:
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    return row_dict
+                return None
+        except Exception as e:
+            logger.error(f"Error getting welcome question {question_id}: {str(e)}", exc_info=True)
+            return None
+
+    def create_welcome_question(
+        self, question_text: str, sort_order: Optional[int] = None, created_by: Optional[int] = None
+    ) -> int:
+        """Create a new welcome question."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Get next sort order if not provided
+                if sort_order is None:
+                    cursor.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM welcome_questions")
+                    sort_order = cursor.fetchone()[0]
+
+                # Insert question
+                cursor.execute(
+                    """
+                    INSERT INTO welcome_questions 
+                    (question_text, sort_order, created_at, updated_at, created_by)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (question_text, sort_order, datetime.now(), datetime.now(), created_by),
+                )
+
+                question_id = cursor.lastrowid
+                logger.info(f"Created welcome question {question_id}")
+                return question_id
+
+        except Exception as e:
+            logger.error(f"Error creating welcome question: {str(e)}", exc_info=True)
+            raise
+
+    def update_welcome_question(
+        self,
+        question_id: int,
+        question_text: Optional[str] = None,
+        sort_order: Optional[int] = None,
+        is_active: Optional[bool] = None,
+    ) -> bool:
+        """Update a welcome question."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build dynamic update query with field whitelisting to prevent SQL injection
+                allowed_fields = {"question_text", "sort_order", "is_active"}
+                updates: List[str] = []
+                params: List[Any] = []
+
+                # Build field updates with validation
+                field_values = {
+                    "question_text": question_text,
+                    "sort_order": sort_order,
+                    "is_active": (1 if is_active else 0) if is_active is not None else None,
+                }
+
+                for field, value in field_values.items():
+                    if value is not None and field in allowed_fields:
+                        updates.append(f"{field} = ?")
+                        params.append(value)
+
+                # If nothing to update, treat as successful no-op
+                if not updates:
+                    logger.debug(f"No-op update for welcome question ID: {question_id}")
+                    return True
+
+                # Always update timestamp
+                updates.append("updated_at = ?")
+                params.append(datetime.now())
+                params.append(question_id)
+
+                # Build and execute query
+                query = f"UPDATE welcome_questions SET {', '.join(updates)} WHERE id = ?"
+                cursor.execute(query, params)
+
+                if cursor.rowcount == 0:
+                    logger.debug(f"Idempotent update for welcome question ID: {question_id}")
+                else:
+                    logger.info(f"Updated welcome question ID: {question_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating welcome question {question_id}: {str(e)}", exc_info=True)
+            return False
+
+    def delete_welcome_question(self, question_id: int) -> bool:
+        """Delete a welcome question (hard delete)."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM welcome_questions WHERE id = ?", (question_id,))
+                success = cursor.rowcount > 0
+                if success:
+                    logger.info(f"Deleted welcome question ID: {question_id}")
+                return success
+        except Exception as e:
+            logger.error(f"Error deleting welcome question {question_id}: {str(e)}", exc_info=True)
+            return False
 
     def get_admin_user(self, username: str) -> Optional[Dict]:
         """Get admin user by username."""

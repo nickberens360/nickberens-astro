@@ -202,6 +202,28 @@ class CategoryWithStats(BaseModel):
     questions: Optional[List[FollowupQuestion]] = None
 
 
+# Welcome question models
+class WelcomeQuestion(BaseModel):
+    id: int
+    question_text: str
+    sort_order: int = 0
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+
+
+class CreateWelcomeQuestionRequest(BaseModel):
+    question_text: str = Field(..., min_length=1, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+
+
+class UpdateWelcomeQuestionRequest(BaseModel):
+    question_text: Optional[str] = Field(None, min_length=1, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+    is_active: Optional[bool] = None
+
+
 # Export models
 class ExportRequest(BaseModel):
     start_date: Optional[str] = None

@@ -19,12 +19,61 @@ from ..dependencies import get_app_state
 router = APIRouter()
 
 
-@router.get("/")
+@router.get(
+    "/",
+    tags=["Health"],
+    summary="Root Status Check",
+    description="Quick health check endpoint. Returns basic application status.",
+    responses={
+        200: {
+            "description": "Application status",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "healthy": {"summary": "Application running", "value": {"status": "healthy"}},
+                        "degraded": {"summary": "Application starting", "value": {"status": "degraded"}},
+                    }
+                }
+            },
+        }
+    },
+)
 async def root(state: dict = Depends(get_app_state)):
     return {"status": "healthy" if state["app_initialized"] else "degraded"}
 
 
-@router.get("/status")
+@router.get(
+    "/status",
+    tags=["Health"],
+    summary="Detailed System Status",
+    description="""
+           **Comprehensive system status with AI service information.**
+           
+           Returns detailed information about:
+           - Application initialization status
+           - AI model availability and rate limits
+           - Primary LLM configuration
+           - Timestamp for monitoring
+           
+           **Rate Limits:** This endpoint helps you monitor which AI models are currently available vs rate-limited.
+           """,
+    responses={
+        200: {
+            "description": "Detailed system status",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "online",
+                        "timestamp": 1694123456.789,
+                        "primary_llm": "claude",
+                        "app_initialized": True,
+                        "rate_limits": {"claude": False, "gemini": False},
+                    }
+                }
+            },
+        }
+    },
+)
 async def status(state: dict = Depends(get_app_state)):
     """Status check with rate limit information."""
     try:
@@ -46,7 +95,43 @@ async def status(state: dict = Depends(get_app_state)):
     }
 
 
-@router.get("/health")
+@router.get(
+    "/health",
+    tags=["Health"],
+    summary="Health Check with Service Validation",
+    description="""
+           **Health check endpoint for monitoring and load balancers.**
+           
+           Validates:
+           - Application initialization status
+           - Illustration service availability 
+           - Knowledge base readiness
+           
+           Use this endpoint for:
+           - Load balancer health checks
+           - Monitoring system alerts
+           - Container orchestration readiness probes
+           """,
+    responses={
+        200: {
+            "description": "Application health status",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "healthy": {
+                            "summary": "Fully operational",
+                            "value": {"status": "healthy", "illustration_count": 15},
+                        },
+                        "initializing": {
+                            "summary": "Still starting up",
+                            "value": {"status": "initializing", "illustration_count": 0},
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
 async def health_check(state: dict = Depends(get_app_state)):
     illustration_count = 0
     try:
@@ -63,7 +148,57 @@ async def health_check(state: dict = Depends(get_app_state)):
     }
 
 
-@router.get("/rate-limits")
+@router.get(
+    "/rate-limits",
+    tags=["Health"],
+    summary="AI Model Rate Limit Status",
+    description="""
+           **Monitor AI model availability and rate limiting status.**
+           
+           Returns the current rate limit status for all configured LLM providers:
+           - `false`: Model is available and not rate limited
+           - `true`: Model is currently rate limited
+           
+           **Use Cases:**
+           - Monitor AI service health
+           - Implement client-side fallback logic
+           - Track service availability metrics
+           
+           **Rate Limit Details:**
+           - Claude: Anthropic API rate limits
+           - Gemini: Google AI rate limits
+           """,
+    responses={
+        200: {
+            "description": "Rate limit status for all LLM providers",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "all_available": {
+                            "summary": "All models available",
+                            "value": {"rate_limits": {"claude": False, "gemini": False}},
+                        },
+                        "claude_limited": {
+                            "summary": "Claude rate limited",
+                            "value": {"rate_limits": {"claude": True, "gemini": False}},
+                        },
+                    }
+                }
+            },
+        },
+        500: {
+            "description": "Error retrieving rate limit status",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": "Failed to get rate limit status",
+                        "rate_limits": {"claude": False, "gemini": False},
+                    }
+                }
+            },
+        },
+    },
+)
 async def get_rate_limits():
     """Get current rate limit status for all LLM providers."""
     try:
@@ -79,3 +214,58 @@ async def get_rate_limits():
             content={"error": "Failed to get rate limit status", "rate_limits": {"claude": False, "gemini": False}},
             status_code=500,
         )
+
+
+@router.get(
+    "/welcome-questions",
+    tags=["Public API"],
+    summary="Get Welcome Questions",
+    description="""
+           **Public endpoint for homepage welcome questions.**
+           
+           Returns active welcome questions configured in the admin panel.
+           These are the suggested questions displayed to users on the homepage.
+           
+           **Public Access:** This endpoint does not require authentication.
+           """,
+    responses={
+        200: {
+            "description": "List of active welcome questions",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "questions": [
+                            {"id": 1, "question_text": "Tell me about yourself", "sort_order": 1},
+                            {"id": 2, "question_text": "Show me your resume", "sort_order": 2},
+                        ]
+                    }
+                }
+            },
+        }
+    },
+)
+async def get_welcome_questions():
+    """Get active welcome questions for homepage display."""
+    try:
+        # Import here to avoid circular imports
+        from ..core.admin_database import admin_db_manager
+
+        questions = admin_db_manager.get_welcome_questions(active_only=True)
+
+        # Return only the fields needed by the frontend
+        public_questions = [
+            {"id": q["id"], "question_text": q["question_text"], "sort_order": q["sort_order"] or 0} for q in questions
+        ]
+
+        return {"questions": public_questions}
+
+    except Exception as e:
+        # Fallback to default questions if database is unavailable
+        print(f"Error getting welcome questions: {e}")
+        return {
+            "questions": [
+                {"id": 1, "question_text": "Tell me about yourself", "sort_order": 1},
+                {"id": 2, "question_text": "Show me your resume", "sort_order": 2},
+                {"id": 3, "question_text": "Show me your illustrations", "sort_order": 3},
+            ]
+        }

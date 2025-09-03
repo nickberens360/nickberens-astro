@@ -132,7 +132,7 @@
                   color="primary"
                   inset
                   hide-details
-                  @update:model-value="() => saveSettings()"
+                  @update:model-value="(value) => updateSetting('enabled', value)"
                 />
                 <div class="setting-helper text-caption text-medium-emphasis mt-2">
                   Toggle the follow-up question system on or off
@@ -153,7 +153,7 @@
                   variant="outlined"
                   density="comfortable"
                   hide-details
-                  @update:model-value="() => saveSettings()"
+                  @update:model-value="(value) => updateSetting('service_type', value)"
                 />
                 <div class="setting-helper text-caption text-medium-emphasis mt-2">
                   Choose how questions are generated and selected
@@ -179,7 +179,7 @@
                   track-color="grey-lighten-3"
                   thumb-color="primary"
                   hide-details
-                  @end="() => saveSettings()"
+                  @update:model-value="(value) => updateSetting('max_questions', value)"
                 />
                 <div class="setting-helper text-caption text-medium-emphasis mt-2">
                   Maximum number of follow-up questions to display
@@ -326,6 +326,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'save-settings',
+  'update-setting',
   'create-category',
   'edit-category',
   'delete-category',
@@ -352,11 +353,16 @@ const panelModel = computed({
   }
 })
 
-// Watchers - refresh accordion when categories change
+// Watchers - refresh accordion when categories change (debounced to prevent loops)
+let refreshTimeout = null
 watch(() => props.categories, (newVal, oldVal) => {
   // Only refresh if categories array actually changed (not just reactive update)
   if (newVal !== oldVal) {
-    refreshAccordion()
+    // Debounce accordion refresh to prevent excessive calls
+    if (refreshTimeout) clearTimeout(refreshTimeout)
+    refreshTimeout = setTimeout(() => {
+      refreshAccordion()
+    }, 200)
   }
 }, { immediate: false })
 
@@ -367,6 +373,10 @@ onMounted(() => {
 })
 
 // Methods
+const updateSetting = (key, value) => {
+  emit('update-setting', key, value)
+}
+
 const saveSettings = () => {
   emit('save-settings')
 }

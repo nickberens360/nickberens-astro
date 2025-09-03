@@ -39,6 +39,10 @@
         <v-icon class="mr-2">$help-circle</v-icon>
         Follow-up Questions
       </v-tab>
+      <v-tab value="welcome">
+        <v-icon class="mr-2">$message-text</v-icon>
+        Welcome Questions
+      </v-tab>
       <v-tab value="response">
         <v-icon class="mr-2">$message-reply</v-icon>
         Response Settings
@@ -74,6 +78,7 @@
       :feature-flags="featureFlags"
       :cache-status="cacheStatus"
       @save-settings="saveSettings"
+      @update-setting="updateSetting"
       @create-category="handleCreateCategoryDialog"
       @edit-category="editCategory"
       @delete-category="showDeleteCategoryDialog"
@@ -400,6 +405,7 @@ export default {
     const currentTab = computed(() => {
       const routeName = route.name
       if (routeName === 'settings-followup') return 'followup'
+      if (routeName === 'settings-welcome') return 'welcome'
       if (routeName === 'settings-response') return 'response'
       if (routeName === 'settings-routing') return 'routing'
       if (routeName === 'settings-features') return 'features'
@@ -411,6 +417,7 @@ export default {
     const navigateToTab = (tabValue) => {
       const routeMap = {
         'followup': 'settings-followup',
+        'welcome': 'settings-welcome',
         'response': 'settings-response',
         'routing': 'settings-routing',
         'features': 'settings-features',
@@ -424,6 +431,37 @@ export default {
     }
 
     // Methods
+    const lightweightRefresh = async () => {
+      try {
+        // Only refresh categories and settings without expensive dev logging
+        const [settingsResponse, categoriesResponse] = await Promise.all([
+          api.getFollowupSettings(),
+          api.getFollowupCategories()
+        ])
+
+        // Safely assign settings with fallback
+        if (settingsResponse && typeof settingsResponse === 'object') {
+          Object.assign(settings, settingsResponse)
+        }
+        categories.value = categoriesResponse || []
+
+        // Update category stats without dev logging
+        const statsPromises = categories.value.map(async (category) => {
+          try {
+            const stats = await api.getFollowupCategoryStatsNormalized(category.id)
+            categoryStats.value[category.id] = stats
+          } catch (err) {
+            console.warn(`Failed to load stats for category ${category.id}:`, err)
+            categoryStats.value[category.id] = { question_count: 0 }
+          }
+        })
+
+        await Promise.all(statsPromises)
+      } catch (err) {
+        console.error('Failed to refresh data:', err)
+      }
+    }
+
     const loadData = async () => {
       try {
         loading.value = true
@@ -460,7 +498,10 @@ export default {
         ] = await Promise.all(promises)
 
 
-        Object.assign(settings, settingsResponse)
+        // Safely assign settings with fallback
+        if (settingsResponse && typeof settingsResponse === 'object') {
+          Object.assign(settings, settingsResponse)
+        }
         categories.value = categoriesResponse || []
 
         // Update additional settings if received
@@ -497,31 +538,27 @@ export default {
 
         await Promise.all(statsPromises)
 
-        // Dev-only: log follow-up questions for each category
-        if (import.meta.env.DEV) {
-          try {
-            await Promise.all(
-              categories.value.map(async (category) => {
-                try {
-                  const qs = await api.getFollowupQuestions({
-                    category_id: category.id,
-                    active_only: false
-                  })
-                  console.group(
-                    `Follow-up questions for category ${category.id} (${category.display_name})`
-                  )
-                  console.groupEnd()
-                } catch (err) {
-                  console.warn(
-                    `Failed to fetch follow-up questions for category ${category.id} (${category.display_name}):`,
-                    err
-                  )
-                }
+        // Dev-only: log follow-up questions for each category (debounced to prevent loops)
+        if (import.meta.env.DEV && !loadData._devLoggingInProgress) {
+          loadData._devLoggingInProgress = true
+          setTimeout(async () => {
+            try {
+              console.log('Loading dev follow-up questions data...')
+              // Reduced logging - just count questions instead of fetching all
+              categories.value.forEach((category) => {
+                const stats = categoryStats.value[category.id]
+                console.group(
+                  `Follow-up questions for category ${category.id} (${category.display_name})`
+                )
+                console.log(`Question count: ${stats?.question_count || 0}`)
+                console.groupEnd()
               })
-            )
-          } catch (e) {
-            console.warn('Dev logging of follow-up questions failed:', e)
-          }
+            } catch (e) {
+              console.warn('Dev logging of follow-up questions failed:', e)
+            } finally {
+              loadData._devLoggingInProgress = false
+            }
+          }, 100)
         }
 
       } catch (err) {
@@ -532,8 +569,25 @@ export default {
       }
     }
 
+    const updateSetting = async (key, value) => {
+      // Ensure settings object exists
+      if (!settings || typeof settings !== 'object') {
+        console.warn('Settings object not initialized yet')
+        return
+      }
+      // Update the settings object (reactive objects don't use .value)
+      settings[key] = value
+      // Automatically save the settings
+      await saveSettings()
+    }
+
     const saveSettings = async () => {
       try {
+        if (!settings || typeof settings !== 'object') {
+          console.error('Settings object is not properly initialized')
+          showErrorMessage('Settings not initialized properly')
+          return
+        }
         await api.updateFollowupSettings(settings)
         showSuccessMessage('Followup settings saved successfully!')
       } catch (err) {
@@ -674,7 +728,8 @@ export default {
         )
         showSuccessMessage(`${selectedCategories.value.length} categories activated!`)
         selectedCategories.value = []
-        await loadData()
+        // Use lightweight refresh instead of full loadData()
+        await lightweightRefresh()
       } catch (err) {
         showErrorMessage('Failed to activate categories')
       } finally {
@@ -692,7 +747,8 @@ export default {
         )
         showSuccessMessage(`${selectedCategories.value.length} categories deactivated!`)
         selectedCategories.value = []
-        await loadData()
+        // Use lightweight refresh instead of full loadData()
+        await lightweightRefresh()
       } catch (err) {
         showErrorMessage('Failed to deactivate categories')
       } finally {
@@ -807,6 +863,7 @@ export default {
       // Methods
       navigateToTab,
       loadData,
+      updateSetting,
       saveSettings,
       saveResponseSettings,
       saveRoutingSettings,

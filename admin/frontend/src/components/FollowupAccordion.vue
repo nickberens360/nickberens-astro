@@ -271,27 +271,49 @@ const openAll = () => { model.value = [...allIds.value] }
 const closeAll = () => { model.value = [] }
 
 
-const load = async () => {
+// Debounced load function to prevent infinite loops
+let loadTimeout = null
+const load = async (force = false) => {
+  // Prevent multiple simultaneous loads unless forced
+  if (loading.value && !force) return
+  
+  // Debounce non-forced loads
+  if (!force) {
+    if (loadTimeout) clearTimeout(loadTimeout)
+    loadTimeout = setTimeout(() => load(true), 300)
+    return
+  }
+
   try {
     loading.value = true
     error.value = ''
     const cats = await api.getFollowupCategories()
     categories.value = cats || []
-    // fetch questions per category
-    await Promise.all(categories.value.map(async (c) => {
-      try {
-        const qs = await api.getFollowupQuestions({ category_id: c.id, active_only: false })
-        questionsByCat[c.id] = qs || []
-        // ensure selection buckets exist and are valid
-        const existing = selectedQuestionsIdsByCat[c.id] || []
-        const validIdsSet = new Set((qs || []).map(q => q.id))
-        selectedQuestionsIdsByCat[c.id] = existing.filter(id => validIdsSet.has(id))
-      } catch (e) {
-        console.warn('Failed loading questions for category', c.id, e)
-        questionsByCat[c.id] = []
-        selectedQuestionsIdsByCat[c.id] = []
+    
+    // Load questions in smaller batches to prevent overwhelming the API
+    const batchSize = 3
+    for (let i = 0; i < categories.value.length; i += batchSize) {
+      const batch = categories.value.slice(i, i + batchSize)
+      await Promise.all(batch.map(async (c) => {
+        try {
+          const qs = await api.getFollowupQuestions({ category_id: c.id, active_only: false })
+          questionsByCat[c.id] = qs || []
+          // ensure selection buckets exist and are valid
+          const existing = selectedQuestionsIdsByCat[c.id] || []
+          const validIdsSet = new Set((qs || []).map(q => q.id))
+          selectedQuestionsIdsByCat[c.id] = existing.filter(id => validIdsSet.has(id))
+        } catch (e) {
+          console.warn('Failed loading questions for category', c.id, e)
+          questionsByCat[c.id] = []
+          selectedQuestionsIdsByCat[c.id] = []
+        }
+      }))
+      // Small delay between batches to prevent API overload
+      if (i + batchSize < categories.value.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
       }
-    }))
+    }
+    
     // prune selected categories to still-existing ones
     const existingCatIds = new Set(categories.value.map(c => c.id))
     selectedCategories.value = selectedCategories.value.filter(id => existingCatIds.has(id))

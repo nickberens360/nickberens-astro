@@ -54,12 +54,46 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     Returns:
         FastAPI: Configured FastAPI application
     """
-    # Create FastAPI app with metadata
+    # Create FastAPI app with enhanced metadata and documentation
     app = FastAPI(
         title=AppConfig.APP_TITLE,
         description=AppConfig.APP_DESCRIPTION,
         version=AppConfig.APP_VERSION,
         lifespan=lifespan,
+        contact={
+            "name": "Nick Berens",
+            "url": "https://nickberens.me",
+            "email": "hello@nickberens.me",
+        },
+        license_info={
+            "name": "MIT",
+        },
+        tags_metadata=[
+            {
+                "name": "Health",
+                "description": "System health and status endpoints",
+            },
+            {
+                "name": "Query",
+                "description": "AI-powered query endpoints for retrieving information from Nick's knowledge base. Uses Claude and advanced RAG (Retrieval-Augmented Generation) to provide intelligent responses.",
+            },
+            {
+                "name": "Public API",
+                "description": "Public endpoints for accessing content, performance metrics, and analytics. No authentication required.",
+            },
+            {
+                "name": "Admin Authentication",
+                "description": "Admin login, logout, and user management endpoints. **Authentication required** for all admin operations.",
+            },
+            {
+                "name": "Admin Management",
+                "description": "Administrative endpoints for system management, monitoring, and configuration. **Admin authentication required**.",
+            },
+            {
+                "name": "Admin Analytics",
+                "description": "Query analytics, performance metrics, and system insights for administrators. **Admin access required**.",
+            },
+        ],
     )
 
     # Setup rate limiter - use the centralized limiter instance

@@ -32,6 +32,7 @@ from ..models.admin_models import (
     CreateFollowupCategoryRequest,
     CreateFollowupQuestionRequest,
     CreateUserRequest,
+    CreateWelcomeQuestionRequest,
     FeedbackUpdate,
     FollowupCategory,
     FollowupQuestion,
@@ -42,6 +43,8 @@ from ..models.admin_models import (
     ReorderCategoriesRequest,
     UpdateFollowupCategoryRequest,
     UpdateFollowupQuestionRequest,
+    UpdateWelcomeQuestionRequest,
+    WelcomeQuestion,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,11 +52,83 @@ logger = logging.getLogger(__name__)
 # Initialize audit logger
 audit_logger = AuditLogger()
 
-router = APIRouter(tags=["admin"])
+router = APIRouter()
 
 
 # Authentication endpoints
-@router.post("/auth/login", response_model=LoginResponse)
+@router.post(
+    "/auth/login",
+    tags=["Admin Authentication"],
+    response_model=LoginResponse,
+    summary="Admin Login",
+    description="""
+            **Authenticate admin user and create secure session.**
+            
+            **Authentication Flow:**
+            1. Submit username and password
+            2. System validates credentials and checks rate limits
+            3. On success: secure HTTPOnly cookie is set (`admin_session`)
+            4. Use this cookie for subsequent admin API calls
+            
+            **Security Features:**
+            - Rate limiting per IP address
+            - Secure session management with HTTPOnly cookies
+            - Audit logging of all login attempts
+            - Password validation and security checks
+            - Session fingerprinting for additional security
+            
+            **Session Management:**
+            - Session expires in 24 hours
+            - HTTPOnly cookie prevents XSS attacks
+            - Secure flag enabled in production (HTTPS)
+            - SameSite=Lax for CSRF protection
+            
+            **Next Steps After Login:**
+            1. Cookie is automatically included in browser requests
+            2. Access admin endpoints like `/api/admin/stats/overview`
+            3. Use `/api/admin/auth/me` to verify current session
+            """,
+    responses={
+        200: {
+            "description": "Login successful - session cookie set",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "successful_login": {
+                            "summary": "Successful admin login",
+                            "value": {
+                                "success": True,
+                                "message": "Login successful",
+                                "user": {
+                                    "id": 1,
+                                    "username": "admin",
+                                    "role": "admin",
+                                    "created_at": "2024-01-01T00:00:00Z",
+                                    "last_login": "2024-09-02T17:00:00Z",
+                                },
+                            },
+                        },
+                        "invalid_credentials": {
+                            "summary": "Invalid login credentials",
+                            "value": {"success": False, "message": "Invalid username or password"},
+                        },
+                        "missing_fields": {
+                            "summary": "Missing required fields",
+                            "value": {"success": False, "message": "Username and password are required"},
+                        },
+                    }
+                }
+            },
+            "headers": {
+                "Set-Cookie": {
+                    "description": "Secure session cookie for admin authentication",
+                    "schema": {"type": "string"},
+                    "example": "admin_session=abc123...; HttpOnly; Secure; SameSite=Lax; Max-Age=86400",
+                }
+            },
+        }
+    },
+)
 async def login(login_data: LoginRequest, request: Request, response: Response) -> LoginResponse:
     """Authenticate user and create session with rate limiting and security checks."""
     try:
@@ -960,8 +1035,16 @@ async def update_followup_settings(
             user_agent=user_agent,
         )
 
-        # Reload settings in the follow-up service
-        # Note: Settings will be reloaded automatically on next request due to cache expiry
+        # Clear cache in follow-up service to ensure immediate effect
+        try:
+            followup_service = getattr(request.app.state, "followup_service", None)
+            if followup_service and hasattr(followup_service, "clear_cache"):
+                followup_service.clear_cache()
+                logger.info("FollowUp service cache cleared after settings update")
+            else:
+                logger.warning("FollowUp service not found or clear_cache method not available")
+        except Exception as e:
+            logger.warning(f"Could not clear followup service cache: {e}")
 
         logger.info(f"Follow-up settings updated by user {session['user_id']}: {settings.to_dict()}")
 
@@ -1002,6 +1085,17 @@ async def reset_followup_settings(
             ip_address=client_ip,
             user_agent=user_agent,
         )
+
+        # Clear cache in follow-up service to ensure immediate effect
+        try:
+            followup_service = getattr(request.app.state, "followup_service", None)
+            if followup_service and hasattr(followup_service, "clear_cache"):
+                followup_service.clear_cache()
+                logger.info("FollowUp service cache cleared after settings reset")
+            else:
+                logger.warning("FollowUp service not found or clear_cache method not available")
+        except Exception as e:
+            logger.warning(f"Could not clear followup service cache: {e}")
 
         logger.info(f"Follow-up settings reset to defaults by user {session['user_id']}")
 
@@ -1742,3 +1836,229 @@ async def invalidate_settings_cache(
     except Exception as e:
         logger.error(f"Error invalidating settings cache: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error invalidating cache")
+
+
+# Welcome Question Management Routes
+@router.get("/settings/welcome/questions")
+async def get_welcome_questions(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+    active_only: bool = Query(default=False, description="Return only active questions"),
+    limit: int = Query(default=100, ge=1, le=1000, description="Maximum number of questions to return"),
+    offset: int = Query(default=0, ge=0, description="Number of questions to skip"),
+) -> List[Dict[str, Any]]:
+    """Get welcome questions with filtering and pagination."""
+    try:
+        questions = admin_db_manager.get_welcome_questions(active_only=active_only, limit=limit, offset=offset)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={
+                "resource": "welcome_questions",
+                "active_only": active_only,
+                "count": len(questions),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return questions
+
+    except Exception as e:
+        logger.error(f"Error getting welcome questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching welcome questions")
+
+
+@router.post("/settings/welcome/questions")
+async def create_welcome_question(
+    request: Request,
+    question_data: CreateWelcomeQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a new welcome question."""
+    try:
+        # Create the question
+        question_id = admin_db_manager.create_welcome_question(
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            created_by=session["user_id"],
+        )
+
+        # Fetch the created question
+        created_question = admin_db_manager.get_welcome_question(question_id)
+        if not created_question:
+            # Graceful fallback
+            created_question = {
+                "id": question_id,
+                "question_text": question_data.question_text,
+                "sort_order": question_data.sort_order or 0,
+                "is_active": True,
+                "created_at": datetime.now(),
+                "updated_at": datetime.now(),
+                "created_by": session.get("user_id"),
+            }
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_CREATE,
+            username=session["username"],
+            details={
+                "resource": "welcome_question",
+                "question_id": question_id,
+                "question_text": question_data.question_text,
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Welcome question created by user {session['user_id']}: {question_data.question_text}")
+
+        return created_question
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating welcome question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating welcome question")
+
+
+@router.put("/settings/welcome/questions/{question_id}")
+async def update_welcome_question(
+    request: Request,
+    question_id: int,
+    question_data: UpdateWelcomeQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Update an existing welcome question."""
+    try:
+        # Check if question exists
+        existing_question = admin_db_manager.get_welcome_question(question_id)
+        if not existing_question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        # Update the question
+        success = admin_db_manager.update_welcome_question(
+            question_id=question_id,
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            is_active=question_data.is_active,
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update question")
+
+        # Fetch the updated question
+        updated_question = admin_db_manager.get_welcome_question(question_id)
+        if not updated_question:
+            raise HTTPException(status_code=500, detail="Failed to retrieve updated question")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "welcome_question",
+                "question_id": question_id,
+                "changes": question_data.dict(exclude_unset=True),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Welcome question {question_id} updated by user {session['user_id']}")
+
+        return updated_question
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating welcome question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating welcome question")
+
+
+@router.delete("/settings/welcome/questions/{question_id}")
+async def delete_welcome_question(
+    request: Request, question_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Delete a welcome question."""
+    try:
+        # Check if question exists
+        existing_question = admin_db_manager.get_welcome_question(question_id)
+        if not existing_question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        # Delete the question
+        success = admin_db_manager.delete_welcome_question(question_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete question")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_DELETE,
+            username=session["username"],
+            details={
+                "resource": "welcome_question",
+                "question_id": question_id,
+                "question_text": existing_question.get("question_text", ""),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Welcome question {question_id} deleted by user {session['user_id']}")
+
+        return {"success": True, "message": "Question deleted successfully", "question_id": question_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting welcome question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting welcome question")
+
+
+@router.post("/test/reset-database")
+async def reset_test_database(session: Dict[str, Any] = Depends(require_admin_auth)):
+    """Reset database to default state for testing purposes."""
+    try:
+        # Only allow in development or test environments
+        env = os.environ.get("ENVIRONMENT", "development")  # Default to development
+        if env not in ["development", "test", "testing"] and not os.environ.get("ALLOW_DB_RESET"):
+            raise HTTPException(
+                status_code=403, detail="Database reset only available in development/test environments"
+            )
+
+        # Clear test data but preserve admin users
+        with query_data_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Clear query logs except for essential admin queries
+            cursor.execute("DELETE FROM query_logs WHERE session_id != 'system'")
+
+            # Clear content gaps
+            cursor.execute("DELETE FROM content_gaps")
+
+            conn.commit()
+
+        logger.info(f"Test database reset completed by admin user {session['username']}")
+
+        return {
+            "success": True,
+            "message": "Test database reset completed",
+            "reset_items": ["query_logs", "content_gaps"],
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting test database: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error resetting test database")

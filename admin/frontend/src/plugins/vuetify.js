@@ -14,7 +14,7 @@ import {
   mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
   mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
   mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon, mdiReply, mdiRoad,
-  mdiFlag, mdiCached,
+  mdiFlag, mdiCached, mdiMessageText,
   
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -127,6 +127,7 @@ const iconAliases = {
   'alert-octagon': mdiAlertOctagon,
   'format-list-bulleted': mdiFormatListBulleted,
   'message-reply': mdiReply,
+  'message-text': mdiMessageText,
   route: mdiRoad,
   'feature-flag': mdiFlag,
   cached: mdiCached,
@@ -155,6 +156,7 @@ const iconAliases = {
   'picture_as_pdf': mdiFilePdfBox,
   'text_snippet': mdiTextBox,
   language: mdiWeb,
+  web: mdiWeb,
   article: mdiFileDocumentOutline,
   'insert_drive_file': mdiFileDocumentOutline,
   help: mdiHelpCircleOutline,

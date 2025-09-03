@@ -64,6 +64,15 @@ class FollowUpService:
         """Return immutable default questions tuple for backward compatibility and testing."""
         return self.default_questions
 
+    def clear_cache(self) -> None:
+        """Clear the settings and categories cache to force reload on next request."""
+        with self._lock:
+            self._cached_settings = None
+            self._settings_cache_timestamp = 0
+            self._cached_categories = None
+            self._categories_cache_timestamp = 0
+            logger.info("FollowUpService: Cache cleared, will reload on next request")
+
     def _get_settings(self) -> FollowUpSettings:
         """Get current settings with caching."""
         import time
