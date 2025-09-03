@@ -1,15 +1,15 @@
 <template>
   <v-card
     :loading="loading"
-    class="metric-card modern-card"
+    class="ds-card metric-card modern-card"
     :class="{ 'cursor-pointer': clickable }"
     @click="handleClick"
     :key="`metric-${title}-${value}-${loading}`"
   >
-    <v-card-text class="pa-6">
+    <v-card-text class="ds-p-6">
       <!-- Header with Icon and Title -->
-      <div class="d-flex align-center justify-space-between mb-4">
-        <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
+      <div class="d-flex align-center justify-space-between ds-mb-4">
+        <div class="ds-text-base ds-font-medium text-medium-emphasis">
           {{ title }}
         </div>
         <v-avatar
@@ -30,7 +30,7 @@
       <!-- Large Value Display -->
       <div class="d-flex align-center justify-space-between">
         <div class="flex-grow-1">
-          <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+          <div class="metric-value ds-text-3xl ds-font-bold text-high-emphasis">
             <span v-if="typeof value === 'number'">
               <CountUp
                 :end-val="value"
@@ -43,7 +43,7 @@
           <!-- Change Indicator -->
           <div
             v-if="change !== undefined"
-            class="d-flex align-center mt-2"
+            class="d-flex align-center ds-mt-2"
           >
             <v-icon
               :color="getTrendColor(change, inverse)"

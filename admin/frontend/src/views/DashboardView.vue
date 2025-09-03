@@ -2,7 +2,7 @@
   <div class="dashboard">
     
     <!-- Metric Cards Grid -->
-    <v-row class="mb-6">
+    <v-row class="ds-mb-6">
       <v-col
         v-for="metric in metrics"
         :key="metric.key"
@@ -25,7 +25,7 @@
     </v-row>
     
     <!-- Charts Row -->
-    <v-row class="mb-6">
+    <v-row class="ds-mb-6">
       <!-- Left Side: Response Time Chart -->
       <v-col cols="12" lg="8">
         <PerformanceChart

@@ -1,0 +1,526 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e6]:
+    - navigation [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e10]:
+          - img [ref=e14]
+          - generic [ref=e17]: RAG LMS
+        - separator [ref=e18]
+        - generic [ref=e19]:
+          - generic [ref=e20]: MAIN MENU
+          - listbox [ref=e21]:
+            - link "Dashboard" [ref=e22] [cursor=pointer]:
+              - /url: /
+              - img [ref=e25] [cursor=pointer]
+              - generic [ref=e28] [cursor=pointer]: Dashboard
+            - link "Queries" [ref=e29] [cursor=pointer]:
+              - /url: /queries
+              - img [ref=e32] [cursor=pointer]
+              - generic [ref=e35] [cursor=pointer]: Queries
+            - link "Performance" [ref=e36] [cursor=pointer]:
+              - /url: /performance
+              - img [ref=e39] [cursor=pointer]
+              - generic [ref=e42] [cursor=pointer]: Performance
+            - link "Sessions" [ref=e43] [cursor=pointer]:
+              - /url: /sessions
+              - img [ref=e46] [cursor=pointer]
+              - generic [ref=e49] [cursor=pointer]: Sessions
+            - link "Knowledge Base" [ref=e50] [cursor=pointer]:
+              - /url: /knowledge/sources
+              - img [ref=e53] [cursor=pointer]
+              - generic [ref=e56] [cursor=pointer]: Knowledge Base
+            - link "Settings" [ref=e57] [cursor=pointer]:
+              - /url: /settings/followup
+              - img [ref=e60] [cursor=pointer]
+              - generic [ref=e63] [cursor=pointer]: Settings
+      - generic [ref=e64]:
+        - separator [ref=e65]
+        - listbox [ref=e66]:
+          - generic [ref=e68]:
+            - generic [ref=e69]: System Status
+            - generic [ref=e71]: unknown
+          - generic [ref=e73] [cursor=pointer]:
+            - generic [ref=e74] [cursor=pointer]: Last Updated
+            - generic [ref=e75] [cursor=pointer]: Sep 3, 2025, 12:03 PM
+    - banner [ref=e76]:
+      - generic [ref=e77]:
+        - generic [ref=e79]: Dashboard
+        - combobox [ref=e82] [cursor=pointer]:
+          - img [ref=e85] [cursor=pointer]
+          - generic [ref=e88] [cursor=pointer]:
+            - generic [ref=e90] [cursor=pointer]: Last 24 Hours
+            - combobox "Open": Last 24 Hours
+          - img [ref=e93] [cursor=pointer]
+        - generic [ref=e95] [cursor=pointer]:
+          - img [ref=e98] [cursor=pointer]
+          - generic [ref=e100] [cursor=pointer]:
+            - generic [ref=e101] [cursor=pointer]: admin
+            - generic [ref=e102] [cursor=pointer]: Admin
+          - img [ref=e104] [cursor=pointer]
+    - main [ref=e106]:
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e112] [cursor=pointer]:
+            - generic [ref=e113] [cursor=pointer]:
+              - generic [ref=e114] [cursor=pointer]: Total Queries
+              - img [ref=e117] [cursor=pointer]
+            - generic [ref=e120] [cursor=pointer]:
+              - generic [ref=e123] [cursor=pointer]: "50"
+              - generic [ref=e124] [cursor=pointer]:
+                - img [ref=e126] [cursor=pointer]
+                - generic [ref=e128] [cursor=pointer]: "-35.1%"
+                - generic [ref=e129] [cursor=pointer]: vs last month
+          - generic [ref=e132] [cursor=pointer]:
+            - generic [ref=e133] [cursor=pointer]:
+              - generic [ref=e134] [cursor=pointer]: Avg Response Time
+              - img [ref=e137] [cursor=pointer]
+            - generic [ref=e140] [cursor=pointer]:
+              - generic [ref=e142] [cursor=pointer]:
+                - generic [ref=e143] [cursor=pointer]: "1184"
+                - text: ms
+              - generic [ref=e144] [cursor=pointer]:
+                - img [ref=e146] [cursor=pointer]
+                - generic [ref=e148] [cursor=pointer]: +28.1%
+                - generic [ref=e149] [cursor=pointer]: vs last month
+          - generic [ref=e152] [cursor=pointer]:
+            - generic [ref=e153] [cursor=pointer]:
+              - generic [ref=e154] [cursor=pointer]: Success Rate
+              - img [ref=e157] [cursor=pointer]
+            - generic [ref=e160] [cursor=pointer]:
+              - generic [ref=e162] [cursor=pointer]:
+                - generic [ref=e163] [cursor=pointer]: "44"
+                - text: "%"
+              - generic [ref=e164] [cursor=pointer]:
+                - img [ref=e166] [cursor=pointer]
+                - generic [ref=e168] [cursor=pointer]: 0%
+                - generic [ref=e169] [cursor=pointer]: vs last month
+          - generic [ref=e172] [cursor=pointer]:
+            - generic [ref=e173] [cursor=pointer]:
+              - generic [ref=e174] [cursor=pointer]: Active Sessions
+              - img [ref=e177] [cursor=pointer]
+            - generic [ref=e180] [cursor=pointer]:
+              - generic [ref=e183] [cursor=pointer]: "0"
+              - generic [ref=e184] [cursor=pointer]:
+                - img [ref=e186] [cursor=pointer]
+                - generic [ref=e188] [cursor=pointer]: 0%
+                - generic [ref=e189] [cursor=pointer]: vs last month
+        - generic [ref=e190]:
+          - generic [ref=e193]:
+            - generic [ref=e194]: Response Time Timeline
+            - button [ref=e195] [cursor=pointer]:
+              - img [ref=e198] [cursor=pointer]
+          - generic [ref=e205]:
+            - generic [ref=e206]: Query Status Distribution
+            - button [ref=e207] [cursor=pointer]:
+              - img [ref=e210] [cursor=pointer]
+        - generic [ref=e217]:
+          - generic [ref=e218]:
+            - generic [ref=e219]: All Queries
+            - generic [ref=e220]:
+              - generic [ref=e224]:
+                - img [ref=e227]
+                - textbox "Search queries..." [ref=e230]
+              - button [ref=e232] [cursor=pointer]:
+                - img [ref=e235] [cursor=pointer]
+              - button [ref=e238] [cursor=pointer]:
+                - img [ref=e241] [cursor=pointer]
+          - generic [ref=e243]:
+            - table [ref=e245]:
+              - rowgroup [ref=e246]:
+                - row "Query Response Status Response Time Relevance LLM Location Timestamp Actions" [ref=e247]:
+                  - cell [ref=e248]:
+                    - generic [ref=e251]:
+                      - img [ref=e253]
+                      - checkbox [ref=e255] [cursor=pointer]
+                  - cell "Query" [ref=e256]:
+                    - generic [ref=e257]:
+                      - generic [ref=e258]: Query
+                      - img [ref=e260]
+                  - cell "Response" [ref=e262]:
+                    - generic [ref=e264]: Response
+                  - cell "Status" [ref=e265]:
+                    - generic [ref=e266]:
+                      - generic [ref=e267]: Status
+                      - img [ref=e269]
+                  - cell "Response Time" [ref=e271]:
+                    - generic [ref=e272]:
+                      - generic [ref=e273]: Response Time
+                      - img [ref=e275]
+                  - cell "Relevance" [ref=e277]:
+                    - generic [ref=e278]:
+                      - generic [ref=e279]: Relevance
+                      - img [ref=e281]
+                  - cell "LLM" [ref=e283]:
+                    - generic [ref=e284]:
+                      - generic [ref=e285]: LLM
+                      - img [ref=e287]
+                  - cell "Location" [ref=e289]:
+                    - generic [ref=e291]: Location
+                  - cell "Timestamp" [ref=e292]:
+                    - generic [ref=e293]:
+                      - generic [ref=e294]: Timestamp
+                      - img [ref=e296]
+                  - cell "Actions" [ref=e298]:
+                    - generic [ref=e300]: Actions
+              - rowgroup [ref=e301]:
+                - row "Updated question I notice you didn't actually ask a question - I just see \"Updated question\" in y... Success 10.4s 0 N/A Claude Local Local Network Sep 3, 2025, 08:40 AM" [ref=e302] [cursor=pointer]:
+                  - cell [ref=e303] [cursor=pointer]:
+                    - generic [ref=e306] [cursor=pointer]:
+                      - img [ref=e308] [cursor=pointer]
+                      - checkbox [ref=e310] [cursor=pointer]
+                  - cell "Updated question" [ref=e311] [cursor=pointer]:
+                    - generic [ref=e312] [cursor=pointer]: Updated question
+                  - cell "I notice you didn't actually ask a question - I just see \"Updated question\" in y..." [ref=e313] [cursor=pointer]:
+                    - generic [ref=e314] [cursor=pointer]: I notice you didn't actually ask a question - I just see "Updated question" in y...
+                  - cell "Success" [ref=e315] [cursor=pointer]:
+                    - generic [ref=e317] [cursor=pointer]: Success
+                  - cell "10.4s" [ref=e318] [cursor=pointer]:
+                    - generic [ref=e319] [cursor=pointer]: 10.4s
+                  - cell "0 N/A" [ref=e320] [cursor=pointer]:
+                    - generic [ref=e321] [cursor=pointer]:
+                      - progressbar [ref=e322] [cursor=pointer]
+                      - generic [ref=e324] [cursor=pointer]: N/A
+                  - cell "Claude" [ref=e325] [cursor=pointer]:
+                    - generic [ref=e327] [cursor=pointer]: Claude
+                  - cell "Local Local Network" [ref=e328] [cursor=pointer]:
+                    - generic [ref=e329] [cursor=pointer]:
+                      - generic [ref=e330] [cursor=pointer]: Local
+                      - generic [ref=e331] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:40 AM" [ref=e332] [cursor=pointer]:
+                    - generic [ref=e333] [cursor=pointer]: Sep 3, 2025, 08:40 AM
+                  - cell [ref=e334] [cursor=pointer]:
+                    - generic [ref=e335] [cursor=pointer]:
+                      - button [ref=e336] [cursor=pointer]:
+                        - img [ref=e339] [cursor=pointer]
+                      - button [ref=e341] [cursor=pointer]:
+                        - img [ref=e344] [cursor=pointer]
+                - row "Show me your design work Based on the provided context, I can tell you that I create illustrations with a... Success 7.7s 0 N/A Claude Local Local Network Sep 3, 2025, 08:39 AM" [ref=e346] [cursor=pointer]:
+                  - cell [ref=e347] [cursor=pointer]:
+                    - generic [ref=e350] [cursor=pointer]:
+                      - img [ref=e352] [cursor=pointer]
+                      - checkbox [ref=e354] [cursor=pointer]
+                  - cell "Show me your design work" [ref=e355] [cursor=pointer]:
+                    - generic [ref=e356] [cursor=pointer]: Show me your design work
+                  - cell "Based on the provided context, I can tell you that I create illustrations with a..." [ref=e357] [cursor=pointer]:
+                    - generic [ref=e358] [cursor=pointer]: Based on the provided context, I can tell you that I create illustrations with a...
+                  - cell "Success" [ref=e359] [cursor=pointer]:
+                    - generic [ref=e361] [cursor=pointer]: Success
+                  - cell "7.7s" [ref=e362] [cursor=pointer]:
+                    - generic [ref=e363] [cursor=pointer]: 7.7s
+                  - cell "0 N/A" [ref=e364] [cursor=pointer]:
+                    - generic [ref=e365] [cursor=pointer]:
+                      - progressbar [ref=e366] [cursor=pointer]
+                      - generic [ref=e368] [cursor=pointer]: N/A
+                  - cell "Claude" [ref=e369] [cursor=pointer]:
+                    - generic [ref=e371] [cursor=pointer]: Claude
+                  - cell "Local Local Network" [ref=e372] [cursor=pointer]:
+                    - generic [ref=e373] [cursor=pointer]:
+                      - generic [ref=e374] [cursor=pointer]: Local
+                      - generic [ref=e375] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:39 AM" [ref=e376] [cursor=pointer]:
+                    - generic [ref=e377] [cursor=pointer]: Sep 3, 2025, 08:39 AM
+                  - cell [ref=e378] [cursor=pointer]:
+                    - generic [ref=e379] [cursor=pointer]:
+                      - button [ref=e380] [cursor=pointer]:
+                        - img [ref=e383] [cursor=pointer]
+                      - button [ref=e385] [cursor=pointer]:
+                        - img [ref=e388] [cursor=pointer]
+                - row "Tell me about yourself Hi! I'm Nick Berens, a web developer and designer who loves creating engaging di... Success 2.6s 0 N/A Cached Local Local Network Sep 3, 2025, 08:39 AM" [ref=e390] [cursor=pointer]:
+                  - cell [ref=e391] [cursor=pointer]:
+                    - generic [ref=e394] [cursor=pointer]:
+                      - img [ref=e396] [cursor=pointer]
+                      - checkbox [ref=e398] [cursor=pointer]
+                  - cell "Tell me about yourself" [ref=e399] [cursor=pointer]:
+                    - generic [ref=e400] [cursor=pointer]: Tell me about yourself
+                  - cell "Hi! I'm Nick Berens, a web developer and designer who loves creating engaging di..." [ref=e401] [cursor=pointer]:
+                    - generic [ref=e402] [cursor=pointer]: Hi! I'm Nick Berens, a web developer and designer who loves creating engaging di...
+                  - cell "Success" [ref=e403] [cursor=pointer]:
+                    - generic [ref=e405] [cursor=pointer]: Success
+                  - cell "2.6s" [ref=e406] [cursor=pointer]:
+                    - generic [ref=e407] [cursor=pointer]: 2.6s
+                  - cell "0 N/A" [ref=e408] [cursor=pointer]:
+                    - generic [ref=e409] [cursor=pointer]:
+                      - progressbar [ref=e410] [cursor=pointer]
+                      - generic [ref=e412] [cursor=pointer]: N/A
+                  - cell "Cached" [ref=e413] [cursor=pointer]:
+                    - generic [ref=e415] [cursor=pointer]: Cached
+                  - cell "Local Local Network" [ref=e416] [cursor=pointer]:
+                    - generic [ref=e417] [cursor=pointer]:
+                      - generic [ref=e418] [cursor=pointer]: Local
+                      - generic [ref=e419] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:39 AM" [ref=e420] [cursor=pointer]:
+                    - generic [ref=e421] [cursor=pointer]: Sep 3, 2025, 08:39 AM
+                  - cell [ref=e422] [cursor=pointer]:
+                    - generic [ref=e423] [cursor=pointer]:
+                      - button [ref=e424] [cursor=pointer]:
+                        - img [ref=e427] [cursor=pointer]
+                      - button [ref=e429] [cursor=pointer]:
+                        - img [ref=e432] [cursor=pointer]
+                - row "What is Nick background? Based on the information provided, here is a summary of Nick Berens' background:... Success 6.2s 0 N/A Claude Haiku Local Local Network Sep 3, 2025, 08:38 AM" [ref=e434] [cursor=pointer]:
+                  - cell [ref=e435] [cursor=pointer]:
+                    - generic [ref=e438] [cursor=pointer]:
+                      - img [ref=e440] [cursor=pointer]
+                      - checkbox [ref=e442] [cursor=pointer]
+                  - cell "What is Nick background?" [ref=e443] [cursor=pointer]:
+                    - generic [ref=e444] [cursor=pointer]: What is Nick background?
+                  - cell "Based on the information provided, here is a summary of Nick Berens' background:..." [ref=e445] [cursor=pointer]:
+                    - generic [ref=e446] [cursor=pointer]: Based on the information provided, here is a summary of Nick Berens' background:...
+                  - cell "Success" [ref=e447] [cursor=pointer]:
+                    - generic [ref=e449] [cursor=pointer]: Success
+                  - cell "6.2s" [ref=e450] [cursor=pointer]:
+                    - generic [ref=e451] [cursor=pointer]: 6.2s
+                  - cell "0 N/A" [ref=e452] [cursor=pointer]:
+                    - generic [ref=e453] [cursor=pointer]:
+                      - progressbar [ref=e454] [cursor=pointer]
+                      - generic [ref=e456] [cursor=pointer]: N/A
+                  - cell "Claude Haiku" [ref=e457] [cursor=pointer]:
+                    - generic [ref=e459] [cursor=pointer]: Claude Haiku
+                  - cell "Local Local Network" [ref=e460] [cursor=pointer]:
+                    - generic [ref=e461] [cursor=pointer]:
+                      - generic [ref=e462] [cursor=pointer]: Local
+                      - generic [ref=e463] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:38 AM" [ref=e464] [cursor=pointer]:
+                    - generic [ref=e465] [cursor=pointer]: Sep 3, 2025, 08:38 AM
+                  - cell [ref=e466] [cursor=pointer]:
+                    - generic [ref=e467] [cursor=pointer]:
+                      - button [ref=e468] [cursor=pointer]:
+                        - img [ref=e471] [cursor=pointer]
+                      - button [ref=e473] [cursor=pointer]:
+                        - img [ref=e476] [cursor=pointer]
+                - row "What is your professional background? As an AI assistant, I'm here to provide information about Nick Berens' professio... Success 2.8s 0 N/A Cached Local Local Network Sep 3, 2025, 08:38 AM" [ref=e478] [cursor=pointer]:
+                  - cell [ref=e479] [cursor=pointer]:
+                    - generic [ref=e482] [cursor=pointer]:
+                      - img [ref=e484] [cursor=pointer]
+                      - checkbox [ref=e486] [cursor=pointer]
+                  - cell "What is your professional background?" [ref=e487] [cursor=pointer]:
+                    - generic [ref=e488] [cursor=pointer]: What is your professional background?
+                  - cell "As an AI assistant, I'm here to provide information about Nick Berens' professio..." [ref=e489] [cursor=pointer]:
+                    - generic [ref=e490] [cursor=pointer]: As an AI assistant, I'm here to provide information about Nick Berens' professio...
+                  - cell "Success" [ref=e491] [cursor=pointer]:
+                    - generic [ref=e493] [cursor=pointer]: Success
+                  - cell "2.8s" [ref=e494] [cursor=pointer]:
+                    - generic [ref=e495] [cursor=pointer]: 2.8s
+                  - cell "0 N/A" [ref=e496] [cursor=pointer]:
+                    - generic [ref=e497] [cursor=pointer]:
+                      - progressbar [ref=e498] [cursor=pointer]
+                      - generic [ref=e500] [cursor=pointer]: N/A
+                  - cell "Cached" [ref=e501] [cursor=pointer]:
+                    - generic [ref=e503] [cursor=pointer]: Cached
+                  - cell "Local Local Network" [ref=e504] [cursor=pointer]:
+                    - generic [ref=e505] [cursor=pointer]:
+                      - generic [ref=e506] [cursor=pointer]: Local
+                      - generic [ref=e507] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:38 AM" [ref=e508] [cursor=pointer]:
+                    - generic [ref=e509] [cursor=pointer]: Sep 3, 2025, 08:38 AM
+                  - cell [ref=e510] [cursor=pointer]:
+                    - generic [ref=e511] [cursor=pointer]:
+                      - button [ref=e512] [cursor=pointer]:
+                        - img [ref=e515] [cursor=pointer]
+                      - button [ref=e517] [cursor=pointer]:
+                        - img [ref=e520] [cursor=pointer]
+                - row "What is your professional background? As an AI assistant, I'm here to provide information about Nick Berens' professio... Success 15.2s 0 N/A Cached Local Local Network Sep 3, 2025, 08:37 AM" [ref=e522] [cursor=pointer]:
+                  - cell [ref=e523] [cursor=pointer]:
+                    - generic [ref=e526] [cursor=pointer]:
+                      - img [ref=e528] [cursor=pointer]
+                      - checkbox [ref=e530] [cursor=pointer]
+                  - cell "What is your professional background?" [ref=e531] [cursor=pointer]:
+                    - generic [ref=e532] [cursor=pointer]: What is your professional background?
+                  - cell "As an AI assistant, I'm here to provide information about Nick Berens' professio..." [ref=e533] [cursor=pointer]:
+                    - generic [ref=e534] [cursor=pointer]: As an AI assistant, I'm here to provide information about Nick Berens' professio...
+                  - cell "Success" [ref=e535] [cursor=pointer]:
+                    - generic [ref=e537] [cursor=pointer]: Success
+                  - cell "15.2s" [ref=e538] [cursor=pointer]:
+                    - generic [ref=e539] [cursor=pointer]: 15.2s
+                  - cell "0 N/A" [ref=e540] [cursor=pointer]:
+                    - generic [ref=e541] [cursor=pointer]:
+                      - progressbar [ref=e542] [cursor=pointer]
+                      - generic [ref=e544] [cursor=pointer]: N/A
+                  - cell "Cached" [ref=e545] [cursor=pointer]:
+                    - generic [ref=e547] [cursor=pointer]: Cached
+                  - cell "Local Local Network" [ref=e548] [cursor=pointer]:
+                    - generic [ref=e549] [cursor=pointer]:
+                      - generic [ref=e550] [cursor=pointer]: Local
+                      - generic [ref=e551] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:37 AM" [ref=e552] [cursor=pointer]:
+                    - generic [ref=e553] [cursor=pointer]: Sep 3, 2025, 08:37 AM
+                  - cell [ref=e554] [cursor=pointer]:
+                    - generic [ref=e555] [cursor=pointer]:
+                      - button [ref=e556] [cursor=pointer]:
+                        - img [ref=e559] [cursor=pointer]
+                      - button [ref=e561] [cursor=pointer]:
+                        - img [ref=e564] [cursor=pointer]
+                - row "What frameworks do you prefer? Based on my skills and experience, I specialize in Vue.js and its ecosystem. I w... Success 10.8s 0 N/A Claude Local Local Network Sep 3, 2025, 08:23 AM" [ref=e566] [cursor=pointer]:
+                  - cell [ref=e567] [cursor=pointer]:
+                    - generic [ref=e570] [cursor=pointer]:
+                      - img [ref=e572] [cursor=pointer]
+                      - checkbox [ref=e574] [cursor=pointer]
+                  - cell "What frameworks do you prefer?" [ref=e575] [cursor=pointer]:
+                    - generic [ref=e576] [cursor=pointer]: What frameworks do you prefer?
+                  - cell "Based on my skills and experience, I specialize in Vue.js and its ecosystem. I w..." [ref=e577] [cursor=pointer]:
+                    - generic [ref=e578] [cursor=pointer]: Based on my skills and experience, I specialize in Vue.js and its ecosystem. I w...
+                  - cell "Success" [ref=e579] [cursor=pointer]:
+                    - generic [ref=e581] [cursor=pointer]: Success
+                  - cell "10.8s" [ref=e582] [cursor=pointer]:
+                    - generic [ref=e583] [cursor=pointer]: 10.8s
+                  - cell "0 N/A" [ref=e584] [cursor=pointer]:
+                    - generic [ref=e585] [cursor=pointer]:
+                      - progressbar [ref=e586] [cursor=pointer]
+                      - generic [ref=e588] [cursor=pointer]: N/A
+                  - cell "Claude" [ref=e589] [cursor=pointer]:
+                    - generic [ref=e591] [cursor=pointer]: Claude
+                  - cell "Local Local Network" [ref=e592] [cursor=pointer]:
+                    - generic [ref=e593] [cursor=pointer]:
+                      - generic [ref=e594] [cursor=pointer]: Local
+                      - generic [ref=e595] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:23 AM" [ref=e596] [cursor=pointer]:
+                    - generic [ref=e597] [cursor=pointer]: Sep 3, 2025, 08:23 AM
+                  - cell [ref=e598] [cursor=pointer]:
+                    - generic [ref=e599] [cursor=pointer]:
+                      - button [ref=e600] [cursor=pointer]:
+                        - img [ref=e603] [cursor=pointer]
+                      - button [ref=e605] [cursor=pointer]:
+                        - img [ref=e608] [cursor=pointer]
+                - row "Tell me about yourself Hi! I'm Nick Berens, a web developer and designer who loves creating engaging di... Success 12.8s 0 N/A Claude Local Local Network Sep 3, 2025, 08:23 AM" [ref=e610] [cursor=pointer]:
+                  - cell [ref=e611] [cursor=pointer]:
+                    - generic [ref=e614] [cursor=pointer]:
+                      - img [ref=e616] [cursor=pointer]
+                      - checkbox [ref=e618] [cursor=pointer]
+                  - cell "Tell me about yourself" [ref=e619] [cursor=pointer]:
+                    - generic [ref=e620] [cursor=pointer]: Tell me about yourself
+                  - cell "Hi! I'm Nick Berens, a web developer and designer who loves creating engaging di..." [ref=e621] [cursor=pointer]:
+                    - generic [ref=e622] [cursor=pointer]: Hi! I'm Nick Berens, a web developer and designer who loves creating engaging di...
+                  - cell "Success" [ref=e623] [cursor=pointer]:
+                    - generic [ref=e625] [cursor=pointer]: Success
+                  - cell "12.8s" [ref=e626] [cursor=pointer]:
+                    - generic [ref=e627] [cursor=pointer]: 12.8s
+                  - cell "0 N/A" [ref=e628] [cursor=pointer]:
+                    - generic [ref=e629] [cursor=pointer]:
+                      - progressbar [ref=e630] [cursor=pointer]
+                      - generic [ref=e632] [cursor=pointer]: N/A
+                  - cell "Claude" [ref=e633] [cursor=pointer]:
+                    - generic [ref=e635] [cursor=pointer]: Claude
+                  - cell "Local Local Network" [ref=e636] [cursor=pointer]:
+                    - generic [ref=e637] [cursor=pointer]:
+                      - generic [ref=e638] [cursor=pointer]: Local
+                      - generic [ref=e639] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:23 AM" [ref=e640] [cursor=pointer]:
+                    - generic [ref=e641] [cursor=pointer]: Sep 3, 2025, 08:23 AM
+                  - cell [ref=e642] [cursor=pointer]:
+                    - generic [ref=e643] [cursor=pointer]:
+                      - button [ref=e644] [cursor=pointer]:
+                        - img [ref=e647] [cursor=pointer]
+                      - button [ref=e649] [cursor=pointer]:
+                        - img [ref=e652] [cursor=pointer]
+                - row "What is your favorite programming language? Based on the context provided, while I can see that Nick works with several prog... Success 8.5s 0 N/A Claude Local Local Network Sep 3, 2025, 08:22 AM" [ref=e654] [cursor=pointer]:
+                  - cell [ref=e655] [cursor=pointer]:
+                    - generic [ref=e658] [cursor=pointer]:
+                      - img [ref=e660] [cursor=pointer]
+                      - checkbox [ref=e662] [cursor=pointer]
+                  - cell "What is your favorite programming language?" [ref=e663] [cursor=pointer]:
+                    - generic [ref=e664] [cursor=pointer]: What is your favorite programming language?
+                  - cell "Based on the context provided, while I can see that Nick works with several prog..." [ref=e665] [cursor=pointer]:
+                    - generic [ref=e666] [cursor=pointer]: Based on the context provided, while I can see that Nick works with several prog...
+                  - cell "Success" [ref=e667] [cursor=pointer]:
+                    - generic [ref=e669] [cursor=pointer]: Success
+                  - cell "8.5s" [ref=e670] [cursor=pointer]:
+                    - generic [ref=e671] [cursor=pointer]: 8.5s
+                  - cell "0 N/A" [ref=e672] [cursor=pointer]:
+                    - generic [ref=e673] [cursor=pointer]:
+                      - progressbar [ref=e674] [cursor=pointer]
+                      - generic [ref=e676] [cursor=pointer]: N/A
+                  - cell "Claude" [ref=e677] [cursor=pointer]:
+                    - generic [ref=e679] [cursor=pointer]: Claude
+                  - cell "Local Local Network" [ref=e680] [cursor=pointer]:
+                    - generic [ref=e681] [cursor=pointer]:
+                      - generic [ref=e682] [cursor=pointer]: Local
+                      - generic [ref=e683] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:22 AM" [ref=e684] [cursor=pointer]:
+                    - generic [ref=e685] [cursor=pointer]: Sep 3, 2025, 08:22 AM
+                  - cell [ref=e686] [cursor=pointer]:
+                    - generic [ref=e687] [cursor=pointer]:
+                      - button [ref=e688] [cursor=pointer]:
+                        - img [ref=e691] [cursor=pointer]
+                      - button [ref=e693] [cursor=pointer]:
+                        - img [ref=e696] [cursor=pointer]
+                - row "What is your professional background? As an AI assistant, I'm here to provide information about Nick Berens' professio... Success 3.7s 0 N/A Cached Local Local Network Sep 3, 2025, 08:21 AM" [ref=e698] [cursor=pointer]:
+                  - cell [ref=e699] [cursor=pointer]:
+                    - generic [ref=e702] [cursor=pointer]:
+                      - img [ref=e704] [cursor=pointer]
+                      - checkbox [ref=e706] [cursor=pointer]
+                  - cell "What is your professional background?" [ref=e707] [cursor=pointer]:
+                    - generic [ref=e708] [cursor=pointer]: What is your professional background?
+                  - cell "As an AI assistant, I'm here to provide information about Nick Berens' professio..." [ref=e709] [cursor=pointer]:
+                    - generic [ref=e710] [cursor=pointer]: As an AI assistant, I'm here to provide information about Nick Berens' professio...
+                  - cell "Success" [ref=e711] [cursor=pointer]:
+                    - generic [ref=e713] [cursor=pointer]: Success
+                  - cell "3.7s" [ref=e714] [cursor=pointer]:
+                    - generic [ref=e715] [cursor=pointer]: 3.7s
+                  - cell "0 N/A" [ref=e716] [cursor=pointer]:
+                    - generic [ref=e717] [cursor=pointer]:
+                      - progressbar [ref=e718] [cursor=pointer]
+                      - generic [ref=e720] [cursor=pointer]: N/A
+                  - cell "Cached" [ref=e721] [cursor=pointer]:
+                    - generic [ref=e723] [cursor=pointer]: Cached
+                  - cell "Local Local Network" [ref=e724] [cursor=pointer]:
+                    - generic [ref=e725] [cursor=pointer]:
+                      - generic [ref=e726] [cursor=pointer]: Local
+                      - generic [ref=e727] [cursor=pointer]: Local Network
+                  - cell "Sep 3, 2025, 08:21 AM" [ref=e728] [cursor=pointer]:
+                    - generic [ref=e729] [cursor=pointer]: Sep 3, 2025, 08:21 AM
+                  - cell [ref=e730] [cursor=pointer]:
+                    - generic [ref=e731] [cursor=pointer]:
+                      - button [ref=e732] [cursor=pointer]:
+                        - img [ref=e735] [cursor=pointer]
+                      - button [ref=e737] [cursor=pointer]:
+                        - img [ref=e740] [cursor=pointer]
+            - separator [ref=e742]
+            - generic [ref=e743]:
+              - combobox [ref=e748] [cursor=pointer]:
+                - generic [ref=e750] [cursor=pointer]:
+                  - generic [ref=e752] [cursor=pointer]: "25"
+                  - combobox "Open": "25"
+                - img [ref=e755] [cursor=pointer]
+              - generic [ref=e758]: 1-10 of 10
+              - navigation "Pagination Navigation" [ref=e760]:
+                - list [ref=e761]:
+                  - listitem [ref=e762]:
+                    - button "First page" [disabled]:
+                      - generic:
+                        - generic:
+                          - img
+                  - listitem [ref=e763]:
+                    - button "Previous page" [disabled]:
+                      - generic:
+                        - generic:
+                          - img
+                  - listitem [ref=e764]:
+                    - button "Next page" [disabled]:
+                      - generic:
+                        - generic:
+                          - img
+                  - listitem [ref=e765]:
+                    - button "Last page" [disabled]:
+                      - generic:
+                        - generic:
+                          - img
+  - generic:
+    - tooltip
+    - tooltip
+    - tooltip
+    - tooltip
+    - tooltip
+    - tooltip
+    - tooltip
+    - tooltip
+    - tooltip
+    - tooltip
+    - generic [ref=e766]:
+      - status [ref=e767]:
+        - img [ref=e769]
+        - text: Connection to admin API lost. Retrying...
+      - button "Retry" [ref=e772] [cursor=pointer]:
+        - generic [ref=e773] [cursor=pointer]: Retry
+```

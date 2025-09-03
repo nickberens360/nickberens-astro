@@ -10,7 +10,7 @@
       class="sidebar-drawer"
     >
       <!-- Brand Logo Section -->
-      <div class="sidebar-header pa-6">
+      <div class="sidebar-header ds-p-6">
         <div class="d-flex align-center">
           <div class="brand-logo">
             <v-avatar color="primary" size="40">
@@ -25,14 +25,14 @@
         </div>
       </div>
 
-      <v-divider class="mb-4"/>
+      <v-divider class="ds-mb-4"/>
 
       <!-- Main Menu Section -->
-      <div class="px-4">
-        <div class="menu-label text-caption font-weight-medium text-medium-emphasis mb-3">
+      <div class="ds-px-4">
+        <div class="menu-label ds-text-xs ds-font-medium text-medium-emphasis ds-mb-3">
           MAIN MENU
         </div>
-        <v-list nav density="compact" class="py-0">
+        <v-list nav density="compact" class="ds-py-0">
           <template v-for="item in navigationItems" :key="item.name">
             <!-- Main navigation item -->
             <v-list-item
@@ -232,7 +232,7 @@
     <v-main>
       <v-container
         fluid
-        class="pa-8"
+        class="ds-p-8"
         style="background-color: rgb(var(--v-theme-background));"
       >
         <router-view v-slot="{ Component }">

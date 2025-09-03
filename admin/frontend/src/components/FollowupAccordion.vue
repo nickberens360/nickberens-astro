@@ -1,9 +1,9 @@
 <template>
-  <div class="pa-6">
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
-    <div class="mb-3 d-flex align-center">
-      <v-btn class="mr-2" @click="openAll" :disabled="!categories.length" prepend-icon="$chevron-down">Open All</v-btn>
-      <v-btn class="mr-4" @click="closeAll" :disabled="!categories.length" prepend-icon="$chevron-up">Close All</v-btn>
+  <div class="ds-p-6">
+    <v-alert v-if="error" type="error" variant="tonal" class="ds-mb-4">{{ error }}</v-alert>
+    <div class="ds-mb-3 d-flex align-center">
+      <v-btn class="ds-btn mr-2" @click="openAll" :disabled="!categories.length" prepend-icon="$chevron-down">Open All</v-btn>
+      <v-btn class="ds-btn mr-4" @click="closeAll" :disabled="!categories.length" prepend-icon="$chevron-up">Close All</v-btn>
       <v-chip v-if="categories.length" size="small" variant="tonal">{{ categories.length }} categories</v-chip>
       <v-spacer />
       
@@ -128,8 +128,9 @@
               </template>
             </v-list-item>
           </v-list>
-          <div class="mt-3">
+          <div class="ds-mt-3">
             <v-btn
+              class="ds-btn"
               color="primary"
               prepend-icon="$plus"
               size="small"
@@ -143,12 +144,12 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <div class="mt-4 text-caption text-medium-emphasis">Model: {{ model }}</div>
+    <div class="ds-mt-4 ds-text-xs text-medium-emphasis">Model: {{ model }}</div>
 
     <!-- Add/Edit Dialog -->
     <v-dialog v-model="showDialog" max-width="580px">
-      <v-card>
-        <v-card-title class="d-flex align-center">
+      <v-card class="ds-card">
+        <v-card-title class="d-flex align-center ds-text-xl ds-font-semibold">
           <v-icon class="mr-2">$help-circle</v-icon>
           {{ editingQuestion ? 'Edit Question' : 'Add Question' }}
         </v-card-title>
@@ -173,64 +174,64 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="closeDialog" :disabled="saving">Cancel</v-btn>
-          <v-btn color="primary" @click="save" :loading="saving">{{ editingQuestion ? 'Update' : 'Add' }}</v-btn>
+          <v-btn class="ds-btn" variant="text" @click="closeDialog" :disabled="saving">Cancel</v-btn>
+          <v-btn class="ds-btn" color="primary" @click="save" :loading="saving">{{ editingQuestion ? 'Update' : 'Add' }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="showDeleteDialog" max-width="520px">
-      <v-card>
-        <v-card-title class="d-flex align-center">
+      <v-card class="ds-card">
+        <v-card-title class="d-flex align-center ds-text-xl ds-font-semibold">
           <v-icon class="mr-2" color="error">$delete</v-icon>
           Delete Question
         </v-card-title>
         <v-card-text>
-          <div class="mb-3">Are you sure you want to delete this question?</div>
-          <v-alert type="warning" variant="tonal" class="mb-3" :icon="false">
+          <div class="ds-mb-3">Are you sure you want to delete this question?</div>
+          <v-alert type="warning" variant="tonal" class="ds-mb-3" :icon="false">
             This action cannot be undone.
           </v-alert>
-          <v-card variant="outlined" class="pa-3">
-            <div class="text-caption text-medium-emphasis mb-1">Question</div>
-            <div class="text-body-2">{{ deleteTargetQuestion?.question_text }}</div>
+          <v-card variant="outlined" class="ds-p-3">
+            <div class="ds-text-xs text-medium-emphasis ds-mb-1">Question</div>
+            <div class="ds-text-sm">{{ deleteTargetQuestion?.question_text }}</div>
           </v-card>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="cancelDelete" :disabled="saving">Cancel</v-btn>
-          <v-btn color="error" @click="confirmDelete" :loading="saving">Delete</v-btn>
+          <v-btn class="ds-btn" variant="text" @click="cancelDelete" :disabled="saving">Cancel</v-btn>
+          <v-btn class="ds-btn" color="error" @click="confirmDelete" :loading="saving">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Category Delete Confirmation Dialog -->
     <v-dialog v-model="showCategoryDeleteDialog" max-width="560px">
-      <v-card>
-        <v-card-title class="d-flex align-center">
+      <v-card class="ds-card">
+        <v-card-title class="d-flex align-center ds-text-xl ds-font-semibold">
           <v-icon class="mr-2" color="error">$delete</v-icon>
           Delete Category
         </v-card-title>
         <v-card-text>
-          <div class="mb-3">
+          <div class="ds-mb-3">
             Are you sure you want to delete
             <strong>{{ deleteCategoryTarget?.display_name }}</strong>
             and all of its questions?
           </div>
-          <v-alert type="warning" variant="tonal" class="mb-3" :icon="false">
+          <v-alert type="warning" variant="tonal" class="ds-mb-3" :icon="false">
             This action cannot be undone. All questions in this category will be permanently deleted.
           </v-alert>
-          <v-card variant="outlined" class="pa-3">
-            <div class="text-caption text-medium-emphasis mb-1">Summary</div>
-            <div class="text-body-2">
+          <v-card variant="outlined" class="ds-p-3">
+            <div class="ds-text-xs text-medium-emphasis ds-mb-1">Summary</div>
+            <div class="ds-text-sm">
               {{ (questionsByCat[deleteCategoryTarget?.id] || []).length }} questions will be deleted
             </div>
           </v-card>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="cancelDeleteCategory" :disabled="saving">Cancel</v-btn>
-          <v-btn color="error" @click="confirmDeleteCategory" :loading="saving">Delete</v-btn>
+          <v-btn class="ds-btn" variant="text" @click="cancelDeleteCategory" :disabled="saving">Cancel</v-btn>
+          <v-btn class="ds-btn" color="error" @click="confirmDeleteCategory" :loading="saving">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -524,12 +525,5 @@ defineExpose({
 </script>
 
 <style scoped>
-.pa-6 { padding: 24px; }
-.mr-2 { margin-right: 8px; }
-.mr-4 { margin-right: 16px; }
-.mb-3 { margin-bottom: 12px; }
-.mb-4 { margin-bottom: 16px; }
-.mt-4 { margin-top: 16px; }
-.ml-2 { margin-left: 8px; }
 .actions-icons { gap: 6px; }
 </style>

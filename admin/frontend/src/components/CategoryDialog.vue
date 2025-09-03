@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" max-width="560px" persistent>
-    <v-card class="dialog-card" elevation="12" rounded="xl">
-      <v-card-title class="dialog-header pa-6">
+    <v-card class="ds-card dialog-card">
+      <v-card-title class="dialog-header ds-p-6">
         <div class="d-flex align-center">
           <v-avatar
             size="40"
@@ -12,8 +12,8 @@
             <v-icon size="20">{{ isEdit ? '$edit' : '$plus' }}</v-icon>
           </v-avatar>
           <div>
-            <h2 class="text-h5 font-weight-bold mb-1">{{ isEdit ? 'Edit Category' : 'New Category' }}</h2>
-            <p class="text-body-2 text-medium-emphasis ma-0">
+            <h2 class="ds-text-2xl ds-font-bold ds-mb-1">{{ isEdit ? 'Edit Category' : 'New Category' }}</h2>
+            <p class="ds-text-sm text-medium-emphasis ma-0">
               {{ isEdit ? 'Update category settings and configuration' : 'Create a new question category' }}
             </p>
           </div>
@@ -22,10 +22,10 @@
 
       <v-divider class="border-opacity-12"></v-divider>
 
-      <v-card-text class="pa-6">
+      <v-card-text class="ds-p-6">
         <v-form ref="form" v-model="valid" class="form-container">
-          <div class="form-section mb-6">
-            <div class="form-section-title text-subtitle-1 font-weight-bold mb-4 d-flex align-center">
+          <div class="form-section ds-mb-6">
+            <div class="form-section-title ds-text-base ds-font-semibold ds-mb-4 d-flex align-center">
               <v-icon size="18" class="mr-2">$info</v-icon>
               Basic Information
             </div>
@@ -44,7 +44,7 @@
               required
               hint="This will be shown in the user interface"
               persistent-hint
-              class="mb-4"
+              class="ds-ds-mb-4"
             ></v-text-field>
 
             <v-text-field
@@ -63,7 +63,7 @@
               required
               hint="Auto-generated snake_case format (e.g., technical_questions)"
               persistent-hint
-              class="mb-4"
+              class="ds-ds-mb-4"
               :readonly="!isEdit"
               :class="{ 'auto-generated-field': !isEdit }"
             ></v-text-field>
@@ -84,8 +84,8 @@
             ></v-textarea>
           </div>
 
-          <div class="form-section mb-6">
-            <div class="form-section-title text-subtitle-1 font-weight-bold mb-4 d-flex align-center">
+          <div class="form-section ds-mb-6">
+            <div class="form-section-title ds-text-base ds-font-semibold ds-mb-4 d-flex align-center">
               <v-icon size="18" class="mr-2">$settings</v-icon>
               Configuration
             </div>
@@ -107,7 +107,7 @@
               </v-col>
               <v-col cols="12" md="6">
                 <div class="setting-group">
-                  <div class="setting-label text-subtitle-2 font-weight-medium mb-3 d-flex align-center">
+                  <div class="setting-label ds-text-sm ds-font-medium ds-mb-3 d-flex align-center">
                     <v-icon size="16" class="mr-2">$toggle-switch</v-icon>
                     Category Status
                   </div>
@@ -133,18 +133,19 @@
 
       <v-divider class="border-opacity-12"></v-divider>
 
-      <v-card-actions class="dialog-actions pa-6">
+      <v-card-actions class="dialog-actions ds-p-6">
         <v-spacer></v-spacer>
         <v-btn
+          class="ds-btn mr-3"
           variant="outlined"
           size="large"
           @click="cancel"
           :disabled="loading"
-          class="mr-3"
         >
           Cancel
         </v-btn>
         <v-btn
+          class="ds-btn"
           color="primary"
           variant="elevated"
           size="large"

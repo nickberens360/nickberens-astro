@@ -1,10 +1,10 @@
 <template>
   <div>
     <!-- Overview Cards -->
-    <v-row class="mb-8">
+    <v-row class="ds-mb-8">
       <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
+        <v-card class="ds-card metric-card h-100">
+          <v-card-text class="ds-p-6">
             <div class="d-flex align-center justify-space-between">
               <div>
                 <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
@@ -29,8 +29,8 @@
       </v-col>
 
       <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
+        <v-card class="ds-card metric-card h-100">
+          <v-card-text class="ds-p-6">
             <div class="d-flex align-center justify-space-between">
               <div>
                 <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
@@ -55,8 +55,8 @@
       </v-col>
 
       <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
+        <v-card class="ds-card metric-card h-100">
+          <v-card-text class="ds-p-6">
             <div class="d-flex align-center justify-space-between">
               <div>
                 <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
@@ -81,8 +81,8 @@
       </v-col>
 
       <v-col cols="12" sm="6" md="3">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
+        <v-card class="ds-card metric-card h-100">
+          <v-card-text class="ds-p-6">
             <div class="d-flex align-center justify-space-between">
               <div>
                 <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
@@ -108,21 +108,21 @@
     </v-row>
 
     <!-- System Settings Section -->
-    <div class="settings-section mb-8">
-      <div class="section-header mb-6">
-        <h2 class="section-title text-h5 font-weight-bold">System Configuration</h2>
-        <p class="section-subtitle text-body-2 text-medium-emphasis">
+    <div class="ds-section-spacing">
+      <div class="ds-content-spacing">
+        <h2 class="ds-text-2xl ds-font-bold ds-mb-2">System Configuration</h2>
+        <p class="ds-text-sm text-medium-emphasis">
           Configure follow-up question generation behavior and limits
         </p>
       </div>
 
-      <v-card class="settings-card" elevation="2">
-        <v-card-text class="pa-6">
+      <v-card class="ds-card settings-card">
+        <v-card-text class="ds-p-6">
           <v-row>
             <!-- Enable/Disable Toggle -->
             <v-col cols="12" md="4">
-              <div class="setting-group">
-                <div class="setting-label text-subtitle-1 font-weight-medium mb-3">
+              <div class="ds-item-spacing">
+                <div class="ds-text-base ds-font-medium ds-mb-3 d-flex align-center">
                   <v-icon class="mr-2" size="20">$toggle-switch</v-icon>
                   Service Status
                 </div>
@@ -134,7 +134,7 @@
                   hide-details
                   @update:model-value="(value) => updateSetting('enabled', value)"
                 />
-                <div class="setting-helper text-caption text-medium-emphasis mt-2">
+                <div class="ds-text-xs text-medium-emphasis ds-mt-2">
                   Toggle the follow-up question system on or off
                 </div>
               </div>
@@ -142,8 +142,8 @@
 
             <!-- Generation Method -->
             <v-col cols="12" md="4">
-              <div class="setting-group">
-                <div class="setting-label text-subtitle-1 font-weight-medium mb-3">
+              <div class="ds-item-spacing">
+                <div class="ds-text-base ds-font-medium ds-mb-3 d-flex align-center">
                   <v-icon class="mr-2" size="20">$brain</v-icon>
                   Generation Method
                 </div>
@@ -155,7 +155,7 @@
                   hide-details
                   @update:model-value="(value) => updateSetting('service_type', value)"
                 />
-                <div class="setting-helper text-caption text-medium-emphasis mt-2">
+                <div class="ds-text-xs text-medium-emphasis ds-mt-2">
                   Choose how questions are generated and selected
                 </div>
               </div>
@@ -163,8 +163,8 @@
 
             <!-- Maximum Questions -->
             <v-col cols="12" md="4">
-              <div class="setting-group">
-                <div class="setting-label text-subtitle-1 font-weight-medium mb-3">
+              <div class="ds-item-spacing">
+                <div class="ds-text-base ds-font-medium ds-mb-3 d-flex align-center">
                   <v-icon class="mr-2" size="20">$numeric</v-icon>
                   Question Limit
                 </div>
@@ -181,7 +181,7 @@
                   hide-details
                   @update:model-value="(value) => updateSetting('max_questions', value)"
                 />
-                <div class="setting-helper text-caption text-medium-emphasis mt-2">
+                <div class="ds-text-xs text-medium-emphasis ds-mt-2">
                   Maximum number of follow-up questions to display
                 </div>
               </div>
@@ -192,12 +192,12 @@
     </div>
 
     <!-- Categories Management Section -->
-    <div class="categories-section">
-      <div class="section-header mb-6">
+    <div class="ds-section-spacing">
+      <div class="ds-content-spacing">
         <div class="d-flex align-center justify-space-between">
           <div>
-            <h2 class="section-title text-h5 font-weight-bold">Category Management</h2>
-            <p class="section-subtitle text-body-2 text-medium-emphasis">
+            <h2 class="ds-text-2xl ds-font-bold ds-mb-2">Category Management</h2>
+            <p class="ds-text-sm text-medium-emphasis">
               Manage question categories and their associated follow-up questions
             </p>
           </div>
@@ -207,12 +207,11 @@
       <!-- Bulk Actions Banner -->
       <v-card
         v-if="props.selectedCategories.length > 0"
-        class="bulk-actions-card mb-6"
-        elevation="1"
+        class="ds-card bulk-actions-card ds-mb-6"
         color="primary"
         variant="tonal"
       >
-        <v-card-text class="pa-4">
+        <v-card-text class="ds-p-4">
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center">
               <v-icon class="mr-2">$checkbox-marked</v-icon>
@@ -251,11 +250,11 @@
       </v-card>
 
       <!-- Categories List -->
-      <v-card class="categories-card" elevation="2">
-        <v-card-title class="pa-6 pb-0">
+      <v-card class="ds-card categories-card">
+        <v-card-title class="ds-p-6 pb-0">
           <div class="d-flex align-center">
             <v-icon class="mr-3">$format-list-group</v-icon>
-            <span class="text-h6 font-weight-bold">Question Categories</span>
+            <span class="ds-text-xl ds-font-semibold">Question Categories</span>
             <v-spacer/>
 
             <v-btn color="primary" size="small" @click="onAddCategoryClick" prepend-icon="$plus" class="mr-2">
@@ -270,7 +269,7 @@
           </div>
         </v-card-title>
 
-        <v-card-text class="pa-6">
+        <v-card-text class="ds-p-6">
           <FollowupAccordion
             ref="followupAccordionRef"
             v-if="props.categories.length > 0"
@@ -281,17 +280,18 @@
           />
 
           <!-- Empty State -->
-          <div v-else class="empty-state text-center py-16">
-            <v-avatar size="120" color="grey-lighten-3" class="mb-6">
+          <div v-else class="empty-state">
+            <v-avatar size="120" color="grey-lighten-3" class="ds-mb-6">
               <v-icon size="60" color="grey-lighten-1">$format-list-group</v-icon>
             </v-avatar>
 
-            <h3 class="text-h5 font-weight-bold mb-3">No Categories Yet</h3>
-            <p class="text-body-1 text-medium-emphasis mb-8 mx-auto" style="max-width: 400px;">
+            <h3 class="ds-text-2xl ds-font-bold ds-mb-3">No Categories Yet</h3>
+            <p class="ds-text-base text-medium-emphasis ds-mb-8 mx-auto" style="max-width: 400px;">
               Create your first category to start organizing and managing follow-up questions for your system.
             </p>
 
             <v-btn
+              class="ds-btn"
               color="primary"
               size="large"
               prepend-icon="$plus"
