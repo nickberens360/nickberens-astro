@@ -52,11 +52,6 @@ const navigationTabs = [
     value: 'features',
     title: 'Feature Flags',
     icon: '$feature-flag'
-  },
-  {
-    value: 'cache',
-    title: 'Cache Status',
-    icon: '$cached'
   }
 ]
 
@@ -67,7 +62,6 @@ const currentTab = computed(() => {
   if (routeName === 'settings-response') return 'response'
   if (routeName === 'settings-routing') return 'routing'
   if (routeName === 'settings-features') return 'features'
-  if (routeName === 'settings-cache') return 'cache'
   return 'followup' // default
 })
 
@@ -77,8 +71,7 @@ const navigateToTab = (tabValue) => {
     'welcome': 'settings-welcome',
     'response': 'settings-response',
     'routing': 'settings-routing',
-    'features': 'settings-features',
-    'cache': 'settings-cache'
+    'features': 'settings-features'
   }
 
   const routeName = routeMap[tabValue]

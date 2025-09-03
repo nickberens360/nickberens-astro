@@ -10,7 +10,7 @@
                 <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
                   ACTIVE CATEGORIES
                 </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
+                <div class="metric-value text-h6 font-weight-bold mt-1">
                   {{ store.stats.active_categories }}
                 </div>
                 <div class="metric-trend text-caption mt-1">
@@ -36,7 +36,7 @@
                 <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
                   TOTAL QUESTIONS
                 </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
+                <div class="metric-value text-h6 font-weight-bold mt-1">
                   {{ store.stats.total_questions }}
                 </div>
                 <div class="metric-trend text-caption mt-1">
@@ -62,7 +62,7 @@
                 <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
                   INACTIVE CATEGORIES
                 </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
+                <div class="metric-value text-h6 font-weight-bold mt-1">
                   {{ store.stats.inactive_categories }}
                 </div>
                 <div class="metric-trend text-caption mt-1">
@@ -110,20 +110,20 @@
     <!-- System Settings Section -->
     <div class="ds-section-spacing">
       <div class="ds-content-spacing">
-        <h2 class="ds-text-2xl ds-font-bold ds-mb-2">System Configuration</h2>
+        <h2 class="text-h6 ds-font-bold ds-mb-2">System Configuration</h2>
         <p class="ds-text-sm text-medium-emphasis">
           Configure follow-up question generation behavior and limits
         </p>
       </div>
 
       <v-card class="ds-card settings-card">
-        <v-card-text class="ds-p-6">
+        <v-card-text class="pa-3">
           <v-row>
             <!-- Enable/Disable Toggle -->
             <v-col cols="12" md="4">
               <div class="ds-item-spacing">
-                <div class="ds-text-base ds-font-medium ds-mb-3 d-flex align-center">
-                  <v-icon class="mr-2" size="20">$toggle-switch</v-icon>
+                <div class="text-body-1 ds-font-medium ds-mb-3 d-flex align-center">
+                  <v-icon class="mr-2" size="16">$toggle-switch</v-icon>
                   Service Status
                 </div>
                 <v-switch
@@ -143,8 +143,8 @@
             <!-- Generation Method -->
             <v-col cols="12" md="4">
               <div class="ds-item-spacing">
-                <div class="ds-text-base ds-font-medium ds-mb-3 d-flex align-center">
-                  <v-icon class="mr-2" size="20">$brain</v-icon>
+                <div class="text-body-1 ds-font-medium ds-mb-3 d-flex align-center">
+                  <v-icon class="mr-2" size="16">$brain</v-icon>
                   Generation Method
                 </div>
                 <v-select
@@ -164,8 +164,8 @@
             <!-- Maximum Questions -->
             <v-col cols="12" md="4">
               <div class="ds-item-spacing">
-                <div class="ds-text-base ds-font-medium ds-mb-3 d-flex align-center">
-                  <v-icon class="mr-2" size="20">$numeric</v-icon>
+                <div class="text-body-1 ds-font-medium ds-mb-3 d-flex align-center">
+                  <v-icon class="mr-2" size="16">$numeric</v-icon>
                   Question Limit
                 </div>
                 <v-slider
@@ -196,7 +196,7 @@
       <div class="ds-content-spacing">
         <div class="d-flex align-center justify-space-between">
           <div>
-            <h2 class="ds-text-2xl ds-font-bold ds-mb-2">Category Management</h2>
+            <h2 class="text-h6 ds-font-bold ds-mb-2">Category Management</h2>
             <p class="ds-text-sm text-medium-emphasis">
               Manage question categories and their associated follow-up questions
             </p>
@@ -211,7 +211,7 @@
         color="primary"
         variant="tonal"
       >
-        <v-card-text class="ds-p-4">
+        <v-card-text class="pa-3">
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center">
               <v-icon class="mr-2">$checkbox-marked</v-icon>
@@ -251,10 +251,10 @@
 
       <!-- Categories List -->
       <v-card class="ds-card categories-card">
-        <v-card-title class="ds-p-6 pb-6">
+        <v-card-title class="pa-3 pb-3">
           <div class="d-flex align-center justify-space-between categories-header">
             <div class="d-flex align-center">
-              <span class="ds-text-xl ds-font-semibold">Question Categories</span>
+              <span class="text-h6 ds-font-semibold">Question Categories</span>
               <v-chip
                 :text="`${store.categories.length}`"
                 variant="tonal"
