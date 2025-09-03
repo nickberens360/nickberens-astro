@@ -6,7 +6,6 @@ Tests complete authentication flows, cross-system security, and end-to-end secur
 import os
 import sqlite3
 import tempfile
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient

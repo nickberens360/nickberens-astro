@@ -6,7 +6,7 @@ All settings that can be modified via admin interface are defined here.
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 

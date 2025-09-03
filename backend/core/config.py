@@ -1,14 +1,10 @@
 import ipaddress
-import json
 import logging
 import os
 import re
 import secrets
-from dataclasses import asdict, dataclass, field
-from typing import Dict, List
+from typing import List
 from urllib.parse import urlparse
-
-from .settings_schemas import FollowUpSettings
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -388,7 +384,7 @@ This API provides AI-powered access to Nick's professional experience, skills, p
 
 🚀 Key Features:
 • AI-Powered Queries: Ask questions about Nick's experience, skills, and projects
-• Smart Illustration Search: Find and browse Nick's creative artwork and illustrations  
+• Smart Illustration Search: Find and browse Nick's creative artwork and illustrations
 • Intelligent Routing: Automatically determines whether you're asking about text content or images
 • Real-time AI Responses: Streaming responses using Claude (Anthropic) and Gemini (Google)
 • Comprehensive Admin Dashboard: Complete analytics and management interface
@@ -418,7 +414,7 @@ This API provides AI-powered access to Nick's professional experience, skills, p
 
 🛠️ Admin Features:
 • Query Analytics: Monitor usage patterns and popular questions
-• Performance Metrics: Track response times and system health  
+• Performance Metrics: Track response times and system health
 • Content Management: Manage knowledge base and illustration metadata
 • User Management: Admin user creation and role management
 • Security Monitoring: Audit logs and security event tracking

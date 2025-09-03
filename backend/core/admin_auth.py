@@ -184,7 +184,8 @@ class AdminAuthManager:
 
                 cursor.execute(
                     """
-                    INSERT INTO admin_sessions (id, user_id, started_at, last_active_at, ip_address, user_agent, is_active)
+                    INSERT INTO admin_sessions 
+                    (id, user_id, started_at, last_active_at, ip_address, user_agent, is_active)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),

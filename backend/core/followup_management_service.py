@@ -181,8 +181,8 @@ class FollowUpManagementService:
                 for item in question_orders:
                     cursor.execute(
                         """
-                        UPDATE followup_questions 
-                        SET sort_order = ?, updated_at = ? 
+                        UPDATE followup_questions
+                        SET sort_order = ?, updated_at = ?
                         WHERE id = ? AND category_id = ?
                         """,
                         (item["sort_order"], datetime.now(), item["question_id"], category_id),

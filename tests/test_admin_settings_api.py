@@ -6,7 +6,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from backend.core.config import FollowUpSettings
+from backend.core.settings_schemas import FollowUpSettings
 
 
 class TestAdminSettingsAPI:
@@ -25,9 +25,8 @@ class TestAdminSettingsAPI:
         return TestClient(app)
 
     @pytest.mark.unit
-    @patch("backend.routes.admin.admin_db_manager")
-    @patch("backend.routes.admin.audit_logger")
-    def test_get_followup_settings_no_existing_settings(self, mock_audit, mock_db_manager, client, mock_session):
+    @patch("backend.routes.admin.get_settings_manager")
+    def test_get_followup_settings_no_existing_settings(self, mock_get_settings_manager, client, mock_session):
         """Test GET /settings/followup when no settings exist."""
         from backend.core.admin_auth import require_admin_auth
         from backend.main import app
@@ -35,7 +34,11 @@ class TestAdminSettingsAPI:
         # Override the dependency
         app.dependency_overrides[require_admin_auth] = lambda: mock_session
 
-        mock_db_manager.get_admin_setting.return_value = None
+        # Mock the settings manager to return default settings
+        default_settings = FollowUpSettings()
+        mock_settings_manager = Mock()
+        mock_settings_manager.get_followup_settings.return_value = default_settings
+        mock_get_settings_manager.return_value = mock_settings_manager
 
         try:
             response = client.get("/api/admin/settings/followup")
@@ -47,7 +50,6 @@ class TestAdminSettingsAPI:
         data = response.json()
 
         # Should return default settings
-        default_settings = FollowUpSettings()
         assert data["enabled"] == default_settings.enabled
         assert data["service_type"] == default_settings.service_type
         assert data["max_questions"] == default_settings.max_questions

@@ -78,7 +78,12 @@ def get_success_message_template(found_images: bool, query_type: QueryType, fell
                         "text_query": {
                             "summary": "Text-based question about Nick's experience",
                             "value": {
-                                "answer": "Nick Berens is a Senior Software Engineer with expertise in full-stack development, particularly in Vue.js, Python, and API design. He has worked with companies like Calendly, where he focused on scaling user experiences and implementing robust backend systems.",
+                                "answer": (
+                                    "Nick Berens is a Senior Software Engineer with expertise in full-stack "
+                                    "development, particularly in Vue.js, Python, and API design. He has worked "
+                                    "with companies like Calendly, where he focused on scaling user experiences "
+                                    "and implementing robust backend systems."
+                                ),
                                 "images": [],
                                 "model_used": "claude-3-5-sonnet-20241022",
                                 "followup_questions": [

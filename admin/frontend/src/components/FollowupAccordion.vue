@@ -1,13 +1,31 @@
 <template>
-  <div class="ds-p-6">
+  <div>
     <v-alert v-if="error" type="error" variant="tonal" class="ds-mb-4">{{ error }}</v-alert>
-    <div class="ds-mb-3 d-flex align-center">
-      <v-btn class="ds-btn mr-2" @click="openAll" :disabled="!categories.length" prepend-icon="$chevron-down">Open All</v-btn>
-      <v-btn class="ds-btn mr-4" @click="closeAll" :disabled="!categories.length" prepend-icon="$chevron-up">Close All</v-btn>
-      <v-chip v-if="categories.length" size="small" variant="tonal">{{ categories.length }} categories</v-chip>
-      <v-spacer />
+    
+    <!-- Subtle control bar -->
+    <div class="ds-mb-4 d-flex align-center justify-space-between" v-if="categories.length > 0">
+      <div class="d-flex align-center">
+        <v-btn 
+          variant="text" 
+          size="small"
+          @click="openAll" 
+          :disabled="!categories.length"
+          class="text-caption mr-2"
+        >
+          Expand All
+        </v-btn>
+        <v-btn 
+          variant="text" 
+          size="small"
+          @click="closeAll" 
+          :disabled="!categories.length"
+          class="text-caption"
+        >
+          Collapse All
+        </v-btn>
+      </div>
       
-      <v-progress-circular v-if="loading" indeterminate color="primary" size="20" />
+      <v-progress-circular v-if="loading" indeterminate color="primary" size="16" />
     </div>
 
     <v-expansion-panels v-model="model" multiple variant="accordion">
@@ -16,129 +34,126 @@
         :key="cat.id"
         :value="cat.id"
       >
-        <v-expansion-panel-title>
+        <v-expansion-panel-title class="category-title-clean">
           <div class="d-flex align-center w-100">
-            <v-checkbox
-              v-model="selectedCategories"
-              :value="cat.id"
-              hide-details
-              density="compact"
-              class="mr-3"
-              @click.stop
-              @update:model-value="emitSelectedCategories"
-            />
-            <span class="font-weight-medium">{{ cat.display_name }}</span>
-            <v-chip class="ml-2" size="x-small" variant="tonal">
-              {{ (questionsByCat[cat.id] || []).length }} questions
-            </v-chip>
-            <v-spacer />
-            <v-chip v-if="!cat.is_active" size="x-small" color="warning" variant="tonal">Inactive</v-chip>
-          </div>
-          <template #actions="{ expanded }">
-            <div class="actions-icons d-flex align-center">
-              <v-tooltip text="Edit Category" location="top">
-                <template #activator="{ props }">
-                  <v-btn
-                    v-bind="props"
-                    icon="$edit"
-                    size="small"
-                    variant="text"
-                    color="primary"
-                    :disabled="saving || loading"
-                    @click.stop="openEditCategoryDialog(cat)"
-                  />
-                </template>
-              </v-tooltip>
-              <v-tooltip text="Delete Category" location="top">
-                <template #activator="{ props }">
-                  <v-btn
-                    v-bind="props"
-                    icon="$delete"
-                    size="small"
-                    variant="text"
-                    color="error"
-                    :disabled="saving || loading"
-                    @click.stop="openDeleteCategoryDialog(cat)"
-                  />
-                </template>
-              </v-tooltip>
-              <v-icon :icon="expanded ? '$chevron-up' : '$chevron-down'" />
+            <div class="d-flex align-center flex-grow-1">
+              <v-checkbox
+                v-model="selectedCategories"
+                :value="cat.id"
+                hide-details
+                density="compact"
+                class="mr-3 category-checkbox"
+                @click.stop
+                @update:model-value="emitSelectedCategories"
+              />
+              <div class="category-info">
+                <div class="category-name font-weight-medium">{{ cat.display_name }}</div>
+                <div class="category-meta text-caption text-medium-emphasis mt-1">
+                  {{ (questionsByCat[cat.id] || []).length }} questions
+                  <span v-if="!cat.is_active" class="inactive-indicator"> • Inactive</span>
+                </div>
+              </div>
             </div>
-          </template>
-        </v-expansion-panel-title>
-        <v-expansion-panel-text>
-          <div v-if="(questionsByCat[cat.id] || []).length === 0" class="text-medium-emphasis">
-            No questions
+            
+            <!-- Hover-revealed actions -->
+            <div class="category-actions">
+              <v-btn
+                icon="$edit"
+                size="small"
+                variant="text"
+                color="primary"
+                :disabled="saving || loading"
+                @click.stop="openEditCategoryDialog(cat)"
+                class="category-action-btn"
+              />
+              <v-btn
+                icon="$delete"
+                size="small"
+                variant="text"
+                color="error"
+                :disabled="saving || loading"
+                @click.stop="openDeleteCategoryDialog(cat)"
+                class="category-action-btn"
+              />
+            </div>
           </div>
-          <v-list v-else density="compact">
-            <v-list-item v-for="(q, idx) in questionsByCat[cat.id]" :key="q.id" class="py-1">
-              <template #prepend>
-                <v-checkbox
-                  v-model="selectedQuestionsIdsByCat[cat.id]"
-                  :value="q.id"
-                  hide-details
-                  density="compact"
-                  class="mr-3"
-                  @click.stop
-                  @update:model-value="() => emitSelectedQuestions(cat.id)"
-                />
-              </template>
-              <v-list-item-title>{{ q.question_text }}</v-list-item-title>
-              <v-list-item-subtitle>Order: {{ q.sort_order }} • Active: {{ q.is_active ? 'Yes' : 'No' }}</v-list-item-subtitle>
-              <template #append>
-                <v-btn
-                  icon="$arrow-up"
-                  size="x-small"
-                  variant="text"
-                  :disabled="saving || idx === 0"
-                  class="mr-1"
-                  @click.stop="moveUp(cat, idx)"
-                />
-                <v-btn
-                  icon="$arrow-down"
-                  size="x-small"
-                  variant="text"
-                  :disabled="saving || idx === (questionsByCat[cat.id].length - 1)"
-                  class="mr-1"
-                  @click.stop="moveDown(cat, idx)"
-                />
-                <v-btn
-                  :icon="q.is_active ? '$eye-off' : '$eye'"
-                  size="x-small"
-                  variant="text"
-                  :disabled="saving"
-                  class="mr-1"
-                  @click.stop="toggleActive(cat, q)"
-                />
-                <v-btn
-                  icon="$edit"
-                  size="x-small"
-                  variant="text"
-                  :disabled="saving"
-                  @click.stop="openEditDialog(cat, q)"
-                />
-                <v-btn
-                  icon="$delete"
-                  size="x-small"
-                  variant="text"
-                  color="error"
-                  :disabled="saving"
-                  @click.stop="openDeleteDialog(cat, q)"
-                />
-              </template>
-            </v-list-item>
-          </v-list>
-          <div class="ds-mt-3">
-            <v-btn
-              class="ds-btn"
-              color="primary"
-              prepend-icon="$plus"
-              size="small"
-              :disabled="saving || !cat.is_active"
-              @click="openAddDialog(cat)"
-            >
+        </v-expansion-panel-title>
+        <v-expansion-panel-text class="question-panel-content">
+          <div v-if="(questionsByCat[cat.id] || []).length === 0" class="empty-questions text-center py-8">
+            <div class="text-body-2 text-medium-emphasis mb-3">No questions in this category</div>
+            <v-btn variant="text" size="small" prepend-icon="$plus" @click.stop="openAddDialog(cat)">
               Add Question
             </v-btn>
+          </div>
+          <div v-else class="questions-list">
+            <div v-for="(q, idx) in questionsByCat[cat.id]" :key="q.id" class="question-item">
+              <div class="d-flex align-center">
+                <div class="question-content flex-grow-1">
+                  <div class="question-text text-body-2">{{ q.question_text }}</div>
+                  <div class="question-meta text-caption text-medium-emphasis mt-1">
+                    Order {{ q.sort_order }}
+                    <span v-if="!q.is_active" class="inactive-question"> • Inactive</span>
+                  </div>
+                </div>
+                <div class="question-actions">
+                  <v-btn
+                    icon="$arrow-up"
+                    size="x-small"
+                    variant="text"
+                    :disabled="saving || idx === 0"
+                    class="question-action-btn"
+                    @click.stop="moveUp(cat, idx)"
+                  />
+                  <v-btn
+                    icon="$arrow-down"
+                    size="x-small"
+                    variant="text"
+                    :disabled="saving || idx === (questionsByCat[cat.id].length - 1)"
+                    class="question-action-btn"
+                    @click.stop="moveDown(cat, idx)"
+                  />
+                  <v-btn
+                    :icon="q.is_active ? '$eye-off' : '$eye'"
+                    size="x-small"
+                    variant="text"
+                    :disabled="saving"
+                    class="question-action-btn"
+                    @click.stop="toggleActive(cat, q)"
+                  />
+                  <v-btn
+                    icon="$edit"
+                    size="x-small"
+                    variant="text"
+                    :disabled="saving"
+                    class="question-action-btn"
+                    @click.stop="openEditDialog(cat, q)"
+                  />
+                  <v-btn
+                    icon="$delete"
+                    size="x-small"
+                    variant="text"
+                    color="error"
+                    :disabled="saving"
+                    class="question-action-btn"
+                    @click.stop="openDeleteDialog(cat, q)"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <!-- Add Question Button -->
+            <div class="add-question-section mt-4 pt-3 border-t-thin">
+              <v-btn
+                variant="text"
+                prepend-icon="$plus"
+                size="small"
+                :disabled="saving || !cat.is_active"
+                @click="openAddDialog(cat)"
+                class="text-primary"
+              >
+                Add Question
+              </v-btn>
+            </div>
           </div>
         </v-expansion-panel-text>
       </v-expansion-panel>
@@ -525,5 +540,149 @@ defineExpose({
 </script>
 
 <style scoped>
-.actions-icons { gap: 6px; }
+/* Clean category title */
+.category-title-clean {
+  padding: 16px 20px;
+}
+
+.category-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.category-name {
+  line-height: 1.3;
+}
+
+.category-meta {
+  line-height: 1.2;
+}
+
+.inactive-indicator {
+  color: rgb(var(--v-theme-warning));
+  font-weight: 500;
+}
+
+/* Hover-revealed category actions */
+.category-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  display: flex;
+  gap: 4px;
+}
+
+.v-expansion-panel-title:hover .category-actions {
+  opacity: 1;
+}
+
+.category-action-btn {
+  min-width: 32px !important;
+  width: 32px;
+  height: 32px;
+}
+
+.category-checkbox {
+  margin-right: 12px !important;
+}
+
+/* Question panel content */
+.question-panel-content {
+  padding: 20px !important;
+  background: rgba(var(--v-theme-primary), 0.08) !important;
+}
+
+.empty-questions {
+  padding: 24px 0;
+}
+
+.questions-list {
+  space-y: 8px;
+}
+
+.question-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.08);
+}
+
+.question-item:last-child {
+  border-bottom: none;
+}
+
+.question-content {
+  min-width: 0;
+}
+
+.question-text {
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.question-meta {
+  line-height: 1.2;
+}
+
+.inactive-question {
+  color: rgb(var(--v-theme-warning));
+  font-weight: 500;
+}
+
+/* Hover-revealed question actions */
+.question-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  display: flex;
+  gap: 2px;
+  margin-left: 8px;
+}
+
+.question-item:hover .question-actions {
+  opacity: 1;
+}
+
+.question-action-btn {
+  min-width: 24px !important;
+  width: 24px;
+  height: 24px;
+}
+
+/* Add question section */
+.add-question-section {
+  border-top: 1px solid rgba(var(--v-theme-outline), 0.08);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+/* Visual hierarchy improvements */
+.v-expansion-panels {
+  gap: 8px;
+}
+
+.v-expansion-panel {
+  border: 1px solid rgba(var(--v-theme-outline), 0.08) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  background: rgb(var(--v-theme-surface));
+}
+
+.v-expansion-panel:not(:last-child) {
+  margin-bottom: 8px;
+}
+
+/* Active/expanded panel header styling */
+.v-expansion-panel--active .v-expansion-panel-title {
+  background: rgba(var(--v-theme-primary), 0.08) !important;
+}
+
+.v-expansion-panel--active .v-expansion-panel-title:hover {
+  background: rgba(var(--v-theme-primary), 0.12) !important;
+}
+
+/* Reduce visual noise from checkboxes */
+.v-selection-control {
+  margin: 0;
+}
+
+.v-selection-control__wrapper {
+  margin-right: 0 !important;
+}
 </style>

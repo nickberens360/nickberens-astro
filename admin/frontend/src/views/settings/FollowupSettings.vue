@@ -251,25 +251,31 @@
 
       <!-- Categories List -->
       <v-card class="ds-card categories-card">
-        <v-card-title class="ds-p-6 pb-0">
-          <div class="d-flex align-center">
-            <v-icon class="mr-3">$format-list-group</v-icon>
-            <span class="ds-text-xl ds-font-semibold">Question Categories</span>
-            <v-spacer/>
-
-            <v-btn color="primary" size="small" @click="onAddCategoryClick" prepend-icon="$plus" class="mr-2">
+        <v-card-title class="ds-p-6 pb-6">
+          <div class="d-flex align-center justify-space-between categories-header">
+            <div class="d-flex align-center">
+              <span class="ds-text-xl ds-font-semibold">Question Categories</span>
+              <v-chip
+                :text="`${props.categories.length}`"
+                variant="tonal"
+                size="small"
+                class="ml-3"
+              />
+            </div>
+            <v-btn 
+              color="primary" 
+              @click="onAddCategoryClick" 
+              prepend-icon="$plus"
+              variant="elevated"
+            >
               Add Category
             </v-btn>
-
-            <v-chip
-              :text="`${props.categories.length} total`"
-              variant="tonal"
-              size="small"
-            />
           </div>
         </v-card-title>
 
-        <v-card-text class="ds-p-6">
+        <v-divider class="mx-6 mb-4"></v-divider>
+
+        <v-card-text class="ds-p-6 pt-0">
           <FollowupAccordion
             ref="followupAccordionRef"
             v-if="props.categories.length > 0"
@@ -280,20 +286,18 @@
           />
 
           <!-- Empty State -->
-          <div v-else class="empty-state">
-            <v-avatar size="120" color="grey-lighten-3" class="ds-mb-6">
-              <v-icon size="60" color="grey-lighten-1">$format-list-group</v-icon>
+          <div v-else class="empty-state text-center py-12">
+            <v-avatar size="80" color="grey-lighten-3" class="ds-mb-4">
+              <v-icon size="40" color="grey-lighten-1">$format-list-group</v-icon>
             </v-avatar>
 
-            <h3 class="ds-text-2xl ds-font-bold ds-mb-3">No Categories Yet</h3>
-            <p class="ds-text-base text-medium-emphasis ds-mb-8 mx-auto" style="max-width: 400px;">
-              Create your first category to start organizing and managing follow-up questions for your system.
+            <h3 class="text-h6 ds-font-semibold ds-mb-2">No Categories Yet</h3>
+            <p class="text-body-2 text-medium-emphasis ds-mb-6 mx-auto" style="max-width: 320px;">
+              Create your first category to organize follow-up questions
             </p>
 
             <v-btn
-              class="ds-btn"
               color="primary"
-              size="large"
               prepend-icon="$plus"
               @click="onAddCategoryClick"
               variant="elevated"
@@ -428,3 +432,9 @@ defineExpose({
   refreshAccordion
 })
 </script>
+
+<style scoped>
+.categories-header {
+  padding-bottom: 16px;
+}
+</style>

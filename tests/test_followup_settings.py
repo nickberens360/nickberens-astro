@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.core.config import FollowUpSettings
 from backend.core.followup_service import FollowUpService
+from backend.core.settings_schemas import FollowUpSettings
 
 
 class TestFollowUpSettings:

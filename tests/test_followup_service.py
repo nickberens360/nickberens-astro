@@ -105,7 +105,7 @@ class TestFollowupService:
         results = []
         with patch.object(service, "_get_settings") as mock_settings:
             # Mock settings to return max_questions=1 for sequential testing
-            from backend.core.config import FollowUpSettings
+            from backend.core.settings_schemas import FollowUpSettings
 
             mock_settings.return_value = FollowUpSettings(max_questions=1)
 
@@ -142,7 +142,7 @@ class TestFollowupService:
         results = []
         with patch.object(service, "_get_settings") as mock_settings:
             # Mock settings to return max_questions=1 for sequential testing
-            from backend.core.config import FollowUpSettings
+            from backend.core.settings_schemas import FollowUpSettings
 
             mock_settings.return_value = FollowUpSettings(max_questions=1)
 
@@ -433,7 +433,7 @@ class TestFollowupService:
 
         with patch.object(service, "_get_settings") as mock_settings:
             # Mock settings to return max_questions=1 for sequential testing
-            from backend.core.config import FollowUpSettings
+            from backend.core.settings_schemas import FollowUpSettings
 
             mock_settings.return_value = FollowUpSettings(max_questions=1)
 

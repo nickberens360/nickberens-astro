@@ -503,7 +503,7 @@ class AdminDatabaseManager:
                     for sort_order, question_text in enumerate(questions):
                         cursor.execute(
                             """
-                            INSERT INTO followup_questions 
+                            INSERT INTO followup_questions
                             (category_id, question_text, sort_order, created_at, updated_at)
                             VALUES (?, ?, ?, ?, ?)
                             """,
@@ -541,7 +541,7 @@ class AdminDatabaseManager:
                     cursor.execute(
                         """
                         SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
-                        FROM followup_categories 
+                        FROM followup_categories
                         WHERE is_active = 1
                         ORDER BY sort_order, display_name
                         """
@@ -551,7 +551,7 @@ class AdminDatabaseManager:
                         """
                         SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
                         FROM followup_categories
-                        ORDER BY sort_order, display_name  
+                        ORDER BY sort_order, display_name
                         """
                     )
 
@@ -568,7 +568,7 @@ class AdminDatabaseManager:
                 cursor.execute(
                     """
                     SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
-                    FROM followup_categories 
+                    FROM followup_categories
                     WHERE id = ?
                     """,
                     (category_id,),
@@ -587,7 +587,7 @@ class AdminDatabaseManager:
                 cursor.execute(
                     """
                     SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
-                    FROM followup_categories 
+                    FROM followup_categories
                     WHERE name = ?
                     """,
                     (name,),
@@ -756,8 +756,8 @@ class AdminDatabaseManager:
 
                 cursor.execute(
                     f"""
-                    SELECT 
-                        fq.id, fq.category_id, fq.question_text, fq.sort_order, 
+                    SELECT
+                        fq.id, fq.category_id, fq.question_text, fq.sort_order,
                         fq.is_active, fq.created_at, fq.updated_at, fq.created_by,
                         fc.name as category_name, fc.display_name as category_display_name
                     FROM followup_questions fq
@@ -787,8 +787,8 @@ class AdminDatabaseManager:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT 
-                        fq.id, fq.category_id, fq.question_text, fq.sort_order, 
+                    SELECT
+                        fq.id, fq.category_id, fq.question_text, fq.sort_order,
                         fq.is_active, fq.created_at, fq.updated_at, fq.created_by,
                         fc.name as category_name, fc.display_name as category_display_name
                     FROM followup_questions fq
@@ -836,7 +836,7 @@ class AdminDatabaseManager:
                 # Insert question
                 cursor.execute(
                     """
-                    INSERT INTO followup_questions 
+                    INSERT INTO followup_questions
                     (category_id, question_text, sort_order, created_at, updated_at, created_by)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
@@ -945,7 +945,7 @@ class AdminDatabaseManager:
                 # Update questions with new category and sort orders
                 cursor.execute(
                     """
-                    UPDATE followup_questions 
+                    UPDATE followup_questions
                     SET category_id = ?, sort_order = sort_order + ?, updated_at = ?
                     WHERE category_id = ?
                     """,
@@ -994,8 +994,8 @@ class AdminDatabaseManager:
 
                 cursor.execute(
                     f"""
-                    SELECT 
-                        id, question_text, sort_order, 
+                    SELECT
+                        id, question_text, sort_order,
                         is_active, created_at, updated_at, created_by
                     FROM welcome_questions
                     {where_clause}
@@ -1023,8 +1023,8 @@ class AdminDatabaseManager:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT 
-                        id, question_text, sort_order, 
+                    SELECT
+                        id, question_text, sort_order,
                         is_active, created_at, updated_at, created_by
                     FROM welcome_questions
                     WHERE id = ?
@@ -1058,7 +1058,7 @@ class AdminDatabaseManager:
                 # Insert question
                 cursor.execute(
                     """
-                    INSERT INTO welcome_questions 
+                    INSERT INTO welcome_questions
                     (question_text, sort_order, created_at, updated_at, created_by)
                     VALUES (?, ?, ?, ?, ?)
                     """,
@@ -1442,40 +1442,6 @@ class AdminDatabaseManager:
             logger.error(f"Error resetting rate limit: {str(e)}", exc_info=True)
             return False
 
-    def record_security_event(
-        self,
-        event_type: str,
-        identifier: str,
-        severity: str = "medium",
-        details: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-    ) -> bool:
-        """Record a security event for monitoring."""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO security_events
-                    (event_type, identifier, details, severity, ip_address, user_agent, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        event_type,
-                        identifier,
-                        details,
-                        severity,
-                        ip_address,
-                        user_agent[:500] if user_agent else None,
-                        datetime.now(),
-                    ),
-                )
-                return True
-        except Exception as e:
-            logger.error(f"Error recording security event: {str(e)}", exc_info=True)
-            return False
-
     def cleanup_old_rate_limits(self, days_old: int = 7) -> int:
         """Clean up old rate limiting records."""
         try:
@@ -1490,35 +1456,6 @@ class AdminDatabaseManager:
         except Exception as e:
             logger.error(f"Error cleaning up old rate limits: {str(e)}", exc_info=True)
             return 0
-
-    def get_admin_setting(self, setting_key: str) -> Optional[str]:
-        """Get an admin setting value by key."""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT setting_value FROM admin_settings WHERE setting_key = ?", (setting_key,))
-                row = cursor.fetchone()
-                return row[0] if row else None
-        except Exception as e:
-            logger.error(f"Error getting admin setting {setting_key}: {str(e)}", exc_info=True)
-            return None
-
-    def set_admin_setting(self, setting_key: str, setting_value: str, updated_by: int) -> bool:
-        """Set an admin setting value."""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    INSERT OR REPLACE INTO admin_settings (setting_key, setting_value, updated_by, updated_at)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (setting_key, setting_value, updated_by, datetime.now()),
-                )
-                return True
-        except Exception as e:
-            logger.error(f"Error setting admin setting {setting_key}: {str(e)}", exc_info=True)
-            return False
 
 
 # Global database manager instance

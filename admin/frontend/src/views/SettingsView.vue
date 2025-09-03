@@ -1,98 +1,93 @@
 <template>
   <div class="settings-page">
-    <!-- Page Header -->
-    <div class="page-header mb-8">
-      <div class="d-flex align-center justify-space-between">
-        <div>
-          <h1 class="page-title text-h4 font-weight-bold mb-2">Settings</h1>
-          <p class="page-subtitle text-body-1 text-medium-emphasis">
-            Manage system configuration, follow-up questions, and feature settings
-          </p>
+    <!-- Main Content Layout with Sidebar -->
+    <div class="settings-layout">
+      <!-- Vertical Navigation Sidebar -->
+      <nav class="settings-nav">
+        <v-list class="settings-nav-list" nav density="comfortable" rounded="lg">
+          <v-list-item
+            v-for="tab in navigationTabs"
+            :key="tab.value"
+            :value="tab.value"
+            :active="currentTab === tab.value"
+            @click="navigateToTab(tab.value)"
+            class="settings-nav-item"
+            :class="{ 'settings-nav-item--active': currentTab === tab.value }"
+            rounded="lg"
+          >
+            <v-list-item-title class="settings-nav-title">{{ tab.title }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </nav>
+
+      <!-- Content Area -->
+      <main class="settings-content">
+        <!-- Page Header -->
+        <div class="page-header mb-8">
+          <div class="d-flex align-center justify-space-between">
+            <div>
+              <h1 class="page-title text-h4 font-weight-bold mb-2">Settings</h1>
+              <p class="page-subtitle text-body-1 text-medium-emphasis">
+                Manage system configuration, follow-up questions, and feature settings
+              </p>
+            </div>
+            <v-btn-group variant="outlined" density="comfortable">
+              <v-btn
+                color="warning"
+                prepend-icon="$refresh"
+                @click="invalidateCache"
+                :loading="cacheInvalidating"
+                variant="elevated"
+                class="mr-3"
+              >
+                Clear Cache
+              </v-btn>
+              <v-btn
+                color="primary"
+                prepend-icon="$refresh"
+                @click="loadData"
+                :loading="loading"
+                variant="elevated"
+              >
+                Refresh
+              </v-btn>
+            </v-btn-group>
+          </div>
         </div>
-        <v-btn-group variant="outlined" density="comfortable">
-          <v-btn
-            color="warning"
-            prepend-icon="$refresh"
-            @click="invalidateCache"
-            :loading="cacheInvalidating"
-            variant="elevated"
-            class="mr-3"
-          >
-            Clear Cache
-          </v-btn>
-          <v-btn
-            color="primary"
-            prepend-icon="$refresh"
-            @click="loadData"
-            :loading="loading"
-            variant="elevated"
-          >
-            Refresh
-          </v-btn>
-        </v-btn-group>
-      </div>
+
+        <router-view
+          ref="routerViewRef"
+          :loading="loading"
+          :categories="categories"
+          :category-stats="categoryStats"
+          :expanded-panels="expandedPanels"
+          :settings="settings"
+          :service-type-options="serviceTypeOptions"
+          :selected-categories="selectedCategories"
+          :selected-questions="selectedQuestions"
+          :stats="stats"
+          :response-settings="responseSettings"
+          :routing-settings="routingSettings"
+          :feature-flags="featureFlags"
+          :cache-status="cacheStatus"
+          @save-settings="saveSettings"
+          @update-setting="updateSetting"
+          @create-category="handleCreateCategoryDialog"
+          @edit-category="editCategory"
+          @delete-category="showDeleteCategoryDialog"
+          @bulk-activate="bulkActivateCategories"
+          @bulk-deactivate="bulkDeactivateCategories"
+          @bulk-delete="bulkDeleteCategories"
+          @update-question-selection="updateQuestionSelection"
+          @update-selected-categories="updateSelectedCategories"
+          @update-expanded-panels="updateExpandedPanels"
+          @load-data="loadData"
+          @save-response-settings="saveResponseSettings"
+          @save-routing-settings="saveRoutingSettings"
+          @save-feature-flags="saveFeatureFlags"
+        />
+      </main>
     </div>
-
-    <!-- Settings Tabs -->
-    <v-tabs :model-value="currentTab" @update:model-value="navigateToTab" class="mb-6" color="primary">
-      <v-tab value="followup">
-        <v-icon class="mr-2">$help-circle</v-icon>
-        Follow-up Questions
-      </v-tab>
-      <v-tab value="welcome">
-        <v-icon class="mr-2">$message-text</v-icon>
-        Welcome Questions
-      </v-tab>
-      <v-tab value="response">
-        <v-icon class="mr-2">$message-reply</v-icon>
-        Response Settings
-      </v-tab>
-      <v-tab value="routing">
-        <v-icon class="mr-2">$route</v-icon>
-        Query Routing
-      </v-tab>
-      <v-tab value="features">
-        <v-icon class="mr-2">$feature-flag</v-icon>
-        Feature Flags
-      </v-tab>
-      <v-tab value="cache">
-        <v-icon class="mr-2">$cached</v-icon>
-        Cache Status
-      </v-tab>
-    </v-tabs>
-
-    <!-- Router View for Child Components -->
-    <router-view
-      ref="routerViewRef"
-      :loading="loading"
-      :categories="categories"
-      :category-stats="categoryStats"
-      :expanded-panels="expandedPanels"
-      :settings="settings"
-      :service-type-options="serviceTypeOptions"
-      :selected-categories="selectedCategories"
-      :selected-questions="selectedQuestions"
-      :stats="stats"
-      :response-settings="responseSettings"
-      :routing-settings="routingSettings"
-      :feature-flags="featureFlags"
-      :cache-status="cacheStatus"
-      @save-settings="saveSettings"
-      @update-setting="updateSetting"
-      @create-category="handleCreateCategoryDialog"
-      @edit-category="editCategory"
-      @delete-category="showDeleteCategoryDialog"
-      @bulk-activate="bulkActivateCategories"
-      @bulk-deactivate="bulkDeactivateCategories"
-      @bulk-delete="bulkDeleteCategories"
-      @update-question-selection="updateQuestionSelection"
-      @update-selected-categories="updateSelectedCategories"
-      @update-expanded-panels="updateExpandedPanels"
-      @load-data="loadData"
-      @save-response-settings="saveResponseSettings"
-      @save-routing-settings="saveRoutingSettings"
-      @save-feature-flags="saveFeatureFlags"
-    />
 
     <!-- Status Messages -->
     <v-snackbar
@@ -390,6 +385,40 @@ export default {
     const successMessage = ref('')
     const errorMessage = ref('')
 
+    // Navigation tabs configuration
+    const navigationTabs = [
+      {
+        value: 'followup',
+        title: 'Follow-up Questions',
+        icon: '$help-circle'
+      },
+      {
+        value: 'welcome',
+        title: 'Welcome Questions',
+        icon: '$message-text'
+      },
+      {
+        value: 'response',
+        title: 'Response Settings',
+        icon: '$message-reply'
+      },
+      {
+        value: 'routing',
+        title: 'Query Routing',
+        icon: '$route'
+      },
+      {
+        value: 'features',
+        title: 'Feature Flags',
+        icon: '$feature-flag'
+      },
+      {
+        value: 'cache',
+        title: 'Cache Status',
+        icon: '$cached'
+      }
+    ]
+
     // Computed properties
     const stats = computed(() => ({
       active_categories: categories.value.filter(c => c.is_active).length,
@@ -520,9 +549,10 @@ export default {
         // Remove panels for categories that no longer exist
         expandedPanels.value = currentPanelIds.filter(id => categoryIds.includes(id))
 
-        // Open all accordions by default on initial load
-        if ((expandedPanels.value?.length || 0) === 0 && categoryIds.length > 0) {
-          expandedPanels.value = [...categoryIds]
+        // Keep accordions collapsed by default for cleaner initial view
+        // Users can expand individual categories as needed
+        if ((expandedPanels.value?.length || 0) === 0) {
+          expandedPanels.value = []
         }
 
         // Load stats for each category
@@ -855,6 +885,7 @@ export default {
       availableCategoriesForMove,
       // New reactive data
       currentTab,
+      navigationTabs,
       cacheInvalidating,
       cacheStatus,
       responseSettings,
@@ -895,12 +926,58 @@ export default {
   margin: 0 auto;
 }
 
+/* Main Layout */
+.settings-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* Vertical Navigation */
+.settings-nav {
+  flex-shrink: 0;
+  width: 280px;
+  position: sticky;
+  top: 24px;
+}
+
+.settings-nav-list {
+  background: transparent;
+  padding: 0;
+}
+
+.settings-nav-item {
+  margin: 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.settings-nav-item:hover {
+  background: rgba(var(--v-theme-primary), 0.08);
+}
+
+.settings-nav-item--active {
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
+}
+
+
+.settings-nav-title {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+
+/* Content Area */
+.settings-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .page-header {
-  background: rgb(var(--v-theme-surface));
-  border-radius: 16px;
-  padding: 32px;
+  background: transparent;
+  padding: 0 32px 32px 32px;
   margin-bottom: 32px;
-  border: 1px solid rgba(var(--v-theme-outline), 0.08);
 }
 
 .page-title {
@@ -1036,6 +1113,38 @@ export default {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .settings-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .settings-nav {
+    width: 100%;
+    position: relative;
+    top: auto;
+  }
+  
+  
+  .settings-nav .v-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+  }
+  
+  .settings-nav-item {
+    flex: 1;
+    min-width: 140px;
+    margin: 0;
+  }
+  
+  .settings-nav-title {
+    font-size: 0.85rem;
+  }
+}
+
 @media (max-width: 768px) {
   .page-header {
     padding: 24px;
@@ -1062,6 +1171,16 @@ export default {
 
   .setting-group {
     margin-bottom: 16px;
+  }
+  
+  .settings-nav .v-list {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .settings-nav-item {
+    min-width: auto;
+    margin: 4px 8px;
   }
 }
 

@@ -6,7 +6,7 @@ Provides cached access to all runtime settings with fallback to defaults.
 import logging
 import time
 from threading import Lock
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, TypeVar
 
 from .admin_database import admin_db_manager
 from .settings_schemas import (
