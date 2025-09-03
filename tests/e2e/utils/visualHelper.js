@@ -184,10 +184,11 @@ class VisualHelper {
       const OriginalDate = Date;
       global.Date = class extends OriginalDate {
         constructor(...args) {
+          super(...args);
           if (args.length === 0) {
-            return mockDate;
+            // Set the time to our mock date
+            this.setTime(mockDate.getTime());
           }
-          return new OriginalDate(...args);
         }
         static now() {
           return mockDate.getTime();

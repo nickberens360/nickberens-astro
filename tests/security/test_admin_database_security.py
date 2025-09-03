@@ -235,7 +235,7 @@ class TestAdminDatabaseSecurity:
         except Exception as e:
             # If the method doesn't exist or fails, that's acceptable for this security test
             # The important part is that it doesn't cause SQL injection or crash
-            assert "SQL" not in str(e).upper() or "injection" not in str(e).lower()
+            assert "SQL" not in str(e).upper() and "injection" not in str(e).lower()
 
         # Test null/empty inputs - should handle without crashing
         try:
@@ -245,7 +245,7 @@ class TestAdminDatabaseSecurity:
             assert result is True
         except Exception as e:
             # Method may not exist, but should not cause SQL injection
-            assert "SQL" not in str(e).upper() or "injection" not in str(e).lower()
+            assert "SQL" not in str(e).upper() and "injection" not in str(e).lower()
 
         # Test special characters that could cause SQL injection
         special_chars = "'; DROP TABLE test; --"

@@ -51,7 +51,7 @@
       "args": [
         "-y",
         "mcp-sqlite",
-        "/Users/nickberens/Webstorm/nickberens/backend/logs/admin_monitoring.db"
+        "./backend/logs/admin_monitoring.db"
       ],
       "env": {}
     },
@@ -61,7 +61,7 @@
       "args": [
         "-y",
         "mcp-sqlite",
-        "/Users/nickberens/Webstorm/nickberens/backend/logs/rag_monitoring.db"
+        "./backend/logs/rag_monitoring.db"
       ],
       "env": {}
     }
