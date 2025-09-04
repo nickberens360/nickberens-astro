@@ -14,37 +14,46 @@
         </v-btn>
       </v-card-title>
       
-      <v-card-text class="pa-6">
-        <v-alert v-if="store.error" type="error" variant="tonal" class="mb-4">
+      <v-card-text class="pa-0">
+        <v-alert v-if="store.error" type="error" variant="tonal" class="ma-6 mb-4">
           {{ store.error }}
         </v-alert>
         
-        <v-row v-if="store.featureFlags && Object.keys(store.featureFlags).length > 0">
-          <v-col 
-            cols="12" 
-            md="6" 
-            lg="4" 
-            v-for="(value, key) in store.featureFlags" 
+        <div v-if="store.featureFlags && Object.keys(store.featureFlags).length > 0">
+          <div 
+            v-for="(value, key, index) in store.featureFlags" 
             :key="key"
           >
-            <v-switch
-              v-model="store.featureFlags[key]"
-              :label="formatFeatureName(key)"
-              color="primary"
-              inset
-              hide-details
-              class="mb-2"
-            />
-            <div class="text-caption text-medium-emphasis ml-12">
-              {{ getFeatureDescription(key) }}
+            <div class="feature-row">
+              <div class="feature-content">
+                <div class="feature-left">
+                  <div class="feature-info">
+                    <div class="feature-title text-high-emphasis">{{ formatFeatureName(key) }}</div>
+                    <div class="feature-description text-medium-emphasis">{{ getFeatureDescription(key) }}</div>
+                  </div>
+                </div>
+                <div class="feature-right">
+                  <v-switch
+                    v-model="store.featureFlags[key]"
+                    color="primary"
+                    inset
+                    hide-details
+                  />
+                  <div class="feature-status text-medium-emphasis">
+                    {{ store.featureFlags[key] ? 'Enabled' : 'Disabled' }}
+                  </div>
+                </div>
+              </div>
             </div>
-          </v-col>
-        </v-row>
+            <v-divider v-if="index < Object.keys(store.featureFlags).length - 1"></v-divider>
+          </div>
+        </div>
         
         <v-alert
           v-else
           type="info"
           variant="tonal"
+          class="ma-6"
         >
           No feature flags available
         </v-alert>
@@ -93,3 +102,74 @@ const saveFeatureFlags = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* Feature Flags Row Layout */
+.feature-row {
+  padding: 20px 24px;
+}
+
+.feature-row:last-child {
+  border-bottom: none;
+}
+
+.feature-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+}
+
+.feature-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.feature-description {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.feature-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 24px;
+}
+
+.feature-status {
+  font-size: 14px;
+  margin-left: 12px;
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .feature-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .feature-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+</style>

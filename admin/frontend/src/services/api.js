@@ -716,6 +716,35 @@ class AdminAPI {
     }
   }
 
+  // API Key Management endpoints
+  async getApiKeys(includeInactive = false) {
+    return await this.client.get(`/settings/api-keys?include_inactive=${includeInactive}`)
+  }
+
+  async createApiKey(keyData) {
+    return await this.client.post('/settings/api-keys', keyData)
+  }
+
+  async updateApiKey(keyName, keyData) {
+    return await this.client.put(`/settings/api-keys/${keyName}`, keyData)
+  }
+
+  async toggleApiKey(keyName, isActive) {
+    return await this.client.post(`/settings/api-keys/${keyName}/toggle`, { is_active: isActive })
+  }
+
+  async deleteApiKey(keyName) {
+    return await this.client.delete(`/settings/api-keys/${keyName}`)
+  }
+
+  async validateApiKey(keyName) {
+    return await this.client.post(`/settings/api-keys/${keyName}/validate`)
+  }
+
+  async migrateApiKeysFromEnv() {
+    return await this.client.post('/settings/api-keys/migrate-from-env')
+  }
+
   // Authentication token methods removed - now using HTTPOnly cookies exclusively
   // These methods are kept for backward compatibility but do nothing
   setAuthToken(token) {

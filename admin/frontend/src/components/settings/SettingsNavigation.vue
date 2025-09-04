@@ -39,6 +39,11 @@ const navigationTabs = [
     icon: '$message-text'
   },
   {
+    value: 'api-keys',
+    title: 'API Keys',
+    icon: '$key'
+  },
+  {
     value: 'response',
     title: 'Response Settings',
     icon: '$message-reply'
@@ -59,6 +64,7 @@ const currentTab = computed(() => {
   const routeName = route.name
   if (routeName === 'settings-followup') return 'followup'
   if (routeName === 'settings-welcome') return 'welcome'
+  if (routeName === 'settings-api-keys') return 'api-keys'
   if (routeName === 'settings-response') return 'response'
   if (routeName === 'settings-routing') return 'routing'
   if (routeName === 'settings-features') return 'features'
@@ -69,6 +75,7 @@ const navigateToTab = (tabValue) => {
   const routeMap = {
     'followup': 'settings-followup',
     'welcome': 'settings-welcome',
+    'api-keys': 'settings-api-keys',
     'response': 'settings-response',
     'routing': 'settings-routing',
     'features': 'settings-features'

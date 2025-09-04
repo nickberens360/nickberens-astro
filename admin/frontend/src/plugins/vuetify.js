@@ -14,7 +14,7 @@ import {
   mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
   mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
   mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon, mdiReply, mdiRoad,
-  mdiFlag, mdiCached, mdiMessageText,
+  mdiFlag, mdiCached, mdiMessageText, mdiKey, mdiImport, mdiShieldCheck, mdiAlertCircle,
 
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -131,6 +131,10 @@ const iconAliases = {
   route: mdiRoad,
   'feature-flag': mdiFlag,
   cached: mdiCached,
+  key: mdiKey,
+  import: mdiImport,
+  'shield-check': mdiShieldCheck,
+  'alert-circle': mdiAlertCircle,
 
   // Status
   alert: mdiAlert,

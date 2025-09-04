@@ -69,76 +69,91 @@
       </div>
 
       <v-card class="ds-card settings-card">
-        <v-card-text class="pa-3">
-          <v-row>
-            <!-- Enable/Disable Toggle -->
-            <v-col cols="12" md="4">
-              <div class="ds-item-spacing">
-                <div class="text-body-1 ds-font-medium ds-mb-3 d-flex align-center">
-                  <v-icon class="mr-2" size="16">$toggle-switch</v-icon>
-                  Service Status
+        <v-card-text class="pa-0">
+          <!-- Service Status Row -->
+          <div class="setting-row">
+            <div class="setting-content">
+              <div class="setting-left">
+                <v-icon color="primary" class="setting-icon">$toggle-switch</v-icon>
+                <div class="setting-info">
+                  <div class="setting-title text-high-emphasis">Service Status</div>
+                  <div class="setting-description text-medium-emphasis">Toggle the follow-up question system on or off</div>
                 </div>
+              </div>
+              <div class="setting-right">
                 <v-switch
                   v-model="store.settings.enabled"
-                  :label="store.settings.enabled ? 'Enabled' : 'Disabled'"
                   color="primary"
                   inset
                   hide-details
                   @update:model-value="updateSetting('enabled', $event)"
                 />
-                <div class="ds-text-xs text-medium-emphasis ds-mt-2">
-                  Toggle the follow-up question system on or off
+                <div class="setting-status text-medium-emphasis">
+                  {{ store.settings.enabled ? 'Enabled' : 'Disabled' }}
                 </div>
               </div>
-            </v-col>
+            </div>
+          </div>
 
-            <!-- Generation Method -->
-            <v-col cols="12" md="4">
-              <div class="ds-item-spacing">
-                <div class="text-body-1 ds-font-medium ds-mb-3 d-flex align-center">
-                  <v-icon class="mr-2" size="16">$brain</v-icon>
-                  Generation Method
+          <v-divider></v-divider>
+
+          <!-- Generation Method Row -->
+          <div class="setting-row">
+            <div class="setting-content">
+              <div class="setting-left">
+                <v-icon color="primary" class="setting-icon">$brain</v-icon>
+                <div class="setting-info">
+                  <div class="setting-title text-high-emphasis">Generation Method</div>
+                  <div class="setting-description text-medium-emphasis">Choose how questions are generated and selected</div>
                 </div>
+              </div>
+              <div class="setting-right">
                 <v-select
                   v-model="store.settings.service_type"
                   :items="store.serviceTypeOptions"
                   variant="outlined"
-                  density="comfortable"
+                  density="compact"
                   hide-details
+                  style="min-width: 200px;"
                   @update:model-value="updateSetting('service_type', $event)"
                 />
-                <div class="ds-text-xs text-medium-emphasis ds-mt-2">
-                  Choose how questions are generated and selected
-                </div>
               </div>
-            </v-col>
+            </div>
+          </div>
 
-            <!-- Maximum Questions -->
-            <v-col cols="12" md="4">
-              <div class="ds-item-spacing">
-                <div class="text-body-1 ds-font-medium ds-mb-3 d-flex align-center">
-                  <v-icon class="mr-2" size="16">$numeric</v-icon>
-                  Question Limit
-                </div>
-                <v-slider
-                  v-model="store.settings.max_questions"
-                  :min="1"
-                  :max="5"
-                  :step="1"
-                  thumb-label="always"
-                  show-ticks="always"
-                  color="primary"
-                  track-color="grey-lighten-3"
-                  thumb-color="primary"
-                  hide-details
-                  @update:model-value="updateSetting('max_questions', $event)"
-                />
-                <div class="ds-text-xs text-medium-emphasis ds-mt-2">
-                  Maximum number of follow-up questions to display
+          <v-divider></v-divider>
+
+          <!-- Question Limit Row -->
+          <div class="setting-row">
+            <div class="setting-content">
+              <div class="setting-left">
+                <v-icon color="primary" class="setting-icon">$numeric</v-icon>
+                <div class="setting-info">
+                  <div class="setting-title text-high-emphasis">Question Limit</div>
+                  <div class="setting-description text-medium-emphasis">Maximum number of follow-up questions to display</div>
                 </div>
               </div>
-            </v-col>
-          </v-row>
+              <div class="setting-right">
+                <div class="setting-slider">
+                  <v-slider
+                    v-model="store.settings.max_questions"
+                    :min="1"
+                    :max="5"
+                    :step="1"
+                    thumb-label="always"
+                    show-ticks="always"
+                    color="primary"
+                    track-color="grey-lighten-3"
+                    thumb-color="primary"
+                    hide-details
+                    style="width: 200px;"
+                    @update:model-value="updateSetting('max_questions', $event)"
+                  />
+                  <div class="setting-status text-medium-emphasis">{{ store.settings.max_questions }} {{ store.settings.max_questions === 1 ? 'question' : 'questions' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </v-card-text>
       </v-card>
     </div>
@@ -388,5 +403,103 @@ const bulkDelete = async () => {
 <style scoped>
 .categories-header {
   padding-bottom: 16px;
+}
+
+/* Settings Row Layout */
+.setting-row {
+  padding: 20px 24px;
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+}
+
+.setting-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-icon {
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.setting-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.setting-description {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.setting-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 24px;
+}
+
+.setting-status {
+  font-size: 14px;
+  margin-left: 12px;
+  font-weight: 500;
+}
+
+.setting-slider {
+  display: flex;
+  align-items: center;
+}
+
+.setting-slider .setting-status {
+  margin-left: 16px;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .setting-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .setting-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .setting-slider {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .setting-slider .setting-status {
+    margin-left: 0;
+    text-align: left;
+    min-width: auto;
+  }
 }
 </style>

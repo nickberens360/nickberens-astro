@@ -244,6 +244,31 @@ class AdminDatabaseManager:
                     "CREATE INDEX IF NOT EXISTS idx_welcome_questions_text ON welcome_questions(question_text)"
                 )
 
+                # API keys table for secure storage
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS api_keys (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        key_name TEXT UNIQUE NOT NULL,
+                        key_type TEXT NOT NULL,  -- 'anthropic', 'google', 'openai', etc.
+                        encrypted_value TEXT NOT NULL,
+                        last_four TEXT NOT NULL,  -- Last 4 chars for display
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        last_used_at TIMESTAMP,
+                        last_validated_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_by INTEGER,
+                        FOREIGN KEY (updated_by) REFERENCES admin_users (id)
+                    )
+                """
+                )
+
+                # Create indices for API keys
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_name ON api_keys(key_name)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_type ON api_keys(key_type)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(is_active)")
+
                 # Seed default welcome questions if table is empty
                 cursor.execute("SELECT COUNT(*) FROM welcome_questions")
                 welcome_count = cursor.fetchone()[0]
@@ -262,6 +287,9 @@ class AdminDatabaseManager:
 
                 # Migrate existing questions from JSON to normalized structure
                 self._migrate_questions_to_normalized_structure(cursor)
+
+                # Migrate API keys from environment variables if needed
+                self._migrate_api_keys_from_environment(cursor)
 
                 # Check if we need to create a default admin user
                 cursor.execute("SELECT COUNT(*) FROM admin_users")
@@ -529,6 +557,58 @@ class AdminDatabaseManager:
 
         except Exception as e:
             logger.error(f"Error in question migration: {str(e)}", exc_info=True)
+
+    def _migrate_api_keys_from_environment(self, cursor):
+        """Migrate API keys from environment variables to database on first run."""
+        try:
+            # Check if any API keys already exist
+            cursor.execute("SELECT COUNT(*) FROM api_keys")
+            key_count = cursor.fetchone()[0]
+
+            if key_count > 0:
+                logger.info("API keys already exist in database, skipping environment migration")
+                return
+
+            # Try to migrate common API keys from environment
+            env_mappings = [
+                ("ANTHROPIC_API_KEY", "anthropic_primary", "anthropic"),
+                ("GOOGLE_API_KEY", "google_primary", "google"),
+                ("OPENAI_API_KEY", "openai_primary", "openai"),
+            ]
+
+            migrated_count = 0
+            for env_var, key_name, key_type in env_mappings:
+                api_key = os.getenv(env_var)
+                if api_key and len(api_key.strip()) > 10:  # Basic validation
+                    try:
+                        # Import here to avoid circular imports during database initialization
+                        from .api_key_manager import api_key_manager
+
+                        # Create the API key in the database
+                        encrypted_value, last_four = api_key_manager.encrypt_key(api_key.strip())
+
+                        cursor.execute(
+                            """
+                            INSERT INTO api_keys 
+                            (key_name, key_type, encrypted_value, last_four, updated_by)
+                            VALUES (?, ?, ?, ?, 1)
+                            """,
+                            (key_name, key_type, encrypted_value, last_four),
+                        )
+
+                        migrated_count += 1
+                        logger.info(f"Migrated {env_var} to database as {key_name}")
+
+                    except Exception as e:
+                        logger.error(f"Failed to migrate {env_var}: {e}")
+
+            if migrated_count > 0:
+                logger.info(f"Successfully migrated {migrated_count} API keys from environment variables")
+            else:
+                logger.info("No API keys found in environment variables to migrate")
+
+        except Exception as e:
+            logger.error(f"Error in API key migration: {str(e)}", exc_info=True)
 
     # Follow-up category management methods
     def get_followup_categories(self, active_only: bool = True) -> List[Dict]:

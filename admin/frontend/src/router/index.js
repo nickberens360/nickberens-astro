@@ -173,6 +173,14 @@ const router = createRouter({
               meta: {
                 title: 'Cache Status'
               }
+            },
+            {
+              path: 'api-keys',
+              name: 'settings-api-keys',
+              component: () => import('@/views/settings/ApiKeysSettings.vue'),
+              meta: {
+                title: 'API Keys'
+              }
             }
           ]
         },

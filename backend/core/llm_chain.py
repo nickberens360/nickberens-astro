@@ -23,6 +23,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from .config import AppConfig
 from .query_logger import get_query_logger
 
+# Import API key manager for secure key retrieval
+try:
+    from .api_key_manager import api_key_manager
+
+    API_KEY_MANAGER_AVAILABLE = True
+except ImportError:
+    API_KEY_MANAGER_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
@@ -286,8 +294,42 @@ def is_rate_limit_error(error: Exception) -> bool:
     return any(indicator in error_str for indicator in rate_limit_indicators)
 
 
+def get_api_key_for_provider(provider_type: str) -> Optional[str]:
+    """
+    Get API key for a provider, preferring database storage over environment variables.
+
+    Args:
+        provider_type: Type of provider ('anthropic', 'google', 'openai')
+
+    Returns:
+        API key string or None if not found
+    """
+    if API_KEY_MANAGER_AVAILABLE:
+        try:
+            # Try to get from database first
+            api_key = api_key_manager.get_api_key_by_type(provider_type)
+            if api_key:
+                logger.debug(f"Using database-stored API key for {provider_type}")
+                return api_key
+        except Exception as e:
+            logger.warning(f"Failed to get {provider_type} API key from database: {e}")
+
+    # Fallback to environment variables
+    env_var_map = {"anthropic": "ANTHROPIC_API_KEY", "google": "GOOGLE_API_KEY", "openai": "OPENAI_API_KEY"}
+
+    env_var = env_var_map.get(provider_type)
+    if env_var:
+        api_key = os.getenv(env_var)
+        if api_key:
+            logger.debug(f"Using environment variable {env_var} for {provider_type}")
+            return api_key
+
+    logger.warning(f"No API key found for {provider_type}")
+    return None
+
+
 def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]]:
-    """Initializes and returns a dictionary of available LLM instances."""
+    """Initializes and returns a dictionary of available LLM instances with managed API keys."""
     llms: Dict[str, Optional[Union[ChatGoogleGenerativeAI, ChatAnthropic]]] = {}
     for provider_config in LLM_PROVIDERS:
         provider_name: str = cast(str, provider_config["name"])
@@ -295,12 +337,32 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
             Type[Union[ChatGoogleGenerativeAI, ChatAnthropic]],
             provider_config["class"],
         )
-        init_kwargs: Dict[str, Any] = cast(Dict[str, Any], provider_config["init_kwargs"])
+        init_kwargs: Dict[str, Any] = cast(Dict[str, Any], provider_config["init_kwargs"]).copy()
 
         try:
             if not rate_limit_tracker.is_rate_limited(provider_name):
-                llms[provider_name] = provider_class(**init_kwargs)
-                logger.info(f"{provider_name.title()} model initialized successfully")
+                # Get API key for this provider type
+                provider_type_map = {"claude": "anthropic", "claude_haiku": "anthropic", "gemini": "google"}
+                provider_type = provider_type_map.get(provider_name)
+
+                if provider_type:
+                    api_key = get_api_key_for_provider(provider_type)
+                    if api_key:
+                        # Add API key to init kwargs
+                        if provider_type == "anthropic":
+                            init_kwargs["api_key"] = api_key
+                        elif provider_type == "google":
+                            init_kwargs["google_api_key"] = api_key
+
+                        llms[provider_name] = provider_class(**init_kwargs)
+                        logger.info(f"{provider_name.title()} model initialized successfully with managed API key")
+                    else:
+                        logger.warning(f"No API key available for {provider_name}, skipping initialization")
+                        llms[provider_name] = None
+                else:
+                    # Fallback for unknown provider types - use original initialization
+                    llms[provider_name] = provider_class(**init_kwargs)
+                    logger.info(f"{provider_name.title()} model initialized with environment variables")
             else:
                 logger.warning(f"{provider_name.title()} is rate limited, skipping initialization")
                 llms[provider_name] = None

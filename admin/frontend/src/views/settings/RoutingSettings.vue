@@ -14,82 +14,154 @@
         </v-btn>
       </v-card-title>
       
-      <v-card-text class="pa-6">
-        <v-alert v-if="store.error" type="error" variant="tonal" class="mb-4">
+      <v-card-text class="pa-0">
+        <v-alert v-if="store.error" type="error" variant="tonal" class="ma-6 mb-4">
           {{ store.error }}
         </v-alert>
         
-        <v-row>
-          <v-col cols="12" md="6">
-            <v-switch
-              v-model="store.settings.enable_smart_routing"
-              label="Enable Smart Routing"
-              color="primary"
-              inset
-              hide-details
-            />
-            <div class="text-caption text-medium-emphasis mt-2">
-              Use intelligent routing algorithms for query processing
+        <!-- Enable Smart Routing Row -->
+        <div class="routing-row">
+          <div class="routing-content">
+            <div class="routing-left">
+              <v-icon color="primary" class="routing-icon">$brain</v-icon>
+              <div class="routing-info">
+                <div class="routing-title text-high-emphasis">Enable Smart Routing</div>
+                <div class="routing-description text-medium-emphasis">Use intelligent routing algorithms for query processing</div>
+              </div>
             </div>
-          </v-col>
-          
-          <v-col cols="12" md="6">
-            <v-switch
-              v-model="store.settings.enable_fuzzy_matching"
-              label="Enable Fuzzy Matching"
-              color="primary"
-              inset
-              hide-details
-            />
-            <div class="text-caption text-medium-emphasis mt-2">
-              Allow approximate string matching for better results
+            <div class="routing-right">
+              <v-switch
+                v-model="store.settings.enable_smart_routing"
+                color="primary"
+                inset
+                hide-details
+              />
+              <div class="routing-status text-medium-emphasis">
+                {{ store.settings.enable_smart_routing ? 'Enabled' : 'Disabled' }}
+              </div>
             </div>
-          </v-col>
-          
-          <v-col cols="12" md="6">
-            <v-slider
-              v-model="store.settings.similarity_threshold"
-              label="Similarity Threshold"
-              :min="0.0"
-              :max="1.0"
-              :step="0.1"
-              thumb-label="always"
-              show-ticks="always"
-              color="primary"
-              hint="Minimum similarity score for matching results"
-              persistent-hint
-            />
-          </v-col>
-          
-          <v-col cols="12" md="6">
-            <v-text-field
-              v-model.number="store.settings.max_search_results"
-              label="Max Search Results"
-              type="number"
-              variant="outlined"
-              :min="1"
-              :max="100"
-              hint="Maximum number of search results to return"
-              persistent-hint
-            />
-          </v-col>
-          
-          <v-col cols="12" md="6">
-            <v-slider
-              v-model="store.settings.fuzzy_threshold"
-              label="Fuzzy Threshold"
-              :min="0.0"
-              :max="1.0"
-              :step="0.1"
-              thumb-label="always"
-              show-ticks="always"
-              color="primary"
-              :disabled="!store.settings.enable_fuzzy_matching"
-              hint="Threshold for fuzzy string matching accuracy"
-              persistent-hint
-            />
-          </v-col>
-        </v-row>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Enable Fuzzy Matching Row -->
+        <div class="routing-row">
+          <div class="routing-content">
+            <div class="routing-left">
+              <v-icon color="primary" class="routing-icon">$target</v-icon>
+              <div class="routing-info">
+                <div class="routing-title text-high-emphasis">Enable Fuzzy Matching</div>
+                <div class="routing-description text-medium-emphasis">Allow approximate string matching for better results</div>
+              </div>
+            </div>
+            <div class="routing-right">
+              <v-switch
+                v-model="store.settings.enable_fuzzy_matching"
+                color="primary"
+                inset
+                hide-details
+              />
+              <div class="routing-status text-medium-emphasis">
+                {{ store.settings.enable_fuzzy_matching ? 'Enabled' : 'Disabled' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Similarity Threshold Row -->
+        <div class="routing-row">
+          <div class="routing-content">
+            <div class="routing-left">
+              <v-icon color="primary" class="routing-icon">$tune</v-icon>
+              <div class="routing-info">
+                <div class="routing-title text-high-emphasis">Similarity Threshold</div>
+                <div class="routing-description text-medium-emphasis">Minimum similarity score for matching results</div>
+              </div>
+            </div>
+            <div class="routing-right">
+              <div class="routing-slider">
+                <v-slider
+                  v-model="store.settings.similarity_threshold"
+                  :min="0.0"
+                  :max="1.0"
+                  :step="0.1"
+                  thumb-label="always"
+                  show-ticks="always"
+                  color="primary"
+                  track-color="grey-lighten-3"
+                  thumb-color="primary"
+                  hide-details
+                  style="width: 200px;"
+                />
+                <div class="routing-status text-medium-emphasis">{{ store.settings.similarity_threshold.toFixed(1) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Max Search Results Row -->
+        <div class="routing-row">
+          <div class="routing-content">
+            <div class="routing-left">
+              <v-icon color="primary" class="routing-icon">$numeric</v-icon>
+              <div class="routing-info">
+                <div class="routing-title text-high-emphasis">Max Search Results</div>
+                <div class="routing-description text-medium-emphasis">Maximum number of search results to return</div>
+              </div>
+            </div>
+            <div class="routing-right">
+              <v-text-field
+                v-model.number="store.settings.max_search_results"
+                type="number"
+                variant="outlined"
+                density="compact"
+                :min="1"
+                :max="100"
+                hide-details
+                style="width: 120px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Fuzzy Threshold Row -->
+        <div class="routing-row">
+          <div class="routing-content">
+            <div class="routing-left">
+              <v-icon color="primary" class="routing-icon">$tune</v-icon>
+              <div class="routing-info">
+                <div class="routing-title text-high-emphasis">Fuzzy Threshold</div>
+                <div class="routing-description text-medium-emphasis">Threshold for fuzzy string matching accuracy</div>
+              </div>
+            </div>
+            <div class="routing-right">
+              <div class="routing-slider">
+                <v-slider
+                  v-model="store.settings.fuzzy_threshold"
+                  :min="0.0"
+                  :max="1.0"
+                  :step="0.1"
+                  thumb-label="always"
+                  show-ticks="always"
+                  color="primary"
+                  track-color="grey-lighten-3"
+                  thumb-color="primary"
+                  :disabled="!store.settings.enable_fuzzy_matching"
+                  hide-details
+                  style="width: 200px;"
+                />
+                <div class="routing-status text-medium-emphasis">{{ store.settings.fuzzy_threshold.toFixed(1) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </v-card-text>
     </v-card>
   </div>
@@ -116,3 +188,103 @@ const saveSettings = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* Routing Settings Row Layout */
+.routing-row {
+  padding: 20px 24px;
+}
+
+.routing-row:last-child {
+  border-bottom: none;
+}
+
+.routing-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+}
+
+.routing-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.routing-icon {
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.routing-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.routing-title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.routing-description {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.routing-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 24px;
+}
+
+.routing-status {
+  font-size: 14px;
+  margin-left: 12px;
+  font-weight: 500;
+}
+
+.routing-slider {
+  display: flex;
+  align-items: center;
+}
+
+.routing-slider .routing-status {
+  margin-left: 16px;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .routing-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .routing-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .routing-slider {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .routing-slider .routing-status {
+    margin-left: 0;
+    text-align: left;
+    min-width: auto;
+  }
+}
+</style>

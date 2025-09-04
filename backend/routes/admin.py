@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
+from ..core.api_key_manager import api_key_manager
 from ..core.audit_logger import AuditAction, AuditLogger
 
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
@@ -2057,3 +2058,257 @@ async def reset_test_database(session: Dict[str, Any] = Depends(require_admin_au
     except Exception as e:
         logger.error(f"Error resetting test database: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error resetting test database")
+
+
+# API Key Management Endpoints
+@router.get("/settings/api-keys")
+async def get_api_keys(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+    include_inactive: bool = Query(default=False, description="Include inactive API keys"),
+) -> Dict[str, Any]:
+    """Get all API keys (without actual values)."""
+    try:
+        keys = api_key_manager.list_api_keys(include_inactive=include_inactive)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "api_keys", "count": len(keys), "include_inactive": include_inactive},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"keys": keys, "total": len(keys)}
+
+    except Exception as e:
+        logger.error(f"Error getting API keys: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching API keys")
+
+
+@router.post("/settings/api-keys")
+async def create_api_key(
+    request: Request,
+    key_data: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a new API key."""
+    try:
+        # Validate required fields
+        if not all(k in key_data for k in ["key_name", "key_type", "api_key"]):
+            raise HTTPException(status_code=400, detail="Missing required fields: key_name, key_type, api_key")
+
+        # Create the key
+        created_key = api_key_manager.create_api_key(
+            key_name=key_data["key_name"],
+            key_type=key_data["key_type"],
+            api_key=key_data["api_key"],
+            updated_by=session["user_id"],
+        )
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_CREATE,
+            username=session["username"],
+            details={"resource": "api_key", "key_name": created_key["key_name"], "key_type": created_key["key_type"]},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": "API key created successfully", "key": created_key}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating API key: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating API key")
+
+
+@router.put("/settings/api-keys/{key_name}")
+async def update_api_key(
+    request: Request,
+    key_name: str,
+    key_data: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Update an existing API key."""
+    try:
+        if "api_key" not in key_data:
+            raise HTTPException(status_code=400, detail="Missing required field: api_key")
+
+        # Update the key
+        success = api_key_manager.update_api_key(
+            key_name=key_name, new_api_key=key_data["api_key"], updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=404, detail="API key not found")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={"resource": "api_key", "key_name": key_name},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": "API key updated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating API key")
+
+
+@router.post("/settings/api-keys/{key_name}/toggle")
+async def toggle_api_key(
+    request: Request,
+    key_name: str,
+    toggle_data: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Enable or disable an API key."""
+    try:
+        if "is_active" not in toggle_data:
+            raise HTTPException(status_code=400, detail="Missing required field: is_active")
+
+        success = api_key_manager.toggle_api_key(
+            key_name=key_name, is_active=toggle_data["is_active"], updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=404, detail="API key not found")
+
+        action_name = "enabled" if toggle_data["is_active"] else "disabled"
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "api_key",
+                "key_name": key_name,
+                "action": action_name,
+                "is_active": toggle_data["is_active"],
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": f"API key {action_name} successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error toggling API key")
+
+
+@router.delete("/settings/api-keys/{key_name}")
+async def delete_api_key(
+    request: Request,
+    key_name: str,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Delete an API key."""
+    try:
+        success = api_key_manager.delete_api_key(key_name)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="API key not found")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_DELETE,
+            username=session["username"],
+            details={"resource": "api_key", "key_name": key_name},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": "API key deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting API key")
+
+
+@router.post("/settings/api-keys/{key_name}/validate")
+async def validate_api_key(
+    request: Request,
+    key_name: str,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Validate an API key by testing it with the provider."""
+    try:
+        is_valid, message = api_key_manager.validate_api_key(key_name)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={
+                "resource": "api_key_validation",
+                "key_name": key_name,
+                "is_valid": is_valid,
+                "validation_message": message,
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "valid": is_valid, "message": message, "key_name": key_name}
+
+    except Exception as e:
+        logger.error(f"Error validating API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error validating API key")
+
+
+@router.post("/settings/api-keys/migrate-from-env")
+async def migrate_api_keys_from_env(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Migrate API keys from environment variables to database."""
+    try:
+        results = api_key_manager.migrate_from_environment(session["user_id"])
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "api_key_migration", "migration_results": results},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        successful = sum(1 for success in results.values() if success)
+        total = len(results)
+
+        return {
+            "success": True,
+            "message": f"Migration completed: {successful}/{total} keys migrated",
+            "results": results,
+        }
+
+    except Exception as e:
+        logger.error(f"Error migrating API keys from environment: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error migrating API keys")
