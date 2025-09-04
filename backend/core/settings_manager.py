@@ -285,6 +285,38 @@ class SettingsManager:
         features = self.get_feature_flags()
         return getattr(features, feature_name, False)
 
+    # === NEW LLM CONFIGURATION METHODS ===
+
+    def get_response_llm(self) -> str:
+        """Get the response LLM type (what users see in chat)."""
+        response_settings = self.get_response_settings()
+        return response_settings.response_llm
+
+    def get_processing_llm(self) -> str:
+        """Get the processing LLM type (background operations)."""
+        system_config = self.get_system_config_settings()
+        return system_config.processing_llm
+
+    def get_response_model_name(self) -> str:
+        """Get the specific model name for response generation."""
+        system_config = self.get_system_config_settings()
+        return system_config.get_response_model_name()
+
+    def get_processing_model_name(self) -> str:
+        """Get the specific model name for background processing."""
+        system_config = self.get_system_config_settings()
+        return system_config.get_processing_model_name()
+
+    def is_response_smart_selection_enabled(self) -> bool:
+        """Check if smart selection is enabled for response models."""
+        response_settings = self.get_response_settings()
+        return response_settings.enable_smart_selection
+
+    def get_effective_primary_llm(self) -> str:
+        """Get the effective primary LLM for backward compatibility."""
+        system_config = self.get_system_config_settings()
+        return system_config.effective_primary_llm
+
 
 # Global settings manager instance
 settings_manager = SettingsManager()

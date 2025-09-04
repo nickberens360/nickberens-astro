@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from .config import AppConfig
 from .geolocation_service import get_geolocation_service
+from .settings_manager import get_settings_manager
 
 
 class SQLiteQueryLogger:
@@ -242,6 +243,12 @@ class SQLiteQueryLogger:
             request_id: Optional request ID
         """
         try:
+            # Check if analytics is enabled via feature flag
+            settings_manager = get_settings_manager()
+            if not settings_manager.is_feature_enabled("enable_analytics"):
+                self.logger.debug("Analytics disabled via feature flag, skipping query logging")
+                return
+
             # Process IP address
             processed_ip = self._process_ip_for_logging(client_ip)
             if processed_ip is None:

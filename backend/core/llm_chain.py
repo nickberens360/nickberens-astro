@@ -33,8 +33,48 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
+# --- Dynamic Configuration ---
+def get_primary_llm() -> str:
+    """
+    Get the response LLM from database settings with fallback to environment.
+
+    UPDATED: Now uses response_llm setting (what users see in chat).
+    Fallback chain: Database response_llm → Legacy primary_llm → Environment → Default
+    """
+    try:
+        # Try to get from database settings first
+        from .settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+
+        # Use new response LLM setting
+        response_llm = settings_manager.get_response_llm()
+
+        # Validate the database value
+        valid_llms = ["claude", "gemini"]
+        if response_llm in valid_llms:
+            logger.debug(f"Using response LLM from database settings: {response_llm}")
+            return response_llm
+        else:
+            logger.warning(f"Invalid response LLM in database: {response_llm}, falling back to legacy primary_llm")
+
+            # Fallback to legacy primary_llm for backward compatibility
+            system_config = settings_manager.get_system_config_settings()
+            legacy_primary = system_config.primary_llm
+            if legacy_primary in valid_llms:
+                logger.debug(f"Using legacy primary LLM from database: {legacy_primary}")
+                return legacy_primary
+    except Exception as e:
+        logger.debug(f"Could not get LLM settings from database: {e}, using environment fallback")
+
+    # Fallback to environment variable
+    env_primary_llm = AppConfig.PRIMARY_LLM
+    logger.debug(f"Using primary LLM from environment: {env_primary_llm}")
+    return env_primary_llm
+
+
 # --- Configuration ---
-PRIMARY_LLM = AppConfig.PRIMARY_LLM
 GEMINI_MODEL = AppConfig.GEMINI_MODEL
 
 # Model name constants
@@ -62,7 +102,25 @@ EMBEDDING_MODEL = AppConfig.EMBEDDING_MODEL
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
 ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
-MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", "100"))
+
+
+def get_max_cache_size() -> int:
+    """
+    Get the max cache size from admin settings with fallback to environment.
+
+    Returns the configured max cache size from database settings with fallback
+    to environment variable and default.
+    """
+    try:
+        from .settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        system_config = settings_manager.get_system_config_settings()
+        return system_config.max_cache_size
+    except Exception as e:
+        logger.warning(f"Failed to get max_cache_size from settings, using fallback: {e}")
+        return int(os.getenv("MAX_CACHE_SIZE", "100"))
+
 
 # --- LLM Provider Configuration ---
 LLM_PROVIDERS = [
@@ -161,10 +219,19 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
             logger.warning(f"Preferred model '{preferred_model}' not allowed, falling back to default")
             # Fall through to default selection logic
 
-    # Check if smart model selection is enabled
-    if not AppConfig.ENABLE_SMART_MODEL_SELECTION:
-        logger.debug("Smart model selection disabled, using primary LLM")
-        return PRIMARY_LLM
+    # Check if response smart selection is enabled
+    try:
+        from .settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        smart_selection_enabled = settings_manager.is_response_smart_selection_enabled()
+    except Exception as e:
+        logger.debug(f"Could not get smart selection setting: {e}, falling back to legacy setting")
+        smart_selection_enabled = AppConfig.ENABLE_SMART_MODEL_SELECTION
+
+    if not smart_selection_enabled:
+        logger.debug("Response smart selection disabled, using primary LLM")
+        return get_primary_llm()
 
     # Analyze query complexity
     query_lower = query.lower()
@@ -204,22 +271,42 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
     # Short queries are usually simple
     is_short = len(query.split()) <= 10
 
-    # Decision logic
-    if is_simple and not is_complex and is_short:
-        logger.debug(f"Using Claude Haiku for simple query: '{query[:50]}...'")
-        selected_model = FAST_MODEL
-    elif is_complex:
-        logger.debug(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
-        selected_model = QUALITY_MODEL
+    # Get response LLM preference and perform family-based smart selection
+    response_llm = get_primary_llm()  # This now returns response_llm
+
+    # Smart selection within response model families
+    if response_llm == "gemini":
+        # Gemini family: Currently only one model, but future-ready for gemini-pro
+        if is_complex:
+            # For complex queries, could use gemini-pro in future
+            logger.debug(f"Using Gemini for complex query: '{query[:50]}...'")
+            selected_model = "gemini"
+        else:
+            # For simple/moderate queries, use standard Gemini
+            logger.debug(f"Using Gemini for query: '{query[:50]}...'")
+            selected_model = "gemini"
+
+    elif response_llm == "claude":
+        # Claude family: Smart selection between Haiku (fast) and Sonnet (quality)
+        if is_simple and not is_complex and is_short:
+            logger.debug(f"Using Claude Haiku for simple query: '{query[:50]}...'")
+            selected_model = FAST_MODEL  # claude_haiku
+        elif is_complex:
+            logger.debug(f"Using Claude Sonnet for complex query: '{query[:50]}...'")
+            selected_model = QUALITY_MODEL  # claude
+        else:
+            # Default to Haiku for moderate queries (speed over perfection)
+            logger.debug(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
+            selected_model = FAST_MODEL  # claude_haiku
     else:
-        # Default to Haiku for moderate queries (speed over perfection)
-        logger.debug(f"Using Claude Haiku for moderate query: '{query[:50]}...'")
-        selected_model = FAST_MODEL
+        # Fallback to response LLM if unknown
+        logger.debug(f"Unknown response LLM '{response_llm}', using as-is")
+        selected_model = response_llm
 
     # Final validation to ensure selected model is allowed
     if selected_model not in SecurityValidator.ALLOWED_MODELS:
         logger.warning(f"Selected model '{selected_model}' not in allowed models, falling back to primary")
-        return PRIMARY_LLM
+        return get_primary_llm()
 
     return selected_model
 
@@ -375,14 +462,45 @@ def get_llm_instances() -> Dict[str, Optional[Union[ChatGoogleGenerativeAI, Chat
     return llms
 
 
-def create_qa_chain(llm: BaseLanguageModel) -> Runnable:
-    """Creates the main question-answering chain."""
-    system_prompt = DEFAULT_PROMPTS.get(
-        "system_template",
-        (
+def _build_dynamic_system_prompt() -> str:
+    """Build system prompt with response settings guidance."""
+    try:
+        from .settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        response_settings = settings_manager.get_response_settings()
+
+        # Length guidance mapping
+        length_guidance = {
+            "brief": "Provide a concise, brief response in 1-2 sentences.",
+            "medium": "Provide a thorough response in 2-3 paragraphs.",
+            "detailed": "Provide a comprehensive, detailed response with full explanations.",
+            "comprehensive": "Provide an extensive, comprehensive response covering all aspects.",
+        }
+
+        length_instruction = length_guidance.get(response_settings.preferred_response_length, length_guidance["medium"])
+
+        # Style guidance mapping
+        style_guidance = {
+            "professional": "Use a professional, formal tone.",
+            "conversational": "Use a friendly, conversational tone.",
+            "technical": "Use precise, technical language with specific details.",
+            "casual": "Use a casual, relaxed tone.",
+        }
+
+        style_instruction = style_guidance.get(response_settings.response_style, style_guidance["conversational"])
+
+        # Build prompt with dynamic guidance
+        base_prompt = DEFAULT_PROMPTS.get("system_template", "")
+
+        # Enhanced prompt with response settings
+        enhanced_prompt = (
             "You are Nick Berens' expert digital assistant. Your role is to answer questions about his "
-            "skills, experience, and work based *only* on the provided context. Speak in a helpful and "
-            "professional tone."
+            "skills, experience, and work based *only* on the provided context."
+            "\n\n"
+            "**RESPONSE GUIDELINES:**"
+            f"\n- Length: {length_instruction}"
+            f"\n- Style: {style_instruction}"
             "\n\n"
             "**CRITICAL INSTRUCTIONS:**"
             "\n"
@@ -402,8 +520,45 @@ def create_qa_chain(llm: BaseLanguageModel) -> Runnable:
             "experience or skills for readability."
             "\n\n"
             "**Provided Context:**\n{context}"
-        ),
-    )
+        )
+
+        return enhanced_prompt
+
+    except Exception as e:
+        logger.warning(f"Failed to build dynamic system prompt: {e}")
+        # Fallback to default prompt
+        return DEFAULT_PROMPTS.get(
+            "system_template",
+            (
+                "You are Nick Berens' expert digital assistant. Your role is to answer questions about his "
+                "skills, experience, and work based *only* on the provided context. Speak in a helpful and "
+                "professional tone."
+                "\n\n"
+                "**CRITICAL INSTRUCTIONS:**"
+                "\n"
+                "1.  **Persona:** When the user asks about 'you' or 'your' experience (e.g., 'What is your "
+                "experience?'), always respond about Nick Berens in the third person (e.g., 'Nick's experience "
+                "is...')."
+                "\n"
+                "2.  **Resume Requests:** If asked for the resume (e.g., 'Show me your resume'), synthesize the "
+                "provided resume context into a clear, professional summary. **NEVER** state that you are an AI "
+                "or do not have a resume. The user is asking for Nick's resume, and the context provided is the "
+                "source for it."
+                "\n"
+                "3.  **Stick to the Context:** If the answer is not in the provided context, clearly state that "
+                "the information is not available. Do not make up answers."
+                "\n"
+                "4.  **Formatting:** Use markdown, such as bullet points, to structure information like work "
+                "experience or skills for readability."
+                "\n\n"
+                "**Provided Context:**\n{context}"
+            ),
+        )
+
+
+def create_qa_chain(llm: BaseLanguageModel) -> Runnable:
+    """Creates the main question-answering chain with dynamic response settings."""
+    system_prompt = _build_dynamic_system_prompt()
     prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
     return create_stuff_documents_chain(llm, prompt)
 
@@ -455,7 +610,7 @@ class CacheManager:
     def cache_response(cache_key: str, response_chunks: List[str]):
         if not cache_key or not ENABLE_CACHING:
             return
-        if len(_response_cache) >= MAX_CACHE_SIZE:
+        if len(_response_cache) >= get_max_cache_size():
             oldest_key = min(_response_cache, key=lambda k: _response_cache[k]["timestamp"])
             del _response_cache[oldest_key]
             logger.info(f"Evicted oldest response cache entry: {oldest_key}")
@@ -481,7 +636,7 @@ class CacheManager:
     def cache_retrieval(cache_key: str, documents: List[Document]):
         if not cache_key or not ENABLE_CACHING:
             return
-        if len(_retrieval_cache) >= MAX_CACHE_SIZE:
+        if len(_retrieval_cache) >= get_max_cache_size():
             oldest_key = min(_retrieval_cache, key=lambda k: _retrieval_cache[k]["timestamp"])
             del _retrieval_cache[oldest_key]
             logger.info(f"Evicted oldest retrieval cache entry: {oldest_key}")

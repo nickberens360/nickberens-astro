@@ -62,8 +62,8 @@ const themes = {
       info: '#60A5FA', // Lighter blue
       success: '#34D399', // Lighter green
       warning: '#FBBF24', // Lighter amber
-      surface: '#1a222e', // Darker surface for cards (slate-900)
-      background: '#111827' // Very dark background
+      surface: '#0e0e0e', // Very dark surface for cards
+      background: '#000000' // Black background
     }
   }
 }
@@ -248,6 +248,15 @@ export default createVuetify({
     VSelect: {
       variant: 'outlined',
       density: 'comfortable'
+    },
+    VDialog: {
+      scrim: true,
+      'no-click-animation': false,
+      transition: 'dialog-transition'
+    },
+    VOverlay: {
+      scrim: true,
+      opacity: 0.65
     },
     // Remove custom typography classes since global font handles everything
   }

@@ -23,20 +23,45 @@
           {{ successMessage }}
         </v-alert>
         
-        <!-- Primary LLM Selection Row -->
+        <!-- Response LLM Selection Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
               <v-icon color="primary" class="setting-icon">$brain</v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Primary LLM</div>
-                <div class="setting-description text-medium-emphasis">Choose the primary language model for responses</div>
+                <div class="setting-title text-high-emphasis">Response LLM</div>
+                <div class="setting-description text-medium-emphasis">Language model used for all user-facing chat responses. Supports smart selection between model variants.</div>
               </div>
             </div>
             <div class="setting-right">
               <v-select
-                v-model="settings.primary_llm"
+                v-model="settings.response_llm"
                 :items="llmOptions"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="width: 160px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Processing LLM Selection Row -->
+        <div class="setting-row">
+          <div class="setting-content">
+            <div class="setting-left">
+              <v-icon color="primary" class="setting-icon">$cog</v-icon>
+              <div class="setting-info">
+                <div class="setting-title text-high-emphasis">Processing LLM</div>
+                <div class="setting-description text-medium-emphasis">Language model for background operations like content indexing and query reformulation. Fast models recommended.</div>
+              </div>
+            </div>
+            <div class="setting-right">
+              <v-select
+                v-model="settings.processing_llm"
+                :items="processingLlmOptions"
                 variant="outlined"
                 density="compact"
                 hide-details
@@ -244,7 +269,7 @@
               <v-icon color="primary" class="setting-icon">$tune</v-icon>
               <div class="setting-info">
                 <div class="setting-title text-high-emphasis">Smart Model Selection</div>
-                <div class="setting-description text-medium-emphasis">Automatically choose the best model based on query complexity</div>
+                <div class="setting-description text-medium-emphasis">Automatically choose between fast (Haiku) and quality (Sonnet) models within the selected Response LLM family based on query complexity</div>
               </div>
             </div>
             <div class="setting-right">
@@ -274,9 +299,15 @@ const adminStore = useAdminStore()
 
 // Reactive state
 const settings = ref({
-  primary_llm: 'claude',
+  primary_llm: 'claude',  // Legacy field for backward compatibility
+  response_llm: 'claude',  // User-facing responses
+  processing_llm: 'claude_haiku',  // Background operations
   claude_model: 'claude-3-5-sonnet-20241022',
   gemini_model: 'gemini-1.5-flash',
+  response_claude_model: 'claude-3-5-sonnet-20241022',
+  response_gemini_model: 'gemini-1.5-flash',
+  processing_claude_model: 'claude-3-haiku-20240307',
+  processing_gemini_model: 'gemini-1.5-flash',
   embedding_model: 'models/embedding-001',
   cache_ttl_seconds: 3600,
   max_cache_size: 1000,
@@ -285,6 +316,7 @@ const settings = ref({
   max_search_results: 15,
   retrieval_score_threshold: 0.3,
   enable_smart_model_selection: true,
+  enable_response_smart_selection: true,
   default_search_k: 8,
   expanded_search_k: 12
 })
@@ -296,6 +328,12 @@ const successMessage = ref('')
 // Model options
 const llmOptions = [
   { title: 'Claude (Anthropic)', value: 'claude' },
+  { title: 'Gemini (Google)', value: 'gemini' }
+]
+
+const processingLlmOptions = [
+  { title: 'Claude Haiku (Fast)', value: 'claude_haiku' },
+  { title: 'Claude (Balanced)', value: 'claude' },
   { title: 'Gemini (Google)', value: 'gemini' }
 ]
 
@@ -327,7 +365,18 @@ const loadSettings = async () => {
     
     const response = await adminAPI.getSystemConfigSettings()
     if (response) {
+      // Merge response with defaults
       settings.value = { ...settings.value, ...response }
+      
+      // Ensure response_llm is initialized from primary_llm for backward compatibility
+      if (!settings.value.response_llm && settings.value.primary_llm) {
+        settings.value.response_llm = settings.value.primary_llm
+      }
+      
+      // Ensure processing_llm has a sensible default
+      if (!settings.value.processing_llm) {
+        settings.value.processing_llm = 'claude_haiku'
+      }
     }
   } catch (err) {
     console.error('Failed to load system config settings:', err)
@@ -344,9 +393,17 @@ const saveSettings = async () => {
     error.value = ''
     successMessage.value = ''
     
-    const response = await adminAPI.updateSystemConfigSettings(settings.value)
+    // Ensure legacy primary_llm field is synced with response_llm for backward compatibility
+    const settingsToSave = { ...settings.value }
+    settingsToSave.primary_llm = settingsToSave.response_llm
+    
+    const response = await adminAPI.updateSystemConfigSettings(settingsToSave)
     if (response && response.success) {
       successMessage.value = 'System configuration settings saved successfully!'
+      // Update local settings with the response to ensure UI is in sync
+      if (response.settings) {
+        settings.value = { ...settings.value, ...response.settings }
+      }
       setTimeout(() => {
         successMessage.value = ''
       }, 3000)

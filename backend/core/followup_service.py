@@ -4,6 +4,7 @@ import threading
 from typing import Dict, List, Optional, Tuple
 
 from .admin_database import admin_db_manager
+from .settings_manager import get_settings_manager
 from .settings_schemas import FollowUpSettings
 
 logger = logging.getLogger(__name__)
@@ -279,6 +280,12 @@ class FollowUpService:
             A list of follow-up questions.
         """
         try:
+            # Check global feature flag first
+            settings_manager = get_settings_manager()
+            if not settings_manager.is_feature_enabled("enable_followup_questions"):
+                logger.debug("Follow-up questions disabled via feature flag")
+                return []
+
             settings = self._get_settings()
 
             # If disabled, return no questions

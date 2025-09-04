@@ -1,30 +1,30 @@
 <template>
   <div>
     <v-alert v-if="error" type="error" variant="tonal" class="ds-mb-4">{{ error }}</v-alert>
-    
+
     <!-- Subtle control bar -->
     <div class="ds-mb-4 d-flex align-center justify-space-between" v-if="categories.length > 0">
       <div class="d-flex align-center">
-        <v-btn 
-          variant="text" 
+        <v-btn
+          variant="text"
           size="small"
-          @click="openAll" 
+          @click="openAll"
           :disabled="!categories.length"
           class="text-caption mr-2"
         >
           Expand All
         </v-btn>
-        <v-btn 
-          variant="text" 
+        <v-btn
+          variant="text"
           size="small"
-          @click="closeAll" 
+          @click="closeAll"
           :disabled="!categories.length"
           class="text-caption"
         >
           Collapse All
         </v-btn>
       </div>
-      
+
       <v-progress-circular v-if="loading" indeterminate color="primary" size="16" />
     </div>
 
@@ -54,7 +54,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Hover-revealed actions -->
             <div class="category-actions">
               <v-btn
@@ -140,7 +140,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Add Question Button -->
             <div class="add-question-section mt-4 pt-3 border-t-thin">
               <v-btn
@@ -292,7 +292,7 @@ let loadTimeout = null
 const load = async (force = false) => {
   // Prevent multiple simultaneous loads unless forced
   if (loading.value && !force) return
-  
+
   // Debounce non-forced loads
   if (!force) {
     if (loadTimeout) clearTimeout(loadTimeout)
@@ -305,7 +305,7 @@ const load = async (force = false) => {
     error.value = ''
     const cats = await api.getFollowupCategories()
     categories.value = cats || []
-    
+
     // Load questions in smaller batches to prevent overwhelming the API
     const batchSize = 3
     for (let i = 0; i < categories.value.length; i += batchSize) {
@@ -329,7 +329,7 @@ const load = async (force = false) => {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
     }
-    
+
     // prune selected categories to still-existing ones
     const existingCatIds = new Set(categories.value.map(c => c.id))
     selectedCategories.value = selectedCategories.value.filter(id => existingCatIds.has(id))
@@ -588,7 +588,7 @@ defineExpose({
 /* Question panel content */
 .question-panel-content {
   padding: 20px !important;
-  background: rgba(var(--v-theme-primary), 0.08) !important;
+  /*background: rgba(var(--v-theme-surface), 0.2) !important;*/
 }
 
 .empty-questions {

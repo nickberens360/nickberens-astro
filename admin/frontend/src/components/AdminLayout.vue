@@ -454,7 +454,12 @@ const testConnection = async () => {
 }
 
 const toggleTheme = () => {
-  theme.global.name.value = isDark.value ? 'light' : 'dark'
+  try {
+    const newTheme = isDark.value ? 'light' : 'dark'
+    theme.change(newTheme)
+  } catch (error) {
+    console.error('Error toggling theme:', error)
+  }
 }
 
 const exportData = () => {

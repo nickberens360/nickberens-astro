@@ -107,7 +107,7 @@ const navigateToTab = (tabValue) => {
   flex-shrink: 0;
   width: 280px;
   position: sticky;
-  top: 24px;
+  top: 115px;
 }
 
 .settings-nav-list {
@@ -142,7 +142,7 @@ const navigateToTab = (tabValue) => {
     position: relative;
     top: auto;
   }
-  
+
   .settings-nav .v-list {
     display: flex;
     flex-direction: row;
@@ -150,13 +150,13 @@ const navigateToTab = (tabValue) => {
     gap: 4px;
     padding: 8px;
   }
-  
+
   .settings-nav-item {
     flex: 1;
     min-width: 140px;
     margin: 0;
   }
-  
+
   .settings-nav-title {
     font-size: 0.85rem;
   }
@@ -167,7 +167,7 @@ const navigateToTab = (tabValue) => {
     flex-direction: column;
     gap: 0;
   }
-  
+
   .settings-nav-item {
     min-width: auto;
     margin: 4px 8px;

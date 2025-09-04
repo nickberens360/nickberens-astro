@@ -14,6 +14,7 @@ from fastapi import HTTPException, Request
 from .admin_database import admin_db_manager
 from .geolocation_validator import GeolocationValidator
 from .session_fingerprint import SessionFingerprinter
+from .settings_manager import get_settings_manager
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +50,42 @@ class AdminAuthManager:
     def __init__(self):
 
         self._bcrypt_rounds = 12
-        # Session expiry time (24 hours)
+        # Session expiry time (24 hours default, but will use dynamic settings)
         self.session_expiry_hours = 24
         # Rate limiting now handled by database - no in-memory storage
         self._lockout_duration_minutes = 5  # 5 minutes lockout
+
+    def get_dynamic_session_timeout_hours(self) -> int:
+        """Get session timeout from security settings, with fallback to default."""
+        try:
+            settings_manager = get_settings_manager()
+            security_settings = settings_manager.get_security_settings()
+            # Convert seconds to hours
+            return security_settings.session_timeout // 3600
+        except Exception as e:
+            logger.warning(f"Failed to get dynamic session timeout, using default: {e}")
+            return self.session_expiry_hours
+
+    def get_dynamic_max_login_attempts(self) -> int:
+        """Get max login attempts from security settings."""
+        try:
+            settings_manager = get_settings_manager()
+            security_settings = settings_manager.get_security_settings()
+            return security_settings.max_login_attempts
+        except Exception as e:
+            logger.warning(f"Failed to get dynamic max login attempts, using default: {e}")
+            return 5  # Default
+
+    def get_dynamic_lockout_duration_minutes(self) -> int:
+        """Get lockout duration from security settings."""
+        try:
+            settings_manager = get_settings_manager()
+            security_settings = settings_manager.get_security_settings()
+            # Convert seconds to minutes
+            return security_settings.lockout_duration // 60
+        except Exception as e:
+            logger.warning(f"Failed to get dynamic lockout duration, using default: {e}")
+            return self._lockout_duration_minutes
 
     def validate_password_strength(self, password: str) -> None:
         """Validate password strength with comprehensive checks."""
@@ -237,7 +270,8 @@ class AdminAuthManager:
 
                 # Check if session is expired
                 last_active = datetime.fromisoformat(session_data["last_active_at"])
-                expiry_time = last_active + timedelta(hours=self.session_expiry_hours)
+                session_timeout_hours = self.get_dynamic_session_timeout_hours()
+                expiry_time = last_active + timedelta(hours=session_timeout_hours)
 
                 if datetime.now() > expiry_time:
                     # Expire the session
@@ -524,7 +558,8 @@ class AdminAuthManager:
     def cleanup_expired_sessions(self) -> None:
         """Clean up expired sessions from the database."""
         try:
-            expiry_cutoff = datetime.now() - timedelta(hours=self.session_expiry_hours)
+            session_timeout_hours = self.get_dynamic_session_timeout_hours()
+            expiry_cutoff = datetime.now() - timedelta(hours=session_timeout_hours)
 
             with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()

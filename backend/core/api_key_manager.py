@@ -4,10 +4,8 @@ Handles encryption, decryption, and validation of API keys.
 """
 
 import base64
-import hashlib
 import logging
 import os
-import secrets
 from typing import Dict, List, Optional, Tuple
 
 from cryptography.fernet import Fernet

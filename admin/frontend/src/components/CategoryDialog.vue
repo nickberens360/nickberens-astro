@@ -202,7 +202,7 @@ export default {
         emit('update:modelValue', value)
       }
     })
-    
+
     // Watch for modelValue changes
     watch(() => props.modelValue, (newValue) => {
       // Dialog visibility changed
@@ -259,7 +259,7 @@ export default {
         // Include ID for edit operations
         ...(isEdit.value && { id: props.category.id })
       }
-      
+
       // Remove is_active for create requests (not in CreateFollowupCategoryRequest model)
       if (!isEdit.value) {
         const { is_active, ...createData } = saveData

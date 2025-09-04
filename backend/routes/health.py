@@ -19,6 +19,19 @@ from ..dependencies import get_app_state
 router = APIRouter()
 
 
+def _get_current_primary_llm() -> str:
+    """Get the current primary LLM from database settings with fallback."""
+    try:
+        from ..core.settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        system_config = settings_manager.get_system_config_settings()
+        return system_config.primary_llm
+    except Exception:
+        # Fallback to environment config
+        return AppConfig.PRIMARY_LLM
+
+
 @router.get(
     "/",
     tags=["Health"],
@@ -89,7 +102,7 @@ async def status(state: dict = Depends(get_app_state)):
     return {
         "status": "online",
         "timestamp": time.time(),
-        "primary_llm": AppConfig.PRIMARY_LLM,
+        "primary_llm": _get_current_primary_llm(),
         "app_initialized": state["app_initialized"],
         "rate_limits": rate_limits,
     }

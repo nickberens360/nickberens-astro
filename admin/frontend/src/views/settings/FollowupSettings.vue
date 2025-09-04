@@ -69,7 +69,7 @@
       </div>
 
       <v-card class="ds-card settings-card">
-        <v-card-text class="pa-0">
+        <v-card-text class="pa-0" style="padding: 0 !important;">
           <!-- Service Status Row -->
           <div class="setting-row">
             <div class="setting-content">
@@ -229,9 +229,9 @@
                 class="ml-3"
               />
             </div>
-            <v-btn 
-              color="primary" 
-              @click="showCreateDialog = true" 
+            <v-btn
+              color="primary"
+              @click="showCategoryDialog = true"
               prepend-icon="$plus"
               variant="elevated"
             >
@@ -271,7 +271,7 @@
             <v-btn
               color="primary"
               prepend-icon="$plus"
-              @click="showCreateDialog = true"
+              @click="showCategoryDialog = true"
               variant="elevated"
             >
               Create First Category
@@ -287,6 +287,7 @@
       :category="editingCategory"
       :loading="store.loading"
       @save="saveCategory"
+      @cancel="cancelCategory"
     />
 
     <!-- Delete Dialog -->
@@ -314,7 +315,6 @@ const store = useFollowupSettingsStore()
 const { showSuccess, showError } = useNotifications()
 
 // Local state
-const showCreateDialog = ref(false)
 const showCategoryDialog = ref(false)
 const showDeleteDialog = ref(false)
 const editingCategory = ref(null)
@@ -354,6 +354,11 @@ const saveCategory = async (categoryData) => {
   } catch (err) {
     showError(`Failed to save category: ${err.message}`)
   }
+}
+
+const cancelCategory = () => {
+  showCategoryDialog.value = false
+  editingCategory.value = null
 }
 
 const deleteCategory = (category) => {

@@ -2362,6 +2362,11 @@ async def update_system_config_settings(
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update system configuration settings")
 
+        # IMPORTANT: Invalidate settings cache to ensure changes take effect immediately
+        # This prevents the 5-minute cache from serving stale settings
+        settings_mgr.invalidate_cache("system_config_settings")
+        logger.info("Invalidated system config settings cache after admin update")
+
         client_ip = request.client.host if request.client else "unknown"
         user_agent = request.headers.get("User-Agent", "")
 

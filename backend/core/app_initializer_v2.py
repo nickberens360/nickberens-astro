@@ -15,7 +15,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseLanguageModel
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
 from .settings_manager import get_settings_manager
@@ -23,6 +23,159 @@ from .smart_illustration_service import SmartIllustrationService
 from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
+
+
+def create_processing_llm() -> BaseLanguageModel:
+    """
+    Create the appropriate LLM for background processing operations.
+
+    Uses processing_llm setting - optimized for indexing, reformulation, etc.
+    Fallback chain: Database settings → Environment → Fast Claude default
+    """
+    # Import API key management
+    try:
+        from .api_key_manager import api_key_manager
+
+        API_KEY_MANAGER_AVAILABLE = True
+    except ImportError:
+        API_KEY_MANAGER_AVAILABLE = False
+
+    def get_api_key_for_provider(provider_type: str) -> Optional[str]:
+        """Get API key for a provider, preferring database over environment."""
+        if API_KEY_MANAGER_AVAILABLE:
+            try:
+                api_key = api_key_manager.get_api_key_by_type(provider_type)
+                if api_key:
+                    return api_key
+            except Exception as e:
+                logger.warning(f"Failed to get {provider_type} API key from database: {e}")
+
+        # Fallback to environment
+        env_var_map = {"anthropic": "ANTHROPIC_API_KEY", "google": "GOOGLE_API_KEY"}
+        env_var = env_var_map.get(provider_type)
+        if env_var:
+            return os.getenv(env_var)
+        return None
+
+    try:
+        # Try to get settings from database
+        settings_manager = get_settings_manager()
+        processing_llm = settings_manager.get_processing_llm()
+        processing_model_name = settings_manager.get_processing_model_name()
+
+        if processing_llm == "gemini":
+            google_api_key = get_api_key_for_provider("google")
+
+            if google_api_key:
+                logger.info(f"Creating Gemini processing LLM: {processing_model_name}")
+                return ChatGoogleGenerativeAI(
+                    model=processing_model_name, temperature=0.1, timeout=60.0, google_api_key=google_api_key
+                )
+            else:
+                logger.warning("No Google API key found for processing LLM, falling back to Claude")
+
+        # For claude or claude_haiku processing
+        if processing_llm in ["claude", "claude_haiku"]:
+            anthropic_api_key = get_api_key_for_provider("anthropic")
+
+            if anthropic_api_key:
+                logger.info(f"Creating Claude processing LLM: {processing_model_name}")
+                return ChatAnthropic(
+                    model=processing_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                )
+            else:
+                logger.warning("No Anthropic API key found for processing LLM, trying environment fallback")
+        else:
+            logger.warning(f"Unknown processing LLM in database: {processing_llm}, falling back to fast default")
+    except Exception as e:
+        logger.debug(f"Could not get processing LLM settings from database: {e}, using fast default")
+
+    # Fallback to fast Claude model for background processing
+    logger.info("Creating fast Claude processing LLM from environment: claude-3-haiku-20240307")
+    anthropic_key = get_api_key_for_provider("anthropic")
+    if anthropic_key:
+        return ChatAnthropic(
+            model="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
+        )
+    else:
+        # Last resort - try without explicit API key (may use environment)
+        return ChatAnthropic(model="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
+
+
+def create_response_llm() -> BaseLanguageModel:
+    """
+    Create the appropriate LLM for user query responses based on database settings.
+
+    Uses response_llm setting - what users see in the chat interface.
+    Fallback chain: Database settings → Environment → Default Claude
+    """
+    # Import API key management
+    try:
+        from .api_key_manager import api_key_manager
+
+        API_KEY_MANAGER_AVAILABLE = True
+    except ImportError:
+        API_KEY_MANAGER_AVAILABLE = False
+
+    def get_api_key_for_provider(provider_type: str) -> Optional[str]:
+        """Get API key for a provider, preferring database over environment."""
+        if API_KEY_MANAGER_AVAILABLE:
+            try:
+                api_key = api_key_manager.get_api_key_by_type(provider_type)
+                if api_key:
+                    return api_key
+            except Exception as e:
+                logger.warning(f"Failed to get {provider_type} API key from database: {e}")
+
+        # Fallback to environment
+        env_var_map = {"anthropic": "ANTHROPIC_API_KEY", "google": "GOOGLE_API_KEY"}
+        env_var = env_var_map.get(provider_type)
+        if env_var:
+            return os.getenv(env_var)
+        return None
+
+    try:
+        # Try to get settings from database
+        settings_manager = get_settings_manager()
+        response_llm = settings_manager.get_response_llm()
+        response_model_name = settings_manager.get_response_model_name()
+
+        if response_llm == "gemini":
+            google_api_key = get_api_key_for_provider("google")
+
+            if google_api_key:
+                logger.info(f"Creating Gemini response LLM: {response_model_name}")
+                return ChatGoogleGenerativeAI(
+                    model=response_model_name, temperature=0.1, timeout=60.0, google_api_key=google_api_key
+                )
+            else:
+                logger.warning("No Google API key found, falling back to Claude")
+
+        elif response_llm == "claude":
+            anthropic_api_key = get_api_key_for_provider("anthropic")
+
+            if anthropic_api_key:
+                logger.info(f"Creating Claude response LLM: {response_model_name}")
+                return ChatAnthropic(
+                    model=response_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                )
+            else:
+                logger.warning("No Anthropic API key found, trying environment fallback")
+        else:
+            logger.warning(f"Unknown response LLM in database: {response_llm}, falling back to environment")
+    except Exception as e:
+        logger.debug(f"Could not get LLM settings from database: {e}, using environment fallback")
+
+    # Fallback to environment configuration
+    logger.info(f"Creating Claude LLM from environment config: {AppConfig.CLAUDE_MODEL}")
+    anthropic_key = get_api_key_for_provider("anthropic")
+    if anthropic_key:
+        return ChatAnthropic(
+            model=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
+        )
+    else:
+        # Last resort - try without explicit API key (may use environment)
+        return ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
 
 
 def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
@@ -44,9 +197,9 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     logs_dir = backend_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
 
-    # Initialize LLMs - Claude Haiku for fast indexing, configurable Claude model for user queries
-    indexing_llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
-    user_query_llm = ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
+    # Initialize LLMs - database-configured processing LLM for indexing, response LLM for user queries
+    indexing_llm = create_processing_llm()
+    user_query_llm = create_response_llm()
 
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)

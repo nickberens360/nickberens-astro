@@ -8,8 +8,6 @@ dist/
 *.zip
 claude-exports/
 podman-commands.sh
-MULTI_TENANT_SAAS.md
-PHASE_1_SPECS.md
 
 RAG_IMPROVEMENTS.md
 RAG_Improvement_Plan.md
