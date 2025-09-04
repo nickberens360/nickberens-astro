@@ -57,6 +57,16 @@ const navigationTabs = [
     value: 'features',
     title: 'Feature Flags',
     icon: '$feature-flag'
+  },
+  {
+    value: 'system',
+    title: 'System Config',
+    icon: '$settings'
+  },
+  {
+    value: 'security',
+    title: 'Security & Privacy',
+    icon: '$shield-check'
   }
 ]
 
@@ -68,6 +78,8 @@ const currentTab = computed(() => {
   if (routeName === 'settings-response') return 'response'
   if (routeName === 'settings-routing') return 'routing'
   if (routeName === 'settings-features') return 'features'
+  if (routeName === 'settings-system') return 'system'
+  if (routeName === 'settings-security') return 'security'
   return 'followup' // default
 })
 
@@ -78,7 +90,9 @@ const navigateToTab = (tabValue) => {
     'api-keys': 'settings-api-keys',
     'response': 'settings-response',
     'routing': 'settings-routing',
-    'features': 'settings-features'
+    'features': 'settings-features',
+    'system': 'settings-system',
+    'security': 'settings-security'
   }
 
   const routeName = routeMap[tabValue]

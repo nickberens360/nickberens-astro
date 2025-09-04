@@ -23,7 +23,14 @@ from ..core.audit_logger import AuditAction, AuditLogger
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
 from ..core.query_data_manager import query_data_manager
 from ..core.settings_manager import get_settings_manager
-from ..core.settings_schemas import FeatureFlags, FollowUpSettings, QueryRoutingSettings, ResponseSettings
+from ..core.settings_schemas import (
+    FeatureFlags,
+    FollowUpSettings,
+    QueryRoutingSettings,
+    ResponseSettings,
+    SecuritySettings,
+    SystemConfigurationSettings,
+)
 from ..models.admin_models import (
     AdminUser,
     BulkQuestionRequest,
@@ -2312,3 +2319,127 @@ async def migrate_api_keys_from_env(
     except Exception as e:
         logger.error(f"Error migrating API keys from environment: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error migrating API keys")
+
+
+# System Configuration Settings Endpoints
+@router.get("/settings/system-config")
+async def get_system_config_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current system configuration settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_system_config_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "system_config_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting system config settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching system configuration settings")
+
+
+@router.put("/settings/system-config")
+async def update_system_config_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update system configuration settings."""
+    try:
+        settings = SystemConfigurationSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_system_config_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update system configuration settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "system_config_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"System config settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "System configuration settings updated successfully",
+            "settings": settings.to_dict(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error updating system config settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating system configuration settings")
+
+
+# Security Settings Endpoints
+@router.get("/settings/security")
+async def get_security_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current security settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_security_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "security_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting security settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching security settings")
+
+
+@router.put("/settings/security")
+async def update_security_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update security settings."""
+    try:
+        settings = SecuritySettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_security_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update security settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "security_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Security settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Security settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating security settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating security settings")

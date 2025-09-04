@@ -5,7 +5,7 @@ html {
 }
 
 body {
-  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
   padding: 0;
   /* Font rendering optimization */
@@ -19,7 +19,7 @@ body {
 /* Font face declarations with display swap for performance */
 @supports (font-display: swap) {
   @font-face {
-    font-family: 'JetBrains Mono';
+    font-family: 'Roboto';
     font-display: swap;
   }
 }
@@ -140,7 +140,7 @@ body {
 /* Print styles for typography */
 @media print {
   body {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     font-size: 11pt;
     line-height: 1.4;
   }
@@ -148,6 +148,6 @@ body {
   .typography-code-inline,
   .typography-code-block,
   .typography-technical {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   }
 }

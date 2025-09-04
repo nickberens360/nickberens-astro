@@ -240,7 +240,7 @@
         >
           <v-card-text class="pa-4">
             <div class="d-flex align-center mb-3">
-              <v-icon class="mr-2" size="18">$list</v-icon>
+              <v-icon class="mr-2" size="18">$format-list-bulleted</v-icon>
               <span class="text-subtitle-2 font-weight-bold">Action Summary</span>
             </div>
             <div class="summary-content text-body-2">

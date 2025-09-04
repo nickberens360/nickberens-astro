@@ -14,7 +14,9 @@ from .settings_schemas import (
     FollowUpSettings,
     QueryRoutingSettings,
     ResponseSettings,
+    SecuritySettings,
     SettingKeys,
+    SystemConfigurationSettings,
     SystemSettings,
 )
 
@@ -179,6 +181,50 @@ class SettingsManager:
         """Set feature flags in database."""
         return self._set_setting_in_db(SettingKeys.FEATURE_FLAGS, settings.to_json(), updated_by)
 
+    def get_system_config_settings(self) -> SystemConfigurationSettings:
+        """Get system configuration settings with caching."""
+        cached = self.cache.get(SettingKeys.SYSTEM_CONFIG_SETTINGS)
+        if cached:
+            return cached
+
+        # Get from database
+        settings_json = self._get_setting_from_db(SettingKeys.SYSTEM_CONFIG_SETTINGS)
+        if settings_json:
+            settings = SystemConfigurationSettings.from_json(settings_json)
+        else:
+            # Return defaults if no settings exist
+            settings = SystemConfigurationSettings()
+
+        # Cache the result
+        self.cache.set(SettingKeys.SYSTEM_CONFIG_SETTINGS, settings)
+        return settings
+
+    def set_system_config_settings(self, settings: SystemConfigurationSettings, updated_by: int) -> bool:
+        """Set system configuration settings in database."""
+        return self._set_setting_in_db(SettingKeys.SYSTEM_CONFIG_SETTINGS, settings.to_json(), updated_by)
+
+    def get_security_settings(self) -> SecuritySettings:
+        """Get security settings with caching."""
+        cached = self.cache.get(SettingKeys.SECURITY_SETTINGS)
+        if cached:
+            return cached
+
+        # Get from database
+        settings_json = self._get_setting_from_db(SettingKeys.SECURITY_SETTINGS)
+        if settings_json:
+            settings = SecuritySettings.from_json(settings_json)
+        else:
+            # Return defaults if no settings exist
+            settings = SecuritySettings()
+
+        # Cache the result
+        self.cache.set(SettingKeys.SECURITY_SETTINGS, settings)
+        return settings
+
+    def set_security_settings(self, settings: SecuritySettings, updated_by: int) -> bool:
+        """Set security settings in database."""
+        return self._set_setting_in_db(SettingKeys.SECURITY_SETTINGS, settings.to_json(), updated_by)
+
     def get_all_settings(self) -> SystemSettings:
         """Get all settings as unified SystemSettings object."""
         return SystemSettings(
@@ -186,6 +232,8 @@ class SettingsManager:
             response=self.get_response_settings(),
             routing=self.get_routing_settings(),
             features=self.get_feature_flags(),
+            system_config=self.get_system_config_settings(),
+            security=self.get_security_settings(),
         )
 
     def invalidate_cache(self, setting_key: Optional[str] = None) -> None:
@@ -200,6 +248,8 @@ class SettingsManager:
             self.get_response_settings()
             self.get_routing_settings()
             self.get_feature_flags()
+            self.get_system_config_settings()
+            self.get_security_settings()
             logger.info("Settings cache warmed up successfully")
         except Exception as e:
             logger.error(f"Error warming up settings cache: {e}")
@@ -217,6 +267,8 @@ class SettingsManager:
             SettingKeys.RESPONSE_SETTINGS,
             SettingKeys.ROUTING_SETTINGS,
             SettingKeys.FEATURE_FLAGS,
+            SettingKeys.SYSTEM_CONFIG_SETTINGS,
+            SettingKeys.SECURITY_SETTINGS,
         ]:
             cached_settings[key] = key in cache_keys
 

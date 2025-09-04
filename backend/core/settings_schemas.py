@@ -323,6 +323,251 @@ class FeatureFlags:
 
 
 @dataclass
+class SystemConfigurationSettings:
+    """Configuration for core system settings."""
+
+    # LLM Configuration
+    primary_llm: str = "claude"  # claude, gemini
+    claude_model: str = "claude-3-5-sonnet-20241022"
+    gemini_model: str = "gemini-1.5-flash"
+    embedding_model: str = "models/embedding-001"
+
+    # Performance Settings
+    cache_ttl_seconds: int = 3600
+    max_cache_size: int = 1000
+    rate_limit: str = "100/minute"
+
+    # Search Configuration
+    search_similarity_threshold: float = 0.55  # Percentage converted to 0-100 scale in UI
+    max_search_results: int = 15
+    retrieval_score_threshold: float = 0.3
+
+    # Cache & Performance
+    enable_smart_model_selection: bool = True
+    default_search_k: int = 8
+    expanded_search_k: int = 12
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SystemConfigurationSettings":
+        """Create from dictionary with validation."""
+        defaults = cls()
+        validated_data = {}
+
+        for key, default_value in asdict(defaults).items():
+            if key in data:
+                validated_data[key] = data[key]
+            else:
+                validated_data[key] = default_value
+
+        # Validate primary_llm
+        valid_llms = ["claude", "gemini"]
+        if validated_data["primary_llm"] not in valid_llms:
+            validated_data["primary_llm"] = defaults.primary_llm
+
+        # Validate Claude model
+        valid_claude_models = ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]
+        if validated_data["claude_model"] not in valid_claude_models:
+            validated_data["claude_model"] = defaults.claude_model
+
+        # Validate Gemini model
+        valid_gemini_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+        if validated_data["gemini_model"] not in valid_gemini_models:
+            validated_data["gemini_model"] = defaults.gemini_model
+
+        # Validate numeric fields with bounds
+        numeric_validations = {
+            "cache_ttl_seconds": (60, 86400),  # 1 minute to 1 day
+            "max_cache_size": (10, 10000),  # 10 to 10k entries
+            "max_search_results": (1, 100),
+            "default_search_k": (1, 50),
+            "expanded_search_k": (1, 50),
+        }
+
+        for field, (min_val, max_val) in numeric_validations.items():
+            if not isinstance(validated_data[field], int):
+                try:
+                    validated_data[field] = int(validated_data[field])
+                except (ValueError, TypeError):
+                    validated_data[field] = getattr(defaults, field)
+            validated_data[field] = max(min_val, min(max_val, validated_data[field]))
+
+        # Validate float fields with bounds
+        float_validations = {"search_similarity_threshold": (0.0, 1.0), "retrieval_score_threshold": (0.0, 1.0)}
+
+        for field, (min_val, max_val) in float_validations.items():
+            if not isinstance(validated_data[field], float):
+                try:
+                    validated_data[field] = float(validated_data[field])
+                except (ValueError, TypeError):
+                    validated_data[field] = getattr(defaults, field)
+            validated_data[field] = max(min_val, min(max_val, validated_data[field]))
+
+        # Validate boolean fields
+        for bool_field in ["enable_smart_model_selection"]:
+            if not isinstance(validated_data[bool_field], bool):
+                validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
+
+        # Validate rate_limit format
+        import re
+
+        rate_pattern = r"^\d+/(minute|hour|day)$"
+        if not isinstance(validated_data["rate_limit"], str) or not re.match(
+            rate_pattern, validated_data["rate_limit"]
+        ):
+            validated_data["rate_limit"] = defaults.rate_limit
+
+        return cls(**validated_data)
+
+    def to_json(self) -> str:
+        """Convert to JSON string for database storage."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "SystemConfigurationSettings":
+        """Create from JSON string with error handling."""
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse system configuration settings from JSON: {e}")
+            return cls()  # Return defaults on error
+
+
+@dataclass
+class SecuritySettings:
+    """Configuration for security and privacy settings."""
+
+    # IP Management
+    excluded_ips: List[str] = field(default_factory=list)
+    anonymize_ips: bool = True
+
+    # CORS Configuration
+    cors_origins: List[str] = field(default_factory=list)  # Empty means use defaults
+
+    # Query Logging
+    enable_query_logging: bool = True
+    low_similarity_threshold: float = 0.7
+    query_log_retention_days: int = 30
+
+    # Authentication & Sessions
+    session_timeout_minutes: int = 480  # 8 hours
+    enable_session_fingerprinting: bool = True
+    enable_audit_logging: bool = True
+
+    # Rate Limiting & Protection
+    enable_rate_limiting: bool = True
+    max_requests_per_minute: int = 100
+    enable_input_validation: bool = True
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SecuritySettings":
+        """Create from dictionary with validation."""
+        defaults = cls()
+        validated_data = {}
+
+        for key, default_value in asdict(defaults).items():
+            if key in data:
+                validated_data[key] = data[key]
+            else:
+                validated_data[key] = default_value
+
+        # Validate IP addresses
+        if isinstance(validated_data["excluded_ips"], list):
+            import ipaddress
+
+            valid_ips = []
+            for ip in validated_data["excluded_ips"]:
+                if isinstance(ip, str) and ip.strip():
+                    try:
+                        ipaddress.ip_address(ip.strip())
+                        valid_ips.append(ip.strip())
+                    except ValueError:
+                        logger.warning(f"Invalid IP address ignored: {ip}")
+            validated_data["excluded_ips"] = valid_ips[:50]  # Max 50 IPs
+        else:
+            validated_data["excluded_ips"] = []
+
+        # Validate CORS origins
+        if isinstance(validated_data["cors_origins"], list):
+            from urllib.parse import urlparse
+
+            valid_origins = []
+            for origin in validated_data["cors_origins"]:
+                if isinstance(origin, str) and origin.strip():
+                    origin = origin.strip()
+                    # Basic URL validation
+                    try:
+                        parsed = urlparse(origin)
+                        if parsed.scheme in ["http", "https"] and parsed.netloc:
+                            valid_origins.append(origin)
+                    except Exception:
+                        logger.warning(f"Invalid CORS origin ignored: {origin}")
+            validated_data["cors_origins"] = valid_origins[:20]  # Max 20 origins
+        else:
+            validated_data["cors_origins"] = []
+
+        # Validate numeric fields with bounds
+        numeric_validations = {
+            "query_log_retention_days": (1, 365),  # 1 day to 1 year
+            "session_timeout_minutes": (30, 1440),  # 30 minutes to 24 hours
+            "max_requests_per_minute": (1, 1000),  # 1 to 1000 requests per minute
+        }
+
+        for field, (min_val, max_val) in numeric_validations.items():
+            if not isinstance(validated_data[field], int):
+                try:
+                    validated_data[field] = int(validated_data[field])
+                except (ValueError, TypeError):
+                    validated_data[field] = getattr(defaults, field)
+            validated_data[field] = max(min_val, min(max_val, validated_data[field]))
+
+        # Validate float fields
+        if not isinstance(validated_data["low_similarity_threshold"], float):
+            try:
+                validated_data["low_similarity_threshold"] = float(validated_data["low_similarity_threshold"])
+            except (ValueError, TypeError):
+                validated_data["low_similarity_threshold"] = defaults.low_similarity_threshold
+        validated_data["low_similarity_threshold"] = max(0.0, min(1.0, validated_data["low_similarity_threshold"]))
+
+        # Validate boolean fields
+        bool_fields = [
+            "anonymize_ips",
+            "enable_query_logging",
+            "enable_session_fingerprinting",
+            "enable_audit_logging",
+            "enable_rate_limiting",
+            "enable_input_validation",
+        ]
+        for bool_field in bool_fields:
+            if not isinstance(validated_data[bool_field], bool):
+                validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
+
+        return cls(**validated_data)
+
+    def to_json(self) -> str:
+        """Convert to JSON string for database storage."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "SecuritySettings":
+        """Create from JSON string with error handling."""
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse security settings from JSON: {e}")
+            return cls()  # Return defaults on error
+
+
+@dataclass
 class SystemSettings:
     """Unified container for all DB-driven runtime settings."""
 
@@ -330,6 +575,8 @@ class SystemSettings:
     response: ResponseSettings = field(default_factory=ResponseSettings)
     routing: QueryRoutingSettings = field(default_factory=QueryRoutingSettings)
     features: FeatureFlags = field(default_factory=FeatureFlags)
+    system_config: SystemConfigurationSettings = field(default_factory=SystemConfigurationSettings)
+    security: SecuritySettings = field(default_factory=SecuritySettings)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -339,6 +586,8 @@ class SystemSettings:
         result["response"] = self.response.to_dict()
         result["routing"] = self.routing.to_dict()
         result["features"] = self.features.to_dict()
+        result["system_config"] = self.system_config.to_dict()
+        result["security"] = self.security.to_dict()
         return result
 
     @classmethod
@@ -350,12 +599,16 @@ class SystemSettings:
         response_data = data.get("response", {})
         routing_data = data.get("routing", {})
         features_data = data.get("features", {})
+        system_config_data = data.get("system_config", {})
+        security_data = data.get("security", {})
 
         return cls(
             followup=FollowUpSettings.from_dict(followup_data) if followup_data else FollowUpSettings(),
             response=ResponseSettings.from_dict(response_data),
             routing=QueryRoutingSettings.from_dict(routing_data),
             features=FeatureFlags.from_dict(features_data),
+            system_config=SystemConfigurationSettings.from_dict(system_config_data),
+            security=SecuritySettings.from_dict(security_data),
         )
 
     def to_json(self) -> str:
@@ -381,4 +634,6 @@ class SettingKeys:
     RESPONSE_SETTINGS = "response_settings"
     ROUTING_SETTINGS = "routing_settings"
     FEATURE_FLAGS = "feature_flags"
+    SYSTEM_CONFIG_SETTINGS = "system_config_settings"
+    SECURITY_SETTINGS = "security_settings"
     SYSTEM_SETTINGS = "system_settings"  # For unified storage (future use)

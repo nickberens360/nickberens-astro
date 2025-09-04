@@ -745,6 +745,24 @@ class AdminAPI {
     return await this.client.post('/settings/api-keys/migrate-from-env')
   }
 
+  // System Configuration Settings endpoints
+  async getSystemConfigSettings() {
+    return await this.client.get('/settings/system-config')
+  }
+
+  async updateSystemConfigSettings(settingsData) {
+    return await this.client.put('/settings/system-config', settingsData)
+  }
+
+  // Security Settings endpoints
+  async getSecuritySettings() {
+    return await this.client.get('/settings/security')
+  }
+
+  async updateSecuritySettings(settingsData) {
+    return await this.client.put('/settings/security', settingsData)
+  }
+
   // Authentication token methods removed - now using HTTPOnly cookies exclusively
   // These methods are kept for backward compatibility but do nothing
   setAuthToken(token) {

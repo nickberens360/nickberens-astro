@@ -15,6 +15,8 @@ import {
   mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
   mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon, mdiReply, mdiRoad,
   mdiFlag, mdiCached, mdiMessageText, mdiKey, mdiImport, mdiShieldCheck, mdiAlertCircle,
+  mdiRobot, mdiGoogle, mdiDatabase, mdiTimer, mdiFingerprint, mdiBookOpen,
+  mdiSpeedometer, mdiGauge, mdiIpNetwork, mdiCheckCircleOutline,
 
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -68,7 +70,7 @@ const themes = {
 
 // Modern typography for LMS design
 const typography = {
-  fontFamily: '"Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
+  fontFamily: '"Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
 }
 
 // Icon aliases configuration
@@ -135,6 +137,17 @@ const iconAliases = {
   import: mdiImport,
   'shield-check': mdiShieldCheck,
   'alert-circle': mdiAlertCircle,
+  robot: mdiRobot,
+  google: mdiGoogle,
+  database: mdiDatabase,
+  timer: mdiTimer,
+  'clock-outline': mdiClockOutline,
+  fingerprint: mdiFingerprint,
+  'book-open': mdiBookOpen,
+  speedometer: mdiSpeedometer,
+  gauge: mdiGauge,
+  'ip-network': mdiIpNetwork,
+  'check-circle-outline': mdiCheckCircleOutline,
 
   // Status
   alert: mdiAlert,
@@ -154,7 +167,7 @@ const iconAliases = {
   // Content types
   info: mdiInformation,
   folder: mdiFolder,
-  list: mdiFormatListBulleted,
+  'list-bulleted': mdiFormatListBulleted,
   description: mdiFileDocument,
   'data_object': mdiCodeBraces,
   'picture_as_pdf': mdiFilePdfBox,
