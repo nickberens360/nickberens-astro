@@ -4,7 +4,7 @@ import {
   // Navigation & Core
   mdiHome, mdiViewDashboard, mdiMagnify, mdiChartLine, mdiFileDocument,
   mdiAccountGroup, mdiAccount, mdiMenu, mdiClose, mdiRefresh, mdiExport,
-  
+
   // Actions & Controls
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
   mdiDownload, mdiUpload, mdiCloudUpload, mdiPaperclip, mdiDelete,
@@ -15,17 +15,17 @@ import {
   mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
   mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon, mdiReply, mdiRoad,
   mdiFlag, mdiCached, mdiMessageText,
-  
+
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
   mdiTrendingDown, mdiThumbUpOutline, mdiThumbUp, mdiThumbDown,
   mdiAlertCircleOutline, mdiBell,
-  
+
   // Content & Knowledge
   mdiBookOpenPageVariant, mdiInformation, mdiFolder, mdiFormatListBulleted,
   mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb, mdiHelpCircleOutline, mdiCog,
   mdiBrain, mdiTune, mdiTarget, mdiNumeric, mdiFormatListGroup, mdiPalette,
-  
+
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
   mdiLightbulbOutline, mdiLightbulb, mdiTableLarge, mdiTestTube
@@ -60,7 +60,7 @@ const themes = {
       info: '#60A5FA', // Lighter blue
       success: '#34D399', // Lighter green
       warning: '#FBBF24', // Lighter amber
-      surface: '#1F2937', // Dark surface
+      surface: '#1a222e', // Darker surface for cards (slate-900)
       background: '#111827' // Very dark background
     }
   }
@@ -81,7 +81,7 @@ const iconAliases = {
   document: mdiFileDocument,
   users: mdiAccountGroup,
   knowledge: mdiBookOpenPageVariant,
-  
+
   // Actions
   menu: mdiMenu,
   close: mdiClose,
@@ -131,7 +131,7 @@ const iconAliases = {
   route: mdiRoad,
   'feature-flag': mdiFlag,
   cached: mdiCached,
-  
+
   // Status
   alert: mdiAlert,
   check: mdiCheck,
@@ -146,7 +146,7 @@ const iconAliases = {
   'thumb-down': mdiThumbDown,
   warning: mdiAlertCircleOutline,
   bell: mdiBell,
-  
+
   // Content types
   info: mdiInformation,
   folder: mdiFolder,
@@ -172,18 +172,18 @@ const iconAliases = {
   palette: mdiPalette,
   code: mdiCodeBraces,
   test: mdiTestTube,
-  
+
   // User & Security
   account: mdiAccount,
   lock: mdiLock,
   'lock-outline': mdiLockOutline,
   'lock-check': mdiLockCheck,
   logout: mdiLogout,
-  
+
   // Theme
   'weather-night': mdiWeatherNight,
   'light-mode': mdiWhiteBalanceSunny,
-  
+
   // System
   memory: mdiMemory,
   'bar_chart': mdiChartBar,

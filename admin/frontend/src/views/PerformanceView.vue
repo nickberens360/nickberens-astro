@@ -12,9 +12,9 @@
         <MetricCard
           :title="metric.title"
           :value="metric.value"
+          :unit="metric.unit"
           :icon="metric.icon"
           :color="metric.color"
-          :change="metric.change"
           :loading="isLoading"
         />
       </v-col>

@@ -1,80 +1,44 @@
 <template>
   <div>
     <!-- Overview Cards -->
-    <v-row class="mb-8">
+    <v-row class="mb-6">
       <v-col cols="12" sm="6" md="4">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
-            <div class="d-flex align-center justify-space-between">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="primary" size="large" class="me-3">$message-text</v-icon>
               <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  TOTAL QUESTIONS
-                </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ questions.filter(q => q.is_active).length }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-primary">
-                    <v-icon size="12">$message-text</v-icon>
-                    Active
-                  </span>
-                </div>
+                <div class="text-h6">{{ questions.filter(q => q.is_active).length }}</div>
+                <div class="text-body-2 text-medium-emphasis">Total Questions</div>
               </div>
-              <v-avatar size="48" color="primary" variant="tonal">
-                <v-icon size="24">$message-text</v-icon>
-              </v-avatar>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" sm="6" md="4">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
-            <div class="d-flex align-center justify-space-between">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="warning" size="large" class="me-3">$alert</v-icon>
               <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  INACTIVE QUESTIONS
-                </div>
-                <div class="metric-value text-h4 font-weight-bold mt-1">
-                  {{ questions.filter(q => !q.is_active).length }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-warning">
-                    <v-icon size="12">$alert</v-icon>
-                    Disabled
-                  </span>
-                </div>
+                <div class="text-h6">{{ questions.filter(q => !q.is_active).length }}</div>
+                <div class="text-body-2 text-medium-emphasis">Inactive Questions</div>
               </div>
-              <v-avatar size="48" color="warning" variant="tonal">
-                <v-icon size="24">$alert</v-icon>
-              </v-avatar>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" sm="6" md="4">
-        <v-card class="metric-card h-100" elevation="2">
-          <v-card-text class="pa-6">
-            <div class="d-flex align-center justify-space-between">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="info" size="large" class="me-3">$web</v-icon>
               <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  HOMEPAGE DISPLAY
-                </div>
-                <div class="metric-value text-h6 font-weight-bold mt-1">
-                  {{ questions.filter(q => q.is_active).length }} Questions
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-info">
-                    <v-icon size="12">$web</v-icon>
-                    Live on site
-                  </span>
-                </div>
+                <div class="text-h6">{{ questions.filter(q => q.is_active).length }}</div>
+                <div class="text-body-2 text-medium-emphasis">Homepage Display</div>
               </div>
-              <v-avatar size="48" color="info" variant="tonal">
-                <v-icon size="24">$web</v-icon>
-              </v-avatar>
             </div>
           </v-card-text>
         </v-card>

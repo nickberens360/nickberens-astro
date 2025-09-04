@@ -16,7 +16,6 @@
           :unit="metric.unit"
           :icon="metric.icon"
           :color="metric.color"
-          :change="metric.change"
           :loading="cardsLoading"
           clickable
           @click="handleMetricClick(metric)"

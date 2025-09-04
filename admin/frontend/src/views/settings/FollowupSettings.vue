@@ -1,106 +1,58 @@
 <template>
   <div>
     <!-- Overview Cards -->
-    <v-row class="ds-mb-8">
+    <v-row class="mb-6">
       <v-col cols="12" sm="6" md="3">
-        <v-card class="ds-card metric-card h-100">
-          <v-card-text class="ds-p-6">
-            <div class="d-flex align-center justify-space-between">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="success" size="large" class="me-3">$folder</v-icon>
               <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  ACTIVE CATEGORIES
-                </div>
-                <div class="metric-value text-h6 font-weight-bold mt-1">
-                  {{ store.stats.active_categories }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-success">
-                    <v-icon size="12">$trending-up</v-icon>
-                    Ready for use
-                  </span>
-                </div>
+                <div class="text-h6">{{ store.stats.active_categories }}</div>
+                <div class="text-body-2 text-medium-emphasis">Active Categories</div>
               </div>
-              <v-avatar size="48" color="success" variant="tonal">
-                <v-icon size="24">$folder</v-icon>
-              </v-avatar>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" sm="6" md="3">
-        <v-card class="ds-card metric-card h-100">
-          <v-card-text class="ds-p-6">
-            <div class="d-flex align-center justify-space-between">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="primary" size="large" class="me-3">$help-circle</v-icon>
               <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  TOTAL QUESTIONS
-                </div>
-                <div class="metric-value text-h6 font-weight-bold mt-1">
-                  {{ store.stats.total_questions }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-primary">
-                    <v-icon size="12">$help-circle</v-icon>
-                    Available
-                  </span>
-                </div>
+                <div class="text-h6">{{ store.stats.total_questions }}</div>
+                <div class="text-body-2 text-medium-emphasis">Total Questions</div>
               </div>
-              <v-avatar size="48" color="primary" variant="tonal">
-                <v-icon size="24">$help-circle</v-icon>
-              </v-avatar>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" sm="6" md="3">
-        <v-card class="ds-card metric-card h-100">
-          <v-card-text class="ds-p-6">
-            <div class="d-flex align-center justify-space-between">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="warning" size="large" class="me-3">$alert</v-icon>
               <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  INACTIVE CATEGORIES
-                </div>
-                <div class="metric-value text-h6 font-weight-bold mt-1">
-                  {{ store.stats.inactive_categories }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-warning">
-                    <v-icon size="12">$alert</v-icon>
-                    Need attention
-                  </span>
-                </div>
+                <div class="text-h6">{{ store.stats.inactive_categories }}</div>
+                <div class="text-body-2 text-medium-emphasis">Inactive Categories</div>
               </div>
-              <v-avatar size="48" color="warning" variant="tonal">
-                <v-icon size="24">$alert</v-icon>
-              </v-avatar>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" sm="6" md="3">
-        <v-card class="ds-card metric-card h-100">
-          <v-card-text class="ds-p-6">
-            <div class="d-flex align-center justify-space-between">
+        <v-card elevation="1">
+          <v-card-text>
+            <div class="d-flex align-center">
+              <v-icon color="info" size="large" class="me-3">$brain</v-icon>
               <div>
-                <div class="metric-label text-caption text-medium-emphasis font-weight-medium">
-                  SERVICE MODE
-                </div>
-                <div class="metric-value text-h6 font-weight-bold mt-1 text-capitalize">
-                  {{ store.settings.service_type || 'Static' }}
-                </div>
-                <div class="metric-trend text-caption mt-1">
-                  <span class="text-info">
-                    <v-icon size="12">$brain</v-icon>
-                    {{ store.settings.enabled ? 'Active' : 'Inactive' }}
-                  </span>
-                </div>
+                <div class="text-h6 text-capitalize">{{ store.settings.service_type || 'Static' }}</div>
+                <div class="text-body-2 text-medium-emphasis">Service Mode</div>
               </div>
-              <v-avatar size="48" color="info" variant="tonal">
-                <v-icon size="24">$brain</v-icon>
-              </v-avatar>
             </div>
           </v-card-text>
         </v-card>
