@@ -15,7 +15,9 @@ from langchain.schema import Document
 from langchain_core.language_models import BaseLanguageModel
 
 from .config import AppConfig
+from .fast_query_classifier import FastQueryClassifier
 from .llm_utils import analyze_query_with_llm
+from .performance_config import PerformanceConfig, performance_monitor
 from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
@@ -24,10 +26,41 @@ logger = logging.getLogger(__name__)
 class SmartQueryHandler:
     """Handles queries intelligently using the unified retriever."""
 
-    def __init__(self, unified_retriever: UnifiedRetriever, llm: BaseLanguageModel):
+    def __init__(self, unified_retriever: UnifiedRetriever, llm: BaseLanguageModel, use_fast_classifier: bool = True):
         self.unified_retriever = unified_retriever
         self.llm = llm
         self._query_cache: Dict[str, List[Document]] = {}  # Simple cache for repeated queries
+        self.use_fast_classifier = use_fast_classifier
+        self.fast_classifier = FastQueryClassifier() if use_fast_classifier else None
+
+    def analyze_query_fast(self, query: str) -> Dict[str, Any]:
+        """Fast query analysis without LLM - 10-50ms instead of 1-2 seconds."""
+        import time
+
+        start_time = time.time()
+
+        # Check if fast classifier is enabled and available
+        if self.use_fast_classifier and self.fast_classifier and PerformanceConfig.ENABLE_FAST_QUERY_CLASSIFIER:
+
+            result = self.fast_classifier.classify(query)
+            duration_ms = (time.time() - start_time) * 1000
+
+            # Record performance metrics
+            performance_monitor.record_query_analysis_time(duration_ms)
+            performance_monitor.record_llm_call_count(0)  # No LLM calls used
+
+            logger.debug(f"Fast query analysis completed in {duration_ms:.1f}ms")
+            return result
+        else:
+            # Fallback to LLM analysis (slower)
+            logger.warning("Fast classifier not available or disabled, falling back to LLM analysis")
+            result = analyze_query_with_llm(self.llm, query)
+
+            duration_ms = (time.time() - start_time) * 1000
+            performance_monitor.record_query_analysis_time(duration_ms)
+            performance_monitor.record_llm_call_count(1)  # One LLM call used
+
+            return result
 
     async def get_relevant_context_async(
         self, query: str, chat_history: Optional[List[Dict]] = None, max_context_length: int = None

@@ -283,8 +283,8 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
             if not llm:
                 logger.error("LLM not initialized, skipping smart query analysis.")
             else:
-                smart_handler = SmartQueryHandler(unified_retriever, llm)
-                intent_analysis = smart_handler.analyze_query_with_llm(sanitized_question)
+                smart_handler = SmartQueryHandler(unified_retriever, llm, use_fast_classifier=True)
+                intent_analysis = smart_handler.analyze_query_fast(sanitized_question)
                 logger.info(
                     f"Smart routing: Query '{sanitized_question}' -> Topics: "
                     f"{intent_analysis.get('topics', [])} | Complexity: {intent_analysis.get('complexity')}"
@@ -329,3 +329,44 @@ async def query_endpoint(request: Request, query: Query, services: dict = Depend
     }
 
     return StreamingResponse(text_stream, media_type="text/plain", headers=headers)
+
+
+@router.get(
+    "/default-model",
+    tags=["Query"],
+    summary="Get Default Model Setting",
+    response_description="Returns the configured default model for responses",
+)
+async def get_default_model():
+    """
+    Get the default response model from admin settings.
+
+    This endpoint allows the frontend to initialize with the correct
+    default model as configured by the admin, while still allowing
+    per-session user overrides.
+    """
+    try:
+        # Use the same method as the working query processing - get from system config directly
+        from ..core.admin_database import admin_db_manager
+
+        # Get system config settings directly from database (same as app initializer)
+        system_config_json = admin_db_manager.get_admin_setting("system_config_settings")
+
+        if system_config_json:
+            import json
+
+            system_config = json.loads(system_config_json)
+            default_model = system_config.get("response_llm", "claude")
+            logger.info(f"Default model from database: {default_model}")
+        else:
+            default_model = "claude"
+            logger.info("No system config found in database, using fallback")
+
+        return {
+            "default_model": default_model,
+            "available_models": ["claude", "gemini"],  # Available options for frontend
+        }
+    except Exception as e:
+        logger.error(f"Error getting default model setting: {e}")
+        # Fallback to safe default
+        return {"default_model": "claude", "available_models": ["claude", "gemini"]}

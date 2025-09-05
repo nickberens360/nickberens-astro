@@ -205,7 +205,9 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
 
     # Create unified retriever with Claude Haiku for fast indexing
-    unified_retriever = UnifiedRetriever(embeddings, indexing_llm)
+    unified_retriever = UnifiedRetriever(
+        embeddings, indexing_llm, use_fast_classifier=True, classification_mode="hybrid"
+    )
 
     # Auto-index all content directories
     directories_to_index = [

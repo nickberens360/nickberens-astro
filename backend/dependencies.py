@@ -62,4 +62,4 @@ def get_smart_handler(request: Request, services: dict = Depends(get_services)) 
     if not llm:
         raise HTTPException(status_code=500, detail="LLM not initialized")
 
-    return SmartQueryHandler(unified_retriever, llm)
+    return SmartQueryHandler(unified_retriever, llm, use_fast_classifier=True)

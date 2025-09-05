@@ -95,12 +95,32 @@ export default {
     const chatHistoryVisible = useStore(isChatHistoryVisible);
     const lastStoppedPrompt = ref('');
     const currentPrompt = ref(''); // Track the current prompt being processed
-    const selectedModel = ref('claude');
+    const selectedModel = ref('claude'); // Will be updated with server default
     const backendStatusValue = useStore(backendStatus);
     const rateLimitNotification = ref('');
     const rateLimitNotificationTimeout = ref(null);
 
     const { sendChatMessage, stopLoading, checkBackendStatus, checkRateLimits, rateLimits } = useChatAPI();
+
+    // Fetch default model from server on component mount
+    const fetchDefaultModel = async () => {
+      try {
+        // Use the same API URL logic as other endpoints
+        const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+        const apiUrl = isDev
+          ? 'http://localhost:8000'
+          : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-production.up.railway.app';
+        
+        const response = await fetch(`${apiUrl}/default-model`);
+        if (response.ok) {
+          const data = await response.json();
+          selectedModel.value = data.default_model || 'claude';
+        }
+      } catch (error) {
+        console.warn('Could not fetch default model, using fallback:', error);
+        // Keep the fallback default 'claude'
+      }
+    };
 
     const hasTypingMessage = computed(() => messages.value.some(msg => msg.isTyping));
 
@@ -147,6 +167,9 @@ export default {
     onMounted(async () => {
       if (!activeChatId.get() && !isPendingNewChat.get()) createNewChat();
       await checkBackendStatus();
+
+      // Fetch default model from server settings
+      await fetchDefaultModel();
 
       // Initial rate limit check
       await checkRateLimits();

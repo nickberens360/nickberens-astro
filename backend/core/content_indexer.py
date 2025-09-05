@@ -19,7 +19,9 @@ from langchain_core.language_models import BaseLanguageModel
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
+from .fast_content_classifier import FastContentClassifier
 from .llm_utils import extract_topics_with_llm
+from .startup_content_classifier import StartupContentClassifier
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +29,31 @@ logger = logging.getLogger(__name__)
 class ContentIndexer:
     """Handles content discovery, processing, and metadata extraction for indexing."""
 
-    def __init__(self, llm: BaseLanguageModel, persist_dir: str = "backend/.unified_chroma"):
+    def __init__(
+        self,
+        llm: BaseLanguageModel,
+        persist_dir: str = "backend/.unified_chroma",
+        use_fast_classifier: bool = True,
+        classification_mode: str = "hybrid",  # "fast", "startup_llm", "hybrid"
+    ):
         self.llm = llm
         self.persist_dir = persist_dir
         self._document_contexts: Dict[str, str] = {}  # Cache for document contexts
+        self.use_fast_classifier = use_fast_classifier
+        self.classification_mode = classification_mode
+
+        # Initialize classifiers based on mode
+        if classification_mode == "fast" or (classification_mode == "hybrid" and use_fast_classifier):
+            self.fast_classifier = FastContentClassifier()
+        else:
+            self.fast_classifier = None
+
+        if classification_mode == "startup_llm" or classification_mode == "hybrid":
+            self.startup_classifier = StartupContentClassifier(llm)
+        else:
+            self.startup_classifier = None
+
+        logger.info(f"ContentIndexer initialized with classification_mode={classification_mode}")
 
     def compute_file_hash(self, file_path: Path) -> str:
         """Compute SHA256 hash of a file."""
@@ -41,13 +64,32 @@ class ContentIndexer:
         return sha256_hash.hexdigest()
 
     def extract_content_metadata(self, doc: Document, file_path: Path) -> Dict[str, Any]:
-        """Extract metadata using LLM topics plus deterministic fallbacks.
+        """Extract metadata using the configured classification mode.
 
-        Heuristics ensure key content remains discoverable even if LLM topic extraction fails.
+        Modes:
+        - "fast": Use fast pattern-based classification (fastest, hardcoded patterns)
+        - "startup_llm": Use LLM classification (slower startup, better accuracy)
+        - "hybrid": Use startup LLM classification (recommended)
         """
         content = doc.page_content
 
-        # Use LLM to extract topics for dynamic content tagging (may fallback to ["general"])
+        # Route to appropriate classification method based on mode
+        if self.classification_mode == "startup_llm" or self.classification_mode == "hybrid":
+            # Use high-accuracy LLM classification during indexing
+            if self.startup_classifier:
+                return self.startup_classifier.classify_content_with_llm(doc, file_path)
+            else:
+                logger.warning("Startup classifier not available, falling back to legacy method")
+
+        elif self.classification_mode == "fast":
+            # Use fast pattern-based classification
+            if self.fast_classifier:
+                return self.fast_classifier.enhance_document_metadata(doc, file_path)
+            else:
+                logger.warning("Fast classifier not available, falling back to legacy method")
+
+        # Legacy LLM-based extraction (fallback)
+        logger.info(f"Using legacy classification for {file_path.name}")
         content_types = extract_topics_with_llm(self.llm, content)
 
         # Deterministic heuristics
@@ -209,30 +251,58 @@ class ContentIndexer:
         return all_documents, files_processed, total_chunks
 
     def generate_document_context(self, documents: List[Document], file_path: Path) -> str:
-        """Generate or retrieve cached document context using LLM."""
-        from .llm_utils import generate_document_context
-
+        """Generate or retrieve cached document context using fast method or LLM."""
         file_key = str(file_path)
 
         # Return cached context if available
         if file_key in self._document_contexts:
             return self._document_contexts[file_key]
 
-        # Use document content to generate meaningful context
-        if documents:
-            # Combine content from all documents for this file
-            combined_content = " ".join(doc.page_content for doc in documents)
-            context = generate_document_context(
-                self.llm, combined_content, file_path.name, file_path.suffix.lstrip(".")
-            )
+        # Use fast context generation if available
+        if self.use_fast_classifier:
+            context = self._generate_lightweight_context(documents, file_path)
         else:
-            # Fallback for empty documents
-            context = f"This is content from {file_path.name}, a {file_path.suffix} document."
+            # Fallback to LLM-based context generation (slower)
+            from .llm_utils import generate_document_context
+
+            if documents:
+                # Combine content from all documents for this file
+                combined_content = " ".join(doc.page_content for doc in documents)
+                context = generate_document_context(
+                    self.llm, combined_content, file_path.name, file_path.suffix.lstrip(".")
+                )
+            else:
+                # Fallback for empty documents
+                context = f"This is content from {file_path.name}, a {file_path.suffix} document."
 
         # Cache the context
         self._document_contexts[file_key] = context
 
         return context
+
+    def _generate_lightweight_context(self, documents: List[Document], file_path: Path) -> str:
+        """Generate context without LLM - fast string operations only."""
+        if not documents:
+            return f"Content from {file_path.name}"
+
+        # Use first chunk + file metadata for context (no LLM)
+        first_chunk = documents[0].page_content[:200]  # First 200 chars
+        file_type = file_path.suffix.lstrip(".")
+
+        # Get content type from first document's metadata if available
+        content_type = "content"
+        if documents[0].metadata and "content_type" in documents[0].metadata:
+            content_type = documents[0].metadata["content_type"].replace(",", "/")
+
+        # Create meaningful context based on file type and content
+        if file_type in ["json"]:
+            return f"Data from {file_path.name} ({content_type}): {first_chunk}..."
+        elif file_type in ["md", "txt"]:
+            return f"Documentation from {file_path.name} ({content_type}): {first_chunk}..."
+        elif file_type in ["pdf"]:
+            return f"PDF document {file_path.name} ({content_type}): {first_chunk}..."
+        else:
+            return f"File {file_path.name} ({file_type}, {content_type}): {first_chunk}..."
 
     def enhance_chunk_with_context(self, chunk: Document, document_context: str) -> Document:
         """Enhance a document chunk with contextual information."""

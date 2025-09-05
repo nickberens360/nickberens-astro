@@ -33,13 +33,24 @@ class UnifiedRetriever:
     compatibility while providing a clean separation of concerns.
     """
 
-    def __init__(self, embeddings: Any, llm: BaseLanguageModel, persist_dir: str = "backend/.unified_chroma"):
+    def __init__(
+        self,
+        embeddings: Any,
+        llm: BaseLanguageModel,
+        persist_dir: str = "backend/.unified_chroma",
+        use_fast_classifier: bool = True,
+        classification_mode: str = "hybrid",
+    ):
         self.embeddings = embeddings
         self.llm = llm
         self.persist_dir = persist_dir
+        self.use_fast_classifier = use_fast_classifier
+        self.classification_mode = classification_mode
 
-        # Initialize component-based architecture
-        self.content_indexer = ContentIndexer(llm, persist_dir)
+        # Initialize component-based architecture with hybrid classification
+        self.content_indexer = ContentIndexer(
+            llm, persist_dir, use_fast_classifier=use_fast_classifier, classification_mode=classification_mode
+        )
         self.semantic_searcher = SemanticSearcher(embeddings, persist_dir)
         self.content_router = ContentRouter(self.semantic_searcher)
 
