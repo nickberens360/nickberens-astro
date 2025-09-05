@@ -3,7 +3,6 @@ Unit tests for security settings integration.
 Tests that security settings properly control backend behavior.
 """
 
-import time
 from unittest.mock import Mock, patch
 
 from backend.core.admin_auth import AdminAuthManager

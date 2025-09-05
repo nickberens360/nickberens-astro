@@ -3,9 +3,7 @@ Unit tests for query routing settings integration.
 Tests that query routing settings properly control routing behavior.
 """
 
-import asyncio
-import time
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 

@@ -5,10 +5,9 @@ Tests verify that the fast classifiers achieve target performance improvements
 while maintaining accuracy and response quality.
 """
 
-import asyncio
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from langchain.docstore.document import Document
@@ -209,7 +208,7 @@ class TestFallbackBehavior:
         indexer = ContentIndexer(mock_llm, use_fast_classifier=False)
 
         doc = Document(page_content="Test content", metadata={})
-        file_path = Path("test.md")
+        Path("test.md")
 
         # Should use LLM path when fast classifier disabled
         assert indexer.use_fast_classifier is False

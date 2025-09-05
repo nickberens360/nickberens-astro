@@ -491,7 +491,7 @@ def _build_dynamic_system_prompt() -> str:
         style_instruction = style_guidance.get(response_settings.response_style, style_guidance["conversational"])
 
         # Build prompt with dynamic guidance
-        base_prompt = DEFAULT_PROMPTS.get("system_template", "")
+        DEFAULT_PROMPTS.get("system_template", "")
 
         # Enhanced prompt with response settings
         enhanced_prompt = (

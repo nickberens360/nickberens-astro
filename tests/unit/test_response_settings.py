@@ -3,7 +3,6 @@ Unit tests for response settings integration.
 Tests that response settings properly control response generation and formatting.
 """
 
-import time
 from unittest.mock import Mock, patch
 
 from backend.core.response_service import ResponseService

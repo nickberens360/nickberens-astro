@@ -101,7 +101,7 @@ class TestHybridImplementation:
         content_metadata = mock_content_metadata  # Would be retrieved from index
 
         # 3. Lightweight context generation
-        context = f"Experience content with confidence {content_metadata['topic_confidence']}"
+        f"Experience content with confidence {content_metadata['topic_confidence']}"
 
         total_time = time.time() - start
 
@@ -168,7 +168,7 @@ class TestHybridImplementation:
         handler = SmartQueryHandler(mock_retriever, mock_llm, use_fast_classifier=True)
 
         # Should record fast query analysis
-        result = handler.analyze_query_fast("Test query")
+        handler.analyze_query_fast("Test query")
 
         # Should have recorded metrics
         assert len(performance_monitor.metrics["query_analysis_times"]) > 0
@@ -207,7 +207,6 @@ class TestPerformanceComparison:
         original_time = 6000  # 6 seconds (estimated)
 
         # Simulate fast-only approach (0 LLM calls, but hardcoded)
-        fast_only_llm_calls = 0
         fast_only_time = 10  # 10ms
         fast_only_flexibility = False  # Hardcoded assumptions
 
