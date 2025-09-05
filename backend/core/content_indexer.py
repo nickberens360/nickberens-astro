@@ -20,7 +20,7 @@ from langchain_core.language_models import BaseLanguageModel
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
 from .fast_content_classifier import FastContentClassifier
-from .llm_utils import extract_topics_with_llm
+from .llm_utils import extract_topics_with_llm, generate_document_context
 from .startup_content_classifier import StartupContentClassifier
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,13 @@ class ContentIndexer:
             if self.startup_classifier:
                 return self.startup_classifier.classify_content_with_llm(doc, file_path)
             else:
+                # In hybrid mode, fallback to fast classifier first
+                if self.classification_mode == "hybrid" and self.fast_classifier:
+                    logger.warning(
+                        "Startup classifier not available in hybrid mode, falling back to fast content classifier."
+                    )
+                    return self.fast_classifier.enhance_document_metadata(doc, file_path)
+
                 logger.warning("Startup classifier not available, falling back to legacy method")
 
         elif self.classification_mode == "fast":
@@ -263,8 +270,6 @@ class ContentIndexer:
             context = self._generate_lightweight_context(documents, file_path)
         else:
             # Fallback to LLM-based context generation (slower)
-            from .llm_utils import generate_document_context
-
             if documents:
                 # Combine content from all documents for this file
                 combined_content = " ".join(doc.page_content for doc in documents)

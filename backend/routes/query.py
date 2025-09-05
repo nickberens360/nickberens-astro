@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
+from ..core.admin_database import admin_db_manager
 from ..core.app_factory import limiter
 from ..core.config import AppConfig
 from ..core.llm_chain import get_rate_limit_status, stream_with_fallback
@@ -347,14 +348,10 @@ async def get_default_model():
     """
     try:
         # Use the same method as the working query processing - get from system config directly
-        from ..core.admin_database import admin_db_manager
-
         # Get system config settings directly from database (same as app initializer)
         system_config_json = admin_db_manager.get_admin_setting("system_config_settings")
 
         if system_config_json:
-            import json
-
             system_config = json.loads(system_config_json)
             default_model = system_config.get("response_llm", "claude")
             logger.info(f"Default model from database: {default_model}")

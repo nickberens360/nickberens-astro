@@ -9,7 +9,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List
 
 from langchain.docstore.document import Document
 
@@ -185,54 +185,6 @@ class FastContentClassifier:
                 "client",
                 "api",
             },
-        }
-
-    def classify_query(self, query: str) -> Dict[str, Any]:
-        """Classify query in <50ms using regex patterns."""
-        query_lower = query.lower().strip()
-
-        # Topic detection
-        topics = []
-        topic_scores = {}
-
-        for topic, patterns in self.topic_patterns.items():
-            score = 0
-            for pattern in patterns:
-                matches = len(re.findall(pattern, query_lower))
-                score += matches
-
-            if score > 0:
-                topics.append(topic)
-                topic_scores[topic] = score
-
-        # If no topics detected, default to general
-        if not topics:
-            topics = ["general"]
-
-        # Sort topics by score (most relevant first)
-        topics = sorted(topics, key=lambda t: topic_scores.get(t, 0), reverse=True)
-
-        # Complexity detection
-        complexity = "moderate"  # default
-        for level, patterns in self.complexity_patterns.items():
-            if any(re.search(pattern, query_lower) for pattern in patterns):
-                complexity = level
-                break
-
-        # Intent detection
-        intent = "general"  # default
-        for intent_type, patterns in self.intent_patterns.items():
-            if any(re.search(pattern, query_lower) for intent in patterns):
-                intent = intent_type
-                break
-
-        return {
-            "query": query,
-            "topics": topics,
-            "complexity": complexity,
-            "intent": intent,
-            "topic_scores": topic_scores,
-            "processing_time_ms": "< 50ms",  # Performance indicator
         }
 
     def extract_content_topics_fast(self, content: str, file_path: Path) -> List[str]:

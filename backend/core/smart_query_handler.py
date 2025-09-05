@@ -9,6 +9,7 @@ This module provides intelligent query handling without manual configuration:
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 from langchain.schema import Document
@@ -35,8 +36,6 @@ class SmartQueryHandler:
 
     def analyze_query_fast(self, query: str) -> Dict[str, Any]:
         """Fast query analysis without LLM - 10-50ms instead of 1-2 seconds."""
-        import time
-
         start_time = time.time()
 
         # Check if fast classifier is enabled and available

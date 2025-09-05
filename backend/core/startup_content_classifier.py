@@ -8,6 +8,7 @@ while still achieving significant performance gains.
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -143,8 +144,6 @@ class StartupContentClassifier:
 
     def _extract_enhanced_keywords(self, content: str, topics: List[str]) -> str:
         """Extract keywords with topic-aware enhancement."""
-        import re
-
         content_lower = content.lower()
         keywords = set()
 
