@@ -2,7 +2,7 @@
   <div class="dashboard">
     
     <!-- Metric Cards Grid -->
-    <v-row class="ds-mb-6">
+    <v-row class="mb-6">
       <v-col
         v-for="metric in metrics"
         :key="metric.key"
@@ -16,6 +16,7 @@
           :unit="metric.unit"
           :icon="metric.icon"
           :color="metric.color"
+          :change="metric.change"
           :loading="cardsLoading"
           clickable
           @click="handleMetricClick(metric)"
@@ -24,7 +25,7 @@
     </v-row>
     
     <!-- Charts Row -->
-    <v-row class="ds-mb-6">
+    <v-row class="mb-6">
       <!-- Left Side: Response Time Chart -->
       <v-col cols="12" lg="8">
         <PerformanceChart

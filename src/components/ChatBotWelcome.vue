@@ -13,18 +13,17 @@
       <h2>Welcome to nick.AI</h2>
       <p>Try asking me some questions like:</p>
       <ul class="example-prompts">
-        <li v-if="loading" class="loading-placeholder">
-          <span class="prompt-icon">...</span>
-          Loading questions...
-        </li>
-        <li 
-          v-else
-          v-for="question in welcomeQuestions" 
-          :key="question.id"
-          @click="selectPrompt(question.question_text)"
-        >
+        <li @click="selectPrompt('Tell me about yourself')">
           <span class="prompt-icon">→</span>
-          {{ question.question_text }}
+          Tell me about yourself
+        </li>
+        <li @click="selectPrompt('Show me your resume')">
+          <span class="prompt-icon">→</span>
+          Show me your resume
+        </li>
+        <li @click="selectPrompt('Show me your illustrations')">
+          <span class="prompt-icon">→</span>
+          Show me your illustrations
         </li>
       </ul>
     </div>
@@ -32,8 +31,6 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
-
 export default {
   name: 'ChatBotWelcome',
   props: {
@@ -45,46 +42,11 @@ export default {
   },
   emits: ['select-prompt'],
   setup(props, { emit }) {
-    const loading = ref(true)
-    const welcomeQuestions = ref([])
-
     const selectPrompt = (prompt) => {
       emit('select-prompt', prompt);
     };
 
-    const fetchWelcomeQuestions = async () => {
-      try {
-        // Use the same API URL logic as other components
-        const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
-        const apiUrl = isDev
-          ? 'http://localhost:8000'
-          : import.meta.env.PUBLIC_API_URL || 'https://nickberens-astro-production.up.railway.app';
-        
-        const response = await fetch(`${apiUrl}/welcome-questions`)
-        const data = await response.json()
-        
-        // Sort questions by sort_order and assign to reactive ref
-        welcomeQuestions.value = (data.questions || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-      } catch (error) {
-        console.error('Failed to fetch welcome questions:', error)
-        // Fallback to default questions
-        welcomeQuestions.value = [
-          { id: 1, question_text: "Tell me about yourself", sort_order: 1 },
-          { id: 2, question_text: "Show me your resume", sort_order: 2 },
-          { id: 3, question_text: "Show me your illustrations", sort_order: 3 }
-        ]
-      } finally {
-        loading.value = false
-      }
-    }
-
-    onMounted(() => {
-      fetchWelcomeQuestions()
-    })
-
     return {
-      loading,
-      welcomeQuestions,
       selectPrompt
     };
   }
@@ -153,16 +115,6 @@ p {
 .example-prompts li:hover {
   background-color: #333333;
   transform: translateY(-2px);
-}
-
-.loading-placeholder {
-  opacity: 0.6;
-  cursor: default !important;
-}
-
-.loading-placeholder:hover {
-  background-color: #222222 !important;
-  transform: none !important;
 }
 
 .prompt-icon {

@@ -44,8 +44,6 @@ class AuditAction(Enum):
 
     # Data operations
     DATA_VIEW = "data_view"
-    DATA_CREATE = "data_create"
-    DATA_UPDATE = "data_update"
     DATA_EXPORT = "data_export"
     DATA_IMPORT = "data_import"
     DATA_DELETE = "data_delete"
