@@ -582,10 +582,13 @@ class AdminDatabaseManager:
                 if api_key and len(api_key.strip()) > 10:  # Basic validation
                     try:
                         # Import here to avoid circular imports during database initialization
-                        from .api_key_manager import api_key_manager
+                        from .api_key_manager import ApiKeyManager
+
+                        # Create temporary manager instance to avoid circular dependency
+                        temp_manager = ApiKeyManager()
 
                         # Create the API key in the database
-                        encrypted_value, last_four = api_key_manager.encrypt_key(api_key.strip())
+                        encrypted_value, last_four = temp_manager.encrypt_key(api_key.strip())
 
                         cursor.execute(
                             """
