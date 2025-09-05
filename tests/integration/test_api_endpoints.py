@@ -224,7 +224,7 @@ async def test_health_endpoint_returns_detailed_status(client: AsyncClient):
     assert response.status_code == 200
     response_json = response.json()
     assert "status" in response_json
-    assert response_json["status"] in ["healthy", "degraded", "initializing"]
+    assert response_json["status"] in ["healthy", "degraded"]
     assert "illustration_count" in response_json
     assert isinstance(response_json["illustration_count"], int)
 

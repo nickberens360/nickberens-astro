@@ -103,15 +103,3 @@ admin/*.db
 admin_monitoring.db
 rag_monitoring.db
 auth_sessions.db
-
-# Test artifacts and reports
-test-results/
-playwright-report/
-tests/e2e/test-results/
-admin/frontend/test-results/
-*.png
-*.webm
-*.json.auth
-results.json
-test-summary.json
-junit.xml

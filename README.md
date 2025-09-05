@@ -18,14 +18,11 @@ This website is packed with interactive and dynamic features designed to provide
     * **Geolocation Integration**: Location-aware query processing
 
 * **📊 Admin Dashboard**: Comprehensive monitoring and analytics system featuring:
-    * **Vue.js + Vuetify Interface**: Modern, responsive admin UI with Material Design
+    * **Vue.js + Vuetify Interface**: Modern, responsive admin UI
     * **Real-time Query Analytics**: Monitor user queries, response times, and system performance
     * **Knowledge Management**: Content gap analysis and indexed document overview
     * **Session Management**: Secure admin authentication with session tracking
     * **Performance Metrics**: System health monitoring and detailed analytics
-    * **Settings Management**: Centralized configuration for API keys, followup questions, and system features
-    * **Security Features**: TOTP authentication, audit logging, and session fingerprinting
-    * **API Key Management**: Secure storage and rotation of Anthropic/Google API keys
 
 * **🖥️ Interactive Terminal**: A draggable, resizable, and minimizable terminal window that allows users to navigate the site and access information using command-line instructions.
 
@@ -131,21 +128,11 @@ The project features a modern full-stack architecture with auto-discovery conten
 │   │   ├── query_router.py          # Advanced query routing
 │   │   ├── response_service.py      # Response processing service  
 │   │   ├── followup_service.py      # Follow-up question service
-│   │   ├── followup_management_service.py # Enhanced followup management
 │   │   ├── geolocation_service.py   # Location-based services
-│   │   ├── geolocation_validator.py # Geolocation validation and security
 │   │   ├── sqlite_query_logger.py   # SQLite-based query logging
 │   │   ├── admin_auth.py            # Admin authentication service
 │   │   ├── admin_database.py        # Admin database operations
 │   │   ├── query_data_manager.py    # Query data management
-│   │   ├── api_key_manager.py       # API key management and rotation
-│   │   ├── audit_logger.py          # Comprehensive audit logging
-│   │   ├── security_middleware.py   # Security middleware and validation
-│   │   ├── session_fingerprint.py   # Session fingerprinting for security
-│   │   ├── totp_service.py          # Time-based one-time password service
-│   │   ├── settings_manager.py      # Settings management service
-│   │   ├── settings_schemas.py      # Settings validation schemas
-│   │   ├── database_utils.py        # Database utility functions
 │   │   ├── config.py                # Centralized configuration
 │   │   └── ...                      # Other core modules
 │   ├── routes/                      # API routes
@@ -154,7 +141,6 @@ The project features a modern full-stack architecture with auto-discovery conten
 │   │   ├── admin.py                 # Admin dashboard API routes  
 │   │   ├── query_logs.py            # Protected query log interface
 │   │   ├── health.py                # Health check endpoint
-│   │   ├── knowledge_public.py      # Public knowledge base access
 │   │   └── ...                      # Other route modules
 │   ├── templates/                   # Jinja2 templates for admin
 │   └── logs/                        # Database and log files
@@ -168,11 +154,10 @@ The project features a modern full-stack architecture with auto-discovery conten
 │   ├── frontend/                    # Vue.js + Vuetify admin frontend
 │   │   ├── src/
 │   │   │   ├── components/          # Vue components
-│   │   │   ├── views/               # Page components including Settings
-│   │   │   │   └── settings/        # Settings management views (API Keys, Followups, etc.)
+│   │   │   ├── views/               # Page components  
 │   │   │   ├── stores/              # Pinia state management
 │   │   │   ├── services/            # API services
-│   │   │   └── plugins/             # Vuetify configuration with icon aliases
+│   │   │   └── plugins/             # Vuetify configuration
 │   │   └── dist/                    # Built frontend files
 │   └── start-admin.py               # Admin server startup script
 ├── scripts/                         # Utility scripts
@@ -182,7 +167,6 @@ The project features a modern full-stack architecture with auto-discovery conten
 │   ├── unit/                        # Unit tests
 │   ├── integration/                 # Integration tests
 │   ├── security/                    # Security tests
-│   ├── e2e/                         # End-to-end tests with Playwright
 │   └── ...                          # Test files with pytest markers
 └── htmlcov/                         # Test coverage reports
 
@@ -210,14 +194,6 @@ The project features a modern full-stack architecture with auto-discovery conten
 - `pytest -m integration` - Run integration tests (slower)
 - `npm test` - Run frontend tests with Vitest
 - `PYTHONPATH=. pytest tests/` - Run tests with proper Python path
-
-### E2E Test Commands
-- `npm run e2e` - Run end-to-end tests with Playwright
-- `npm run e2e:headed` - Run E2E tests in headed mode (visible browser)
-- `npm run e2e:debug` - Run E2E tests with debugging enabled
-- `npm run e2e:ui` - Run E2E tests with Playwright UI mode
-- `npm run e2e:report` - Show Playwright test report
-- `npm run e2e:install` - Install Playwright browsers
 
 ### Makefile Commands
 - `make lint-fix` - Auto-format code with Black, isort, and autoflake
@@ -272,13 +248,6 @@ The system now uses a **unified smart retriever** that:
 - `FORCE_REBUILD_DATA=true` - Force rebuild of vector indices on startup (optional)
 - `ADMIN_DB_PATH` - Path to admin SQLite database (defaults to backend/logs/admin_monitoring.db)
 
-### Security & Authentication Variables
-- `ADMIN_DEFAULT_USERNAME` - Default admin username for initial setup
-- `ADMIN_DEFAULT_PASSWORD` - Default admin password for initial setup (change immediately)
-- `SESSION_SECRET_KEY` - Secret key for session management (generated automatically)
-- `TOTP_SECRET_KEY` - Secret key for TOTP authentication (generated automatically)
-- `ENABLE_AUDIT_LOGGING=true` - Enable comprehensive audit logging (default: true)
-
 ### Follow-up Configuration
 - `FOLLOWUP_MODE=pre_generated|optimized|static` - Follow-up question strategy (default: pre_generated)
 - `ENABLE_FOLLOWUP_PREGENERATION=true|false` - Cache follow-ups at startup (default: true)
@@ -300,26 +269,14 @@ The system uses multiple SQLite databases for different purposes:
 
 ### Backend Databases
 - **`/backend/logs/rag_monitoring.db`** - Primary query logging and analytics
-  - Tables: `query_logs`, `content_gaps`
-  - Features: IP filtering, anonymization, geolocation tracking
-- **`/backend/logs/auth_sessions.db`** - User session tracking for main application
-  - Tables: `user_sessions`
-  - Features: Session management and user behavior analytics
+- **`/backend/logs/auth_sessions.db`** - User session tracking
 
 ### Admin System Databases  
 - **`/backend/logs/admin_monitoring.db`** - Admin user management and settings
-  - Tables: `admin_users`, `admin_sessions`, `admin_settings`
-  - Features: Admin authentication, roles, session management, and system configuration
+- **Query Log Storage** - SQLite-based logging with IP filtering, anonymization, geolocation
 
-### Security Features
-- **Session-based Authentication**: Secure cookies with fingerprinting
-- **TOTP Multi-factor Authentication**: Time-based one-time passwords
-- **Audit Logging**: Comprehensive tracking of all admin actions
-- **API Key Management**: Secure storage and rotation of provider keys
-- **Database Separation**: Isolated admin and backend databases for security
-
-### Access Points
-- **Admin Dashboard**: http://localhost:3000 (Vue.js + Vuetify interface)
-- **Backend API**: http://localhost:8000 (FastAPI with protected admin routes)
-- **Health Monitoring**: Real-time system status and performance metrics
-- **Analytics**: Query monitoring, response time analysis, and usage patterns
+### Features
+- **Admin Dashboard Access**: http://localhost:3000 (Vue.js + Vuetify)
+- **Backend API**: http://localhost:8000 (FastAPI with admin routes)
+- **Security**: Session-based authentication with fingerprinting
+- **Analytics**: Real-time query monitoring and performance metrics
