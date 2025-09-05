@@ -36,6 +36,14 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `PYTHONPATH=. pytest tests/` - Run tests with proper Python path
 - `pytest tests/integration/test_api_endpoints.py -v` - Run specific test file with verbose output
 
+### E2E Test Commands
+- `npm run e2e` - Run end-to-end tests with Playwright
+- `npm run e2e:headed` - Run E2E tests in headed mode (visible browser)
+- `npm run e2e:debug` - Run E2E tests with debugging enabled
+- `npm run e2e:ui` - Run E2E tests with Playwright UI mode
+- `npm run e2e:report` - Show Playwright test report
+- `npm run e2e:install` - Install Playwright browsers
+
 ### Makefile Commands
 - `make lint-fix` - Auto-format code with Black, isort, and autoflake
 - `make lint-check` - Check code formatting without making changes
@@ -117,12 +125,13 @@ backend/
 │   ├── smart_query_handler.py     # Intelligent query processing
 │   ├── query_logger.py            # Query logging factory (returns SQLiteQueryLogger)
 │   ├── sqlite_query_logger.py    # SQLite-based query logging implementation
-│   ├── query_logger_dual.py       # Dual-output query logging
 │   ├── query_router.py            # Query routing logic
 │   ├── response_service.py        # Response processing service
 │   ├── response_cache_warmer.py   # Cache warming service
 │   ├── followup_service.py        # Follow-up question service (configurable)
+│   ├── followup_management_service.py  # Enhanced followup management service
 │   ├── geolocation_service.py     # Location-based services
+│   ├── geolocation_validator.py   # Geolocation validation and security
 │   ├── llm_utils.py               # Shared LLM utilities
 │   ├── constants.py               # Shared constants and stop words
 │   ├── config.py                  # Centralized configuration with validation
@@ -132,7 +141,15 @@ backend/
 │   ├── query_data_manager.py      # Query data management
 │   ├── content_indexer.py         # Content indexing utilities
 │   ├── content_router.py          # Content routing logic
-│   └── semantic_searcher.py       # Semantic search functionality
+│   ├── semantic_searcher.py       # Semantic search functionality
+│   ├── api_key_manager.py         # API key management and rotation
+│   ├── audit_logger.py            # Comprehensive audit logging
+│   ├── database_utils.py          # Database utility functions
+│   ├── security_middleware.py     # Security middleware and validation
+│   ├── session_fingerprint.py     # Session fingerprinting for security
+│   ├── settings_manager.py        # Settings management service
+│   ├── settings_schemas.py        # Settings validation schemas
+│   └── totp_service.py            # Time-based one-time password service
 ├── knowledge/      # Auto-indexed knowledge base
 │   ├── *.md        # Markdown documentation
 │   ├── *.pdf       # PDF documents
@@ -147,6 +164,7 @@ backend/
 │   ├── admin_refresh.py    # Admin refresh endpoints
 │   ├── content.py          # Content management routes
 │   ├── knowledge.py        # Knowledge base routes
+│   ├── knowledge_public.py # Public knowledge base access
 │   ├── performance.py      # Performance monitoring routes
 │   ├── queries.py          # Query management routes
 │   └── stats.py            # Statistics and analytics routes
@@ -183,6 +201,7 @@ scripts/           # Utility scripts
 tests/             # Comprehensive test suite
 ├── unit/          # Unit tests
 ├── integration/   # Integration tests
+├── e2e/           # End-to-end tests with Playwright
 └── *.py           # Test files with markers for organization
 ```
 
@@ -197,13 +216,27 @@ tests/             # Comprehensive test suite
 - `backend/core/query_router.py` - Advanced query routing logic
 - `backend/core/response_service.py` - Response processing and enhancement
 - `backend/core/followup_service.py` - Intelligent follow-up question generation
+- `backend/core/followup_management_service.py` - Enhanced followup management service
 - `backend/core/geolocation_service.py` - Location-based query processing
+- `backend/core/geolocation_validator.py` - Geolocation validation and security
 - `backend/core/llm_utils.py` - Shared LLM utilities
 - `backend/core/constants.py` - Shared constants for consistent processing
 - `backend/core/config.py` - Centralized configuration with enhanced security validation
+
+### Security & Admin Files
 - `backend/core/admin_auth.py` - Admin authentication and security
 - `backend/core/admin_database.py` - Admin database management
+- `backend/core/api_key_manager.py` - API key management and rotation
+- `backend/core/audit_logger.py` - Comprehensive audit logging
+- `backend/core/security_middleware.py` - Security middleware and validation
+- `backend/core/session_fingerprint.py` - Session fingerprinting for security
+- `backend/core/totp_service.py` - Time-based one-time password service
+
+### Settings & Management Files
+- `backend/core/settings_manager.py` - Settings management service
+- `backend/core/settings_schemas.py` - Settings validation schemas
 - `backend/core/query_data_manager.py` - Query data operations and analytics
+- `backend/core/database_utils.py` - Database utility functions
 
 ### Configuration
 - `backend/core/config.py` - **PRIMARY**: Centralized configuration with validation
@@ -306,6 +339,10 @@ The project features a fully integrated admin dashboard system with comprehensiv
 - **Smart Query Testing**: `/api/smart-query/*` - Advanced query analysis endpoints
 - **Query Log Download**: Automated scripts for downloading and analyzing query logs
 - **Protected Endpoints**: Security validation for admin interfaces
+- **API Key Management**: `/admin/api/settings/api-keys` - Secure API key management and rotation
+- **TOTP Authentication**: Multi-factor authentication with time-based one-time passwords
+- **Audit Logging**: Comprehensive audit trail for all admin actions
+- **Settings Management**: `/admin/api/settings/*` - Centralized configuration management
 
 ### Admin Dashboard Access
 - **Frontend**: http://localhost:3000 (Vue.js + Vuetify interface)
@@ -320,6 +357,12 @@ The project features a fully integrated admin dashboard system with comprehensiv
 - **Knowledge**: Content management, indexed documents, gap analysis
 - **Performance**: System performance metrics, response time analysis
 - **Sessions**: User session management and authentication logs
+- **Settings**: Comprehensive configuration management including:
+  - **API Keys**: Secure management of Anthropic/Google API keys with rotation
+  - **Followup Questions**: Category-based followup question management
+  - **Response Settings**: Model preferences and response configuration
+  - **Routing Settings**: Query routing and smart retriever configuration
+  - **Feature Toggles**: Enable/disable system features and capabilities
 
 ### Admin Dashboard Icon Usage
 The admin dashboard uses Vuetify with Material Design Icons (MDI). To maintain consistency and avoid console errors:
@@ -382,23 +425,40 @@ cd admin/frontend && npm run build
 ```
 
 ### New Services & Modules
+
+#### Core Services
 - `sqlite_query_logger.py` - SQLite-based query logging and analytics
-- `query_logger_dual.py` - Dual-output logging (JSON + SQLite)
 - `response_service.py` - Enhanced response processing pipeline
 - `response_cache_warmer.py` - Cache warming for improved performance
 - `followup_service.py` - Intelligent follow-up question generation
+- `followup_management_service.py` - Enhanced followup management service
 - `query_router.py` - Advanced query routing with intent analysis
 - `geolocation_service.py` - Location-based services for user queries
+- `geolocation_validator.py` - Geolocation validation and security
 - `llm_utils.py` - Shared LLM utilities and helper functions
 - `constants.py` - Shared constants including stop words for query processing
-- `admin_auth.py` - Admin authentication and security layer
-- `admin_database.py` - Admin database operations and management
-- `query_data_manager.py` - Query data analytics and operations
 - `content_indexer.py` - Content indexing and processing utilities
 - `content_router.py` - Content routing and management
 - `semantic_searcher.py` - Advanced semantic search capabilities
 
+#### Security & Authentication
+- `admin_auth.py` - Admin authentication and security layer
+- `api_key_manager.py` - API key management and rotation service
+- `audit_logger.py` - Comprehensive audit logging for all admin actions
+- `security_middleware.py` - Security middleware and validation
+- `session_fingerprint.py` - Session fingerprinting for enhanced security
+- `totp_service.py` - Time-based one-time password service for MFA
+
+#### Data Management
+- `admin_database.py` - Admin database operations and management
+- `query_data_manager.py` - Query data analytics and operations
+- `database_utils.py` - Database utility functions and helpers
+- `settings_manager.py` - Centralized settings management service
+- `settings_schemas.py` - Settings validation schemas and models
+
 ### Testing & Coverage
+
+#### Python Backend Testing
 - **Coverage Reports**: HTML coverage reports generated in `htmlcov/` directory
 - **Test Markers**: `unit`, `integration`, `slow` for test organization
 - **Coverage Target**: Focuses on `backend/core` modules
@@ -409,7 +469,16 @@ cd admin/frontend && npm run build
   - `test_illustration_service.py` - Illustration service with fuzzy matching tests
   - `test_query_router.py` - Query routing logic tests
   - `test_llm_chain.py` - LLM chain functionality tests
+  - `test_admin_settings_api.py` - Admin settings API testing
+  - `security/test_*.py` - Comprehensive security testing suite
   - `integration/test_*.py` - Integration tests for API endpoints and search functionality
+
+#### End-to-End Testing
+- **Framework**: Playwright with @playwright/mcp integration
+- **Test Location**: `tests/e2e/` directory
+- **Browser Support**: Chromium, Firefox, Safari
+- **Features**: Full admin dashboard testing, API endpoint validation, user workflow testing
+- **Reports**: HTML reports with screenshots and traces for debugging failures
 
 ## Environment Variables
 
@@ -590,3 +659,5 @@ repos:
 10. **Analytics**: Query logging and analysis for continuous improvement
 
 The system now operates like a smart assistant that understands both your content and your users' intent, with enterprise-grade reliability and performance!
+- memorize
+- memorize

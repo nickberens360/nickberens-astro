@@ -10,7 +10,7 @@
       class="sidebar-drawer"
     >
       <!-- Brand Logo Section -->
-      <div class="sidebar-header pa-6">
+      <div class="sidebar-header ds-p-6">
         <div class="d-flex align-center">
           <div class="brand-logo">
             <v-avatar color="primary" size="40">
@@ -25,14 +25,14 @@
         </div>
       </div>
 
-      <v-divider class="mb-4"/>
+      <v-divider class="ds-mb-4"/>
 
       <!-- Main Menu Section -->
-      <div class="px-4">
-        <div class="menu-label text-caption font-weight-medium text-medium-emphasis mb-3">
+      <div class="ds-px-4">
+        <div class="menu-label ds-text-xs ds-font-medium text-medium-emphasis ds-mb-3">
           MAIN MENU
         </div>
-        <v-list nav density="compact" class="py-0">
+        <v-list nav density="compact" class="ds-py-0">
           <template v-for="item in navigationItems" :key="item.name">
             <!-- Main navigation item -->
             <v-list-item
@@ -84,38 +84,6 @@
         </v-list>
       </div>
 
-      <!-- Settings Section -->
-      <div class="px-4 mt-6">
-        <div class="menu-label text-caption font-weight-medium text-medium-emphasis mb-3">
-          CONFIGURATION
-        </div>
-        <v-list nav density="compact" class="py-0">
-          <v-list-item
-            rounded="lg"
-            class="mb-1 nav-item"
-            prepend-icon="$settings"
-            color="primary"
-            disabled
-          >
-            <v-list-item-title class="font-weight-medium d-flex align-center justify-space-between">
-              <span>Settings</span>
-              <v-chip
-                size="x-small"
-                variant="tonal"
-                color="info"
-              >
-                Coming Soon
-              </v-chip>
-            </v-list-item-title>
-            <v-tooltip
-              activator="parent"
-              location="right"
-            >
-              Settings page coming soon
-            </v-tooltip>
-          </v-list-item>
-        </v-list>
-      </div>
 
       <template #append>
         <v-divider class="mb-2"/>
@@ -264,7 +232,7 @@
     <v-main>
       <v-container
         fluid
-        class="pa-8"
+        class="ds-p-8"
         style="background-color: rgb(var(--v-theme-background));"
       >
         <router-view v-slot="{ Component }">
@@ -399,6 +367,12 @@ const navigationItems = computed(() => [
     to: '/knowledge/sources',
     icon: '$knowledge',
     //do nest children
+  },
+  {
+    name: 'settings',
+    title: 'Settings',
+    to: '/settings/followup',
+    icon: '$settings'
   }
 ]);
 
@@ -480,7 +454,12 @@ const testConnection = async () => {
 }
 
 const toggleTheme = () => {
-  theme.global.name.value = isDark.value ? 'light' : 'dark'
+  try {
+    const newTheme = isDark.value ? 'light' : 'dark'
+    theme.change(newTheme)
+  } catch (error) {
+    console.error('Error toggling theme:', error)
+  }
 }
 
 const exportData = () => {

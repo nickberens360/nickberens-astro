@@ -10,17 +10,17 @@ This module provides focused functionality for:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from langchain.docstore.document import Document
 from langchain_core.retrievers import BaseRetriever
 
 # Prefer the newer Chroma package
 try:
-    from langchain_chroma import Chroma
+    from langchain_chroma import Chroma  # type: ignore
 except ImportError:
     # Fallback to community version if new package not available
-    from langchain_community.vectorstores import Chroma
+    from langchain_community.vectorstores import Chroma  # type: ignore
 
 from .config import AppConfig
 
@@ -183,6 +183,21 @@ class SemanticSearcher:
             logger.warning(f"Could not get collection count: {e}")
             return 0
 
+    def get_count(self, where: Optional[Dict[str, Any]] = None) -> int:
+        """Get the number of documents in the vector store with optional filtering."""
+        if self.vector_store is None:
+            return 0
+        try:
+            if where:
+                # Try to use count with filter if supported
+                return self.vector_store._collection.count(where=where)
+            else:
+                return self.vector_store._collection.count()
+        except AttributeError:
+            # Fallback: fetch documents and count them
+            docs = self.get_documents(where=where, limit=100000, offset=0)
+            return len(docs or [])
+
     def get_documents(
         self, where: Optional[Dict[str, Any]] = None, limit: int = 100, offset: int = 0
     ) -> List[Dict[str, Any]]:
@@ -344,7 +359,20 @@ class SemanticSearcher:
             return False
 
         try:
-            self.vector_store._collection.update(ids=document_ids, metadatas=metadatas)
+            # Convert metadata to compatible format for ChromaDB
+            compatible_metadatas: List[Dict[str, Union[str, int, float, bool, None]]] = []
+            for metadata in metadatas:
+                compatible_metadata: Dict[str, Union[str, int, float, bool, None]] = {}
+                for key, value in metadata.items():
+                    # ChromaDB only accepts str, int, float, bool, or None values
+                    if isinstance(value, (str, int, float, bool)) or value is None:
+                        compatible_metadata[key] = value
+                    else:
+                        # Convert other types to string
+                        compatible_metadata[key] = str(value)
+                compatible_metadatas.append(compatible_metadata)
+
+            self.vector_store._collection.update(ids=document_ids, metadatas=compatible_metadatas)  # type: ignore
             return True
         except Exception as e:
             logger.error(f"Error updating multiple document metadata: {e}")

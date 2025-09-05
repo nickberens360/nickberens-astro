@@ -19,6 +19,12 @@
     "admin": "npm run admin:frontend",
     "admin:stop": "pkill -f 'python3 admin/start-admin.py' || true",
     "admin:sync": "python3 admin/sync_logs.py",
+    "e2e": "cd tests/e2e && npx -y @playwright/mcp@latest test",
+    "e2e:headed": "cd tests/e2e && npx -y @playwright/mcp@latest test --headed",
+    "e2e:debug": "cd tests/e2e && npx -y @playwright/mcp@latest test --debug",
+    "e2e:ui": "cd tests/e2e && npx -y @playwright/mcp@latest test --ui",
+    "e2e:report": "cd tests/e2e && npx -y @playwright/mcp@latest show-report",
+    "e2e:install": "cd tests/e2e && npx -y @playwright/mcp@latest install",
     "railway:build": "./scripts/copy-content-to-knowledge.sh && cd admin/frontend && npm ci && npm run build",
     "railway:deploy": "railway up"
   },

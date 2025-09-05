@@ -100,7 +100,7 @@
             variant="outlined"
             @click="formatJson"
             :disabled="saving"
-            class="rounded-lg"
+            class="rounded-lg mr-3"
           >
             Format JSON
           </v-btn>
@@ -109,7 +109,7 @@
             variant="outlined"
             @click="handleCancel"
             :disabled="saving"
-            class="rounded-lg mr-2"
+            class="rounded-lg mr-3"
           >
             Cancel
           </v-btn>
@@ -175,8 +175,9 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import * as monaco from 'monaco-editor'
+import { useTheme } from 'vuetify'
 import { adminAPI } from '@/services/api'
 
 export default {
@@ -193,6 +194,8 @@ export default {
   },
   emits: ['update:modelValue', 'file-saved'],
   setup(props, { emit }) {
+    const theme = useTheme()
+
     const dialog = ref(false)
     const loading = ref(false)
     const saving = ref(false)
@@ -208,6 +211,11 @@ export default {
     const fileType = ref('')
     const fileSize = ref(0)
     const lineCount = ref(0)
+
+    // Computed property for Monaco theme based on Vuetify theme
+    const monacoTheme = computed(() =>
+      theme.global.current.value.dark ? 'vs-dark' : 'vs'
+    )
 
     // Watch for dialog changes
     watch(() => props.modelValue, (newValue) => {
@@ -226,6 +234,13 @@ export default {
         setTimeout(() => {
           createEditor()
         }, 300)
+      }
+    })
+
+    // Watch for theme changes and update Monaco editor theme
+    watch(monacoTheme, (newTheme) => {
+      if (editor) {
+        monaco.editor.setTheme(newTheme)
       }
     })
 
@@ -325,7 +340,7 @@ export default {
         editor = monaco.editor.create(editorContainer.value, {
           value: currentContent.value || '',
           language: language,
-          theme: 'vs-dark',
+          theme: monacoTheme.value,
           automaticLayout: true,
           minimap: { enabled: true },
           scrollBeyondLastLine: false,
@@ -512,23 +527,52 @@ export default {
 
 .editor-container {
   border: 2px solid rgba(var(--v-theme-primary), 0.12);
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
+  background: rgb(var(--v-theme-surface));
 }
 
 .editor-container:hover {
   border-color: rgba(var(--v-theme-primary), 0.24);
 }
 
-/* Ensure Monaco editor takes full container size */
+/* Monaco Editor theme integration */
 :deep(.monaco-editor) {
   border-radius: 8px;
+  background: rgb(var(--v-theme-surface)) !important;
 }
 
-:deep(.monaco-editor .margin) {
-  background: rgba(var(--v-theme-surface), 0.8);
+/* Light theme adjustments */
+:deep(.monaco-editor.vs) {
+  background: rgb(var(--v-theme-surface)) !important;
 }
 
-:deep(.monaco-editor .monaco-editor-background) {
-  background: rgba(var(--v-theme-surface-variant), 0.3);
+:deep(.monaco-editor.vs .margin) {
+  background: rgb(var(--v-theme-surface)) !important;
+}
+
+:deep(.monaco-editor.vs .monaco-editor-background) {
+  background: rgb(var(--v-theme-surface)) !important;
+}
+
+/* Dark theme adjustments */
+:deep(.monaco-editor.vs-dark) {
+  background: rgb(var(--v-theme-surface)) !important;
+}
+
+:deep(.monaco-editor.vs-dark .margin) {
+  background: rgb(var(--v-theme-surface)) !important;
+}
+
+:deep(.monaco-editor.vs-dark .monaco-editor-background) {
+  background: rgb(var(--v-theme-surface)) !important;
+}
+
+/* Ensure consistent scrollbar styling */
+:deep(.monaco-scrollable-element > .scrollbar > .slider) {
+  background: rgba(var(--v-theme-on-surface), 0.2);
+}
+
+:deep(.monaco-scrollable-element > .scrollbar > .slider:hover) {
+  background: rgba(var(--v-theme-on-surface), 0.4);
 }
 </style>

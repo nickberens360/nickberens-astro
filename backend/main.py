@@ -43,7 +43,7 @@ try:
     retrievers, illustration_service, llm = initialize_app_state()
     app_initialized = True
 except Exception as e:
-    logger.critical(f"Application startup failed: {e}", exc_info=True)
+    logger.critical(f"❌ Application startup failed: {e}", exc_info=True)
     retrievers = None
     illustration_service = None
     llm = None
@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
 
     # Startup: Store state in app.state for dependency injection
     try:
-        logger.info("Starting application initialization...")
+        logger.info("🚀 Starting application initialization...")
         app.state.app_initialized = app_initialized
         app.state.retrievers = retrievers
         app.state.illustration_service = illustration_service
@@ -84,15 +84,15 @@ async def lifespan(app: FastAPI):
         if app_initialized and retrievers:
             await start_cache_warming(retrievers, app.state)
 
-        logger.info("Application startup completed successfully")
+        logger.info("✅ Application startup completed successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize application: {e}")
+        logger.error(f"❌ Failed to initialize application: {e}")
         raise
 
     yield
 
     # Shutdown: Clean shutdown
-    logger.info("Application shutdown completed successfully")
+    logger.info("✅ Application shutdown completed successfully")
 
 
 # Create the FastAPI app with lifespan context manager

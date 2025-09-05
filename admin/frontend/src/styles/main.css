@@ -5,7 +5,7 @@ html {
 }
 
 body {
-  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Inconsolata, 'Source Code Pro', Consolas, 'Courier New', monospace;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
   padding: 0;
   /* Font rendering optimization */
@@ -19,7 +19,7 @@ body {
 /* Font face declarations with display swap for performance */
 @supports (font-display: swap) {
   @font-face {
-    font-family: 'JetBrains Mono';
+    font-family: 'Roboto';
     font-display: swap;
   }
 }
@@ -29,18 +29,34 @@ body {
   width: 8px;
 }
 
-::-webkit-scrollbar-track {
+/* Light theme scrollbar */
+.v-theme--light ::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb {
+.v-theme--light ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+.v-theme--light ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Dark theme scrollbar */
+.v-theme--dark ::-webkit-scrollbar-track {
+  background: #374151;
+  border-radius: 4px;
+}
+
+.v-theme--dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 4px;
+}
+
+.v-theme--dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 /* Utility classes */
@@ -124,7 +140,7 @@ body {
 /* Print styles for typography */
 @media print {
   body {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     font-size: 11pt;
     line-height: 1.4;
   }
@@ -132,6 +148,6 @@ body {
   .typography-code-inline,
   .typography-code-block,
   .typography-technical {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   }
 }

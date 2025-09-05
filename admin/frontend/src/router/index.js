@@ -112,7 +112,87 @@ const router = createRouter({
             icon: 'lock'
           }
         },
-        // Development-only route for typography testing
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/views/SettingsView.vue'),
+          meta: {
+            title: 'Settings',
+            icon: 'settings'
+          },
+          children: [
+            {
+              path: '',
+              name: 'settings-overview',
+              redirect: 'followup'
+            },
+            {
+              path: 'followup',
+              name: 'settings-followup',
+              component: () => import('@/views/settings/FollowupSettings.vue'),
+              meta: {
+                title: 'Follow-up Questions'
+              }
+            },
+            {
+              path: 'welcome',
+              name: 'settings-welcome',
+              component: () => import('@/views/settings/WelcomeSettings.vue'),
+              meta: {
+                title: 'Welcome Questions'
+              }
+            },
+            {
+              path: 'response',
+              name: 'settings-response',
+              component: () => import('@/views/settings/ResponseSettings.vue'),
+              meta: {
+                title: 'Response Settings'
+              }
+            },
+            {
+              path: 'routing',
+              name: 'settings-routing',
+              component: () => import('@/views/settings/RoutingSettings.vue'),
+              meta: {
+                title: 'Query Routing'
+              }
+            },
+            {
+              path: 'features',
+              name: 'settings-features',
+              component: () => import('@/views/settings/FeatureSettings.vue'),
+              meta: {
+                title: 'Feature Flags'
+              }
+            },
+            {
+              path: 'api-keys',
+              name: 'settings-api-keys',
+              component: () => import('@/views/settings/ApiKeysSettings.vue'),
+              meta: {
+                title: 'API Keys'
+              }
+            },
+            {
+              path: 'system',
+              name: 'settings-system',
+              component: () => import('@/views/settings/SystemSettings.vue'),
+              meta: {
+                title: 'System Config'
+              }
+            },
+            {
+              path: 'security',
+              name: 'settings-security',
+              component: () => import('@/views/settings/SecuritySettings.vue'),
+              meta: {
+                title: 'Security & Privacy'
+              }
+            }
+          ]
+        },
+        // Development-only routes
         ...(import.meta.env.DEV ? [{
           path: 'typography-demo',
           name: 'typography-demo',
@@ -121,6 +201,15 @@ const router = createRouter({
             title: 'Typography Demo',
             icon: 'article',
             hidden: true // Hide from main navigation
+          }
+        }, {
+          path: 'accordion-test',
+          name: 'accordion-test',
+          component: () => import('@/components/FollowupAccordion.vue'),
+          meta: {
+            title: 'Accordion Test',
+            icon: 'list',
+            hidden: true
           }
         }] : [])
       ]

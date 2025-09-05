@@ -44,10 +44,13 @@ class AdminAPI {
         
         // Handle common error cases
         if (error.response?.status === 401) {
-          // Handle unauthorized access
+          // SECURITY FIX: Better authentication state management
           if (import.meta.env.DEV) {
             console.debug('Unauthorized access - authentication required')
           }
+          
+          // Trigger logout and redirect for authentication errors
+          this.handleAuthenticationError()
         } else if (error.response?.status === 404) {
           if (import.meta.env.DEV) {
             console.error('API endpoint not found')
@@ -282,6 +285,22 @@ class AdminAPI {
     }
   }
 
+  // SECURITY FIX: Handle authentication errors properly
+  handleAuthenticationError() {
+    if (import.meta.env.DEV) {
+      console.debug('Handling authentication error - redirecting to login')
+    }
+    
+    // In a real Vue app, you'd use router here
+    // For now, trigger a page reload to the login page
+    if (typeof window !== 'undefined' && window.location) {
+      // Only redirect if we're not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/admin/'
+      }
+    }
+  }
+
   async getCurrentUser() {
     try {
       return await this.client.get('/auth/me')
@@ -312,6 +331,328 @@ class AdminAPI {
     }
   }
 
+  // Settings API methods
+  async getFollowupSettings() {
+    try {
+      const response = await this.client.get('/settings/followup')
+      return response
+    } catch (error) {
+      console.error('Failed to get follow-up settings:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupSettings(settings) {
+    try {
+      const response = await this.client.put('/settings/followup', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update follow-up settings:', error)
+      throw error
+    }
+  }
+
+  async resetFollowupSettings() {
+    try {
+      const response = await this.client.post('/settings/followup/reset')
+      return response
+    } catch (error) {
+      console.error('Failed to reset follow-up settings:', error)
+      throw error
+    }
+  }
+
+  // New settings API methods for the hybrid configuration system
+  async getResponseSettings() {
+    try {
+      const response = await this.client.get('/settings/response')
+      return response
+    } catch (error) {
+      console.error('Failed to get response settings:', error)
+      throw error
+    }
+  }
+
+  async updateResponseSettings(settings) {
+    try {
+      const response = await this.client.put('/settings/response', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update response settings:', error)
+      throw error
+    }
+  }
+
+  async getRoutingSettings() {
+    try {
+      const response = await this.client.get('/settings/routing')
+      return response
+    } catch (error) {
+      console.error('Failed to get routing settings:', error)
+      throw error
+    }
+  }
+
+  async updateRoutingSettings(settings) {
+    try {
+      const response = await this.client.put('/settings/routing', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update routing settings:', error)
+      throw error
+    }
+  }
+
+  async getFeatureFlags() {
+    try {
+      const response = await this.client.get('/settings/features')
+      return response
+    } catch (error) {
+      console.error('Failed to get feature flags:', error)
+      throw error
+    }
+  }
+
+  async updateFeatureFlags(settings) {
+    try {
+      const response = await this.client.put('/settings/features', settings)
+      return response
+    } catch (error) {
+      console.error('Failed to update feature flags:', error)
+      throw error
+    }
+  }
+
+  async getSettingsCacheStatus() {
+    try {
+      const response = await this.client.get('/settings/cache/status')
+      return response
+    } catch (error) {
+      console.error('Failed to get settings cache status:', error)
+      throw error
+    }
+  }
+
+  async invalidateSettingsCache() {
+    try {
+      const response = await this.client.post('/settings/cache/invalidate')
+      return response
+    } catch (error) {
+      console.error('Failed to invalidate settings cache:', error)
+      throw error
+    }
+  }
+
+
+  async resetFollowupQuestions() {
+    try {
+      const response = await this.client.post('/settings/followup/questions/reset')
+      return response
+    } catch (error) {
+      console.error('Failed to reset follow-up questions:', error)
+      throw error
+    }
+  }
+
+
+  async reorderFollowupCategories(categories) {
+    try {
+      const response = await this.client.post('/settings/followup/categories/reorder', { categories })
+      return response
+    } catch (error) {
+      console.error('Failed to reorder follow-up categories:', error)
+      throw error
+    }
+  }
+
+  // Enhanced category management with stats
+  async getCategoriesWithStats(includeInactive = false) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/with-stats?include_inactive=${includeInactive}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get categories with stats:', error)
+      throw error
+    }
+  }
+
+  async validateCategoryDeletion(categoryId) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/${categoryId}/validate-deletion`)
+      return response
+    } catch (error) {
+      console.error('Failed to validate category deletion:', error)
+      throw error
+    }
+  }
+
+  async deleteCategoryWithStrategy(categoryId, strategy, targetCategoryId = null) {
+    try {
+      const response = await this.client.post(`/settings/followup/categories/${categoryId}/delete`, {
+        strategy,
+        target_category_id: targetCategoryId
+      })
+      return response
+    } catch (error) {
+      console.error('Failed to delete category with strategy:', error)
+      throw error
+    }
+  }
+
+  // New normalized question management
+  async getFollowupQuestions(params = {}) {
+    try {
+      const searchParams = new URLSearchParams()
+      if (params.category_id) searchParams.append('category_id', params.category_id)
+      if (params.active_only !== undefined) searchParams.append('active_only', params.active_only)
+      if (params.search) searchParams.append('search', params.search)
+      if (params.limit) searchParams.append('limit', params.limit)
+      if (params.offset) searchParams.append('offset', params.offset)
+
+      const response = await this.client.get(`/settings/followup/questions?${searchParams}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup questions:', error)
+      throw error
+    }
+  }
+
+  async getFollowupQuestion(questionId) {
+    try {
+      const response = await this.client.get(`/settings/followup/questions/${questionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup question:', error)
+      throw error
+    }
+  }
+
+  async createFollowupQuestion(questionData) {
+    try {
+      const response = await this.client.post('/settings/followup/questions', questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to create followup question:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupQuestion(questionId, questionData) {
+    try {
+      const response = await this.client.put(`/settings/followup/questions/${questionId}`, questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to update followup question:', error)
+      throw error
+    }
+  }
+
+  async deleteFollowupQuestion(questionId) {
+    try {
+      const response = await this.client.delete(`/settings/followup/questions/${questionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to delete followup question:', error)
+      throw error
+    }
+  }
+
+  async bulkUpdateQuestions(operations) {
+    try {
+      const response = await this.client.post('/settings/followup/questions/bulk', { operations })
+      return response
+    } catch (error) {
+      console.error('Failed to bulk update questions:', error)
+      throw error
+    }
+  }
+
+  async searchFollowupQuestions(query, categoryId = null, limit = 20) {
+    try {
+      const searchParams = new URLSearchParams()
+      searchParams.append('query', query)
+      if (categoryId) searchParams.append('category_id', categoryId)
+      searchParams.append('limit', limit)
+
+      const response = await this.client.get(`/settings/followup/questions/search?${searchParams}`)
+      return response
+    } catch (error) {
+      console.error('Failed to search followup questions:', error)
+      throw error
+    }
+  }
+
+  // Additional normalized API methods for the unified interface
+  async getFollowupCategories(includeInactive = true) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories?include_inactive=${includeInactive}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup categories normalized:', error)
+      throw error
+    }
+  }
+
+  async createFollowupCategory(categoryData) {
+    try {
+      const response = await this.client.post('/settings/followup/categories', categoryData)
+      return response
+    } catch (error) {
+      console.error('Failed to create followup category normalized:', error)
+      throw error
+    }
+  }
+
+  async updateFollowupCategory(categoryId, categoryData) {
+    try {
+      const response = await this.client.put(`/settings/followup/categories/${categoryId}`, categoryData)
+      return response
+    } catch (error) {
+      console.error('Failed to update followup category normalized:', error)
+      throw error
+    }
+  }
+
+  async deleteFollowupCategoryWithStrategy(deleteRequest) {
+    try {
+      const response = await this.client.post(`/settings/followup/categories/${deleteRequest.categoryId}/delete`, {
+        strategy: deleteRequest.strategy,
+        target_category_id: deleteRequest.targetCategoryId
+      })
+      return response
+    } catch (error) {
+      console.error('Failed to delete followup category with strategy:', error)
+      throw error
+    }
+  }
+
+  // Backward-compatible alias used by some views
+  async deleteFollowupCategoryWithStrategyNormalized(deleteRequest) {
+    return this.deleteFollowupCategoryWithStrategy(deleteRequest)
+  }
+
+  async getFollowupCategoryStats(categoryId) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/${categoryId}/stats`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup category stats:', error)
+      // Return default stats instead of throwing to prevent UI breaking
+      return { question_count: 0, active_questions: 0 }
+    }
+  }
+
+  async getFollowupCategoryStatsNormalized(categoryId) {
+    try {
+      const response = await this.client.get(`/settings/followup/categories/${categoryId}/stats`)
+      return response
+    } catch (error) {
+      console.error('Failed to get followup category stats normalized:', error)
+      // Return default stats instead of throwing to prevent UI breaking
+      return { question_count: 0, active_questions: 0 }
+    }
+  }
+
   // Utility methods
   async testConnection() {
     try {
@@ -319,6 +660,47 @@ class AdminAPI {
       return true
     } catch (error) {
       return false
+    }
+  }
+
+  // Welcome Questions API methods
+  async getWelcomeQuestions(activeOnly = false) {
+    try {
+      const response = await this.client.get(`/settings/welcome/questions?active_only=${activeOnly}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get welcome questions:', error)
+      throw error
+    }
+  }
+
+  async createWelcomeQuestion(questionData) {
+    try {
+      const response = await this.client.post('/settings/welcome/questions', questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to create welcome question:', error)
+      throw error
+    }
+  }
+
+  async updateWelcomeQuestion(questionId, questionData) {
+    try {
+      const response = await this.client.put(`/settings/welcome/questions/${questionId}`, questionData)
+      return response
+    } catch (error) {
+      console.error('Failed to update welcome question:', error)
+      throw error
+    }
+  }
+
+  async deleteWelcomeQuestion(questionId) {
+    try {
+      const response = await this.client.delete(`/settings/welcome/questions/${questionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to delete welcome question:', error)
+      throw error
     }
   }
 
@@ -332,6 +714,53 @@ class AdminAPI {
     } else {
       return 'An unknown error occurred'
     }
+  }
+
+  // API Key Management endpoints
+  async getApiKeys(includeInactive = false) {
+    return await this.client.get(`/settings/api-keys?include_inactive=${includeInactive}`)
+  }
+
+  async createApiKey(keyData) {
+    return await this.client.post('/settings/api-keys', keyData)
+  }
+
+  async updateApiKey(keyName, keyData) {
+    return await this.client.put(`/settings/api-keys/${keyName}`, keyData)
+  }
+
+  async toggleApiKey(keyName, isActive) {
+    return await this.client.post(`/settings/api-keys/${keyName}/toggle`, { is_active: isActive })
+  }
+
+  async deleteApiKey(keyName) {
+    return await this.client.delete(`/settings/api-keys/${keyName}`)
+  }
+
+  async validateApiKey(keyName) {
+    return await this.client.post(`/settings/api-keys/${keyName}/validate`)
+  }
+
+  async migrateApiKeysFromEnv() {
+    return await this.client.post('/settings/api-keys/migrate-from-env')
+  }
+
+  // System Configuration Settings endpoints
+  async getSystemConfigSettings() {
+    return await this.client.get('/settings/system-config')
+  }
+
+  async updateSystemConfigSettings(settingsData) {
+    return await this.client.put('/settings/system-config', settingsData)
+  }
+
+  // Security Settings endpoints
+  async getSecuritySettings() {
+    return await this.client.get('/settings/security')
+  }
+
+  async updateSecuritySettings(settingsData) {
+    return await this.client.put('/settings/security', settingsData)
   }
 
   // Authentication token methods removed - now using HTTPOnly cookies exclusively

@@ -1,0 +1,367 @@
+{
+  "config": {
+    "configFile": "/Users/nickberens/Webstorm/nickberens/playwright.config.js",
+    "rootDir": "/Users/nickberens/Webstorm/nickberens/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/Users/nickberens/Webstorm/nickberens/tests/e2e/global-setup.js",
+    "globalTeardown": "/Users/nickberens/Webstorm/nickberens/tests/e2e/global-teardown.js",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/junit.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/nickberens/Webstorm/nickberens/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/Users/nickberens/Webstorm/nickberens/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.setup\\.js/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/nickberens/Webstorm/nickberens/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "unauthenticated",
+        "name": "unauthenticated",
+        "testDir": "/Users/nickberens/Webstorm/nickberens/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*auth-flow.*\\.spec\\.js|.*auth-specific.*\\.spec\\.js|.*auth\\.spec\\.js/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/nickberens/Webstorm/nickberens/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "admin-e2e",
+        "name": "admin-e2e",
+        "testDir": "/Users/nickberens/Webstorm/nickberens/tests/e2e",
+        "testIgnore": [
+          "/.*auth-flow.*\\.spec\\.js|.*auth-specific.*\\.spec\\.js|.*auth\\.spec\\.js/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/nickberens/Webstorm/nickberens/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile-admin",
+        "name": "mobile-admin",
+        "testDir": "/Users/nickberens/Webstorm/nickberens/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*mobile.*\\.spec\\.js/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/nickberens/Webstorm/nickberens/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "performance",
+        "name": "performance",
+        "testDir": "/Users/nickberens/Webstorm/nickberens/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*performance.*\\.spec\\.js/"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth-api.setup.js",
+      "file": "auth-api.setup.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "authenticate via API",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5504,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2025-09-03T19:03:13.324Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c614768f7280c14c3080-6312c8cbd40251cd5262",
+          "file": "auth-api.setup.js",
+          "line": 3,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "auth.setup.js",
+      "file": "auth.setup.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "authenticate as admin",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 11622,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "🔐 Setting up admin authentication...\n"
+                    },
+                    {
+                      "text": "Logging in as: admin\n"
+                    },
+                    {
+                      "text": "✅ Admin authentication completed. Saved to: /Users/nickberens/Webstorm/nickberens/tests/e2e/.auth/admin.json\n"
+                    },
+                    {
+                      "text": "Current URL: http://localhost:3000/\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2025-09-03T19:03:18.938Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "f376efe52c54b1a876fd-28b184ba26ee58ce6bc0",
+          "file": "auth.setup.js",
+          "line": 15,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "multi-role.setup.js",
+      "file": "multi-role.setup.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "authenticate as admin",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7783,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2025-09-03T19:03:30.575Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4ec91d5e5a4a0bd30819-07b23a2be049fe8cbbe3",
+          "file": "multi-role.setup.js",
+          "line": 4,
+          "column": 1
+        },
+        {
+          "title": "authenticate as user",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "location": {
+                    "file": "/Users/nickberens/Webstorm/nickberens/tests/e2e/multi-role.setup.js",
+                    "line": 26,
+                    "column": 7
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2025-09-03T19:03:38.363Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/Users/nickberens/Webstorm/nickberens/tests/e2e/multi-role.setup.js",
+                        "line": 26,
+                        "column": 7
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "4ec91d5e5a4a0bd30819-35834d772fb7b0325a18",
+          "file": "multi-role.setup.js",
+          "line": 26,
+          "column": 7
+        },
+        {
+          "title": "no authentication",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 828,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2025-09-03T19:03:38.364Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "4ec91d5e5a4a0bd30819-ae20d18565cb27dc4bae",
+          "file": "multi-role.setup.js",
+          "line": 49,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-09-03T19:03:07.332Z",
+    "duration": 31894.752999999997,
+    "expected": 4,
+    "skipped": 1,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -1,6 +1,12 @@
+import asyncio
+import hashlib
 import logging
+import time
+from datetime import datetime
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+from .settings_manager import get_settings_manager
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +227,13 @@ class QueryRouter:
         Returns:
             Tuple of (QueryType, search_term or None)
         """
+        # Check if smart routing is enabled via feature flag
+        settings_manager = get_settings_manager()
+        if not settings_manager.is_feature_enabled("enable_smart_routing"):
+            # Fall back to simple routing - default to AI text response
+            logger.debug("Smart routing disabled via feature flag, using simple routing")
+            return QueryType.AI_TEXT_RESPONSE, None
+
         # Route to specific image search
         search_term = self._check_specific_image_search(question)
         if search_term:
@@ -362,3 +375,293 @@ class QueryRouter:
         """Check if a query is asking for images/illustrations."""
         query_type, _ = self.route_query(question)
         return query_type != QueryType.AI_TEXT_RESPONSE
+
+    # === ENHANCED ROUTING METHODS WITH CONFIGURATION SUPPORT ===
+
+    async def route_query_with_confidence(
+        self, question: str, chat_history: Optional[List[Dict]] = None
+    ) -> Dict[str, Any]:
+        """
+        Route query with confidence scoring and configurable fallback strategies.
+
+        Returns:
+            Dict containing routing decision with confidence score and metadata
+        """
+        start_time = time.time()
+        routing_settings = get_settings_manager().get_routing_settings()
+
+        try:
+            # Perform smart routing with confidence analysis
+            routing_result = await self._smart_route_with_confidence(question, chat_history, routing_settings)
+
+            # Check if confidence meets threshold
+            if routing_result["confidence"] < routing_settings.confidence_threshold:
+                logger.info(
+                    f"Low confidence ({routing_result['confidence']:.2f}) for query: '{question[:50]}...', applying fallback"
+                )
+                routing_result = await self._apply_fallback_strategy(question, chat_history, routing_settings)
+
+            # Add performance metadata
+            processing_time = time.time() - start_time
+            routing_result["processing_time"] = processing_time
+            routing_result["settings_applied"] = True
+
+            return routing_result
+
+        except Exception as e:
+            logger.error(f"Error in enhanced query routing: {e}")
+            return await self._emergency_fallback(question, chat_history)
+
+    async def _smart_route_with_confidence(
+        self, question: str, chat_history: Optional[List[Dict]], settings
+    ) -> Dict[str, Any]:
+        """Perform smart routing with confidence analysis."""
+
+        # Analyze query intent
+        intent_analysis = self._analyze_query_intent(question)
+
+        # Determine query type using existing logic
+        query_type, search_term = self.route_query(question)
+
+        # Calculate confidence based on multiple factors
+        confidence_score = self._calculate_confidence_score(question, query_type, search_term, intent_analysis)
+
+        return {
+            "strategy": "smart_routing",
+            "query_type": query_type.value,
+            "search_term": search_term,
+            "confidence": confidence_score,
+            "intent": intent_analysis.get("intent", "unknown"),
+            "topics": intent_analysis.get("topics", []),
+            "enable_caching": settings.enable_caching,
+            "cache_ttl": settings.cache_ttl_seconds,
+            "parallel_processing": settings.enable_parallel_processing,
+        }
+
+    def _analyze_query_intent(self, question: str) -> Dict[str, Any]:
+        """Analyze query intent and extract topics."""
+
+        # Simple intent analysis based on question patterns
+        intent = "question"
+        topics = []
+
+        # Detect question types
+        if any(word in question.lower() for word in ["what", "how", "why", "when", "where", "who"]):
+            intent = "question"
+        elif any(word in question.lower() for word in ["show", "find", "display", "get"]):
+            intent = "retrieval"
+        elif any(word in question.lower() for word in ["explain", "tell me about", "describe"]):
+            intent = "explanation"
+        else:
+            intent = "general"
+
+        # Extract topics based on keywords
+        if any(word in question.lower() for word in ["code", "programming", "development", "technical"]):
+            topics.append("technical")
+        if any(word in question.lower() for word in ["experience", "work", "job", "career"]):
+            topics.append("experience")
+        if any(word in question.lower() for word in ["skills", "knowledge", "expertise"]):
+            topics.append("skills")
+        if any(word in question.lower() for word in ["about", "personal", "background"]):
+            topics.append("personal")
+        if any(word in question.lower() for word in self.image_keywords):
+            topics.append("creative")
+
+        return {
+            "intent": intent,
+            "topics": topics,
+            "complexity": len(question.split()),  # Simple complexity metric
+        }
+
+    def _calculate_confidence_score(
+        self, question: str, query_type: QueryType, search_term: Optional[str], intent_analysis: Dict
+    ) -> float:
+        """Calculate confidence score for routing decision."""
+
+        confidence = 0.5  # Base confidence
+
+        # Boost confidence for clear image queries
+        if query_type != QueryType.AI_TEXT_RESPONSE:
+            confidence += 0.3
+
+            # Additional boost if search term is clear
+            if search_term and len(search_term.strip()) > 2:
+                confidence += 0.2
+
+        # Boost confidence for questions with clear intent
+        if intent_analysis.get("intent") in ["question", "retrieval", "explanation"]:
+            confidence += 0.1
+
+        # Boost confidence for queries with identified topics
+        if intent_analysis.get("topics"):
+            confidence += 0.1 * min(len(intent_analysis["topics"]), 2)  # Max 0.2 boost
+
+        # Penalize very short or very long queries
+        word_count = len(question.split())
+        if word_count < 2:
+            confidence -= 0.2
+        elif word_count > 50:
+            confidence -= 0.1
+
+        return max(0.0, min(1.0, confidence))
+
+    async def _apply_fallback_strategy(
+        self, question: str, chat_history: Optional[List[Dict]], settings
+    ) -> Dict[str, Any]:
+        """Apply configured fallback strategy."""
+
+        strategy = settings.fallback_strategy
+        logger.info(f"Applying fallback strategy: {strategy}")
+
+        if strategy == "comprehensive_search":
+            return await self._comprehensive_search_fallback(question, chat_history)
+        elif strategy == "semantic_similarity":
+            return await self._semantic_similarity_fallback(question, chat_history)
+        elif strategy == "keyword_matching":
+            return await self._keyword_matching_fallback(question, chat_history)
+        elif strategy == "default_response":
+            return await self._default_response_fallback(question, chat_history)
+        else:
+            # Unknown strategy, use comprehensive search as default
+            return await self._comprehensive_search_fallback(question, chat_history)
+
+    async def _comprehensive_search_fallback(self, question: str, chat_history: Optional[List[Dict]]) -> Dict[str, Any]:
+        """Comprehensive search across all content types."""
+        return {
+            "strategy": "comprehensive_search",
+            "query_type": "comprehensive",
+            "search_all_types": True,
+            "use_semantic_similarity": True,
+            "use_keyword_matching": True,
+            "confidence": 0.5,
+            "fallback_applied": True,
+        }
+
+    async def _semantic_similarity_fallback(self, question: str, chat_history: Optional[List[Dict]]) -> Dict[str, Any]:
+        """Focus on semantic similarity matching."""
+        return {
+            "strategy": "semantic_similarity",
+            "query_type": "semantic",
+            "search_method": "semantic_only",
+            "similarity_threshold": 0.6,
+            "confidence": 0.6,
+            "fallback_applied": True,
+        }
+
+    async def _keyword_matching_fallback(self, question: str, chat_history: Optional[List[Dict]]) -> Dict[str, Any]:
+        """Focus on keyword-based matching."""
+        return {
+            "strategy": "keyword_matching",
+            "query_type": "keyword",
+            "search_method": "keyword_only",
+            "use_fuzzy_matching": True,
+            "confidence": 0.4,
+            "fallback_applied": True,
+        }
+
+    async def _default_response_fallback(self, question: str, chat_history: Optional[List[Dict]]) -> Dict[str, Any]:
+        """Default response strategy."""
+        return {
+            "strategy": "default_response",
+            "query_type": "default",
+            "use_default_context": True,
+            "confidence": 0.3,
+            "fallback_applied": True,
+        }
+
+    async def _emergency_fallback(self, question: str, chat_history: Optional[List[Dict]]) -> Dict[str, Any]:
+        """Emergency fallback when all routing fails."""
+        logger.error(f"Emergency fallback activated for query: '{question[:50]}...'")
+        return {
+            "strategy": "emergency_fallback",
+            "query_type": "emergency",
+            "search_all_types": True,
+            "use_comprehensive_search": True,
+            "confidence": 0.2,
+            "error_occurred": True,
+        }
+
+    async def route_query_with_retries(
+        self, question: str, chat_history: Optional[List[Dict]] = None
+    ) -> Dict[str, Any]:
+        """Route query with configurable retry logic."""
+        routing_settings = get_settings_manager().get_routing_settings()
+        max_retries = routing_settings.max_retries
+
+        for attempt in range(max_retries + 1):
+            try:
+                result = await self.route_query_with_confidence(question, chat_history)
+
+                # Validate result quality
+                if self._is_result_acceptable(result, routing_settings):
+                    if attempt > 0:
+                        logger.info(f"Query routing succeeded on attempt {attempt + 1}")
+                    return result
+
+                if attempt < max_retries:
+                    logger.info(f"Routing attempt {attempt + 1} produced low-quality result, retrying...")
+                    await asyncio.sleep(0.5 * (attempt + 1))  # Exponential backoff
+                    continue
+
+                # Final attempt - return what we have
+                logger.warning(f"All {max_retries + 1} routing attempts completed, returning best available result")
+                return result
+
+            except Exception as e:
+                if attempt < max_retries:
+                    logger.warning(f"Routing attempt {attempt + 1} failed: {e}, retrying...")
+                    await asyncio.sleep(1.0 * (attempt + 1))
+                    continue
+
+                # Final attempt failed - use emergency fallback
+                logger.error(f"All routing attempts failed: {e}")
+                return await self._emergency_fallback(question, chat_history)
+
+    def _is_result_acceptable(self, result: Dict[str, Any], settings) -> bool:
+        """Validate if routing result meets quality standards."""
+
+        # Emergency fallback results are always considered acceptable (check first)
+        if result.get("error_occurred", False):
+            return True
+
+        # Check if confidence meets threshold (for non-fallback strategies)
+        if not result.get("fallback_applied", False):
+            if result.get("confidence", 0) < settings.confidence_threshold:
+                return False
+
+        # Check if we have sufficient routing information
+        if not result.get("query_type") and not result.get("strategy"):
+            return False
+
+        return True
+
+    def log_routing_performance(
+        self, question: str, routing_decision: Dict[str, Any], processing_time: float, attempt_count: int = 1
+    ):
+        """Log routing performance metrics for analytics."""
+        try:
+            performance_data = {
+                "query_hash": hashlib.md5(question.encode()).hexdigest()[:8],
+                "routing_strategy": routing_decision.get("strategy"),
+                "query_type": routing_decision.get("query_type"),
+                "confidence": routing_decision.get("confidence"),
+                "processing_time_ms": processing_time * 1000,
+                "attempt_count": attempt_count,
+                "fallback_applied": routing_decision.get("fallback_applied", False),
+                "error_occurred": routing_decision.get("error_occurred", False),
+                "settings_applied": routing_decision.get("settings_applied", False),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+            # Log basic performance info
+            logger.info(
+                f"Routing performance: {performance_data['routing_strategy']} "
+                f"({performance_data['confidence']:.2f} confidence, "
+                f"{performance_data['processing_time_ms']:.1f}ms)"
+            )
+
+            # TODO: Integrate with query analytics system if available
+            # self.query_logger.log_routing_performance(performance_data)
+
+        except Exception as e:
+            logger.warning(f"Failed to log routing performance: {e}")

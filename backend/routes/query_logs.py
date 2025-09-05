@@ -15,7 +15,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
 from fastapi import Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -25,7 +25,17 @@ from ..core.query_logger import get_query_logger
 
 # Initialize router and security
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+# Check if we're in testing environment to disable rate limiting
+import os
+
+_is_testing = os.getenv("TESTING", "false").lower() == "true" or "pytest" in os.environ.get("_", "")
+
+if _is_testing:
+    # Use memory storage during testing to avoid rate limiting issues
+    limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
+else:
+    limiter = Limiter(key_func=get_remote_address)
 
 # Initialize logger
 logger = logging.getLogger(__name__)

@@ -13,23 +13,41 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
-from ..core.audit_logger import AuditLogger
+from ..core.api_key_manager import api_key_manager
+from ..core.audit_logger import AuditAction, AuditLogger
 
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
 from ..core.query_data_manager import query_data_manager
+from ..core.settings_manager import get_settings_manager
+from ..core.settings_schemas import (
+    FeatureFlags,
+    FollowUpSettings,
+    QueryRoutingSettings,
+    ResponseSettings,
+    SecuritySettings,
+    SystemConfigurationSettings,
+)
 from ..models.admin_models import (
     AdminUser,
+    BulkQuestionRequest,
+    CategoryDeleteRequest,
     ChangePasswordRequest,
+    CreateFollowupCategoryRequest,
+    CreateFollowupQuestionRequest,
     CreateUserRequest,
+    CreateWelcomeQuestionRequest,
     FeedbackUpdate,
     LoginRequest,
     LoginResponse,
     OverviewStats,
     QueryResponse,
+    UpdateFollowupCategoryRequest,
+    UpdateFollowupQuestionRequest,
+    UpdateWelcomeQuestionRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,11 +55,83 @@ logger = logging.getLogger(__name__)
 # Initialize audit logger
 audit_logger = AuditLogger()
 
-router = APIRouter(tags=["admin"])
+router = APIRouter()
 
 
 # Authentication endpoints
-@router.post("/auth/login", response_model=LoginResponse)
+@router.post(
+    "/auth/login",
+    tags=["Admin Authentication"],
+    response_model=LoginResponse,
+    summary="Admin Login",
+    description="""
+            **Authenticate admin user and create secure session.**
+            
+            **Authentication Flow:**
+            1. Submit username and password
+            2. System validates credentials and checks rate limits
+            3. On success: secure HTTPOnly cookie is set (`admin_session`)
+            4. Use this cookie for subsequent admin API calls
+            
+            **Security Features:**
+            - Rate limiting per IP address
+            - Secure session management with HTTPOnly cookies
+            - Audit logging of all login attempts
+            - Password validation and security checks
+            - Session fingerprinting for additional security
+            
+            **Session Management:**
+            - Session expires in 24 hours
+            - HTTPOnly cookie prevents XSS attacks
+            - Secure flag enabled in production (HTTPS)
+            - SameSite=Lax for CSRF protection
+            
+            **Next Steps After Login:**
+            1. Cookie is automatically included in browser requests
+            2. Access admin endpoints like `/api/admin/stats/overview`
+            3. Use `/api/admin/auth/me` to verify current session
+            """,
+    responses={
+        200: {
+            "description": "Login successful - session cookie set",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "successful_login": {
+                            "summary": "Successful admin login",
+                            "value": {
+                                "success": True,
+                                "message": "Login successful",
+                                "user": {
+                                    "id": 1,
+                                    "username": "admin",
+                                    "role": "admin",
+                                    "created_at": "2024-01-01T00:00:00Z",
+                                    "last_login": "2024-09-02T17:00:00Z",
+                                },
+                            },
+                        },
+                        "invalid_credentials": {
+                            "summary": "Invalid login credentials",
+                            "value": {"success": False, "message": "Invalid username or password"},
+                        },
+                        "missing_fields": {
+                            "summary": "Missing required fields",
+                            "value": {"success": False, "message": "Username and password are required"},
+                        },
+                    }
+                }
+            },
+            "headers": {
+                "Set-Cookie": {
+                    "description": "Secure session cookie for admin authentication",
+                    "schema": {"type": "string"},
+                    "example": "admin_session=abc123...; HttpOnly; Secure; SameSite=Lax; Max-Age=86400",
+                }
+            },
+        }
+    },
+)
 async def login(login_data: LoginRequest, request: Request, response: Response) -> LoginResponse:
     """Authenticate user and create session with rate limiting and security checks."""
     try:
@@ -193,10 +283,14 @@ async def change_password(
             session["username"], session["username"], client_ip, request.headers.get("User-Agent", ""), success=True
         )
 
-        # Expire all sessions for this user (except current one)
+        # SECURITY FIX: Force complete re-authentication after password change
+        # This prevents session fixation attacks
         admin_auth_manager.expire_user_sessions(user["id"])
 
-        return {"success": True, "message": "Password changed successfully"}
+        # Force logout by clearing the current session cookie
+        response = JSONResponse({"success": True, "message": "Password changed successfully. Please log in again."})
+        response.delete_cookie("admin_session", path="/", httponly=True, secure=True, samesite="lax")
+        return response
 
     except HTTPException:
         raise
@@ -886,3 +980,1471 @@ async def get_all_users(session: Dict[str, Any] = Depends(require_admin_role)) -
     except Exception as e:
         logger.error(f"Error fetching users: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error fetching users")
+
+
+# Settings endpoints
+@router.get("/settings/followup")
+async def get_followup_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current follow-up question settings."""
+    try:
+        # Use settings manager for cached access
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_followup_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "followup_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting follow-up settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up settings")
+
+
+@router.put("/settings/followup")
+async def update_followup_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update follow-up question settings."""
+    try:
+        # Validate and create settings object
+        settings = FollowUpSettings.from_dict(settings_data)
+
+        # Use settings manager to store settings
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_followup_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "followup_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        # Clear cache in follow-up service to ensure immediate effect
+        try:
+            followup_service = getattr(request.app.state, "followup_service", None)
+            if followup_service and hasattr(followup_service, "clear_cache"):
+                followup_service.clear_cache()
+                logger.info("FollowUp service cache cleared after settings update")
+            else:
+                logger.warning("FollowUp service not found or clear_cache method not available")
+        except Exception as e:
+            logger.warning(f"Could not clear followup service cache: {e}")
+
+        logger.info(f"Follow-up settings updated by user {session['user_id']}: {settings.to_dict()}")
+
+        return {"success": True, "message": "Follow-up settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating follow-up settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating follow-up settings")
+
+
+@router.post("/settings/followup/reset")
+async def reset_followup_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Reset follow-up settings to defaults."""
+    try:
+        # Create default settings
+        default_settings = FollowUpSettings()
+
+        # Use settings manager to store settings
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_followup_settings(default_settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to reset settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_settings",
+                "action": "reset_to_defaults",
+                "reset_to": default_settings.to_dict(),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        # Clear cache in follow-up service to ensure immediate effect
+        try:
+            followup_service = getattr(request.app.state, "followup_service", None)
+            if followup_service and hasattr(followup_service, "clear_cache"):
+                followup_service.clear_cache()
+                logger.info("FollowUp service cache cleared after settings reset")
+            else:
+                logger.warning("FollowUp service not found or clear_cache method not available")
+        except Exception as e:
+            logger.warning(f"Could not clear followup service cache: {e}")
+
+        logger.info(f"Follow-up settings reset to defaults by user {session['user_id']}")
+
+        return {
+            "success": True,
+            "message": "Follow-up settings reset to defaults",
+            "settings": default_settings.to_dict(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error resetting follow-up settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error resetting follow-up settings")
+
+
+# Follow-up Category Management Routes
+@router.get("/settings/followup/categories")
+async def get_followup_categories(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+    include_inactive: bool = Query(default=True, description="Include inactive categories"),
+) -> List[Dict[str, Any]]:
+    """Get all follow-up categories with optional filtering."""
+    try:
+        categories = admin_db_manager.get_followup_categories(active_only=not include_inactive)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "followup_categories", "include_inactive": include_inactive, "count": len(categories)},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return categories
+
+    except Exception as e:
+        logger.error(f"Error getting follow-up categories: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up categories")
+
+
+@router.post("/settings/followup/categories")
+async def create_followup_category(
+    request: Request,
+    category_data: CreateFollowupCategoryRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a new follow-up category."""
+    try:
+        # Check if category name already exists
+        existing_category = admin_db_manager.get_followup_category_by_name(category_data.name)
+        if existing_category:
+            raise HTTPException(status_code=409, detail=f"Category '{category_data.name}' already exists")
+
+        # Create the category
+        category_id = admin_db_manager.create_followup_category(
+            name=category_data.name,
+            display_name=category_data.display_name,
+            description=category_data.description,
+            icon=category_data.icon,
+            sort_order=category_data.sort_order,
+        )
+
+        # Fetch the created category
+        created_category = admin_db_manager.get_followup_category(category_id)
+        if not created_category:
+            raise HTTPException(status_code=500, detail="Failed to retrieve created category")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_CREATE,
+            username=session["username"],
+            details={"resource": "followup_category", "category_id": category_id, "name": category_data.name},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Follow-up category created by user {session['user_id']}: {category_data.name}")
+
+        return created_category
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating follow-up category: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating follow-up category")
+
+
+@router.put("/settings/followup/categories/{category_id}")
+async def update_followup_category(
+    request: Request,
+    category_id: int,
+    category_data: UpdateFollowupCategoryRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Update an existing follow-up category."""
+    try:
+        # Check if category exists
+        existing_category = admin_db_manager.get_followup_category(category_id)
+        if not existing_category:
+            raise HTTPException(status_code=404, detail="Category not found")
+
+        # Update the category
+        success = admin_db_manager.update_followup_category(
+            category_id=category_id,
+            display_name=category_data.display_name,
+            description=category_data.description,
+            icon=category_data.icon,
+            sort_order=category_data.sort_order,
+            is_active=category_data.is_active,
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update category")
+
+        # Fetch the updated category
+        updated_category = admin_db_manager.get_followup_category(category_id)
+        if not updated_category:
+            raise HTTPException(status_code=500, detail="Failed to retrieve updated category")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "followup_category",
+                "category_id": category_id,
+                "changes": category_data.dict(exclude_unset=True),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Follow-up category {category_id} updated by user {session['user_id']}")
+
+        return updated_category
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating follow-up category: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating follow-up category")
+
+
+@router.post("/settings/followup/categories/{category_id}/delete")
+async def delete_followup_category_with_strategy(
+    request: Request,
+    category_id: int,
+    delete_request: CategoryDeleteRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Delete a follow-up category using specified strategy."""
+    try:
+        # Fast path: direct hard delete strategy
+        if delete_request.strategy == "delete":
+            success = admin_db_manager.delete_followup_category(category_id)
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to delete category")
+            result = {"success": True, "action": "delete", "category_id": category_id}
+        else:
+            # Initialize management service for move/deactivate flows
+            from ..core.followup_management_service import FollowUpManagementService
+
+            management_service = FollowUpManagementService()
+
+            # Validate the deletion request
+            validation_result = management_service.validate_category_deletion(category_id)
+            if not validation_result.get("can_delete", False):
+                raise HTTPException(status_code=400, detail=validation_result.get("reason", "Cannot delete category"))
+
+            # Perform deletion with strategy
+            result = management_service.delete_category_with_strategy(
+                category_id=category_id,
+                strategy=delete_request.strategy,
+                target_category_id=delete_request.target_category_id,
+                user_id=session.get("user_id"),
+            )
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Best-effort audit logging
+        try:
+            audit_logger.log_action(
+                action=AuditAction.DATA_DELETE,
+                username=session["username"],
+                details={
+                    "resource": "followup_category",
+                    "category_id": category_id,
+                    "strategy": delete_request.strategy,
+                    "result": result,
+                },
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception as log_err:
+            logger.error(f"Audit log failed for category delete {category_id}: {log_err}")
+
+        logger.info(
+            f"Follow-up category {category_id} deleted by user {session['user_id']} using strategy: {delete_request.strategy}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting follow-up category: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting follow-up category")
+
+
+@router.get("/settings/followup/categories/{category_id}/stats")
+async def get_followup_category_stats(
+    request: Request, category_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get statistics for a specific follow-up category."""
+    try:
+        # Check if category exists
+        category = admin_db_manager.get_followup_category(category_id)
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+
+        # Get questions for this category
+        questions = admin_db_manager.get_followup_questions(category_id=category_id, active_only=False)
+
+        active_questions = [q for q in questions if q.get("is_active", True)]
+        inactive_questions = [q for q in questions if not q.get("is_active", True)]
+
+        stats = {
+            "question_count": len(questions),
+            "active_questions": len(active_questions),
+            "inactive_questions": len(inactive_questions),
+            "category_id": category_id,
+            "category_name": category.get("name"),
+            "category_display_name": category.get("display_name"),
+        }
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "followup_category_stats", "category_id": category_id},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return stats
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting follow-up category stats: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error getting follow-up category stats")
+
+
+# Follow-up Question Management Routes
+@router.get("/settings/followup/questions")
+async def get_followup_questions(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+    category_id: Optional[int] = Query(default=None, description="Filter by category ID"),
+    active_only: bool = Query(default=False, description="Return only active questions"),
+    search: Optional[str] = Query(default=None, description="Search in question text"),
+    limit: int = Query(default=100, ge=1, le=1000, description="Maximum number of questions to return"),
+    offset: int = Query(default=0, ge=0, description="Number of questions to skip"),
+) -> List[Dict[str, Any]]:
+    """Get follow-up questions with filtering and pagination."""
+    try:
+        questions = admin_db_manager.get_followup_questions(
+            category_id=category_id, active_only=active_only, search=search, limit=limit, offset=offset
+        )
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={
+                "resource": "followup_questions",
+                "category_id": category_id,
+                "active_only": active_only,
+                "count": len(questions),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return questions
+
+    except Exception as e:
+        logger.error(f"Error getting follow-up questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching follow-up questions")
+
+
+@router.post("/settings/followup/questions")
+async def create_followup_question(
+    request: Request,
+    question_data: CreateFollowupQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a new follow-up question."""
+    try:
+        # Validate that category exists
+        category = admin_db_manager.get_followup_category(question_data.category_id)
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+
+        # Create the question
+        question_id = admin_db_manager.create_followup_question(
+            category_id=question_data.category_id,
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            created_by=session["user_id"],
+        )
+
+        # Fetch the created question
+        created_question = admin_db_manager.get_followup_question(question_id)
+        if not created_question:
+            # Graceful fallback: construct minimal response when read-after-write fails
+            created_question = {
+                "id": question_id,
+                "category_id": question_data.category_id,
+                "question_text": question_data.question_text,
+                "sort_order": question_data.sort_order or 0,
+                "is_active": True,
+                "created_at": datetime.now(),
+                "updated_at": datetime.now(),
+                "created_by": session.get("user_id"),
+            }
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Best-effort audit logging
+        try:
+            audit_logger.log_action(
+                action=AuditAction.DATA_CREATE,
+                username=session["username"],
+                details={
+                    "resource": "followup_question",
+                    "question_id": question_id,
+                    "category_id": question_data.category_id,
+                    "question_text": question_data.question_text,
+                },
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception as log_err:
+            logger.error(f"Audit log failed for question create {question_id}: {log_err}")
+
+        logger.info(f"Follow-up question created by user {session['user_id']}: {question_data.question_text}")
+
+        return created_question
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating follow-up question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating follow-up question")
+
+
+@router.put("/settings/followup/questions/{question_id}")
+async def update_followup_question(
+    request: Request,
+    question_id: int,
+    question_data: UpdateFollowupQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Update an existing follow-up question."""
+    try:
+        # Check if question exists
+        existing_question = admin_db_manager.get_followup_question(question_id)
+        if not existing_question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        # Update the question
+        success = admin_db_manager.update_followup_question(
+            question_id=question_id,
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            is_active=question_data.is_active,
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update question")
+
+        # Fetch the updated question
+        updated_question = admin_db_manager.get_followup_question(question_id)
+        if not updated_question:
+            raise HTTPException(status_code=500, detail="Failed to retrieve updated question")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Best-effort audit logging; do not fail the request if logging fails
+        try:
+            audit_logger.log_action(
+                action=AuditAction.DATA_UPDATE,
+                username=session["username"],
+                details={
+                    "resource": "followup_question",
+                    "question_id": question_id,
+                    "changes": question_data.dict(exclude_unset=True),
+                },
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception as log_err:
+            logger.error(f"Audit log failed for question update {question_id}: {log_err}")
+
+        logger.info(f"Follow-up question {question_id} updated by user {session['user_id']}")
+
+        return updated_question
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating follow-up question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating follow-up question")
+
+
+@router.delete("/settings/followup/questions/{question_id}")
+async def delete_followup_question(
+    request: Request, question_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Delete a follow-up question."""
+    try:
+        # Check if question exists
+        existing_question = admin_db_manager.get_followup_question(question_id)
+        if not existing_question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        # Delete the question
+        success = admin_db_manager.delete_followup_question(question_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete question")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_DELETE,
+            username=session["username"],
+            details={
+                "resource": "followup_question",
+                "question_id": question_id,
+                "question_text": existing_question.get("question_text", ""),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Follow-up question {question_id} deleted by user {session['user_id']}")
+
+        return {"success": True, "message": "Question deleted successfully", "question_id": question_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting follow-up question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting follow-up question")
+
+
+@router.post("/settings/followup/questions/bulk")
+async def bulk_update_followup_questions(
+    request: Request, bulk_request: BulkQuestionRequest, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Perform bulk operations on follow-up questions."""
+    try:
+        # Initialize management service
+        from ..core.followup_management_service import FollowUpManagementService
+
+        management_service = FollowUpManagementService()
+
+        # Convert operations to expected format
+        operations = [op.dict() for op in bulk_request.operations]
+
+        # Perform bulk operations
+        result = management_service.bulk_update_questions(operations)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={"resource": "followup_questions_bulk", "operation_count": len(operations), "result": result},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Bulk question operations performed by user {session['user_id']}: {len(operations)} operations")
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error performing bulk question operations: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error performing bulk question operations")
+
+
+# Additional settings endpoints for new functionality
+@router.get("/settings/response")
+async def get_response_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current response generation settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_response_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "response_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting response settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching response settings")
+
+
+@router.put("/settings/response")
+async def update_response_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update response generation settings."""
+    try:
+        settings = ResponseSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_response_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update response settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "response_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Response settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Response settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating response settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating response settings")
+
+
+@router.get("/settings/routing")
+async def get_routing_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current query routing settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_routing_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "routing_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting routing settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching routing settings")
+
+
+@router.put("/settings/routing")
+async def update_routing_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update query routing settings."""
+    try:
+        settings = QueryRoutingSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_routing_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update routing settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "routing_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Routing settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Routing settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating routing settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating routing settings")
+
+
+@router.get("/settings/features")
+async def get_feature_flags(request: Request, session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get current feature flags."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_feature_flags()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "feature_flags"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting feature flags: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching feature flags")
+
+
+@router.put("/settings/features")
+async def update_feature_flags(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update feature flags."""
+    try:
+        settings = FeatureFlags.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_feature_flags(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update feature flags")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "feature_flags", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Feature flags updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Feature flags updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating feature flags: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating feature flags")
+
+
+@router.get("/settings/cache/status")
+async def get_settings_cache_status(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get settings cache status for monitoring."""
+    try:
+        settings_mgr = get_settings_manager()
+        cache_status = settings_mgr.get_cache_status()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "settings_cache_status"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return cache_status
+
+    except Exception as e:
+        logger.error(f"Error getting settings cache status: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching cache status")
+
+
+@router.post("/settings/cache/invalidate")
+async def invalidate_settings_cache(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Invalidate settings cache to force refresh."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings_mgr.invalidate_cache()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "settings_cache_invalidation"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Settings cache invalidated by user {session['user_id']}")
+        return {"success": True, "message": "Settings cache invalidated successfully"}
+
+    except Exception as e:
+        logger.error(f"Error invalidating settings cache: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error invalidating cache")
+
+
+# Welcome Question Management Routes
+@router.get("/settings/welcome/questions")
+async def get_welcome_questions(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+    active_only: bool = Query(default=False, description="Return only active questions"),
+    limit: int = Query(default=100, ge=1, le=1000, description="Maximum number of questions to return"),
+    offset: int = Query(default=0, ge=0, description="Number of questions to skip"),
+) -> List[Dict[str, Any]]:
+    """Get welcome questions with filtering and pagination."""
+    try:
+        questions = admin_db_manager.get_welcome_questions(active_only=active_only, limit=limit, offset=offset)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={
+                "resource": "welcome_questions",
+                "active_only": active_only,
+                "count": len(questions),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return questions
+
+    except Exception as e:
+        logger.error(f"Error getting welcome questions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching welcome questions")
+
+
+@router.post("/settings/welcome/questions")
+async def create_welcome_question(
+    request: Request,
+    question_data: CreateWelcomeQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a new welcome question."""
+    try:
+        # Create the question
+        question_id = admin_db_manager.create_welcome_question(
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            created_by=session["user_id"],
+        )
+
+        # Fetch the created question
+        created_question = admin_db_manager.get_welcome_question(question_id)
+        if not created_question:
+            # Graceful fallback
+            created_question = {
+                "id": question_id,
+                "question_text": question_data.question_text,
+                "sort_order": question_data.sort_order or 0,
+                "is_active": True,
+                "created_at": datetime.now(),
+                "updated_at": datetime.now(),
+                "created_by": session.get("user_id"),
+            }
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_CREATE,
+            username=session["username"],
+            details={
+                "resource": "welcome_question",
+                "question_id": question_id,
+                "question_text": question_data.question_text,
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Welcome question created by user {session['user_id']}: {question_data.question_text}")
+
+        return created_question
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating welcome question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating welcome question")
+
+
+@router.put("/settings/welcome/questions/{question_id}")
+async def update_welcome_question(
+    request: Request,
+    question_id: int,
+    question_data: UpdateWelcomeQuestionRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Update an existing welcome question."""
+    try:
+        # Check if question exists
+        existing_question = admin_db_manager.get_welcome_question(question_id)
+        if not existing_question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        # Update the question
+        success = admin_db_manager.update_welcome_question(
+            question_id=question_id,
+            question_text=question_data.question_text,
+            sort_order=question_data.sort_order,
+            is_active=question_data.is_active,
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update question")
+
+        # Fetch the updated question
+        updated_question = admin_db_manager.get_welcome_question(question_id)
+        if not updated_question:
+            raise HTTPException(status_code=500, detail="Failed to retrieve updated question")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "welcome_question",
+                "question_id": question_id,
+                "changes": question_data.dict(exclude_unset=True),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Welcome question {question_id} updated by user {session['user_id']}")
+
+        return updated_question
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating welcome question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating welcome question")
+
+
+@router.delete("/settings/welcome/questions/{question_id}")
+async def delete_welcome_question(
+    request: Request, question_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Delete a welcome question."""
+    try:
+        # Check if question exists
+        existing_question = admin_db_manager.get_welcome_question(question_id)
+        if not existing_question:
+            raise HTTPException(status_code=404, detail="Question not found")
+
+        # Delete the question
+        success = admin_db_manager.delete_welcome_question(question_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete question")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_DELETE,
+            username=session["username"],
+            details={
+                "resource": "welcome_question",
+                "question_id": question_id,
+                "question_text": existing_question.get("question_text", ""),
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Welcome question {question_id} deleted by user {session['user_id']}")
+
+        return {"success": True, "message": "Question deleted successfully", "question_id": question_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting welcome question: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting welcome question")
+
+
+@router.post("/test/reset-database")
+async def reset_test_database(session: Dict[str, Any] = Depends(require_admin_auth)):
+    """Reset database to default state for testing purposes."""
+    try:
+        # Only allow in development or test environments
+        env = os.environ.get("ENVIRONMENT", "development")  # Default to development
+        if env not in ["development", "test", "testing"] and not os.environ.get("ALLOW_DB_RESET"):
+            raise HTTPException(
+                status_code=403, detail="Database reset only available in development/test environments"
+            )
+
+        # Clear test data but preserve admin users
+        with query_data_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Clear query logs except for essential admin queries
+            cursor.execute("DELETE FROM query_logs WHERE session_id != 'system'")
+
+            # Clear content gaps
+            cursor.execute("DELETE FROM content_gaps")
+
+            conn.commit()
+
+        logger.info(f"Test database reset completed by admin user {session['username']}")
+
+        return {
+            "success": True,
+            "message": "Test database reset completed",
+            "reset_items": ["query_logs", "content_gaps"],
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting test database: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error resetting test database")
+
+
+# API Key Management Endpoints
+@router.get("/settings/api-keys")
+async def get_api_keys(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+    include_inactive: bool = Query(default=False, description="Include inactive API keys"),
+) -> Dict[str, Any]:
+    """Get all API keys (without actual values)."""
+    try:
+        keys = api_key_manager.list_api_keys(include_inactive=include_inactive)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "api_keys", "count": len(keys), "include_inactive": include_inactive},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"keys": keys, "total": len(keys)}
+
+    except Exception as e:
+        logger.error(f"Error getting API keys: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching API keys")
+
+
+@router.post("/settings/api-keys")
+async def create_api_key(
+    request: Request,
+    key_data: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a new API key."""
+    try:
+        # Validate required fields
+        if not all(k in key_data for k in ["key_name", "key_type", "api_key"]):
+            raise HTTPException(status_code=400, detail="Missing required fields: key_name, key_type, api_key")
+
+        # Create the key
+        created_key = api_key_manager.create_api_key(
+            key_name=key_data["key_name"],
+            key_type=key_data["key_type"],
+            api_key=key_data["api_key"],
+            updated_by=session["user_id"],
+        )
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_CREATE,
+            username=session["username"],
+            details={"resource": "api_key", "key_name": created_key["key_name"], "key_type": created_key["key_type"]},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": "API key created successfully", "key": created_key}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating API key: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating API key")
+
+
+@router.put("/settings/api-keys/{key_name}")
+async def update_api_key(
+    request: Request,
+    key_name: str,
+    key_data: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Update an existing API key."""
+    try:
+        if "api_key" not in key_data:
+            raise HTTPException(status_code=400, detail="Missing required field: api_key")
+
+        # Update the key
+        success = api_key_manager.update_api_key(
+            key_name=key_name, new_api_key=key_data["api_key"], updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=404, detail="API key not found")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={"resource": "api_key", "key_name": key_name},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": "API key updated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating API key")
+
+
+@router.post("/settings/api-keys/{key_name}/toggle")
+async def toggle_api_key(
+    request: Request,
+    key_name: str,
+    toggle_data: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Enable or disable an API key."""
+    try:
+        if "is_active" not in toggle_data:
+            raise HTTPException(status_code=400, detail="Missing required field: is_active")
+
+        success = api_key_manager.toggle_api_key(
+            key_name=key_name, is_active=toggle_data["is_active"], updated_by=session["user_id"]
+        )
+
+        if not success:
+            raise HTTPException(status_code=404, detail="API key not found")
+
+        action_name = "enabled" if toggle_data["is_active"] else "disabled"
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_UPDATE,
+            username=session["username"],
+            details={
+                "resource": "api_key",
+                "key_name": key_name,
+                "action": action_name,
+                "is_active": toggle_data["is_active"],
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": f"API key {action_name} successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error toggling API key")
+
+
+@router.delete("/settings/api-keys/{key_name}")
+async def delete_api_key(
+    request: Request,
+    key_name: str,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Delete an API key."""
+    try:
+        success = api_key_manager.delete_api_key(key_name)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="API key not found")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_DELETE,
+            username=session["username"],
+            details={"resource": "api_key", "key_name": key_name},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "message": "API key deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting API key")
+
+
+@router.post("/settings/api-keys/{key_name}/validate")
+async def validate_api_key(
+    request: Request,
+    key_name: str,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Validate an API key by testing it with the provider."""
+    try:
+        is_valid, message = api_key_manager.validate_api_key(key_name)
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={
+                "resource": "api_key_validation",
+                "key_name": key_name,
+                "is_valid": is_valid,
+                "validation_message": message,
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"success": True, "valid": is_valid, "message": message, "key_name": key_name}
+
+    except Exception as e:
+        logger.error(f"Error validating API key {key_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error validating API key")
+
+
+@router.post("/settings/api-keys/migrate-from-env")
+async def migrate_api_keys_from_env(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Migrate API keys from environment variables to database."""
+    try:
+        results = api_key_manager.migrate_from_environment(session["user_id"])
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "api_key_migration", "migration_results": results},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        successful = sum(1 for success in results.values() if success)
+        total = len(results)
+
+        return {
+            "success": True,
+            "message": f"Migration completed: {successful}/{total} keys migrated",
+            "results": results,
+        }
+
+    except Exception as e:
+        logger.error(f"Error migrating API keys from environment: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error migrating API keys")
+
+
+# System Configuration Settings Endpoints
+@router.get("/settings/system-config")
+async def get_system_config_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current system configuration settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_system_config_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "system_config_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting system config settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching system configuration settings")
+
+
+@router.put("/settings/system-config")
+async def update_system_config_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update system configuration settings."""
+    try:
+        settings = SystemConfigurationSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_system_config_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update system configuration settings")
+
+        # IMPORTANT: Invalidate settings cache to ensure changes take effect immediately
+        # This prevents the 5-minute cache from serving stale settings
+        settings_mgr.invalidate_cache("system_config_settings")
+        logger.info("Invalidated system config settings cache after admin update")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "system_config_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"System config settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "System configuration settings updated successfully",
+            "settings": settings.to_dict(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error updating system config settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating system configuration settings")
+
+
+# Security Settings Endpoints
+@router.get("/settings/security")
+async def get_security_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current security settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_security_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "security_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return settings.to_dict()
+
+    except Exception as e:
+        logger.error(f"Error getting security settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching security settings")
+
+
+@router.put("/settings/security")
+async def update_security_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update security settings."""
+    try:
+        settings = SecuritySettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_security_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update security settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "security_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Security settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {"success": True, "message": "Security settings updated successfully", "settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error updating security settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating security settings")

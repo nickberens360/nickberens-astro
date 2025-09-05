@@ -9,7 +9,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +159,138 @@ class AdminDatabaseManager:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_2fa_user_id ON user_2fa(user_id)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_2fa_enabled ON user_2fa(is_enabled)")
 
+                # Follow-up question categories table
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS followup_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT UNIQUE NOT NULL,
+                        display_name TEXT NOT NULL,
+                        description TEXT,
+                        icon TEXT DEFAULT 'help-circle',
+                        sort_order INTEGER DEFAULT 0,
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """
+                )
+
+                # Follow-up questions table (normalized)
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS followup_questions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        category_id INTEGER NOT NULL,
+                        question_text TEXT NOT NULL,
+                        sort_order INTEGER DEFAULT 0,
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_by INTEGER,
+                        FOREIGN KEY (category_id) REFERENCES followup_categories (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES admin_users (id)
+                    )
+                """
+                )
+
+                # Create indices for follow-up categories
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_followup_categories_name ON followup_categories(name)")
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_categories_active ON followup_categories(is_active)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_categories_order ON followup_categories(sort_order)"
+                )
+
+                # Create indices for follow-up questions
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_category ON followup_questions(category_id)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_active ON followup_questions(is_active)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_order ON followup_questions(category_id, sort_order)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_followup_questions_text ON followup_questions(question_text)"
+                )
+
+                # Welcome questions table for homepage suggestions
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS welcome_questions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        question_text TEXT NOT NULL,
+                        sort_order INTEGER DEFAULT 0,
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_by INTEGER,
+                        FOREIGN KEY (created_by) REFERENCES admin_users (id)
+                    )
+                """
+                )
+
+                # Create indices for welcome questions
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_welcome_questions_active ON welcome_questions(is_active)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_welcome_questions_order ON welcome_questions(sort_order)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_welcome_questions_text ON welcome_questions(question_text)"
+                )
+
+                # API keys table for secure storage
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS api_keys (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        key_name TEXT UNIQUE NOT NULL,
+                        key_type TEXT NOT NULL,  -- 'anthropic', 'google', 'openai', etc.
+                        encrypted_value TEXT NOT NULL,
+                        last_four TEXT NOT NULL,  -- Last 4 chars for display
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        last_used_at TIMESTAMP,
+                        last_validated_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_by INTEGER,
+                        FOREIGN KEY (updated_by) REFERENCES admin_users (id)
+                    )
+                """
+                )
+
+                # Create indices for API keys
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_name ON api_keys(key_name)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_type ON api_keys(key_type)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(is_active)")
+
+                # Seed default welcome questions if table is empty
+                cursor.execute("SELECT COUNT(*) FROM welcome_questions")
+                welcome_count = cursor.fetchone()[0]
+
+                if welcome_count == 0:
+                    logger.info("Creating default welcome questions")
+                    self._create_default_welcome_questions(cursor)
+
+                # Seed default categories if table is empty
+                cursor.execute("SELECT COUNT(*) FROM followup_categories")
+                category_count = cursor.fetchone()[0]
+
+                if category_count == 0:
+                    logger.info("Creating default followup categories")
+                    self._create_default_categories(cursor)
+
+                # Migrate existing questions from JSON to normalized structure
+                self._migrate_questions_to_normalized_structure(cursor)
+
+                # Migrate API keys from environment variables if needed
+                self._migrate_api_keys_from_environment(cursor)
+
                 # Check if we need to create a default admin user
                 cursor.execute("SELECT COUNT(*) FROM admin_users")
                 user_count = cursor.fetchone()[0]
@@ -226,40 +358,866 @@ class AdminDatabaseManager:
         default_username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin").lower()
         default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
 
-        if not default_password:
-            # If no default password is set, don't modify existing users
-            return
-
+        # SECURITY FIX: Always verify admin user integrity
         # Check if the default admin user exists
-        cursor.execute("SELECT id, password_hash FROM admin_users WHERE username = ?", (default_username,))
+        cursor.execute("SELECT id, password_hash, role FROM admin_users WHERE username = ?", (default_username,))
         result = cursor.fetchone()
 
         if result:
-            user_id, current_hash = result
+            user_id, current_hash, role = result
 
-            # Test if the current hash works with direct bcrypt verification
-            try:
-                test_password_bytes = default_password.encode("utf-8")
-                hash_bytes = current_hash.encode("utf-8")
-                bcrypt_works = bcrypt.checkpw(test_password_bytes, hash_bytes)
-            except Exception:
-                bcrypt_works = False
-
-            if not bcrypt_works:
-                # Hash is in wrong format (probably passlib), recreate with bcrypt
-                logger.info(f"Updating password hash format for default admin user: {default_username}")
-                new_password_bytes = default_password.encode("utf-8")
-                new_password_hash = bcrypt.hashpw(new_password_bytes, bcrypt.gensalt()).decode("utf-8")
-
+            # SECURITY: Ensure admin user has proper role
+            if role != "admin":
+                logger.warning(f"Default admin user {default_username} has incorrect role: {role}. Fixing...")
                 cursor.execute(
-                    "UPDATE admin_users SET password_hash = ?, updated_at = ? WHERE id = ?",
-                    (new_password_hash, datetime.now(), user_id),
+                    "UPDATE admin_users SET role = 'admin', updated_at = ? WHERE id = ?",
+                    (datetime.now(), user_id),
                 )
-                logger.info(f"Updated password hash for default admin user: {default_username}")
+                logger.info(f"Restored admin role for user: {default_username}")
+
+            # Only update password if one is provided and different
+            if default_password:
+                # Test if the current hash works with direct bcrypt verification
+                try:
+                    test_password_bytes = default_password.encode("utf-8")
+                    hash_bytes = current_hash.encode("utf-8")
+                    bcrypt_works = bcrypt.checkpw(test_password_bytes, hash_bytes)
+                except Exception:
+                    bcrypt_works = False
+
+                if not bcrypt_works:
+                    # Hash is in wrong format (probably passlib), recreate with bcrypt
+                    logger.info(f"Updating password hash format for default admin user: {default_username}")
+                    new_password_bytes = default_password.encode("utf-8")
+                    new_password_hash = bcrypt.hashpw(new_password_bytes, bcrypt.gensalt()).decode("utf-8")
+
+                    cursor.execute(
+                        "UPDATE admin_users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                        (new_password_hash, datetime.now(), user_id),
+                    )
+                    logger.info(f"Updated password hash for default admin user: {default_username}")
+            else:
+                # SECURITY: Log when default admin exists without password validation
+                logger.info(f"Default admin user {default_username} exists. No password update requested.")
         else:
             # Default admin user doesn't exist, create it
             logger.info("Default admin user not found, creating it")
             self._create_default_admin_user(cursor)
+
+    def _create_default_categories(self, cursor):
+        """Create default follow-up question categories."""
+        default_categories = [
+            {
+                "name": "technical",
+                "display_name": "Technical",
+                "description": "Development, technologies, and coding questions",
+                "icon": "code",
+                "sort_order": 1,
+            },
+            {
+                "name": "personal",
+                "display_name": "Personal",
+                "description": "Experience, background, and contact information",
+                "icon": "account",
+                "sort_order": 2,
+            },
+            {
+                "name": "creative",
+                "display_name": "Creative",
+                "description": "Illustrations, art, and design work",
+                "icon": "palette",
+                "sort_order": 3,
+            },
+        ]
+
+        for category in default_categories:
+            cursor.execute(
+                """
+                INSERT INTO followup_categories (name, display_name, description, icon, sort_order, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    category["name"],
+                    category["display_name"],
+                    category["description"],
+                    category["icon"],
+                    category["sort_order"],
+                    datetime.now(),
+                    datetime.now(),
+                ),
+            )
+
+        logger.info(f"Created {len(default_categories)} default followup categories")
+
+    def _create_default_welcome_questions(self, cursor):
+        """Create default welcome questions for the homepage."""
+        default_questions = [
+            {
+                "question_text": "Tell me about yourself",
+                "sort_order": 1,
+            },
+            {
+                "question_text": "Show me your resume",
+                "sort_order": 2,
+            },
+            {
+                "question_text": "Show me your illustrations",
+                "sort_order": 3,
+            },
+        ]
+
+        for question in default_questions:
+            cursor.execute(
+                """
+                INSERT INTO welcome_questions (question_text, sort_order, created_at, updated_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    question["question_text"],
+                    question["sort_order"],
+                    datetime.now(),
+                    datetime.now(),
+                ),
+            )
+
+        logger.info(f"Created {len(default_questions)} default welcome questions")
+
+    def _migrate_questions_to_normalized_structure(self, cursor):
+        """Migrate questions from JSON storage to normalized table structure."""
+        try:
+            # Check if we have any questions in the normalized table
+            cursor.execute("SELECT COUNT(*) FROM followup_questions")
+            question_count = cursor.fetchone()[0]
+
+            if question_count > 0:
+                logger.info("Questions already migrated to normalized structure")
+                return
+
+            # Get existing questions from JSON settings
+            cursor.execute("SELECT setting_value FROM admin_settings WHERE setting_key = 'followup_settings'")
+            settings_row = cursor.fetchone()
+
+            if not settings_row:
+                logger.info("No existing followup settings to migrate")
+                return
+
+            import json
+
+            try:
+                settings_data = json.loads(settings_row[0])
+                custom_questions = settings_data.get("custom_questions", {})
+
+                if not custom_questions:
+                    logger.info("No custom questions to migrate")
+                    return
+
+                # Migrate questions for each category
+                migrated_count = 0
+                for category_name, questions in custom_questions.items():
+                    if not questions:
+                        continue
+
+                    # Get category ID
+                    cursor.execute("SELECT id FROM followup_categories WHERE name = ?", (category_name,))
+                    category_row = cursor.fetchone()
+
+                    if not category_row:
+                        logger.warning(f"Category '{category_name}' not found for migration")
+                        continue
+
+                    category_id = category_row[0]
+
+                    # Insert questions
+                    for sort_order, question_text in enumerate(questions):
+                        cursor.execute(
+                            """
+                            INSERT INTO followup_questions
+                            (category_id, question_text, sort_order, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?)
+                            """,
+                            (category_id, question_text, sort_order, datetime.now(), datetime.now()),
+                        )
+                        migrated_count += 1
+
+                if migrated_count > 0:
+                    # Clear the custom_questions from JSON settings to avoid confusion
+                    del settings_data["custom_questions"]
+                    cursor.execute(
+                        "UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'followup_settings'",
+                        (json.dumps(settings_data),),
+                    )
+                    logger.info(f"Migrated {migrated_count} questions to normalized structure")
+                else:
+                    logger.info("No questions needed migration")
+
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing followup settings JSON: {e}")
+            except Exception as e:
+                logger.error(f"Error during question migration: {e}")
+
+        except Exception as e:
+            logger.error(f"Error in question migration: {str(e)}", exc_info=True)
+
+    def _migrate_api_keys_from_environment(self, cursor):
+        """Migrate API keys from environment variables to database on first run."""
+        try:
+            # Check if any API keys already exist
+            cursor.execute("SELECT COUNT(*) FROM api_keys")
+            key_count = cursor.fetchone()[0]
+
+            if key_count > 0:
+                logger.info("API keys already exist in database, skipping environment migration")
+                return
+
+            # Try to migrate common API keys from environment
+            env_mappings = [
+                ("ANTHROPIC_API_KEY", "anthropic_primary", "anthropic"),
+                ("GOOGLE_API_KEY", "google_primary", "google"),
+                ("OPENAI_API_KEY", "openai_primary", "openai"),
+            ]
+
+            migrated_count = 0
+            for env_var, key_name, key_type in env_mappings:
+                api_key = os.getenv(env_var)
+                if api_key and len(api_key.strip()) > 10:  # Basic validation
+                    try:
+                        # Import here to avoid circular imports during database initialization
+                        from .api_key_manager import api_key_manager
+
+                        # Create the API key in the database
+                        encrypted_value, last_four = api_key_manager.encrypt_key(api_key.strip())
+
+                        cursor.execute(
+                            """
+                            INSERT INTO api_keys 
+                            (key_name, key_type, encrypted_value, last_four, updated_by)
+                            VALUES (?, ?, ?, ?, 1)
+                            """,
+                            (key_name, key_type, encrypted_value, last_four),
+                        )
+
+                        migrated_count += 1
+                        logger.info(f"Migrated {env_var} to database as {key_name}")
+
+                    except Exception as e:
+                        logger.error(f"Failed to migrate {env_var}: {e}")
+
+            if migrated_count > 0:
+                logger.info(f"Successfully migrated {migrated_count} API keys from environment variables")
+            else:
+                logger.info("No API keys found in environment variables to migrate")
+
+        except Exception as e:
+            logger.error(f"Error in API key migration: {str(e)}", exc_info=True)
+
+    # Follow-up category management methods
+    def get_followup_categories(self, active_only: bool = True) -> List[Dict]:
+        """Get follow-up categories, optionally filtered by active status."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                if active_only:
+                    cursor.execute(
+                        """
+                        SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
+                        FROM followup_categories
+                        WHERE is_active = 1
+                        ORDER BY sort_order, display_name
+                        """
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
+                        FROM followup_categories
+                        ORDER BY sort_order, display_name
+                        """
+                    )
+
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            logger.error(f"Error getting followup categories: {str(e)}", exc_info=True)
+            return []
+
+    def get_followup_category(self, category_id: int) -> Optional[Dict]:
+        """Get a single follow-up category by ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
+                    FROM followup_categories
+                    WHERE id = ?
+                    """,
+                    (category_id,),
+                )
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting followup category {category_id}: {str(e)}", exc_info=True)
+            return None
+
+    def get_followup_category_by_name(self, name: str) -> Optional[Dict]:
+        """Get a single follow-up category by name."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, name, display_name, description, icon, sort_order, is_active, created_at, updated_at
+                    FROM followup_categories
+                    WHERE name = ?
+                    """,
+                    (name,),
+                )
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting followup category by name {name}: {str(e)}", exc_info=True)
+            return None
+
+    def create_followup_category(
+        self,
+        name: str,
+        display_name: str,
+        description: Optional[str] = None,
+        icon: str = "help-circle",
+        sort_order: int = 0,
+    ) -> int:
+        """Create a new follow-up category."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO followup_categories (name, display_name, description, icon, sort_order, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (name, display_name, description, icon, sort_order, datetime.now(), datetime.now()),
+                )
+                category_id = cursor.lastrowid
+                logger.info(f"Created followup category: {name} (ID: {category_id})")
+                return category_id
+        except Exception as e:
+            logger.error(f"Error creating followup category {name}: {str(e)}", exc_info=True)
+            raise
+
+    def update_followup_category(
+        self,
+        category_id: int,
+        display_name: Optional[str] = None,
+        description: Optional[str] = None,
+        icon: Optional[str] = None,
+        sort_order: Optional[int] = None,
+        is_active: Optional[bool] = None,
+    ) -> bool:
+        """Update a follow-up category."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build dynamic update query with field whitelisting to prevent SQL injection
+                # Define allowed fields to prevent injection of arbitrary SQL
+                allowed_fields = {"display_name", "description", "icon", "sort_order", "is_active"}
+                updates: List[str] = []
+                params: List[Any] = []
+
+                # Build field updates with validation
+                field_values = {
+                    "display_name": display_name,
+                    "description": description,
+                    "icon": icon,
+                    "sort_order": sort_order,
+                    "is_active": (1 if is_active else 0) if is_active is not None else None,
+                }
+
+                for field, value in field_values.items():
+                    if value is not None and field in allowed_fields:
+                        # Field name is from our whitelist, safe to use
+                        updates.append(f"{field} = ?")
+                        params.append(value)
+
+                # Always update timestamp, even for no-op updates
+                updates.append("updated_at = ?")
+                params.append(datetime.now())
+
+                # If only timestamp is being updated, it's still a successful operation
+                if len(updates) == 1:
+                    # Only timestamp update - this is a valid no-op that succeeds
+                    logger.debug(f"No field changes for category {category_id}, updating timestamp only")
+                params.append(category_id)
+
+                # Build and execute query with validated field names only
+                query = f"UPDATE followup_categories SET {', '.join(updates)} WHERE id = ?"
+                cursor.execute(query, params)
+
+                success = cursor.rowcount > 0
+                if success:
+                    logger.info(f"Updated followup category ID: {category_id}")
+                return success
+        except Exception as e:
+            logger.error(f"Error updating followup category {category_id}: {str(e)}", exc_info=True)
+            return False
+
+    def delete_followup_category(self, category_id: int) -> bool:
+        """Delete a follow-up category (hard delete - completely removes from database)."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # First, delete any associated questions
+                cursor.execute("DELETE FROM followup_questions WHERE category_id = ?", (category_id,))
+                deleted_questions = cursor.rowcount
+
+                # Then delete the category itself
+                cursor.execute("DELETE FROM followup_categories WHERE id = ?", (category_id,))
+                success = cursor.rowcount > 0
+
+                if success:
+                    logger.info(
+                        f"Hard deleted followup category ID: {category_id} and {deleted_questions} associated questions"
+                    )
+                return success
+        except Exception as e:
+            logger.error(f"Error deleting followup category {category_id}: {str(e)}", exc_info=True)
+            return False
+
+    def reorder_followup_categories(self, category_orders: List[Dict[str, int]]) -> bool:
+        """Reorder categories by updating sort_order. Expects list of {id, sort_order}."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                for item in category_orders:
+                    cursor.execute(
+                        "UPDATE followup_categories SET sort_order = ?, updated_at = ? WHERE id = ?",
+                        (item["sort_order"], datetime.now(), item["id"]),
+                    )
+                logger.info(f"Reordered {len(category_orders)} followup categories")
+                return True
+        except Exception as e:
+            logger.error(f"Error reordering followup categories: {str(e)}", exc_info=True)
+            return False
+
+    # Follow-up question management methods (normalized)
+    def get_followup_questions(
+        self,
+        category_id: Optional[int] = None,
+        active_only: bool = True,
+        search: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Dict]:
+        """Get follow-up questions with pagination and filtering."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build query with filters
+                where_conditions: List[str] = []
+                params: List[Any] = []
+
+                if active_only:
+                    where_conditions.append("fq.is_active = 1")
+
+                if category_id is not None:
+                    where_conditions.append("fq.category_id = ?")
+                    params.append(category_id)
+
+                if search:
+                    where_conditions.append("fq.question_text LIKE ?")
+                    params.append(f"%{search}%")
+
+                where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+
+                # Add pagination params
+                params.extend([limit, offset])
+
+                cursor.execute(
+                    f"""
+                    SELECT
+                        fq.id, fq.category_id, fq.question_text, fq.sort_order,
+                        fq.is_active, fq.created_at, fq.updated_at, fq.created_by,
+                        fc.name as category_name, fc.display_name as category_display_name
+                    FROM followup_questions fq
+                    LEFT JOIN followup_categories fc ON fq.category_id = fc.id
+                    {where_clause}
+                    ORDER BY fq.category_id, fq.sort_order, fq.id
+                    LIMIT ? OFFSET ?
+                    """,
+                    params,
+                )
+
+                results = []
+                for row in cursor.fetchall():
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    results.append(row_dict)
+                return results
+        except Exception as e:
+            logger.error(f"Error getting followup questions: {str(e)}", exc_info=True)
+            return []
+
+    def get_followup_question(self, question_id: int) -> Optional[Dict]:
+        """Get a single follow-up question by ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT
+                        fq.id, fq.category_id, fq.question_text, fq.sort_order,
+                        fq.is_active, fq.created_at, fq.updated_at, fq.created_by,
+                        fc.name as category_name, fc.display_name as category_display_name
+                    FROM followup_questions fq
+                    LEFT JOIN followup_categories fc ON fq.category_id = fc.id
+                    WHERE fq.id = ?
+                    """,
+                    (question_id,),
+                )
+                row = cursor.fetchone()
+                if row:
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    return row_dict
+                return None
+        except Exception as e:
+            logger.error(f"Error getting followup question {question_id}: {str(e)}", exc_info=True)
+            return None
+
+    def create_followup_question(
+        self, category_id: int, question_text: str, sort_order: Optional[int] = None, created_by: Optional[int] = None
+    ) -> int:
+        """Create a new follow-up question."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Validate category exists and is active
+                cursor.execute("SELECT id, is_active FROM followup_categories WHERE id = ?", (category_id,))
+                category = cursor.fetchone()
+
+                if not category:
+                    raise ValueError(f"Category {category_id} not found")
+                if not category["is_active"]:
+                    raise ValueError("Cannot add questions to inactive category")
+
+                # Get next sort order if not provided
+                if sort_order is None:
+                    cursor.execute(
+                        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM followup_questions WHERE category_id = ?",
+                        (category_id,),
+                    )
+                    sort_order = cursor.fetchone()[0]
+
+                # Insert question
+                cursor.execute(
+                    """
+                    INSERT INTO followup_questions
+                    (category_id, question_text, sort_order, created_at, updated_at, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (category_id, question_text, sort_order, datetime.now(), datetime.now(), created_by),
+                )
+
+                question_id = cursor.lastrowid
+                logger.info(f"Created followup question {question_id} in category {category_id}")
+                return question_id
+
+        except Exception as e:
+            logger.error(f"Error creating followup question: {str(e)}", exc_info=True)
+            raise
+
+    def update_followup_question(
+        self,
+        question_id: int,
+        question_text: Optional[str] = None,
+        sort_order: Optional[int] = None,
+        is_active: Optional[bool] = None,
+    ) -> bool:
+        """Update a follow-up question."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build dynamic update query with field whitelisting to prevent SQL injection
+                # Define allowed fields to prevent injection of arbitrary SQL
+                allowed_fields = {"question_text", "sort_order", "is_active"}
+                updates: List[str] = []
+                params: List[Any] = []
+
+                # Build field updates with validation
+                field_values = {
+                    "question_text": question_text,
+                    "sort_order": sort_order,
+                    "is_active": (1 if is_active else 0) if is_active is not None else None,
+                }
+
+                for field, value in field_values.items():
+                    if value is not None and field in allowed_fields:
+                        # Field name is from our whitelist, safe to use
+                        updates.append(f"{field} = ?")
+                        params.append(value)
+
+                # If nothing to update, treat as successful no-op
+                if not updates:
+                    logger.debug(f"No-op update for followup question ID: {question_id} (no fields changed)")
+                    return True
+
+                # Always update timestamp
+                updates.append("updated_at = ?")
+                params.append(datetime.now())
+                params.append(question_id)
+
+                # Build and execute query with validated field names only
+                query = f"UPDATE followup_questions SET {', '.join(updates)} WHERE id = ?"
+                cursor.execute(query, params)
+
+                # Consider idempotent updates successful even if rowcount == 0
+                if cursor.rowcount == 0:
+                    logger.debug(f"Idempotent update for followup question ID: {question_id} (no data changed)")
+                else:
+                    logger.info(f"Updated followup question ID: {question_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating followup question {question_id}: {str(e)}", exc_info=True)
+            return False
+
+    def delete_followup_question(self, question_id: int) -> bool:
+        """Delete a follow-up question (hard delete)."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM followup_questions WHERE id = ?", (question_id,))
+                success = cursor.rowcount > 0
+                if success:
+                    logger.info(f"Deleted followup question ID: {question_id}")
+                return success
+        except Exception as e:
+            logger.error(f"Error deleting followup question {question_id}: {str(e)}", exc_info=True)
+            return False
+
+    def move_questions_to_category(self, source_category_id: int, target_category_id: int) -> int:
+        """Move all questions from source category to target category."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Validate target category exists and is active
+                cursor.execute("SELECT id, is_active FROM followup_categories WHERE id = ?", (target_category_id,))
+                target = cursor.fetchone()
+
+                if not target:
+                    raise ValueError(f"Target category {target_category_id} not found")
+                if not target["is_active"]:
+                    raise ValueError("Cannot move questions to inactive category")
+
+                # Get max sort order in target category
+                cursor.execute(
+                    "SELECT COALESCE(MAX(sort_order), 0) FROM followup_questions WHERE category_id = ?",
+                    (target_category_id,),
+                )
+                max_sort_order = cursor.fetchone()[0]
+
+                # Update questions with new category and sort orders
+                cursor.execute(
+                    """
+                    UPDATE followup_questions
+                    SET category_id = ?, sort_order = sort_order + ?, updated_at = ?
+                    WHERE category_id = ?
+                    """,
+                    (target_category_id, max_sort_order, datetime.now(), source_category_id),
+                )
+
+                moved_count = cursor.rowcount
+                logger.info(f"Moved {moved_count} questions from category {source_category_id} to {target_category_id}")
+                return moved_count
+
+        except Exception as e:
+            logger.error(f"Error moving questions: {str(e)}", exc_info=True)
+            raise
+
+    def get_category_question_count(self, category_id: int) -> int:
+        """Get the count of questions in a category."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT COUNT(*) FROM followup_questions WHERE category_id = ? AND is_active = 1", (category_id,)
+                )
+                return cursor.fetchone()[0]
+        except Exception as e:
+            logger.error(f"Error getting question count for category {category_id}: {str(e)}", exc_info=True)
+            return 0
+
+    # Welcome question management methods
+    def get_welcome_questions(self, active_only: bool = True, limit: int = 50, offset: int = 0) -> List[Dict]:
+        """Get welcome questions with pagination and filtering."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build query with filters
+                where_conditions: List[str] = []
+                params: List[Any] = []
+
+                if active_only:
+                    where_conditions.append("is_active = 1")
+
+                where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+
+                # Add pagination params
+                params.extend([limit, offset])
+
+                cursor.execute(
+                    f"""
+                    SELECT
+                        id, question_text, sort_order,
+                        is_active, created_at, updated_at, created_by
+                    FROM welcome_questions
+                    {where_clause}
+                    ORDER BY sort_order, id
+                    LIMIT ? OFFSET ?
+                    """,
+                    params,
+                )
+
+                results = []
+                for row in cursor.fetchall():
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    results.append(row_dict)
+                return results
+        except Exception as e:
+            logger.error(f"Error getting welcome questions: {str(e)}", exc_info=True)
+            return []
+
+    def get_welcome_question(self, question_id: int) -> Optional[Dict]:
+        """Get a single welcome question by ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT
+                        id, question_text, sort_order,
+                        is_active, created_at, updated_at, created_by
+                    FROM welcome_questions
+                    WHERE id = ?
+                    """,
+                    (question_id,),
+                )
+                row = cursor.fetchone()
+                if row:
+                    row_dict = dict(row)
+                    # Convert SQLite integer to proper boolean for API consistency
+                    row_dict["is_active"] = bool(row_dict["is_active"])
+                    return row_dict
+                return None
+        except Exception as e:
+            logger.error(f"Error getting welcome question {question_id}: {str(e)}", exc_info=True)
+            return None
+
+    def create_welcome_question(
+        self, question_text: str, sort_order: Optional[int] = None, created_by: Optional[int] = None
+    ) -> int:
+        """Create a new welcome question."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Get next sort order if not provided
+                if sort_order is None:
+                    cursor.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM welcome_questions")
+                    sort_order = cursor.fetchone()[0]
+
+                # Insert question
+                cursor.execute(
+                    """
+                    INSERT INTO welcome_questions
+                    (question_text, sort_order, created_at, updated_at, created_by)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (question_text, sort_order, datetime.now(), datetime.now(), created_by),
+                )
+
+                question_id = cursor.lastrowid
+                logger.info(f"Created welcome question {question_id}")
+                return question_id
+
+        except Exception as e:
+            logger.error(f"Error creating welcome question: {str(e)}", exc_info=True)
+            raise
+
+    def update_welcome_question(
+        self,
+        question_id: int,
+        question_text: Optional[str] = None,
+        sort_order: Optional[int] = None,
+        is_active: Optional[bool] = None,
+    ) -> bool:
+        """Update a welcome question."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Build dynamic update query with field whitelisting to prevent SQL injection
+                allowed_fields = {"question_text", "sort_order", "is_active"}
+                updates: List[str] = []
+                params: List[Any] = []
+
+                # Build field updates with validation
+                field_values = {
+                    "question_text": question_text,
+                    "sort_order": sort_order,
+                    "is_active": (1 if is_active else 0) if is_active is not None else None,
+                }
+
+                for field, value in field_values.items():
+                    if value is not None and field in allowed_fields:
+                        updates.append(f"{field} = ?")
+                        params.append(value)
+
+                # If nothing to update, treat as successful no-op
+                if not updates:
+                    logger.debug(f"No-op update for welcome question ID: {question_id}")
+                    return True
+
+                # Always update timestamp
+                updates.append("updated_at = ?")
+                params.append(datetime.now())
+                params.append(question_id)
+
+                # Build and execute query
+                query = f"UPDATE welcome_questions SET {', '.join(updates)} WHERE id = ?"
+                cursor.execute(query, params)
+
+                if cursor.rowcount == 0:
+                    logger.debug(f"Idempotent update for welcome question ID: {question_id}")
+                else:
+                    logger.info(f"Updated welcome question ID: {question_id}")
+                return True
+        except Exception as e:
+            logger.error(f"Error updating welcome question {question_id}: {str(e)}", exc_info=True)
+            return False
+
+    def delete_welcome_question(self, question_id: int) -> bool:
+        """Delete a welcome question (hard delete)."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM welcome_questions WHERE id = ?", (question_id,))
+                success = cursor.rowcount > 0
+                if success:
+                    logger.info(f"Deleted welcome question ID: {question_id}")
+                return success
+        except Exception as e:
+            logger.error(f"Error deleting welcome question {question_id}: {str(e)}", exc_info=True)
+            return False
 
     def get_admin_user(self, username: str) -> Optional[Dict]:
         """Get admin user by username."""
@@ -272,6 +1230,64 @@ class AdminDatabaseManager:
         except Exception as e:
             logger.error(f"Error getting admin user {username}: {str(e)}", exc_info=True)
             return None
+
+    # Security events and rate limiting helpers used by audit logger and auth flows
+    def record_security_event(
+        self,
+        event_type: str,
+        identifier: str,
+        severity: str,
+        details: str,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> bool:
+        """Persist a security/audit event to the database."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO security_events (event_type, identifier, details, severity, ip_address, user_agent, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        event_type,
+                        identifier,
+                        details,
+                        severity,
+                        ip_address,
+                        (user_agent[:500] if user_agent else None),
+                        datetime.now(),
+                    ),
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error recording security event: {str(e)}", exc_info=True)
+            return False
+
+    def get_security_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
+        """Return security events within the last N hours."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, event_type, identifier, details, severity, ip_address, user_agent, created_at
+                    FROM security_events
+                    WHERE created_at >= datetime('now', ?)
+                    ORDER BY created_at DESC
+                    """,
+                    (f"-{int(hours)} hours",),
+                )
+                rows = cursor.fetchall()
+                result = []
+                for row in rows:
+                    d = dict(row)
+                    result.append(d)
+                return result
+        except Exception as e:
+            logger.error(f"Error fetching security alerts: {str(e)}", exc_info=True)
+            return []
 
     def create_admin_user(self, username: str, email: Optional[str], password_hash: str, role: str = "viewer") -> int:
         """Create a new admin user."""
@@ -412,12 +1428,16 @@ class AdminDatabaseManager:
         self, identifier: str, identifier_type: str, lockout_duration_minutes: int = 5
     ) -> bool:
         """Record a failed attempt and return True if identifier should be locked out."""
+        import random
+
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 now = datetime.now()
-                lockout_until = datetime.now().replace(second=0, microsecond=0)  # Round to minute
-                lockout_until = lockout_until.replace(minute=lockout_until.minute + lockout_duration_minutes)
+                # SECURITY FIX: Add randomization to prevent timing attacks
+                # Add 0-60 seconds of random jitter to lockout duration
+                jitter_seconds = random.randint(0, 60)
+                lockout_until = now + timedelta(minutes=lockout_duration_minutes, seconds=jitter_seconds)
 
                 # Check if identifier already exists
                 cursor.execute(
@@ -500,40 +1520,6 @@ class AdminDatabaseManager:
                 return cursor.rowcount > 0
         except Exception as e:
             logger.error(f"Error resetting rate limit: {str(e)}", exc_info=True)
-            return False
-
-    def record_security_event(
-        self,
-        event_type: str,
-        identifier: str,
-        severity: str = "medium",
-        details: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-    ) -> bool:
-        """Record a security event for monitoring."""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO security_events
-                    (event_type, identifier, details, severity, ip_address, user_agent, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        event_type,
-                        identifier,
-                        details,
-                        severity,
-                        ip_address,
-                        user_agent[:500] if user_agent else None,
-                        datetime.now(),
-                    ),
-                )
-                return True
-        except Exception as e:
-            logger.error(f"Error recording security event: {str(e)}", exc_info=True)
             return False
 
     def cleanup_old_rate_limits(self, days_old: int = 7) -> int:

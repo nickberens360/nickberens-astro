@@ -136,6 +136,7 @@
       show-select
       :search="searchQuery"
       item-value="id"
+      fixed-header
       @click:row="handleRowClick"
     >
       <template #item.user_query="{ item }">
@@ -591,55 +592,46 @@ const headers = computed(() => [
   {
     title: 'Query',
     key: 'user_query',
-    width: '25%',
     sortable: true
   },
   {
     title: 'Response',
     key: 'response',
-    width: '20%',
     sortable: false
   },
   {
     title: 'Status',
     key: 'error_occurred',
-    width: '8%',
     sortable: true
   },
   {
     title: 'Response Time',
     key: 'response_time_ms',
-    width: '10%',
     sortable: true
   },
   {
     title: 'Relevance',
     key: 'vector_search_score',
-    width: '10%',
     sortable: true
   },
   {
     title: 'LLM',
     key: 'llm_model',
-    width: '8%',
     sortable: true
   },
   {
     title: 'Location',
     key: 'location',
-    width: '10%',
     sortable: false
   },
   {
     title: 'Timestamp',
     key: 'timestamp',
-    width: '12%',
     sortable: true
   },
   {
     title: 'Actions',
     key: 'actions',
-    width: '5%',
     sortable: false
   }
 ]);
@@ -807,9 +799,28 @@ onMounted(async () => {
   overflow-x: auto;
 }
 
+/* Allow table to auto-size columns */
+:deep(.v-data-table__wrapper table) {
+  width: 100% !important;
+  table-layout: fixed;
+}
+
 :deep(.v-data-table-row--clickable:hover) {
   background-color: rgba(var(--v-theme-primary), 0.04);
   cursor: pointer;
+}
+
+/* Force column widths */
+:deep(.v-data-table th:nth-child(2)),
+:deep(.v-data-table td:nth-child(2)) {
+  width: 30% !important;
+  min-width: 250px;
+}
+
+:deep(.v-data-table th:nth-child(3)),
+:deep(.v-data-table td:nth-child(3)) {
+  width: 30% !important;
+  min-width: 250px;
 }
 
 /* Dialog Styles */

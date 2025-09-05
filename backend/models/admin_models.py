@@ -107,6 +107,123 @@ class ContentGap(BaseModel):
     sample_query: Optional[str] = None
 
 
+# Follow-up category models
+class FollowupCategory(BaseModel):
+    id: int
+    name: str
+    display_name: str
+    description: Optional[str] = None
+    icon: str = "help-circle"
+    sort_order: int = 0
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreateFollowupCategoryRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=50, pattern="^[a-z_][a-z0-9_]*$")
+    display_name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    icon: str = Field(default="help-circle", max_length=50)
+    sort_order: int = Field(default=0, ge=0, le=1000)
+
+
+class UpdateFollowupCategoryRequest(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    icon: Optional[str] = Field(None, max_length=50)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+    is_active: Optional[bool] = None
+
+
+class ReorderCategoriesRequest(BaseModel):
+    categories: List[Dict[str, int]] = Field(..., description="List of {id: int, sort_order: int}")
+
+
+# Follow-up question models (normalized)
+class FollowupQuestion(BaseModel):
+    id: int
+    category_id: int
+    question_text: str
+    sort_order: int = 0
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+    category_name: Optional[str] = None
+    category_display_name: Optional[str] = None
+
+
+class CreateFollowupQuestionRequest(BaseModel):
+    category_id: int = Field(..., gt=0)
+    question_text: str = Field(..., min_length=1, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+
+
+class UpdateFollowupQuestionRequest(BaseModel):
+    question_text: Optional[str] = Field(None, min_length=1, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+    is_active: Optional[bool] = None
+
+
+class BulkQuestionOperation(BaseModel):
+    action: str = Field(..., pattern="^(delete|activate|deactivate|update)$")
+    question_id: int = Field(..., gt=0)
+    question_text: Optional[str] = Field(None, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+
+
+class BulkQuestionRequest(BaseModel):
+    operations: List[BulkQuestionOperation] = Field(..., min_length=1, max_length=50)
+
+
+class CategoryDeleteRequest(BaseModel):
+    strategy: str = Field(..., pattern="^(move|delete|deactivate)$")
+    target_category_id: Optional[int] = Field(None, gt=0)
+
+
+class QuestionSearchRequest(BaseModel):
+    query: str = Field(..., min_length=3, max_length=100)
+    category_id: Optional[int] = Field(None, gt=0)
+    limit: int = Field(default=20, ge=1, le=50)
+
+
+class CategoryWithStats(BaseModel):
+    id: int
+    name: str
+    display_name: str
+    description: Optional[str] = None
+    icon: str = "help-circle"
+    sort_order: int = 0
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+    questions_count: int = 0
+    questions: Optional[List[FollowupQuestion]] = None
+
+
+# Welcome question models
+class WelcomeQuestion(BaseModel):
+    id: int
+    question_text: str
+    sort_order: int = 0
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+
+
+class CreateWelcomeQuestionRequest(BaseModel):
+    question_text: str = Field(..., min_length=1, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+
+
+class UpdateWelcomeQuestionRequest(BaseModel):
+    question_text: Optional[str] = Field(None, min_length=1, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+    is_active: Optional[bool] = None
+
+
 # Export models
 class ExportRequest(BaseModel):
     start_date: Optional[str] = None

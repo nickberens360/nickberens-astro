@@ -141,3 +141,117 @@ class ResponseService:
             model_used=model_used or llm_used,  # Use model_used if provided, fallback to llm_used
             rate_limits=rate_limits,
         )
+
+    def process_response_formatting(self, response: str, sources: Optional[List[Dict[str, str]]] = None) -> str:
+        """Apply formatting based on admin settings."""
+        try:
+            from .settings_manager import get_settings_manager
+
+            settings_manager = get_settings_manager()
+            response_settings = settings_manager.get_response_settings()
+
+            # Apply response formatting
+            formatted_response = response
+
+            # Handle markdown settings
+            if not response_settings.enable_markdown:
+                formatted_response = self._strip_markdown(formatted_response)
+
+            # Handle code highlighting settings
+            if not response_settings.enable_code_highlighting:
+                formatted_response = self._strip_code_highlighting(formatted_response)
+
+            # Add sources if enabled
+            if response_settings.include_sources and sources:
+                source_section = self._format_sources(sources, response_settings)
+                if source_section:
+                    formatted_response += f"\n\n{source_section}"
+
+            return formatted_response
+
+        except Exception as e:
+            logger.warning(f"Failed to apply response formatting: {e}")
+            return response  # Return original response on error
+
+    def _format_sources(self, sources: List[Dict[str, str]], response_settings) -> str:
+        """Format sources based on admin settings."""
+        if not sources:
+            return ""
+
+        # Limit source count
+        limited_sources = sources[: response_settings.max_sources]
+
+        # Format based on preference
+        if response_settings.source_format == "numbered":
+            return self._format_numbered_sources(limited_sources)
+        elif response_settings.source_format == "bulleted":
+            return self._format_bulleted_sources(limited_sources)
+        elif response_settings.source_format == "inline":
+            return self._format_inline_sources(limited_sources)
+        else:
+            return self._format_numbered_sources(limited_sources)  # Default
+
+    def _format_numbered_sources(self, sources: List[Dict[str, str]]) -> str:
+        """Format sources as numbered list."""
+        if not sources:
+            return ""
+
+        source_lines = ["**Sources:**"]
+        for i, source in enumerate(sources, 1):
+            title = source.get("title", "Unknown Source")
+            file_path = source.get("file", "")
+            source_lines.append(f"{i}. {title} ({file_path})")
+
+        return "\n".join(source_lines)
+
+    def _format_bulleted_sources(self, sources: List[Dict[str, str]]) -> str:
+        """Format sources as bulleted list."""
+        if not sources:
+            return ""
+
+        source_lines = ["**Sources:**"]
+        for source in sources:
+            title = source.get("title", "Unknown Source")
+            file_path = source.get("file", "")
+            source_lines.append(f"• {title} ({file_path})")
+
+        return "\n".join(source_lines)
+
+    def _format_inline_sources(self, sources: List[Dict[str, str]]) -> str:
+        """Format sources inline."""
+        if not sources:
+            return ""
+
+        source_names = [s.get("title", "Unknown") for s in sources]
+        return f"\n\n*Sources: {', '.join(source_names)}*"
+
+    def _strip_markdown(self, text: str) -> str:
+        """Remove markdown formatting for plain text output."""
+        import re
+
+        # Remove headers
+        text = re.sub(r"^#{1,6}\s+(.+)$", r"\1", text, flags=re.MULTILINE)
+
+        # Remove bold/italic
+        text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+        text = re.sub(r"\*(.+?)\*", r"\1", text)
+        text = re.sub(r"__(.+?)__", r"\1", text)
+        text = re.sub(r"_(.+?)_", r"\1", text)
+
+        # Remove links
+        text = re.sub(r"\[(.+?)\]\(.+?\)", r"\1", text)
+
+        # Remove code blocks
+        text = re.sub(r"```[\s\S]*?```", "[Code Block]", text)
+        text = re.sub(r"`(.+?)`", r"\1", text)
+
+        return text
+
+    def _strip_code_highlighting(self, text: str) -> str:
+        """Remove code highlighting while keeping code blocks."""
+        import re
+
+        # Convert highlighted code blocks to plain code blocks
+        text = re.sub(r"```\w+\n([\s\S]*?)```", r"```\n\1```", text)
+
+        return text
