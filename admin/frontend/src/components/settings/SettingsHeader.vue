@@ -18,16 +18,6 @@
         >
           Clear Cache
         </v-btn>
-        <v-btn
-          color="primary"
-          prepend-icon="$refresh"
-          @click="refreshAllSettings"
-          :loading="refreshLoading"
-          variant="elevated"
-          size="default"
-        >
-          Refresh All
-        </v-btn>
       </div>
     </div>
   </div>
@@ -41,7 +31,6 @@ import { cacheSettingsService } from '@/services/settings/cacheSettingsService'
 const { showSuccess, showError } = useNotifications()
 
 const cacheLoading = ref(false)
-const refreshLoading = ref(false)
 
 const invalidateCache = async () => {
   try {
@@ -55,17 +44,6 @@ const invalidateCache = async () => {
   }
 }
 
-const refreshAllSettings = async () => {
-  try {
-    refreshLoading.value = true
-    // Simple solution: reload the page to refresh all stores
-    window.location.reload()
-  } catch (err) {
-    showError(`Failed to refresh settings: ${err.message}`)
-  } finally {
-    refreshLoading.value = false
-  }
-}
 </script>
 
 <style scoped>
