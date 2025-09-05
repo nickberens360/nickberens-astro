@@ -17,7 +17,16 @@ from ..core.admin_auth import require_admin_auth
 logger = logging.getLogger(__name__)
 
 # Initialize rate limiter for admin refresh endpoints
-limiter = Limiter(key_func=get_remote_address)
+# Check if we're in testing environment to disable rate limiting
+import os
+
+_is_testing = os.getenv("TESTING", "false").lower() == "true" or "pytest" in os.environ.get("_", "")
+
+if _is_testing:
+    # Use memory storage during testing to avoid rate limiting issues
+    limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
+else:
+    limiter = Limiter(key_func=get_remote_address)
 
 
 router = APIRouter(

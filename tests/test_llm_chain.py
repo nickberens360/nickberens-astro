@@ -150,8 +150,8 @@ class TestLLMChain:
         """Test cache eviction when max size is reached."""
         import backend.core.llm_chain as llm_chain
 
-        # Mock MAX_CACHE_SIZE to be small
-        with patch("backend.core.llm_chain.MAX_CACHE_SIZE", 2):
+        # Mock get_max_cache_size to be small
+        with patch("backend.core.llm_chain.get_max_cache_size", return_value=2):
             # Add entries up to limit
             cache_response("key1", ["response1"])
             cache_response("key2", ["response2"])
@@ -351,8 +351,8 @@ class TestLLMChain:
         """Test retrieval cache eviction when max size is reached."""
         import backend.core.llm_chain as llm_chain
 
-        # Mock MAX_CACHE_SIZE to be small
-        with patch("backend.core.llm_chain.MAX_CACHE_SIZE", 2):
+        # Mock get_max_cache_size to be small
+        with patch("backend.core.llm_chain.get_max_cache_size", return_value=2):
             doc1 = [Document(page_content="Doc 1", metadata={"source": "test"})]
             doc2 = [Document(page_content="Doc 2", metadata={"source": "test"})]
             doc3 = [Document(page_content="Doc 3", metadata={"source": "test"})]
