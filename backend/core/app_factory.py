@@ -154,7 +154,7 @@ def configure_dynamic_cors(app: FastAPI):
                 allow_origins=origins,
                 allow_credentials=True,
                 allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                allow_headers=["Content-Type"],
+                allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
                 expose_headers=["X-Model-Used", "X-Followup-Questions"],
             )
         else:
@@ -164,7 +164,7 @@ def configure_dynamic_cors(app: FastAPI):
                 allow_origins=[],
                 allow_credentials=False,
                 allow_methods=["GET"],
-                allow_headers=["Content-Type"],
+                allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
                 expose_headers=[],
             )
     except Exception as e:
@@ -179,7 +179,7 @@ def configure_dynamic_cors(app: FastAPI):
             allow_origins=AppConfig.get_cors_origins(),
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            allow_headers=["Content-Type"],
+            allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
             expose_headers=["X-Model-Used", "X-Followup-Questions"],
         )
 
