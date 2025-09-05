@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import random
 import threading
@@ -243,9 +244,11 @@ class FollowUpService:
 
         # Simple implementation: prefer questions that aren't too similar to current query
         # This could be enhanced with semantic similarity in the future
-        random.seed(hash(user_question.lower()) % 1000)  # Deterministic randomness based on question
+        # Use thread-safe deterministic randomness based on stable hash
+        stable_hash = int(hashlib.sha256(user_question.lower().encode("utf-8")).hexdigest()[:8], 16)
+        rng = random.Random(stable_hash)
 
-        selected = random.sample(questions_pool, min(settings.max_questions, len(questions_pool)))
+        selected = rng.sample(questions_pool, min(settings.max_questions, len(questions_pool)))
 
         logger.debug(f"FollowUpService dynamic: selected {len(selected)} questions")
         return selected
