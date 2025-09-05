@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import secrets
+from pathlib import Path
 from typing import List
 from urllib.parse import urlparse
 
@@ -10,33 +11,8 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 
-def sanitize_error_message(error: Exception, user_message: str = "An error occurred") -> str:
-    """
-    Sanitize error messages for production use.
-
-    Args:
-        error: The exception that occurred
-        user_message: Safe message to show to users in production
-
-    Returns:
-        str: Sanitized error message
-    """
-    # In development or debug mode, show detailed errors
-    if not AppConfig.IS_PRODUCTION or AppConfig.DEBUG_MODE:
-        return str(error)
-
-    # In production, return generic message and log actual error
-    logger.error(f"Error sanitized for production: {str(error)}", exc_info=True)
-    return user_message
-
-
 class AppConfig:
     """Centralized configuration management with enhanced security."""
-
-    # Environment detection for security
-    ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-    IS_PRODUCTION = ENVIRONMENT == "production"
-    DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true" and not IS_PRODUCTION
 
     # LLM Configuration - keep it simple for now
     PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")
@@ -311,14 +287,7 @@ class AppConfig:
         development_origins = [
             "http://localhost:4321",
             "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-            "http://localhost:3003",
             "http://localhost:5173",
-            "http://localhost:8000",
-            "http://localhost:8001",
-            "http://localhost:8002",
-            "http://localhost:8003",
         ]
 
         if environment in ["production", "prod"]:
@@ -377,57 +346,7 @@ class AppConfig:
 
     # App Metadata
     APP_TITLE = "Nick Berens Portfolio API"
-    APP_DESCRIPTION = """
-Intelligent API for Nick Berens' Portfolio and Knowledge Base
-
-This API provides AI-powered access to Nick's professional experience, skills, projects, and creative work using advanced RAG (Retrieval-Augmented Generation) technology.
-
-🚀 Key Features:
-• AI-Powered Queries: Ask questions about Nick's experience, skills, and projects
-• Smart Illustration Search: Find and browse Nick's creative artwork and illustrations
-• Intelligent Routing: Automatically determines whether you're asking about text content or images
-• Real-time AI Responses: Streaming responses using Claude (Anthropic) and Gemini (Google)
-• Comprehensive Admin Dashboard: Complete analytics and management interface
-• Advanced Security: Rate limiting, input validation, and secure authentication
-
-📖 Getting Started:
-
-1. Basic Query:
-   POST /query with {"question": "What is Nick's professional background?"}
-
-2. Request Illustrations:
-   POST /query with {"question": "Show me some creative illustrations"}
-
-3. Admin Authentication:
-   POST /api/admin/auth/login with {"username": "admin", "password": "your-password"}
-
-🔒 Authentication:
-• Public Endpoints: No authentication required for basic queries
-• Admin Endpoints: Session-based authentication with secure HTTPOnly cookies
-• Rate Limiting: 100 requests per minute per IP address
-
-📊 Available Data:
-• Professional Experience: Work history, roles, companies (Calendly, etc.)
-• Technical Skills: Vue.js, Python, FastAPI, full-stack development
-• Creative Work: Digital illustrations, artwork, and visual projects
-• Personal Projects: Open source contributions, side projects
-
-🛠️ Admin Features:
-• Query Analytics: Monitor usage patterns and popular questions
-• Performance Metrics: Track response times and system health
-• Content Management: Manage knowledge base and illustration metadata
-• User Management: Admin user creation and role management
-• Security Monitoring: Audit logs and security event tracking
-
-🔧 Technical Details:
-• AI Models: Claude 3.5 Sonnet (primary), Gemini 1.5 Flash (fallback)
-• Vector Database: ChromaDB for semantic search
-• Security: Input validation, rate limiting, CSRF protection
-• Monitoring: Comprehensive logging and health checks
-• Performance: Response caching, smart context management
-
-Built with ❤️ by Nick Berens using FastAPI, Vue.js, and modern AI technologies.
-    """
+    APP_DESCRIPTION = "API for AI-powered responses and illustration search with Claude as primary LLM"
     APP_VERSION = "2.1.0"
 
 

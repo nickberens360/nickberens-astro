@@ -20,10 +20,10 @@ from langchain_core.retrievers import BaseRetriever
 
 # Prefer the newer Chroma package
 try:
-    from langchain_chroma import Chroma  # type: ignore
+    from langchain_chroma import Chroma
 except ImportError:
     # Fallback to community version if new package not available
-    from langchain_community.vectorstores import Chroma  # type: ignore
+    from langchain_community.vectorstores import Chroma
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc

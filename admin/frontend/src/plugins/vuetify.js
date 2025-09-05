@@ -4,33 +4,25 @@ import {
   // Navigation & Core
   mdiHome, mdiViewDashboard, mdiMagnify, mdiChartLine, mdiFileDocument,
   mdiAccountGroup, mdiAccount, mdiMenu, mdiClose, mdiRefresh, mdiExport,
-
+  
   // Actions & Controls
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
   mdiDownload, mdiUpload, mdiCloudUpload, mdiPaperclip, mdiDelete,
   mdiPencil, mdiNoteEdit, mdiUndo, mdiChevronLeft, mdiChevronRight, mdiChevronDown,
-  mdiChevronUp,
   mdiContentSave, mdiFormatTextVariant, mdiMapMarker, mdiText, mdiFile,
-  mdiPlus, mdiDragVertical, mdiEyeOff, mdiArrowUp, mdiArrowDown, mdiDotsVertical,
-  mdiToggleSwitch, mdiSort, mdiCheckboxMarked, mdiArrowRight, mdiDeleteForever,
-  mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon, mdiReply, mdiRoad,
-  mdiFlag, mdiCached, mdiMessageText, mdiKey, mdiImport, mdiShieldCheck, mdiAlertCircle,
-  mdiRobot, mdiGoogle, mdiDatabase, mdiTimer, mdiFingerprint, mdiBookOpen,
-  mdiSpeedometer, mdiGauge, mdiIpNetwork, mdiCheckCircleOutline,
-
+  
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
   mdiTrendingDown, mdiThumbUpOutline, mdiThumbUp, mdiThumbDown,
   mdiAlertCircleOutline, mdiBell,
-
+  
   // Content & Knowledge
   mdiBookOpenPageVariant, mdiInformation, mdiFolder, mdiFormatListBulleted,
   mdiCodeBraces, mdiFilePdfBox, mdiFileDocumentOutline, mdiTextBox, mdiWeb, mdiHelpCircleOutline, mdiCog,
-  mdiBrain, mdiTune, mdiTarget, mdiNumeric, mdiFormatListGroup, mdiPalette,
-
+  
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
-  mdiLightbulbOutline, mdiLightbulb, mdiTableLarge, mdiTestTube
+  mdiLightbulbOutline, mdiLightbulb, mdiTableLarge
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -62,15 +54,15 @@ const themes = {
       info: '#60A5FA', // Lighter blue
       success: '#34D399', // Lighter green
       warning: '#FBBF24', // Lighter amber
-      surface: '#0e0e0e', // Very dark surface for cards
-      background: '#000000' // Black background
+      surface: '#1F2937', // Dark surface
+      background: '#111827' // Very dark background
     }
   }
 }
 
 // Modern typography for LMS design
 const typography = {
-  fontFamily: '"Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+  fontFamily: '"Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
 }
 
 // Icon aliases configuration
@@ -83,7 +75,7 @@ const iconAliases = {
   document: mdiFileDocument,
   users: mdiAccountGroup,
   knowledge: mdiBookOpenPageVariant,
-
+  
   // Actions
   menu: mdiMenu,
   close: mdiClose,
@@ -91,64 +83,23 @@ const iconAliases = {
   export: mdiExport,
   filter: mdiFilter,
   view: mdiEye,
-  eye: mdiEye,
   download: mdiDownload,
   upload: mdiUpload,
   'cloud_upload': mdiCloudUpload,
   'attach_file': mdiPaperclip,
   delete: mdiDelete,
-  'delete-forever': mdiDeleteForever,
   edit: mdiPencil,
   'note-edit': mdiNoteEdit,
   undo: mdiUndo,
   'chevron-left': mdiChevronLeft,
   'chevron-right': mdiChevronRight,
   'chevron-down': mdiChevronDown,
-  'chevron-up': mdiChevronUp,
   save: mdiContentSave,
   'format-text': mdiFormatTextVariant,
   'map-marker': mdiMapMarker,
   text: mdiText,
   file: mdiFile,
-  plus: mdiPlus,
-  'drag-vertical': mdiDragVertical,
-  'eye-off': mdiEyeOff,
-  'arrow-up': mdiArrowUp,
-  'arrow-down': mdiArrowDown,
-  'arrow-right': mdiArrowRight,
-  'dots-vertical': mdiDotsVertical,
-  'alert-triangle': mdiAlert,
-  'toggle-switch': mdiToggleSwitch,
-  'sort': mdiSort,
-  'checkbox-marked': mdiCheckboxMarked,
-  'trending-up': mdiTrendingUp,
-  tag: mdiTag,
-  'tag-outline': mdiTagOutline,
-  cog: mdiCog,
-  'clipboard-list': mdiClipboardList,
-  'alert-octagon': mdiAlertOctagon,
-  'format-list-bulleted': mdiFormatListBulleted,
-  'message-reply': mdiReply,
-  'message-text': mdiMessageText,
-  route: mdiRoad,
-  'feature-flag': mdiFlag,
-  cached: mdiCached,
-  key: mdiKey,
-  import: mdiImport,
-  'shield-check': mdiShieldCheck,
-  'alert-circle': mdiAlertCircle,
-  robot: mdiRobot,
-  google: mdiGoogle,
-  database: mdiDatabase,
-  timer: mdiTimer,
-  'clock-outline': mdiClockOutline,
-  fingerprint: mdiFingerprint,
-  'book-open': mdiBookOpen,
-  speedometer: mdiSpeedometer,
-  gauge: mdiGauge,
-  'ip-network': mdiIpNetwork,
-  'check-circle-outline': mdiCheckCircleOutline,
-
+  
   // Status
   alert: mdiAlert,
   check: mdiCheck,
@@ -163,44 +114,33 @@ const iconAliases = {
   'thumb-down': mdiThumbDown,
   warning: mdiAlertCircleOutline,
   bell: mdiBell,
-
+  
   // Content types
   info: mdiInformation,
   folder: mdiFolder,
-  'list-bulleted': mdiFormatListBulleted,
+  list: mdiFormatListBulleted,
   description: mdiFileDocument,
   'data_object': mdiCodeBraces,
   'picture_as_pdf': mdiFilePdfBox,
   'text_snippet': mdiTextBox,
   language: mdiWeb,
-  web: mdiWeb,
   article: mdiFileDocumentOutline,
   'insert_drive_file': mdiFileDocumentOutline,
   help: mdiHelpCircleOutline,
-  'help-circle': mdiHelpCircleOutline,
-  'help-circle-outline': mdiHelpCircleOutline,
   settings: mdiCog,
-  brain: mdiBrain,
-  tune: mdiTune,
-  target: mdiTarget,
-  numeric: mdiNumeric,
   pencil: mdiPencil,
-  'format-list-group': mdiFormatListGroup,
-  palette: mdiPalette,
-  code: mdiCodeBraces,
-  test: mdiTestTube,
-
+  
   // User & Security
   account: mdiAccount,
   lock: mdiLock,
   'lock-outline': mdiLockOutline,
   'lock-check': mdiLockCheck,
   logout: mdiLogout,
-
+  
   // Theme
   'weather-night': mdiWeatherNight,
   'light-mode': mdiWhiteBalanceSunny,
-
+  
   // System
   memory: mdiMemory,
   'bar_chart': mdiChartBar,
@@ -211,7 +151,7 @@ const iconAliases = {
 
 export default createVuetify({
   theme: {
-    defaultTheme: 'dark',
+    defaultTheme: 'light',
     themes,
     variations: {
       colors: ['primary', 'secondary', 'accent', 'error', 'info', 'success', 'warning'],
@@ -248,15 +188,6 @@ export default createVuetify({
     VSelect: {
       variant: 'outlined',
       density: 'comfortable'
-    },
-    VDialog: {
-      scrim: true,
-      'no-click-animation': false,
-      transition: 'dialog-transition'
-    },
-    VOverlay: {
-      scrim: true,
-      opacity: 0.65
     },
     // Remove custom typography classes since global font handles everything
   }

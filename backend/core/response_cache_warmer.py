@@ -10,7 +10,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.retrievers import BaseRetriever
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class ResponseCacheWarmer:
                     logger.debug(f"Warming cache [{i}/{len(questions)}]: {question}")
 
                     # Create chat history with just the question
-                    chat_history: List[BaseMessage] = [HumanMessage(content=question)]
+                    chat_history = [HumanMessage(content=question)]
 
                     # Call stream_with_fallback which will automatically cache the response
                     text_stream, _, _ = await stream_with_fallback(
@@ -174,7 +174,7 @@ async def start_cache_warming(retrievers: Dict[str, BaseRetriever], app_state: A
         return
 
     # Get the static questions (all 6 questions) - convert tuple to list for processing
-    questions_to_warm = list(followup_service.default_questions)
+    questions_to_warm = list(followup_service.questions)
 
     if not questions_to_warm:
         logger.info("No general follow-up questions found for cache warming")

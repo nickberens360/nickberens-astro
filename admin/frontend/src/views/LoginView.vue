@@ -15,7 +15,6 @@
               variant="outlined"
               prepend-inner-icon="$account"
               :error-messages="validation.username"
-              data-testid="username"
               @keyup.enter="login"
             ></v-text-field>
             
@@ -26,7 +25,6 @@
               variant="outlined"
               prepend-inner-icon="$lock"
               :error-messages="validation.password"
-              data-testid="password"
               @keyup.enter="login"
             ></v-text-field>
             
@@ -56,7 +54,6 @@
               size="large"
               :loading="state.loading"
               :disabled="!isFormValid"
-              data-testid="login-button"
               @click="login"
             >
               {{ state.loading ? 'Logging in...' : 'Login' }}

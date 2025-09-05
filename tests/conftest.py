@@ -8,28 +8,42 @@ This file applies lightweight test-time patches only during pytest runs:
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 
-def pytest_configure(config):
-    """Configure pytest environment to disable rate limiting for all tests."""
-    # Set environment variable for high rate limits during testing
-    os.environ["RATE_LIMIT"] = "100000/minute"
+@pytest.fixture(autouse=True)
+def disable_rate_limiting(monkeypatch: pytest.MonkeyPatch):
+    """Turn the SlowAPI limiter decorator into a no-op for tests.
 
+    Avoids middleware TaskGroup errors with ASGI test transport and
+    ensures tests focus on endpoint behavior rather than throttling.
+    """
+    try:
+        # Set unlimited rate limit in config for tests
+        from backend.core.config import AppConfig
 
-@pytest.fixture(autouse=True, scope="session")
-def setup_test_environment():
-    """Setup test environment with disabled rate limiting."""
-    # Ensure environment variable is set for entire test session
-    original_rate_limit = os.environ.get("RATE_LIMIT")
-    os.environ["RATE_LIMIT"] = "100000/minute"
+        monkeypatch.setattr(AppConfig, "RATE_LIMIT", "100000/minute", raising=False)
 
-    yield
+        # Import and patch slowapi components
+        from slowapi import Limiter
 
-    # Restore original value after tests
-    if original_rate_limit is not None:
-        os.environ["RATE_LIMIT"] = original_rate_limit
-    else:
-        os.environ.pop("RATE_LIMIT", None)
+        def _noop_decorator(*args, **kwargs):
+            def _wrap(func):
+                return func
+
+            return _wrap
+
+        # Patch the Limiter class methods
+        monkeypatch.setattr(Limiter, "limit", _noop_decorator, raising=False)
+
+        # Try to patch the app_factory limiter instance too
+        try:
+            from backend.core import app_factory
+
+            monkeypatch.setattr(app_factory.limiter, "limit", _noop_decorator, raising=False)
+        except Exception:
+            pass
+
+    except Exception as e:
+        # If any patching fails, continue with tests
+        print(f"Warning: Could not fully disable rate limiting for tests: {e}")

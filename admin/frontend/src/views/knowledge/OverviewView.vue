@@ -103,7 +103,7 @@
     <!-- File List -->
     <v-card>
       <v-card-title class="text-h6 d-flex align-center">
-        <v-icon class="me-2">$format-list-bulleted</v-icon>
+        <v-icon class="me-2">$list</v-icon>
         Knowledge Base Files
         <v-spacer></v-spacer>
         <v-btn

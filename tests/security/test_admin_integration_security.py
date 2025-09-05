@@ -6,8 +6,10 @@ Tests complete authentication flows, cross-system security, and end-to-end secur
 import os
 import sqlite3
 import tempfile
+from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from backend.main import app
@@ -129,249 +131,300 @@ class TestAdminIntegrationSecurity:
 
     def test_complete_authentication_flow_security(self, client, setup_test_environment):
         """Test complete authentication flow with security validations."""
-        # Test basic authentication flow without complex mocking
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
+                # Create a simple mock for the context manager
+                from unittest.mock import MagicMock
 
-        # Step 1: Test failed login with wrong credentials
-        response = client.post(
-            "/api/admin/auth/login",
-            json={"username": setup_test_environment["admin_username"], "password": "wrongpassword"},
-        )
+                mock_conn = MagicMock()
+                mock_conn.row_factory = sqlite3.Row
+                mock_db.get_connection.return_value.__enter__.return_value = mock_conn
+                mock_db.get_connection.return_value.__exit__.return_value = None
 
-        # Should handle failed login gracefully (not crash)
-        assert response.status_code in [200, 401, 422]
+                mock_db.get_admin_user.side_effect = self._get_admin_user_mock(setup_test_environment["db_path"])
+                mock_db.record_security_event.return_value = True
+                mock_db.is_rate_limited.return_value = False
+                mock_db.reset_rate_limit.return_value = True
 
-        # If response is 200, it should indicate failure
-        if response.status_code == 200:
-            response_data = response.json()
-            assert not response_data.get("success", False)
+                # Mock additional services
+                with patch("backend.routes.admin.audit_logger") as mock_audit:
+                    # Step 1: Failed login attempt
+                    response = client.post(
+                        "/api/admin/auth/login",
+                        json={"username": setup_test_environment["admin_username"], "password": "wrongpassword"},
+                    )
 
-        # Step 2: Test login with empty credentials
-        response = client.post(
-            "/api/admin/auth/login",
-            json={"username": "", "password": ""},
-        )
+                    assert response.status_code == 200
+                    assert not response.json()["success"]
 
-        # Should reject empty credentials
-        assert response.status_code in [200, 400, 401, 422]
-        if response.status_code == 200:
-            response_data = response.json()
-            assert not response_data.get("success", False)
+                    # Should log failed attempt
+                    mock_audit.log_login.assert_called_with(
+                        setup_test_environment["admin_username"],
+                        "testclient",
+                        "",
+                        success=False,
+                        error_message="Invalid credentials",
+                    )
 
-        # Step 3: Test SQL injection in login
-        response = client.post(
-            "/api/admin/auth/login",
-            json={"username": "admin'; DROP TABLE admin_users; --", "password": "any"},
-        )
+                    # Step 2: Successful login
+                    with patch("backend.core.admin_auth.AdminAuthManager.authenticate_user") as mock_auth:
+                        mock_user = {
+                            "id": 1,
+                            "username": setup_test_environment["admin_username"],
+                            "email": "admin@test.com",
+                            "role": "admin",
+                        }
+                        mock_auth.return_value = {"user": mock_user, "session_id": "test-session-123"}
 
-        # Should handle injection attempt safely
-        assert response.status_code in [200, 400, 401, 422]
-        # Should not cause server error (500)
-        assert response.status_code != 500
+                        response = client.post(
+                            "/api/admin/auth/login",
+                            json={
+                                "username": setup_test_environment["admin_username"],
+                                "password": setup_test_environment["password"],
+                            },
+                        )
 
-    @pytest.mark.skip(reason="Complex integration test - replaced by simpler security tests")
+                        assert response.status_code == 200
+                        assert response.json()["success"]
+                        assert "admin_session" in response.cookies
+
+                        # Should log successful login
+                        mock_audit.log_login.assert_called_with(
+                            setup_test_environment["admin_username"], "testclient", "", success=True, method="password"
+                        )
+
     def test_session_hijacking_detection_flow(self, client, setup_test_environment):
-        """Test session hijacking detection flow."""
-        # Test access without session cookies - should be denied
-        response = client.get("/api/admin/auth/me")
-        assert response.status_code in [401, 404, 422], f"No session access returned {response.status_code}"
+        """Test complete session hijacking detection flow."""
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.routes.admin.require_admin_auth") as mock_auth:
+                with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
+                    # Create valid session
+                    session_data = {
+                        "id": "test-session-123",
+                        "user_id": 1,
+                        "username": setup_test_environment["admin_username"],
+                        "role": "admin",
+                        "ip_address": "192.168.1.100",
+                        "user_agent": "Mozilla/5.0 (Chrome/90.0)",
+                    }
+                    mock_auth.return_value = session_data
+                    mock_db.record_security_event.return_value = True
 
-        # Test with invalid session cookie
-        response = client.get("/api/admin/auth/me", cookies={"admin_session": "invalid-session-123"})
-        assert response.status_code in [401, 404, 422], f"Invalid session access returned {response.status_code}"
+                    # Mock session fingerprinting detection
+                    with patch("backend.core.admin_auth.session_fingerprinter") as mock_fingerprinter:
+                        mock_fingerprinter.monitor_session_fingerprint.return_value = {
+                            "validation_result": {
+                                "risk_level": "high",
+                                "reason": "Significant fingerprint change detected",
+                            }
+                        }
 
-        # Test with malformed session cookie
-        response = client.get("/api/admin/auth/me", cookies={"admin_session": "'; DROP TABLE sessions; --"})
-        assert response.status_code in [401, 404, 422], f"Malformed session access returned {response.status_code}"
+                        # Access admin endpoint - should trigger session monitoring
+                        response = client.get("/api/admin/stats/overview")
 
-        # Test session fixation attempt
-        malicious_session = "attacker-controlled-session"
-        response = client.post(
-            "/api/admin/auth/login",
-            json={"username": "admin", "password": "wrong"},
-            cookies={"admin_session": malicious_session},
-        )
+                        # Should still allow access but log security event
+                        assert response.status_code == 200
 
-        # Should not use attacker's session ID
-        if response.status_code == 200 and "admin_session" in response.cookies:
-            session_cookie = response.cookies["admin_session"]
-            assert session_cookie != malicious_session, "Session fixation vulnerability detected"
+                        # Should record high-risk fingerprint change
+                        mock_db.record_security_event.assert_called_with(
+                            "possible_session_hijacking",
+                            setup_test_environment["admin_username"],
+                            "high",
+                            "High-risk fingerprint change: Significant fingerprint change detected",
+                            "testclient",
+                            "",
+                        )
 
     def test_rate_limiting_cross_system_integration(self, client, setup_test_environment):
         """Test rate limiting integration across authentication and API endpoints."""
-        # Test basic rate limiting behavior by making multiple failed login attempts
-        responses = []
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
+                # Create a simple mock for the context manager
+                from unittest.mock import MagicMock
 
-        # Make multiple failed login attempts rapidly
-        for i in range(10):
-            response = client.post(
-                "/api/admin/auth/login",
-                json={"username": "admin", "password": "wrongpassword"},
-            )
-            responses.append(response.status_code)
+                mock_conn = MagicMock()
+                mock_conn.row_factory = sqlite3.Row
+                mock_db.get_connection.return_value.__enter__.return_value = mock_conn
+                mock_db.get_connection.return_value.__exit__.return_value = None
 
-            # Should not cause server errors
-            assert response.status_code != 500, f"Server error on attempt {i+1}"
+                # Mock progressive rate limiting
+                attempt_count = 0
 
-            # If rate limiting is implemented, should eventually get 429
-            if response.status_code == 429:
-                break
+                def mock_is_rate_limited(*args):
+                    nonlocal attempt_count
+                    attempt_count += 1
+                    return attempt_count > 3  # Rate limit after 3 attempts
 
-        # Test multiple requests to different endpoints
-        endpoint_responses = []
-        test_endpoints = [
-            "/api/admin/users",
-            "/api/admin/queries",
-            "/api/admin/stats/overview",
-        ]
+                mock_db.is_rate_limited.side_effect = mock_is_rate_limited
+                mock_db.record_rate_limit_attempt.return_value = attempt_count > 5  # Lockout after 5
+                mock_db.record_security_event.return_value = True
 
-        for endpoint in test_endpoints:
-            for i in range(5):
-                response = client.get(endpoint)
-                endpoint_responses.append((endpoint, response.status_code))
+                # Make multiple failed login attempts
+                for i in range(6):
+                    response = client.post(
+                        "/api/admin/auth/login",
+                        json={"username": setup_test_environment["admin_username"], "password": "wrongpassword"},
+                    )
 
-                # Should handle requests gracefully
-                assert response.status_code != 500, f"Server error on {endpoint}"
+                    assert response.status_code == 200
+                    assert not response.json()["success"]
 
-        # Should handle all requests without crashing
-        assert len(responses) > 0
-        assert len(endpoint_responses) > 0
+                    if i >= 3:
+                        # Should start triggering rate limiting logic
+                        assert mock_db.record_security_event.called
 
-    @pytest.mark.skip(reason="Complex integration test - replaced by simpler security tests")
     def test_geolocation_security_integration(self, client, setup_test_environment):
         """Test geolocation security validation integration."""
-        # Test login attempts with different IP addresses (via headers)
-        # This tests if the system handles geolocation-related headers safely
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
+                mock_db.get_admin_user.side_effect = self._get_admin_user_mock(setup_test_environment["db_path"])
+                mock_db.record_security_event.return_value = True
 
-        geo_test_headers = [
-            {"X-Forwarded-For": "1.2.3.4"},
-            {"X-Real-IP": "192.168.1.1"},
-            {"X-Forwarded-For": "'; DROP TABLE users; --"},  # Injection attempt
-            {"CF-Connecting-IP": "10.0.0.1"},
-            {"X-Forwarded-For": "192.168.1.1, 10.0.0.1, 172.16.0.1"},  # Multiple IPs
-        ]
+                # Mock geolocation validation
+                with patch("backend.core.admin_auth.geo_validator") as mock_geo:
+                    with patch("backend.core.admin_auth.AdminAuthManager.check_user_rate_limits") as mock_rate_check:
+                        mock_rate_check.return_value = {"any_rate_limited": False}
 
-        for headers in geo_test_headers:
-            response = client.post(
-                "/api/admin/auth/login", json={"username": "admin", "password": "testpassword"}, headers=headers
-            )
+                        # Test blocked unusual location
+                        mock_geo.validate_login_location.return_value = {
+                            "action": "block",
+                            "reason": "Login from unusual country detected",
+                        }
 
-            # Should handle geolocation headers safely without server errors
-            assert response.status_code != 500, f"Server error with headers {headers}"
+                        with patch("backend.core.admin_auth.AdminAuthManager.authenticate_user") as mock_auth:
+                            mock_auth.return_value = None  # Blocked by geolocation
 
-            # Should not allow unauthorized access regardless of IP
-            if response.status_code == 200:
-                response_data = response.json()
-                assert not response_data.get("success", False), f"Unauthorized access with {headers}"
+                            response = client.post(
+                                "/api/admin/auth/login",
+                                json={
+                                    "username": setup_test_environment["admin_username"],
+                                    "password": setup_test_environment["password"],
+                                },
+                            )
 
-    @pytest.mark.skip(reason="Complex integration test - replaced by simpler security tests")
+                            assert response.status_code == 200
+                            assert not response.json()["success"]
+
+                            # Should record security event
+                            mock_db.record_security_event.assert_called()
+
     def test_audit_trail_security_integration(self, client, setup_test_environment):
         """Test comprehensive audit trail integration."""
-        # Test that admin actions are handled securely (no server errors)
-        admin_actions = [
-            ("GET", "/api/admin/auth/me"),
-            ("POST", "/api/admin/auth/logout"),
-            ("GET", "/api/admin/users"),
-            ("GET", "/api/admin/queries"),
-        ]
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.routes.admin.audit_logger") as mock_audit:
+                with patch("backend.routes.admin.require_admin_auth") as mock_auth:
+                    session_data = {"user_id": 1, "username": setup_test_environment["admin_username"], "role": "admin"}
+                    mock_auth.return_value = session_data
 
-        for method, endpoint in admin_actions:
-            if method == "GET":
-                response = client.get(endpoint)
-            elif method == "POST":
-                response = client.post(endpoint, json={})
+                    # Test multiple admin actions that should be audited
+                    admin_actions = [
+                        ("GET", "/api/admin/auth/me", {}, "profile_access"),
+                        ("POST", "/api/admin/auth/logout", {}, "logout"),
+                    ]
 
-            # Should handle requests without server errors
-            assert response.status_code != 500, f"Server error on {method} {endpoint}"
+                    for method, endpoint, data, expected_event in admin_actions:
+                        if method == "GET":
+                            response = client.get(endpoint)
+                        elif method == "POST":
+                            response = client.post(endpoint, json=data)
 
-            # Should require authentication (not return 200 without auth)
-            if response.status_code == 200:
-                # If it returns 200, should not expose sensitive data
-                response_text = response.text.lower()
-                sensitive_terms = ["password", "secret", "key", "token", "hash"]
-                has_sensitive = any(term in response_text for term in sensitive_terms)
-                assert not has_sensitive, f"Sensitive data exposed in {endpoint}"
+                        # Should complete successfully and be audited
+                        assert response.status_code in [200, 201]
 
-    @pytest.mark.skip(reason="Complex integration test - replaced by simpler security tests")
     def test_role_escalation_prevention(self, client, setup_test_environment):
         """Test prevention of role escalation attacks."""
-        # Test unauthorized access to admin endpoints
-        admin_endpoints = [
-            ("GET", "/api/admin/users"),
-            (
-                "POST",
-                "/api/admin/auth/create-user",
-                {"username": "newuser", "password": "NewP@ss123!", "role": "admin"},
-            ),
-            ("GET", "/api/admin/settings"),
-            ("POST", "/api/admin/settings", {"key": "test", "value": "test"}),
-        ]
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            # Test with viewer role trying to access admin endpoints
+            with patch("backend.routes.admin.require_admin_role") as mock_admin_role:
+                with patch("backend.routes.admin.require_admin_auth") as mock_auth:
+                    # Mock viewer session
+                    viewer_session = {
+                        "user_id": 2,
+                        "username": setup_test_environment["viewer_username"],
+                        "role": "viewer",
+                    }
+                    mock_auth.return_value = viewer_session
+                    mock_admin_role.side_effect = HTTPException(status_code=403, detail="Admin privileges required")
 
-        for method, endpoint, *data in admin_endpoints:
-            if method == "GET":
-                response = client.get(endpoint)
-            elif method == "POST":
-                response = client.post(endpoint, json=data[0] if data else {})
+                    # Try to access admin-only endpoints
+                    admin_endpoints = ["/api/admin/auth/create-user", "/api/admin/users"]
 
-            # Should not allow unauthorized access (not 200)
-            # Should require authentication/authorization
-            assert response.status_code in [
-                401,
-                403,
-                404,
-                422,
-            ], f"Unauthorized access to {endpoint}: {response.status_code}"
+                    for endpoint in admin_endpoints:
+                        if endpoint.endswith("create-user"):
+                            response = client.post(
+                                endpoint, json={"username": "newuser", "password": "NewP@ss123!", "role": "admin"}
+                            )
+                        else:
+                            response = client.get(endpoint)
 
-    @pytest.mark.skip(reason="Complex integration test - replaced by simpler security tests")
+                        assert response.status_code == 403
+                        assert "Admin privileges required" in response.json()["detail"]
+
     def test_session_security_lifecycle(self, client, setup_test_environment):
         """Test complete session security lifecycle."""
-        # Test session-related endpoints without complex mocking
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
+                # Create a simple mock for the context manager
+                from unittest.mock import MagicMock
 
-        # Test logout without session
-        response = client.post("/api/admin/auth/logout")
-        # Should handle gracefully (not crash)
-        assert response.status_code in [200, 401, 404, 422]
+                mock_conn = MagicMock()
+                mock_conn.row_factory = sqlite3.Row
+                mock_db.get_connection.return_value.__enter__.return_value = mock_conn
+                mock_db.get_connection.return_value.__exit__.return_value = None
 
-        # Test session validation endpoints
-        response = client.get("/api/admin/auth/me")
-        # Should require authentication
-        assert response.status_code in [401, 404, 422]
+                session_id = "test-session-lifecycle"
 
-        # Test session with expired/invalid cookies
-        response = client.get("/api/admin/auth/me", cookies={"admin_session": "expired-session"})
-        assert response.status_code in [401, 404, 422]
+                # Step 1: Session creation with security monitoring
+                with patch("backend.core.admin_auth.session_fingerprinter") as mock_fingerprinter:
+                    mock_fingerprinter.create_fingerprint.return_value = "test-fingerprint"
+                    mock_fingerprinter.store_session_fingerprint.return_value = True
 
-    @pytest.mark.skip(reason="Complex integration test - replaced by simpler security tests")
+                    # Step 2: Session validation and monitoring
+                    with patch("backend.routes.admin.require_admin_auth") as mock_auth:
+                        session_data = {
+                            "id": session_id,
+                            "user_id": 1,
+                            "username": setup_test_environment["admin_username"],
+                            "role": "admin",
+                        }
+                        mock_auth.return_value = session_data
+
+                        # Access protected endpoint
+                        response = client.get("/api/admin/auth/me")
+                        assert response.status_code == 200
+
+                        # Step 3: Session expiry and cleanup
+                        with patch("backend.core.admin_auth.AdminAuthManager.expire_session") as mock_expire:
+                            response = client.post("/api/admin/auth/logout")
+                            assert response.status_code == 200
+
+                            # Should clean up session cookie
+                            # Note: TestClient may not fully simulate cookie deletion
+
     def test_database_isolation_security(self, client, setup_test_environment):
         """Test database isolation between admin and backend systems."""
-        # Test that data access endpoints require proper authentication
-        data_endpoints = [
-            "/api/admin/queries",
-            "/api/admin/stats/overview",
-            "/api/admin/export/csv",
-        ]
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.routes.admin.require_admin_auth") as mock_auth:
+                mock_auth.return_value = {
+                    "user_id": 1,
+                    "username": setup_test_environment["admin_username"],
+                    "role": "admin",
+                }
 
-        for endpoint in data_endpoints:
-            response = client.get(endpoint)
-            # Should not allow unauthorized access to data
-            assert response.status_code in [401, 404, 422], f"Unauthorized data access: {endpoint}"
+                # Test that admin system has read-only access to backend data
+                with patch("backend.routes.admin.query_data_manager") as mock_query_manager:
+                    mock_query_manager.get_queries.return_value = {"queries": [], "total": 0, "limit": 50, "offset": 0}
 
-        # Test that write operations require authentication
-        write_endpoints = [
-            ("POST", "/api/admin/queries/1/feedback", {"feedback": "test"}),
-            ("PUT", "/api/admin/settings/key", {"value": "test"}),
-            ("DELETE", "/api/admin/sessions/123", {}),
-        ]
+                    response = client.get("/api/admin/queries")
+                    assert response.status_code == 200
 
-        for method, endpoint, data in write_endpoints:
-            if method == "POST":
-                response = client.post(endpoint, json=data)
-            elif method == "PUT":
-                response = client.put(endpoint, json=data)
-            elif method == "DELETE":
-                response = client.delete(endpoint)
-
-            # Should require authentication for write operations
-            assert response.status_code in [401, 404, 405, 422], f"Unauthorized write access: {endpoint}"
+                    # Should only read, never write to backend database
+                    # Verify no write operations were attempted
+                    assert not any(
+                        call[0][0].upper().startswith(("INSERT", "UPDATE", "DELETE"))
+                        for call in mock_query_manager.method_calls
+                        if hasattr(call, "__len__") and len(call) > 0
+                    )
 
     def _get_admin_user_mock(self, db_path):
         """Helper to create admin user mock function."""
@@ -387,53 +440,46 @@ class TestAdminIntegrationSecurity:
 
         return mock_get_admin_user
 
-    @pytest.mark.skip(reason="Complex integration test - replaced by simpler security tests")
     def test_comprehensive_security_scenario(self, client, setup_test_environment):
         """Test comprehensive security scenario with multiple attack vectors."""
-        # Test various attack vectors without complex mocking
-        security_test_results = []
+        with patch("backend.core.admin_database.admin_db_manager.db_path", setup_test_environment["db_path"]):
+            with patch("backend.core.admin_auth.admin_db_manager") as mock_db:
+                mock_db.get_admin_user.side_effect = self._get_admin_user_mock(setup_test_environment["db_path"])
+                mock_db.record_security_event.return_value = True
+                mock_db.is_rate_limited.return_value = False
+                mock_db.reset_rate_limit.return_value = True
 
-        # 1. SQL injection attempts in login
-        injection_payloads = [
-            "admin'; DROP TABLE admin_users; --",
-            "admin' OR '1'='1",
-            "'; INSERT INTO admin_users VALUES('hacker', 'pass'); --",
-        ]
+                # Scenario: Attacker attempts multiple attack vectors
 
-        for payload in injection_payloads:
-            response = client.post("/api/admin/auth/login", json={"username": payload, "password": "any"})
-            # Should handle safely without server errors
-            security_test_results.append(("sql_injection", response.status_code != 500))
+                # 1. SQL injection in login
+                response = client.post(
+                    "/api/admin/auth/login", json={"username": "admin'; DROP TABLE admin_users; --", "password": "any"}
+                )
+                assert response.status_code == 200
+                assert not response.json()["success"]
 
-            # Should not succeed with login
-            if response.status_code == 200:
-                response_data = response.json()
-                security_test_results.append(("sql_injection_auth", not response_data.get("success", True)))
+                # 2. XSS in search parameters
+                with patch("backend.routes.admin.require_admin_auth") as mock_auth:
+                    mock_auth.return_value = {
+                        "user_id": 1,
+                        "username": setup_test_environment["admin_username"],
+                        "role": "admin",
+                    }
 
-        # 2. XSS attempts in various parameters
-        xss_payloads = ["<script>alert('xss')</script>", "javascript:alert('xss')", "<img src=x onerror=alert('xss')>"]
+                    response = client.get("/api/admin/queries?search=<script>alert('xss')</script>")
+                    assert response.status_code in [200, 400, 422]
 
-        for payload in xss_payloads:
-            # Test in query parameters
-            response = client.get(f"/api/admin/queries?search={payload}")
-            security_test_results.append(("xss_query", response.status_code != 500))
-            security_test_results.append(("xss_content", "<script>" not in response.text))
+                    # Response should not contain unescaped script
+                    assert "<script>" not in response.text
 
-        # 3. Parameter pollution and edge cases
-        edge_case_requests = [
-            "/api/admin/queries?limit=10&limit=999999&limit=-1",  # Multiple same params
-            "/api/admin/queries?limit=-999999",  # Negative limit
-            "/api/admin/queries?" + "x=y&" * 1000,  # Many parameters
-        ]
+                # 3. Parameter pollution
+                response = client.get("/api/admin/queries?limit=10&limit=999999&limit=-1")
+                # Should handle parameter pollution gracefully
+                assert response.status_code in [200, 400, 422]
 
-        for request_url in edge_case_requests:
-            response = client.get(request_url)
-            security_test_results.append(("edge_case", response.status_code != 500))
-
-        # 4. Validate all security tests passed
-        failed_tests = [test for test in security_test_results if not test[1]]
-
-        assert len(failed_tests) == 0, f"Security tests failed: {failed_tests}"
-
-        # Should have run multiple security tests
-        assert len(security_test_results) > 10, "Not enough security tests were executed"
+                # 4. All attacks should be handled securely without system compromise
+                # Database should still be intact
+                user = self._get_admin_user_mock(setup_test_environment["db_path"])(
+                    setup_test_environment["admin_username"]
+                )
+                assert user is not None  # User still exists, table wasn't dropped
