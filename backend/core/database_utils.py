@@ -52,11 +52,22 @@ def get_database_path(filename: str) -> Path:
                 continue
 
         if base_path is None:
-            raise RuntimeError(
+            # TEMPORARY: Allow fallback to /tmp for Railway debugging
+            # TODO: Fix Railway persistent volume mounting
+            logger.error(
                 "No persistent volume found for database storage in Railway production environment. "
                 "Please ensure Railway persistent volume is mounted at /data. "
-                "Ephemeral storage (/tmp, /app/*) avoided to prevent data loss."
+                "FALLING BACK to /tmp - DATA WILL BE LOST on restart!"
             )
+            base_path = Path("/tmp")
+            try:
+                base_path.mkdir(parents=True, exist_ok=True)
+                test_file = base_path / ".write_test"
+                test_file.write_text("test")
+                test_file.unlink()
+                logger.warning(f"Using TEMPORARY storage at {base_path} - data will be lost!")
+            except Exception as e:
+                raise RuntimeError(f"Even temporary storage /tmp is not writable: {e}")
     else:
         # Development: use local logs directory
         # Assumes this file is in backend/core/
