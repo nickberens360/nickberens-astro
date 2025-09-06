@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from .config import AppConfig
+from .database_utils import get_database_path
 from .geolocation_service import get_geolocation_service
 from .settings_manager import get_settings_manager
 
@@ -39,16 +40,10 @@ class SQLiteQueryLogger:
         """
         self.logger = logging.getLogger(__name__)
 
-        # Set up SQLite database path - use absolute path for consistency
+        # Set up SQLite database path - use shared utility for consistency
         if sqlite_db_path is None:
-            # Use Railway persistent volume in production, local logs in development
-            if os.getenv("RAILWAY_ENVIRONMENT_NAME"):
-                # Production: use persistent volume
-                sqlite_db_path = "/data/logs/rag_monitoring.db"
-            else:
-                # Development: use local logs directory
-                project_root = Path(__file__).parent.parent.parent
-                sqlite_db_path = str(project_root / "backend" / "logs" / "rag_monitoring.db")
+            # Use shared utility to determine appropriate database path
+            sqlite_db_path = str(get_database_path("rag_monitoring.db"))
         self.sqlite_db_path = sqlite_db_path
         self._init_sqlite_database()
 

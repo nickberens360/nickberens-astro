@@ -1,16 +1,41 @@
 """
-Shared database utilities for SQLite connections.
+Shared database utilities for SQLite connections and path resolution.
 
 This module provides centralized database connection management
-to avoid code duplication across route handlers.
+and path resolution to avoid code duplication across route handlers.
 """
 
 import logging
+import os
 import sqlite3
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+def get_database_path(filename: str) -> Path:
+    """
+    Get the appropriate database path based on environment.
+
+    Args:
+        filename: The database filename (e.g., "admin_monitoring.db")
+
+    Returns:
+        Path: Full path to the database file
+
+    In production (Railway), uses persistent volume at /data/logs/
+    In development, uses local backend/logs/ directory
+    """
+    if os.getenv("RAILWAY_ENVIRONMENT_NAME"):
+        # Production: use persistent volume
+        base_path = Path("/data/logs")
+    else:
+        # Development: use local logs directory
+        # Assumes this file is in backend/core/
+        base_path = Path(__file__).parent.parent / "logs"
+
+    return base_path / filename
 
 
 def get_rag_monitoring_db_connection() -> Optional[sqlite3.Connection]:
