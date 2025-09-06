@@ -21,24 +21,41 @@ class AdminDatabaseManager:
 
     def __init__(self):
         """Initialize the admin database manager."""
-        # Use shared utility to determine appropriate database path
-        self.db_path = get_database_path("admin_monitoring.db")
-        self.db_path.parent.mkdir(exist_ok=True)
-        self._initialize_database()
+        try:
+            # Use shared utility to determine appropriate database path
+            self.db_path = get_database_path("admin_monitoring.db")
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Admin database path: {self.db_path}")
+            self._initialize_database()
+        except Exception as e:
+            logger.error(f"Failed to initialize admin database manager: {e}")
+            # Create a fallback in-memory database for graceful degradation
+            self.db_path = Path(":memory:")
+            logger.warning("Using in-memory database as fallback - admin features may be limited")
+            try:
+                self._initialize_database()
+            except Exception as fallback_error:
+                logger.error(f"Even fallback database initialization failed: {fallback_error}")
+                raise
 
     @contextmanager
     def get_connection(self):
         """Get a database connection with proper cleanup."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row  # Enable dict-like access
         try:
-            yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
+            # Handle both file paths and in-memory databases
+            conn = sqlite3.connect(str(self.db_path))
+            conn.row_factory = sqlite3.Row  # Enable dict-like access
+            try:
+                yield conn
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
+        except Exception as e:
+            logger.error(f"Failed to create database connection to {self.db_path}: {e}")
             raise
-        finally:
-            conn.close()
 
     def _initialize_database(self):
         """Initialize database tables if they don't exist."""
