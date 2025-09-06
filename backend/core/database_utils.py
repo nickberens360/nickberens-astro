@@ -24,12 +24,13 @@ def get_database_path(filename: str) -> Path:
     Returns:
         Path: Full path to the database file
 
-    In production (Railway), uses persistent volume at /data/logs/
+    In production (Railway), uses persistent volume at /data/
     In development, uses local backend/logs/ directory
     """
     if os.getenv("RAILWAY_ENVIRONMENT_NAME"):
-        # Production: use persistent volume
-        base_path = Path("/data/logs")
+        # Production: use persistent volume directly at /data (not /data/logs)
+        # Railway mounts the volume at /data and we have permission there
+        base_path = Path("/data")
     else:
         # Development: use local logs directory
         # Assumes this file is in backend/core/
