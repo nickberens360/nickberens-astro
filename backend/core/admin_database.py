@@ -43,8 +43,7 @@ class AdminDatabaseManager:
         """Get a database connection with proper cleanup."""
         try:
             # Handle both file paths and in-memory databases
-            db_path_str = ":memory:" if str(self.db_path) == ":memory:" else str(self.db_path)
-            conn = sqlite3.connect(db_path_str)
+            conn = sqlite3.connect(str(self.db_path))
             conn.row_factory = sqlite3.Row  # Enable dict-like access
             try:
                 yield conn

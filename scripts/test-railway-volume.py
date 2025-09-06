@@ -29,25 +29,20 @@ def test_path_access(path: Path) -> bool:
 
 
 def test_sqlite_creation(path: Path) -> bool:
-    """Test SQLite database creation."""
+    """Test SQLite database creation with proper resource management."""
+    db_path = path / "test_admin.db"
     try:
-        db_path = path / "test_admin.db"
-        conn = sqlite3.connect(str(db_path))
-        cursor = conn.cursor()
-        cursor.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-        cursor.execute("INSERT INTO test (name) VALUES ('Railway Test')")
-        conn.commit()
-        conn.close()
+        # Test write using context manager for safety
+        with sqlite3.connect(str(db_path)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+            cursor.execute("INSERT INTO test (name) VALUES ('Railway Test')")
 
-        # Verify we can read back
-        conn = sqlite3.connect(str(db_path))
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM test WHERE id = 1")
-        result = cursor.fetchone()
-        conn.close()
-
-        # Clean up
-        db_path.unlink()
+        # Test read using separate context manager
+        with sqlite3.connect(str(db_path)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM test WHERE id = 1")
+            result = cursor.fetchone()
 
         if result and result[0] == "Railway Test":
             logger.info(f"✅ SQLite database works at {path}")
@@ -58,6 +53,13 @@ def test_sqlite_creation(path: Path) -> bool:
     except Exception as e:
         logger.error(f"❌ SQLite test failed at {path}: {e}")
         return False
+    finally:
+        # Ensure cleanup happens even if tests fail
+        if db_path.exists():
+            try:
+                db_path.unlink()
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to clean up test database {db_path}: {cleanup_error}")
 
 
 def main():
