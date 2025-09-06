@@ -10,6 +10,7 @@ This module provides functionality to:
 
 import json
 import logging
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -40,9 +41,14 @@ class SQLiteQueryLogger:
 
         # Set up SQLite database path - use absolute path for consistency
         if sqlite_db_path is None:
-            # Compute absolute path relative to project root
-            project_root = Path(__file__).parent.parent.parent
-            sqlite_db_path = str(project_root / "backend" / "logs" / "rag_monitoring.db")
+            # Use Railway persistent volume in production, local logs in development
+            if os.getenv("RAILWAY_ENVIRONMENT_NAME"):
+                # Production: use persistent volume
+                sqlite_db_path = "/data/logs/rag_monitoring.db"
+            else:
+                # Development: use local logs directory
+                project_root = Path(__file__).parent.parent.parent
+                sqlite_db_path = str(project_root / "backend" / "logs" / "rag_monitoring.db")
         self.sqlite_db_path = sqlite_db_path
         self._init_sqlite_database()
 

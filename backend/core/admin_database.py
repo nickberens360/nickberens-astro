@@ -19,8 +19,15 @@ class AdminDatabaseManager:
 
     def __init__(self):
         """Initialize the admin database manager."""
-        # Use backend/logs directory for admin database
-        self.db_path = Path(__file__).parent.parent / "logs" / "admin_monitoring.db"
+        # Use Railway persistent volume for admin database in production
+        # Falls back to local logs directory for development
+        if os.getenv("RAILWAY_ENVIRONMENT_NAME"):
+            # Production: use persistent volume
+            self.db_path = Path("/data/logs/admin_monitoring.db")
+        else:
+            # Development: use local logs directory
+            self.db_path = Path(__file__).parent.parent / "logs" / "admin_monitoring.db"
+
         self.db_path.parent.mkdir(exist_ok=True)
         self._initialize_database()
 
