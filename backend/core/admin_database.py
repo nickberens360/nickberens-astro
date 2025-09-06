@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .database_utils import get_database_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,8 +21,8 @@ class AdminDatabaseManager:
 
     def __init__(self):
         """Initialize the admin database manager."""
-        # Use backend/logs directory for admin database
-        self.db_path = Path(__file__).parent.parent / "logs" / "admin_monitoring.db"
+        # Use shared utility to determine appropriate database path
+        self.db_path = get_database_path("admin_monitoring.db")
         self.db_path.parent.mkdir(exist_ok=True)
         self._initialize_database()
 
