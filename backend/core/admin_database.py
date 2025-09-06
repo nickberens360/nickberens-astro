@@ -581,23 +581,11 @@ class AdminDatabaseManager:
                 api_key = os.getenv(env_var)
                 if api_key and len(api_key.strip()) > 10:  # Basic validation
                     try:
-                        # Import here to avoid circular imports during database initialization
-                        from .api_key_manager import api_key_manager
-
-                        # Create the API key in the database
-                        encrypted_value, last_four = api_key_manager.encrypt_key(api_key.strip())
-
-                        cursor.execute(
-                            """
-                            INSERT INTO api_keys 
-                            (key_name, key_type, encrypted_value, last_four, updated_by)
-                            VALUES (?, ?, ?, ?, 1)
-                            """,
-                            (key_name, key_type, encrypted_value, last_four),
+                        # Skip automatic migration to avoid circular imports during database initialization
+                        # API keys can be set manually via admin interface or script after startup
+                        logger.info(
+                            f"Skipping automatic migration of {env_var} to avoid circular imports - use admin interface to add keys manually"
                         )
-
-                        migrated_count += 1
-                        logger.info(f"Migrated {env_var} to database as {key_name}")
 
                     except Exception as e:
                         logger.error(f"Failed to migrate {env_var}: {e}")
@@ -1538,5 +1526,13 @@ class AdminDatabaseManager:
             return 0
 
 
-# Global database manager instance
-admin_db_manager = AdminDatabaseManager()
+# Global database manager instance - created lazily to avoid circular imports
+admin_db_manager = None
+
+
+def get_admin_db_manager():
+    """Get or create the global admin database manager instance."""
+    global admin_db_manager
+    if admin_db_manager is None:
+        admin_db_manager = AdminDatabaseManager()
+    return admin_db_manager

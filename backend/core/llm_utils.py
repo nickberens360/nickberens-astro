@@ -126,8 +126,29 @@ Your comma-separated list of topics:
         truncated_text = text[:_MAX_TEXT_LENGTH_FOR_TOPICS]
 
         response = chain.invoke({"text": truncated_text})
-        # Sanitize and clean up topics
-        return [topic.strip().lower() for topic in response if topic.strip()]
+        # Sanitize and clean up topics, filtering out reasoning phrases
+        valid_topics = []
+        reasoning_phrases = [
+            "based on the given text chunk",
+            "based on the provided text",
+            "the main topics that describe its content are:",
+            "the main topics are:",
+            "based on the given text",
+            "the main topics that describe the content are:",
+        ]
+
+        for topic in response:
+            topic_clean = topic.strip().lower()
+            # Skip empty topics and reasoning phrases
+            if not topic_clean:
+                continue
+            if any(phrase in topic_clean for phrase in reasoning_phrases):
+                continue
+            # Only keep single words or simple phrases (no long sentences)
+            if len(topic_clean.split()) <= 3:
+                valid_topics.append(topic_clean)
+
+        return valid_topics if valid_topics else ["general"]
     except Exception as e:
         logger.error(f"Error extracting topics with LLM: {e}")
         # Fallback to a default topic

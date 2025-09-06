@@ -61,7 +61,7 @@ class StartupContentClassifier:
         # Handle special file types
         special_metadata = self._handle_special_files(doc, file_path)
 
-        # Build comprehensive metadata
+        # Build comprehensive metadata (ChromaDB requires scalar values only)
         metadata = {
             "file_path": str(file_path),
             "file_name": file_path.name,
@@ -73,8 +73,9 @@ class StartupContentClassifier:
             "content_keywords": keywords,
             "topic_confidence": confidence,
             "classification_method": "startup_llm",
-            "llm_topics": llm_topics,
-            "heuristic_topics": heuristic_topics,
+            # Convert lists to comma-separated strings for ChromaDB compatibility
+            "llm_topics": ",".join(llm_topics) if llm_topics else "",
+            "heuristic_topics": ",".join(heuristic_topics) if heuristic_topics else "",
             **special_metadata,
         }
 

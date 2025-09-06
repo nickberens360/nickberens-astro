@@ -13,7 +13,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from .admin_database import admin_db_manager
+from .admin_database import get_get_admin_db_manager
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class ApiKeyManager:
             # Encrypt the key
             encrypted_value, last_four = self.encrypt_key(api_key)
 
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Check if key name already exists
@@ -136,7 +136,7 @@ class ApiKeyManager:
             # Encrypt the new key
             encrypted_value, last_four = self.encrypt_key(new_api_key)
 
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Update the key
@@ -170,7 +170,7 @@ class ApiKeyManager:
             Decrypted API key value or None if not found/inactive
         """
         try:
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Get the encrypted key
@@ -210,7 +210,7 @@ class ApiKeyManager:
             Decrypted API key value or None if not found
         """
         try:
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Get the first active key of this type
@@ -249,7 +249,7 @@ class ApiKeyManager:
             List of key info dictionaries
         """
         try:
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 query = """
@@ -291,7 +291,7 @@ class ApiKeyManager:
     def toggle_api_key(self, key_name: str, is_active: bool, updated_by: int) -> bool:
         """Enable or disable an API key."""
         try:
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 cursor.execute(
@@ -316,7 +316,7 @@ class ApiKeyManager:
     def delete_api_key(self, key_name: str) -> bool:
         """Permanently delete an API key."""
         try:
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 cursor.execute("DELETE FROM api_keys WHERE key_name = ?", (key_name,))
@@ -343,7 +343,7 @@ class ApiKeyManager:
             if not api_key:
                 return False, "Key not found or inactive"
 
-            with admin_db_manager.get_connection() as conn:
+            with get_admin_db_manager().get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Get key type

@@ -48,8 +48,48 @@ class SemanticSearcher:
     def add_documents(self, documents: List[Document]) -> None:
         """Add documents to the vector store."""
         if documents and self.vector_store is not None:
-            self.vector_store.add_documents(documents)
-            logger.info(f"Added {len(documents)} documents to vector store")
+            # Filter complex metadata to prevent ChromaDB errors
+            try:
+                from langchain_community.vectorstores.utils import filter_complex_metadata
+
+                filtered_documents = filter_complex_metadata(documents)
+                logger.debug(f"Filtered metadata for {len(filtered_documents)} documents")
+            except ImportError:
+                logger.warning("Could not import filter_complex_metadata, filtering manually")
+                filtered_documents = self._filter_complex_metadata_manually(documents)
+
+            self.vector_store.add_documents(filtered_documents)
+            logger.info(f"Added {len(filtered_documents)} documents to vector store")
+
+    def _filter_complex_metadata_manually(self, documents: List[Document]) -> List[Document]:
+        """Manually filter complex metadata to ensure ChromaDB compatibility."""
+        filtered_documents = []
+
+        for doc in documents:
+            # Create a new document with filtered metadata
+            filtered_metadata = {}
+
+            for key, value in doc.metadata.items():
+                # ChromaDB only accepts str, int, float, bool, or None
+                if isinstance(value, (str, int, float, bool)) or value is None:
+                    filtered_metadata[key] = value
+                elif isinstance(value, list):
+                    # Convert lists to comma-separated strings
+                    if all(isinstance(item, str) for item in value):
+                        filtered_metadata[key] = ",".join(value)
+                    else:
+                        filtered_metadata[key] = ",".join(str(item) for item in value)
+                    logger.debug(f"Converted list metadata '{key}' to string: {filtered_metadata[key]}")
+                else:
+                    # Convert other types to string
+                    filtered_metadata[key] = str(value)
+                    logger.debug(f"Converted metadata '{key}' from {type(value)} to string")
+
+            # Create new document with filtered metadata
+            filtered_doc = Document(page_content=doc.page_content, metadata=filtered_metadata)
+            filtered_documents.append(filtered_doc)
+
+        return filtered_documents
 
     def get_retriever(
         self, search_kwargs: Optional[Dict] = None, filter_content_types: Optional[List[str]] = None
