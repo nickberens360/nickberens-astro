@@ -86,6 +86,12 @@ async def dynamic_rate_limit_middleware(request: Request, call_next):
     if _is_testing:
         return await call_next(request)
 
+    # Skip rate limiting for admin routes except login endpoint - they have session-based auth protection
+    if (
+        request.url.path.startswith("/admin/") or request.url.path.startswith("/api/admin/")
+    ) and request.url.path != "/api/admin/auth/login":
+        return await call_next(request)
+
     try:
         settings_manager = get_settings_manager()
         security_settings = settings_manager.get_security_settings()
@@ -137,51 +143,17 @@ async def dynamic_rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-def configure_dynamic_cors(app: FastAPI):
-    """Configure CORS with dynamic origins from security settings."""
-    try:
-        settings_manager = get_settings_manager()
-        security_settings = settings_manager.get_security_settings()
-
-        if security_settings.enable_cors:
-            # Use database settings if available, otherwise fall back to config
-            origins = (
-                security_settings.allowed_origins if security_settings.allowed_origins else AppConfig.get_cors_origins()
-            )
-
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=origins,
-                allow_credentials=True,
-                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
-                expose_headers=["X-Model-Used", "X-Followup-Questions"],
-            )
-        else:
-            # CORS disabled - restrictive settings
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=[],
-                allow_credentials=False,
-                allow_methods=["GET"],
-                allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
-                expose_headers=[],
-            )
-    except Exception as e:
-        # Fall back to default CORS configuration
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.warning(f"Failed to configure dynamic CORS, using defaults: {e}")
-
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=AppConfig.get_cors_origins(),
-            allow_credentials=True,
-            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
-            expose_headers=["X-Model-Used", "X-Followup-Questions"],
-        )
+def configure_cors(app: FastAPI):
+    """Configure CORS with hardcoded origins from AppConfig."""
+    # Always use hardcoded CORS origins from AppConfig
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=AppConfig.get_cors_origins(),
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type"],
+        expose_headers=["X-Model-Used", "X-Followup-Questions"],
+    )
 
 
 def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = None) -> FastAPI:
@@ -249,8 +221,8 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     # Add dynamic rate limiting middleware
     app.middleware("http")(dynamic_rate_limit_middleware)
 
-    # Add CORS middleware with dynamic configuration
-    configure_dynamic_cors(app)
+    # Add CORS middleware with hardcoded configuration
+    configure_cors(app)
 
     # Register routers - import here to avoid circular imports
     from ..routes import (

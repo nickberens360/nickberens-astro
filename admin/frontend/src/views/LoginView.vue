@@ -124,10 +124,13 @@ export default {
       state.success = null
       
       try {
-        const response = await adminAPI.login(formData.username, formData.password)
+        // Use the store's login method for consistent state management
+        const { useAdminStore } = await import('@/stores/admin')
+        const adminStore = useAdminStore()
+        
+        const response = await adminStore.login(formData.username, formData.password)
         
         if (response.success) {
-          // The API service now handles setting the token
           state.success = 'Login successful! Redirecting...'
           
           // Determine a safe redirect destination (internal-only)
@@ -139,7 +142,7 @@ export default {
             rawRedirect.startsWith('/') &&
             !rawRedirect.startsWith('//')
               ? rawRedirect
-              : '/admin'
+              : '/'
 
           // Redirect after a brief delay
           setTimeout(() => {
@@ -179,22 +182,34 @@ export default {
     // Check if user is already authenticated on component mount
     const checkExistingAuth = async () => {
       try {
-        // Check authentication via HTTPOnly cookie (no localStorage needed)
-        const response = await adminAPI.getCurrentUser()
+        // Use the store's auth check to maintain consistency
+        const { useAdminStore } = await import('@/stores/admin')
+        const adminStore = useAdminStore()
         
-        if (response.user) {
+        const isAuth = await adminStore.checkAuth()
+        if (isAuth) {
           // User is already authenticated, redirect
-          const redirectTo = route.query.redirect || '/admin'
-          router.push(redirectTo)
+          const rawRedirect = Array.isArray(route.query.redirect)
+            ? route.query.redirect[0]
+            : route.query.redirect
+          const redirectTo =
+            typeof rawRedirect === 'string' &&
+            rawRedirect.startsWith('/') &&
+            !rawRedirect.startsWith('//')
+              ? rawRedirect
+              : '/'
+          router.push({ path: redirectTo })
         }
       } catch (err) {
         // Not authenticated or invalid session - allow login to proceed
-        // HTTPOnly cookies are automatically managed by the browser
+        console.debug('Auth check failed, proceeding with login form')
       }
     }
     
-    // Check auth on mount
-    checkExistingAuth()
+    // Check auth on mount only if not coming from a redirect
+    if (!route.query.redirect) {
+      checkExistingAuth()
+    }
     
     return {
       formData,

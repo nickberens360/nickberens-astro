@@ -89,7 +89,7 @@
         <v-divider class="mb-2"/>
 
         <v-list density="compact">
-          <v-list-item class="px-4">
+          <div class="px-4 d-flex justify-space-between align-center mb-2">
             <v-list-item-title class="text-caption text-medium-emphasis">
               System Status
             </v-list-item-title>
@@ -100,10 +100,10 @@
             >
               {{ systemHealth.status }}
             </v-chip>
-          </v-list-item>
+          </div>
 
-          <v-list-item
-            class="px-4"
+          <div
+            class="px-4 d-flex justify-space-between align-center mb-2"
             @click="refreshData"
           >
             <v-list-item-title class="text-caption text-medium-emphasis">
@@ -112,7 +112,7 @@
             <v-list-item-subtitle class="text-caption">
               {{ formatLastUpdate }}
             </v-list-item-subtitle>
-          </v-list-item>
+          </div>
         </v-list>
       </template>
     </v-navigation-drawer>
@@ -189,7 +189,7 @@
               Refresh Data
             </v-list-item-title>
           </v-list-item>
-          
+
           <v-list-item @click="exportData">
             <v-list-item-title>
               <v-icon start>$export</v-icon>

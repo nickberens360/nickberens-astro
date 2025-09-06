@@ -288,15 +288,16 @@ class AdminAPI {
   // SECURITY FIX: Handle authentication errors properly
   handleAuthenticationError() {
     if (import.meta.env.DEV) {
-      console.debug('Handling authentication error - redirecting to login')
+      console.debug('Handling authentication error - clearing auth state')
     }
     
-    // In a real Vue app, you'd use router here
-    // For now, trigger a page reload to the login page
+    // Instead of redirecting immediately, let the router handle navigation
+    // This prevents redirect loops
     if (typeof window !== 'undefined' && window.location) {
       // Only redirect if we're not already on login page
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/admin/'
+        // Use a more controlled redirect to login
+        window.location.href = '/login'
       }
     }
   }

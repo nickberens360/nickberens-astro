@@ -64,6 +64,15 @@
         "./backend/logs/rag_monitoring.db"
       ],
       "env": {}
+    },
+    "railway": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@railway/mcp-server@latest"
+      ],
+      "env": {}
     }
   }
 }

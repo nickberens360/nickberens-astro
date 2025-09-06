@@ -321,31 +321,6 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
-
-        <!-- CORS Origins Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$web</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">CORS Origins</div>
-                <div class="setting-description text-medium-emphasis">Allowed CORS origins (one per line, empty for defaults)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-textarea
-                v-model="corsOriginsText"
-                variant="outlined"
-                density="compact"
-                placeholder="https://example.com&#10;https://app.example.com"
-                rows="3"
-                hide-details
-                style="width: 250px;"
-              />
-            </div>
-          </div>
-        </div>
       </v-card-text>
     </v-card>
   </div>
@@ -362,7 +337,6 @@ const adminStore = useAdminStore()
 const settings = ref({
   excluded_ips: [],
   anonymize_ips: true,
-  cors_origins: [],
   enable_query_logging: true,
   low_similarity_threshold: 0.7,
   query_log_retention_days: 30,
@@ -386,12 +360,6 @@ const excludedIpsText = computed({
   }
 })
 
-const corsOriginsText = computed({
-  get: () => settings.value.cors_origins.join('\n'),
-  set: (value) => {
-    settings.value.cors_origins = value ? value.split('\n').map(origin => origin.trim()).filter(origin => origin) : []
-  }
-})
 
 // Convert similarity threshold to percentage for display
 const similarityThresholdPercent = computed({

@@ -73,8 +73,8 @@ class StartupContentClassifier:
             "content_keywords": keywords,
             "topic_confidence": confidence,
             "classification_method": "startup_llm",
-            "llm_topics": llm_topics,
-            "heuristic_topics": heuristic_topics,
+            "llm_topics": ",".join(llm_topics) if llm_topics else "",
+            "heuristic_topics": ",".join(heuristic_topics) if heuristic_topics else "",
             **special_metadata,
         }
 
