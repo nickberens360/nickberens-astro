@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .database_utils import get_database_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,9 +21,9 @@ class QueryDataManager:
 
     def __init__(self):
         """Initialize the query data manager."""
-        # Use backend/logs directory for query database
-        self.db_path = Path(__file__).parent.parent / "logs" / "rag_monitoring.db"
-        self.db_path.parent.mkdir(exist_ok=True)
+        # Use shared database path utility for consistency with query logger
+        self.db_path = get_database_path("rag_monitoring.db")
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize_database()
 
     @contextmanager

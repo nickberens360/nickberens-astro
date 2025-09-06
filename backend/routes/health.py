@@ -230,6 +230,54 @@ async def get_rate_limits():
 
 
 @router.get(
+    "/db-paths",
+    tags=["Health"],
+    summary="Database Path Status (Debug)",
+    description="Debug endpoint to check which database paths are being used",
+)
+async def get_db_paths():
+    """Debug endpoint to check database path resolution."""
+    import os
+    from pathlib import Path
+
+    try:
+        from ..core.database_utils import get_database_path
+
+        # Test both admin and RAG monitoring databases
+        admin_db_path = get_database_path("admin_monitoring.db")
+        rag_db_path = get_database_path("rag_monitoring.db")
+
+        # Check environment and volume info
+        env_info = {
+            "RAILWAY_ENVIRONMENT_NAME": os.getenv("RAILWAY_ENVIRONMENT_NAME"),
+            "RAILWAY_VOLUME_NAME": os.getenv("RAILWAY_VOLUME_NAME"),
+            "RAILWAY_VOLUME_MOUNT_PATH": os.getenv("RAILWAY_VOLUME_MOUNT_PATH"),
+            "RAILWAY_RUN_UID": os.getenv("RAILWAY_RUN_UID"),
+        }
+
+        # Check path accessibility
+        paths_status = {}
+        for path_name, path in [("/data", Path("/data")), ("/tmp", Path("/tmp")), ("/app", Path("/app"))]:
+            paths_status[path_name] = {
+                "exists": path.exists(),
+                "readable": path.exists() and os.access(path, os.R_OK),
+                "writable": path.exists() and os.access(path, os.W_OK),
+            }
+
+        return {
+            "admin_db_path": str(admin_db_path),
+            "rag_db_path": str(rag_db_path),
+            "admin_db_exists": admin_db_path.exists(),
+            "rag_db_exists": rag_db_path.exists(),
+            "environment": env_info,
+            "paths": paths_status,
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get(
     "/welcome-questions",
     tags=["Public API"],
     summary="Get Welcome Questions",
