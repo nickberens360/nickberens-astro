@@ -189,7 +189,7 @@
               Refresh Data
             </v-list-item-title>
           </v-list-item>
-          
+
           <v-list-item @click="exportData">
             <v-list-item-title>
               <v-icon start>$export</v-icon>

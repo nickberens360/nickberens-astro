@@ -111,6 +111,7 @@
             v-for="chat in chatList"
             :key="chat.id"
             :class="['history-item', { 'active': chat.id === currentChatId }]"
+
             @click="handleSelectChat(chat.id)"
           >
             {{ chat.title }}
