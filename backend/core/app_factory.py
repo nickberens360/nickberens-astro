@@ -86,6 +86,10 @@ async def dynamic_rate_limit_middleware(request: Request, call_next):
     if _is_testing:
         return await call_next(request)
 
+    # Skip rate limiting for admin routes - they have session-based auth protection
+    if request.url.path.startswith("/admin/") or request.url.path.startswith("/api/admin/"):
+        return await call_next(request)
+
     try:
         settings_manager = get_settings_manager()
         security_settings = settings_manager.get_security_settings()
