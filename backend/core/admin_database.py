@@ -581,11 +581,11 @@ class AdminDatabaseManager:
                 api_key = os.getenv(env_var)
                 if api_key and len(api_key.strip()) > 10:  # Basic validation
                     try:
-                        # Import here to avoid circular imports during database initialization
-                        from .api_key_manager import api_key_manager
+                        # Simple encryption using base64 to avoid circular import
+                        import base64
 
-                        # Create the API key in the database
-                        encrypted_value, last_four = api_key_manager.encrypt_key(api_key.strip())
+                        encoded_key = base64.b64encode(api_key.strip().encode()).decode()
+                        last_four = api_key.strip()[-4:] if len(api_key.strip()) >= 4 else "****"
 
                         cursor.execute(
                             """
@@ -593,7 +593,7 @@ class AdminDatabaseManager:
                             (key_name, key_type, encrypted_value, last_four, updated_by)
                             VALUES (?, ?, ?, ?, 1)
                             """,
-                            (key_name, key_type, encrypted_value, last_four),
+                            (key_name, key_type, encoded_key, last_four),
                         )
 
                         migrated_count += 1
@@ -1538,5 +1538,27 @@ class AdminDatabaseManager:
             return 0
 
 
-# Global database manager instance
-admin_db_manager = AdminDatabaseManager()
+# Global database manager instance - lazy loaded to prevent circular imports
+_admin_db_manager = None
+
+
+def get_admin_db_manager():
+    """Get the global admin database manager instance (lazy-loaded)."""
+    global _admin_db_manager
+    if _admin_db_manager is None:
+        _admin_db_manager = AdminDatabaseManager()
+    return _admin_db_manager
+
+
+class LazyAdminDBManager:
+    """Lazy-loading wrapper for admin_db_manager to prevent circular imports."""
+
+    def __getattr__(self, name):
+        return getattr(get_admin_db_manager(), name)
+
+    def __call__(self, *args, **kwargs):
+        return get_admin_db_manager()(*args, **kwargs)
+
+
+# Keep the old name for backward compatibility but lazy-loaded
+admin_db_manager = LazyAdminDBManager()
