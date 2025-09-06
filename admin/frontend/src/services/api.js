@@ -764,6 +764,23 @@ class AdminAPI {
     return await this.client.put('/settings/security', settingsData)
   }
 
+  // User Management endpoints
+  async getUsers() {
+    return await this.client.get('/users')
+  }
+
+  async createUser(userData) {
+    return await this.client.post('/users', userData)
+  }
+
+  async deactivateUser(userId) {
+    return await this.client.put(`/users/${userId}/deactivate`)
+  }
+
+  async deleteUser(userId) {
+    return await this.client.delete(`/users/${userId}`)
+  }
+
   // Authentication token methods removed - now using HTTPOnly cookies exclusively
   // These methods are kept for backward compatibility but do nothing
   setAuthToken(token) {

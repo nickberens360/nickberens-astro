@@ -104,6 +104,15 @@ const router = createRouter({
           ]
         },
         {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/UsersView.vue'),
+          meta: {
+            title: 'User Management',
+            icon: '$users'
+          }
+        },
+        {
           path: 'change-password',
           name: 'change-password',
           component: () => import('@/views/ChangePassword.vue'),
