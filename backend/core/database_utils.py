@@ -35,6 +35,9 @@ def get_database_path(filename: str) -> Path:
         # Assumes this file is in backend/core/
         base_path = Path(__file__).parent.parent / "logs"
 
+    # Ensure the directory exists
+    base_path.mkdir(parents=True, exist_ok=True)
+
     return base_path / filename
 
 
@@ -46,13 +49,13 @@ def get_rag_monitoring_db_connection() -> Optional[sqlite3.Connection]:
         sqlite3.Connection with row_factory set to sqlite3.Row for dict-like access,
         or None if connection fails or database doesn't exist.
     """
-    db_path = "backend/logs/rag_monitoring.db"
-    if not Path(db_path).exists():
+    db_path = get_database_path("rag_monitoring.db")
+    if not db_path.exists():
         logger.warning(f"Database not found at {db_path}, returning empty results")
         return None
 
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row  # Enable dict-like access to rows
         return conn
     except Exception as e:
