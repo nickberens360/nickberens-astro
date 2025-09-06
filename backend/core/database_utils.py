@@ -35,6 +35,9 @@ def get_database_path(filename: str) -> Path:
         # Assumes this file is in backend/core/
         base_path = Path(__file__).parent.parent / "logs"
 
+    # Ensure the directory exists
+    base_path.mkdir(parents=True, exist_ok=True)
+
     return base_path / filename
 
 
