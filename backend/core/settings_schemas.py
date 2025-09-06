@@ -678,9 +678,6 @@ class SecuritySettings:
     excluded_ips: List[str] = field(default_factory=list)
     anonymize_ips: bool = True
 
-    # CORS Configuration
-    cors_origins: List[str] = field(default_factory=list)  # Empty means use defaults
-
     # Query Logging
     enable_query_logging: bool = True
     low_similarity_threshold: float = 0.7
@@ -697,10 +694,6 @@ class SecuritySettings:
     rate_limit_window: int = 60  # seconds
     max_requests_per_minute: int = 100  # Legacy field for backward compatibility
     enable_input_validation: bool = True
-
-    # CORS Policy
-    enable_cors: bool = True
-    allowed_origins: List[str] = field(default_factory=lambda: ["http://localhost:3000", "http://localhost:4321"])
 
     # Authentication Security
     enable_api_keys: bool = False
@@ -741,44 +734,6 @@ class SecuritySettings:
         else:
             validated_data["excluded_ips"] = []
 
-        # Validate CORS origins (legacy field)
-        if isinstance(validated_data["cors_origins"], list):
-            from urllib.parse import urlparse
-
-            valid_origins = []
-            for origin in validated_data["cors_origins"]:
-                if isinstance(origin, str) and origin.strip():
-                    origin = origin.strip()
-                    # Basic URL validation
-                    try:
-                        parsed = urlparse(origin)
-                        if parsed.scheme in ["http", "https"] and parsed.netloc:
-                            valid_origins.append(origin)
-                    except Exception:
-                        logger.warning(f"Invalid CORS origin ignored: {origin}")
-            validated_data["cors_origins"] = valid_origins[:20]  # Max 20 origins
-        else:
-            validated_data["cors_origins"] = []
-
-        # Validate allowed_origins (new field)
-        if isinstance(validated_data["allowed_origins"], list):
-            from urllib.parse import urlparse
-
-            valid_origins = []
-            for origin in validated_data["allowed_origins"]:
-                if isinstance(origin, str) and origin.strip():
-                    origin = origin.strip()
-                    # Basic URL validation
-                    try:
-                        parsed = urlparse(origin)
-                        if parsed.scheme in ["http", "https"] and parsed.netloc:
-                            valid_origins.append(origin)
-                    except Exception:
-                        logger.warning(f"Invalid allowed origin ignored: {origin}")
-            validated_data["allowed_origins"] = valid_origins[:20]  # Max 20 origins
-        else:
-            validated_data["allowed_origins"] = ["http://localhost:3000"]  # Default
-
         # Validate numeric fields with bounds
         numeric_validations = {
             "query_log_retention_days": (1, 365),  # 1 day to 1 year
@@ -815,7 +770,6 @@ class SecuritySettings:
             "enable_audit_logging",
             "enable_rate_limiting",
             "enable_input_validation",
-            "enable_cors",
             "enable_api_keys",
             "require_https",
         ]
