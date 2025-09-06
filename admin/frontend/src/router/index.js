@@ -230,9 +230,14 @@ router.beforeEach(async (to, from, next) => {
 
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
-    // Use the store's authentication check, which calls the API
+    // Only check auth if we haven't already verified it recently
+    // This prevents unnecessary API calls on every navigation
     if (!adminStore.isAuthenticated) {
-      await adminStore.checkAuth()
+      try {
+        await adminStore.checkAuth()
+      } catch (error) {
+        console.debug('Auth check failed, redirecting to login')
+      }
     }
 
     if (!adminStore.isAuthenticated) {

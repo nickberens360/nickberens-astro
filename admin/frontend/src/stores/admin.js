@@ -316,22 +316,40 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  // Track ongoing auth checks to prevent race conditions
+  let authCheckPromise = null
+
   const checkAuth = async () => {
-    try {
-      const response = await adminAPI.getCurrentUser()
-      if (response.user) {
-        user.value = response.user
-        isAuthenticated.value = true
-        return true
-      }
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.debug('Not authenticated or session expired')
-      }
-      user.value = null
-      isAuthenticated.value = false
+    // If an auth check is already in progress, wait for it
+    if (authCheckPromise) {
+      return await authCheckPromise
     }
-    return false
+
+    authCheckPromise = (async () => {
+      try {
+        const response = await adminAPI.getCurrentUser()
+        if (response.user) {
+          user.value = response.user
+          isAuthenticated.value = true
+          return true
+        } else {
+          user.value = null
+          isAuthenticated.value = false
+          return false
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.debug('Not authenticated or session expired')
+        }
+        user.value = null
+        isAuthenticated.value = false
+        return false
+      } finally {
+        authCheckPromise = null
+      }
+    })()
+
+    return await authCheckPromise
   }
 
   // Cleanup function for when store is no longer used
