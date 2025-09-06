@@ -71,31 +71,58 @@ def main():
     else:
         logger.info("📍 Running in local development environment")
 
-    # Test various paths
-    test_paths = [
-        Path("/data"),  # Standard Railway volume mount
-        Path("/app/data"),  # Alternative mount
-        Path("/tmp"),  # Temporary fallback
-        Path("/app/backend/logs"),  # Application directory
-        Path.cwd() / "backend" / "logs",  # Current working directory
+    # Test various paths (prioritizing persistent storage)
+    persistent_paths = [
+        Path("/data"),  # Standard Railway volume mount (PERSISTENT)
+        Path("/app/data"),  # Alternative mount (PERSISTENT)
     ]
 
-    working_paths = []
+    ephemeral_paths = [
+        Path("/tmp"),  # Temporary storage (EPHEMERAL - lost on restart)
+        Path("/app/backend/logs"),  # Application directory (EPHEMERAL - overwritten on deploy)
+        Path.cwd() / "backend" / "logs",  # Current working directory (EPHEMERAL)
+    ]
 
-    for path in test_paths:
-        logger.info(f"🔍 Testing path: {path}")
+    test_paths = persistent_paths + ephemeral_paths
+
+    persistent_working = []
+    ephemeral_working = []
+
+    # Test persistent paths first
+    logger.info("🔍 Testing PERSISTENT storage paths:")
+    for path in persistent_paths:
+        logger.info(f"   Testing: {path}")
         if test_path_access(path) and test_sqlite_creation(path):
-            working_paths.append(path)
+            persistent_working.append(path)
+            logger.info(f"   ✅ {path} works (PERSISTENT)")
+        else:
+            logger.info(f"   ❌ {path} failed")
 
-    logger.info("\n" + "=" * 50)
-    if working_paths:
-        logger.info("✅ Working paths found:")
-        for path in working_paths:
-            logger.info(f"   - {path}")
-        logger.info(f"\n💡 Recommended: Use {working_paths[0]} for database storage")
+    # Test ephemeral paths
+    logger.info("\n🔍 Testing EPHEMERAL storage paths (NOT RECOMMENDED):")
+    for path in ephemeral_paths:
+        logger.info(f"   Testing: {path}")
+        if test_path_access(path) and test_sqlite_creation(path):
+            ephemeral_working.append(path)
+            logger.info(f"   ⚠️  {path} works (EPHEMERAL - data will be lost!)")
+        else:
+            logger.info(f"   ❌ {path} failed")
+
+    logger.info("\n" + "=" * 60)
+    if persistent_working:
+        logger.info("✅ PERSISTENT storage found (RECOMMENDED):")
+        for path in persistent_working:
+            logger.info(f"   - {path} (data survives restarts/deploys)")
+        logger.info(f"\n💡 Using: {persistent_working[0]} for database storage")
+    elif ephemeral_working:
+        logger.warning("⚠️  Only EPHEMERAL storage found:")
+        for path in ephemeral_working:
+            logger.warning(f"   - {path} (data will be LOST on restart/deploy)")
+        logger.error("\n🚨 CRITICAL: No persistent volume configured!")
+        logger.error("🔧 Configure Railway persistent volume or data will be lost!")
     else:
         logger.error("❌ No working paths found for database storage!")
-        logger.error("🔧 Check Railway persistent volume configuration")
+        logger.error("🔧 Check Railway persistent volume and permissions")
 
     # Show current directory and permissions
     cwd = Path.cwd()

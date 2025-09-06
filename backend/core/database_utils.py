@@ -28,12 +28,12 @@ def get_database_path(filename: str) -> Path:
     In development, uses local backend/logs/ directory
     """
     if os.getenv("RAILWAY_ENVIRONMENT_NAME"):
-        # Production: try multiple potential paths for Railway persistent volumes
+        # Production: try persistent volume paths for Railway
         potential_paths = [
             Path("/data"),  # Standard Railway persistent volume mount
             Path("/app/data"),  # Alternative mount point
-            Path("/tmp"),  # Fallback (temporary but works)
-            Path("/app/backend/logs"),  # Application directory fallback
+            # NOTE: /tmp is temporary storage - data will be lost on restart
+            # NOTE: /app/backend/logs is ephemeral - gets overwritten on deployment
         ]
 
         base_path = None
@@ -52,7 +52,11 @@ def get_database_path(filename: str) -> Path:
                 continue
 
         if base_path is None:
-            raise RuntimeError("No writable path found for database storage in production")
+            raise RuntimeError(
+                "No persistent volume found for database storage in Railway production environment. "
+                "Please ensure Railway persistent volume is mounted at /data. "
+                "Ephemeral storage (/tmp, /app/*) avoided to prevent data loss."
+            )
     else:
         # Development: use local logs directory
         # Assumes this file is in backend/core/
