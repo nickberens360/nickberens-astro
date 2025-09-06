@@ -70,7 +70,7 @@ COPY --from=builder --chown=app:app /app/admin/frontend/dist ./admin/frontend/di
 RUN mkdir -p /app/backend/logs && chown -R app:app /app/backend/logs
 
 # Create /data directory for Railway volume mounting (must be accessible by app user)
-RUN mkdir -p /data/logs && chown -R app:app /data
+RUN mkdir -p /data && chown -R app:app /data
 
 USER app
 
