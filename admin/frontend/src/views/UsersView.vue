@@ -824,9 +824,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useNotifications } from '../composables/useNotifications.js'
 import { format } from 'date-fns'
 import { useUsersStore } from '../stores/users.js'
+import { useAdminStore } from '../stores/admin.js'
 
 const { showSuccess, showError } = useNotifications()
 const usersStore = useUsersStore()
+const adminStore = useAdminStore()
 
 // Local reactive state
 const loading = ref(false)
@@ -911,14 +913,14 @@ const lastUpdated = computed(() => usersStore.lastUpdated)
 // Bulk operation computed properties
 const canBulkDelete = computed(() => {
   // Check if any selected user is the current user
-  const currentUserId = 1 // TODO: Get from auth store
-  return selectedUsers.value.length > 0 && !selectedUsers.value.includes(currentUserId)
+  const currentUserId = adminStore.user?.id
+  return selectedUsers.value.length > 0 && currentUserId && !selectedUsers.value.includes(currentUserId)
 })
 
 const canBulkDeactivate = computed(() => {
   // Check if any selected user is the current user or already inactive
-  const currentUserId = 1 // TODO: Get from auth store
-  const hasCurrentUser = selectedUsers.value.includes(currentUserId)
+  const currentUserId = adminStore.user?.id
+  const hasCurrentUser = currentUserId && selectedUsers.value.includes(currentUserId)
   const allAlreadyInactive = selectedUsers.value.every(id => {
     const user = getUserById(id)
     return user && !user.is_active
@@ -1029,31 +1031,36 @@ const bulkDeleteUsers = async () => {
   if (bulkDeleteConfirmText.value !== 'DELETE ALL') return
   
   bulkDeleting.value = true
-  const errors = []
-  const successes = []
   
   try {
-    for (const userId of selectedUsers.value) {
-      try {
-        console.log(`🔄 Deleting user ${userId}...`)
-        await usersStore.deleteUser(userId)
-        successes.push(userId)
-      } catch (error) {
-        console.error(`❌ Failed to delete user ${userId}:`, error)
-        errors.push({ userId, error: error.response?.data?.detail || error.message })
+    console.log(`🔄 Bulk deleting ${selectedUsers.value.length} users...`)
+    const response = await usersStore.bulkDeleteUsers(selectedUsers.value)
+    console.log('✅ Bulk delete response:', response)
+    
+    // Handle response messaging
+    if (response.success) {
+      showSuccess(response.message || `Successfully deleted ${response.successful_deletions} user${response.successful_deletions === 1 ? '' : 's'}`)
+    } else if (response.successful_deletions > 0) {
+      // Partial success
+      showSuccess(`${response.message} - ${response.successful_deletions} users deleted successfully`)
+      
+      // Show failure details if any
+      if (response.failures && response.failures.length > 0) {
+        const errorDetails = response.failures.map(f => 
+          f.username ? `${f.username}: ${f.error}` : `User ${f.user_id}: ${f.error}`
+        ).join('\n')
+        showError(`Some deletions failed:\n${errorDetails}`)
       }
-    }
-    
-    if (successes.length > 0) {
-      showSuccess(`Successfully deleted ${successes.length} user${successes.length === 1 ? '' : 's'}`)
-    }
-    
-    if (errors.length > 0) {
-      const errorMsg = errors.map(e => {
-        const user = getUserById(e.userId)
-        return `${user?.username || 'User ' + e.userId}: ${e.error}`
-      }).join('\n')
-      showError(`Failed to delete ${errors.length} user${errors.length === 1 ? '' : 's'}:\n${errorMsg}`)
+    } else {
+      // Complete failure
+      showError(response.message || 'Failed to delete any users')
+      
+      if (response.failures && response.failures.length > 0) {
+        const errorDetails = response.failures.map(f => 
+          f.username ? `${f.username}: ${f.error}` : `User ${f.user_id}: ${f.error}`
+        ).join('\n')
+        showError(`Deletion failures:\n${errorDetails}`)
+      }
     }
     
     // Clear selection and close dialog
@@ -1063,7 +1070,8 @@ const bulkDeleteUsers = async () => {
     
   } catch (error) {
     console.error('❌ Bulk delete error:', error)
-    showError('An unexpected error occurred during bulk delete')
+    const message = error.response?.data?.detail || error.message || 'An unexpected error occurred during bulk delete'
+    showError(message)
   } finally {
     bulkDeleting.value = false
   }
@@ -1185,9 +1193,8 @@ const getAccountAge = (createdDate) => {
 }
 
 const isCurrentUser = (user) => {
-  // This would typically come from a user store/context
-  // For now, we'll check if it's the admin user
-  return user.username === 'admin'
+  // Check if the user ID matches the authenticated user's ID
+  return adminStore.user?.id === user.id
 }
 
 // Lifecycle

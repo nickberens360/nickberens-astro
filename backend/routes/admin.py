@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -33,6 +34,7 @@ from ..core.settings_schemas import (
 )
 from ..models.admin_models import (
     AdminUser,
+    BulkDeleteUsersRequest,
     BulkQuestionRequest,
     CategoryDeleteRequest,
     ChangePasswordRequest,
@@ -2524,8 +2526,6 @@ async def create_admin_user(
 ) -> Dict[str, Any]:
     """Create a new admin user."""
     try:
-        import bcrypt
-
         # Validate password strength
         if len(user_data.password) < 12:
             raise HTTPException(status_code=400, detail="Password must be at least 12 characters long")
@@ -2683,6 +2683,9 @@ async def delete_admin_user(
         if not success:
             raise HTTPException(status_code=500, detail="Failed to delete user")
 
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
         # Audit log deletion
         audit_logger.log_action(
             action=AuditAction.USER_DELETE,
@@ -2691,9 +2694,9 @@ async def delete_admin_user(
                 "deleted_user_id": user_id,
                 "deleted_username": user_to_delete["username"],
                 "deleted_by": session["user_id"],
-                "client_ip": request.client.host if request.client else "unknown",
-                "user_agent": request.headers.get("User-Agent", ""),
             },
+            ip_address=client_ip,
+            user_agent=user_agent,
         )
 
         logger.info(
@@ -2707,3 +2710,126 @@ async def delete_admin_user(
     except Exception as e:
         logger.error(f"Error deleting admin user: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error deleting admin user")
+
+
+@router.delete(
+    "/users/bulk",
+    summary="Bulk delete admin users",
+    description="Permanently delete multiple admin users at once. This action cannot be undone.",
+    dependencies=[Depends(require_admin_auth)],
+)
+async def bulk_delete_admin_users(
+    request: Request,
+    bulk_request: BulkDeleteUsersRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+):
+    """
+    Permanently delete multiple admin users at once.
+
+    Security restrictions:
+        - Cannot delete your own account (prevents lockout)
+        - Only admin users can delete other users
+        - All deletions are logged for audit purposes
+        - Terminates all sessions for deleted users
+    """
+    try:
+        user_ids = bulk_request.user_ids
+        current_user_id = session["user_id"]
+
+        # Prevent self-deletion to avoid lockout
+        if current_user_id in user_ids:
+            raise HTTPException(status_code=400, detail="Cannot delete your own account in bulk operation")
+
+        # Track successful deletions and failures
+        successful_deletions = []
+        failed_deletions = []
+        audit_entries = []
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Process each user deletion
+        for user_id in user_ids:
+            try:
+                # Get user info before deletion for audit logging
+                user_to_delete = admin_db_manager.get_admin_user_by_id(user_id)
+                if not user_to_delete:
+                    failed_deletions.append({"user_id": user_id, "error": "User not found"})
+                    continue
+
+                # Permanently delete the user
+                success = admin_db_manager.delete_admin_user(user_id)
+                if not success:
+                    failed_deletions.append(
+                        {
+                            "user_id": user_id,
+                            "username": user_to_delete["username"],
+                            "error": "Failed to delete user from database",
+                        }
+                    )
+                    continue
+
+                # Track successful deletion
+                successful_deletions.append({"user_id": user_id, "username": user_to_delete["username"]})
+
+                # Prepare audit entry
+                audit_entries.append(
+                    {
+                        "deleted_user_id": user_id,
+                        "deleted_username": user_to_delete["username"],
+                    }
+                )
+
+            except Exception as e:
+                failed_deletions.append({"user_id": user_id, "error": f"Unexpected error: {str(e)}"})
+
+        # Log all successful deletions in a single audit entry
+        if successful_deletions:
+            audit_logger.log_action(
+                action=AuditAction.USER_DELETE,
+                username=session["username"],
+                details={
+                    "bulk_operation": True,
+                    "deleted_users": audit_entries,
+                    "deleted_by": current_user_id,
+                    "total_deleted": len(successful_deletions),
+                },
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+
+            logger.info(
+                f"Bulk deletion: {len(successful_deletions)} users deleted by user {current_user_id}. "
+                f"Users: {[d['username'] for d in successful_deletions]}"
+            )
+
+        # Prepare response
+        response_data = {
+            "success": len(failed_deletions) == 0,
+            "total_requested": len(user_ids),
+            "successful_deletions": len(successful_deletions),
+            "failed_deletions": len(failed_deletions),
+        }
+
+        if successful_deletions:
+            response_data["deleted_users"] = [d["username"] for d in successful_deletions]
+
+        if failed_deletions:
+            response_data["failures"] = failed_deletions
+
+        if len(successful_deletions) > 0 and len(failed_deletions) == 0:
+            response_data["message"] = f"Successfully deleted {len(successful_deletions)} user(s)"
+        elif len(successful_deletions) > 0 and len(failed_deletions) > 0:
+            response_data["message"] = (
+                f"Partially completed: {len(successful_deletions)} deleted, {len(failed_deletions)} failed"
+            )
+        else:
+            response_data["message"] = "No users were deleted due to errors"
+
+        return response_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in bulk delete admin users: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error processing bulk delete operation")

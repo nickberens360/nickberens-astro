@@ -23,31 +23,28 @@ export const useUsersStore = defineStore('users', {
 
   actions: {
     async fetchUsers() {
-      console.log('🔄 Users Store: Starting fetchUsers...')
+      if (import.meta.env.DEV) console.log('🔄 Users Store: Starting fetchUsers...')
       this.loading = true
       this.error = null
       
       try {
-        console.log('🔄 Users Store: Making API call to getUsers...')
         const response = await adminAPI.getUsers()
-        console.log('✅ Users Store: API response received:', response)
         
         if (Array.isArray(response)) {
           this.users = response
-          console.log(`✅ Users Store: Stored ${response.length} users:`, this.users)
+          if (import.meta.env.DEV) console.log(`✅ Users Store: Stored ${response.length} users`)
         } else {
-          console.error('❌ Users Store: Response is not an array:', typeof response, response)
+          console.error('❌ Users Store: Response is not an array:', typeof response)
           throw new Error('Invalid response format - expected array')
         }
         
         this.lastUpdated = new Date()
-        console.log('✅ Users Store: Users loaded successfully at', this.lastUpdated)
         
       } catch (error) {
         console.error('❌ Users Store: Error fetching users:', error)
-        console.error('❌ Users Store: Error response:', error.response?.data)
-        console.error('❌ Users Store: Error status:', error.response?.status)
-        console.error('❌ Users Store: Error headers:', error.response?.headers)
+        if (import.meta.env.DEV) {
+          console.error('❌ Error details:', error.response?.data)
+        }
         
         this.error = {
           message: error.message,
@@ -64,25 +61,32 @@ export const useUsersStore = defineStore('users', {
         throw error
       } finally {
         this.loading = false
-        console.log('🏁 Users Store: fetchUsers completed. Loading:', this.loading)
       }
     },
 
     async createUser(userData) {
-      console.log('🔄 Users Store: Creating user:', userData)
+      if (import.meta.env.DEV) console.log('🔄 Users Store: Creating user:', userData.username)
       this.loading = true
       this.error = null
       
       try {
         const response = await adminAPI.createUser(userData)
-        console.log('✅ Users Store: User created:', response)
+        if (import.meta.env.DEV) console.log('✅ Users Store: User created successfully')
         
-        // Refresh users list to include the new user
-        await this.fetchUsers()
+        // Add the new user to the store instead of refetching the entire list
+        if (response.user) {
+          this.users.push(response.user)
+          this.lastUpdated = new Date()
+          if (import.meta.env.DEV) console.log('✅ Users Store: Added new user to store')
+        } else {
+          // Fallback to refetching if user data isn't returned for some reason
+          if (import.meta.env.DEV) console.log('⚠️ Users Store: No user data returned, refetching list')
+          await this.fetchUsers()
+        }
         
         return response
       } catch (error) {
-        console.error('❌ Users Store: Error creating user:', error)
+        console.error('❌ Users Store: Error creating user:', error.message)
         this.error = {
           message: error.message,
           status: error.response?.status,
@@ -96,24 +100,23 @@ export const useUsersStore = defineStore('users', {
     },
 
     async deactivateUser(userId) {
-      console.log('🔄 Users Store: Deactivating user:', userId)
+      if (import.meta.env.DEV) console.log('🔄 Users Store: Deactivating user:', userId)
       this.loading = true
       this.error = null
       
       try {
         const response = await adminAPI.deactivateUser(userId)
-        console.log('✅ Users Store: User deactivated:', response)
+        if (import.meta.env.DEV) console.log('✅ Users Store: User deactivated successfully')
         
         // Update user in store immediately for better UX
         const userIndex = this.users.findIndex(user => user.id === userId)
         if (userIndex !== -1) {
           this.users[userIndex].is_active = false
-          console.log('✅ Users Store: Updated user in store:', this.users[userIndex])
         }
         
         return response
       } catch (error) {
-        console.error('❌ Users Store: Error deactivating user:', error)
+        console.error('❌ Users Store: Error deactivating user:', error.message)
         this.error = {
           message: error.message,
           status: error.response?.status,
@@ -127,25 +130,58 @@ export const useUsersStore = defineStore('users', {
     },
 
     async deleteUser(userId) {
-      console.log('🔄 Users Store: Permanently deleting user:', userId)
+      if (import.meta.env.DEV) console.log('🔄 Users Store: Permanently deleting user:', userId)
       this.loading = true
       this.error = null
       
       try {
         const response = await adminAPI.deleteUser(userId)
-        console.log('✅ Users Store: User permanently deleted:', response)
+        if (import.meta.env.DEV) console.log('✅ Users Store: User permanently deleted')
         
         // Remove user from store immediately
         const userIndex = this.users.findIndex(user => user.id === userId)
         if (userIndex !== -1) {
           const deletedUser = this.users[userIndex]
           this.users.splice(userIndex, 1)
-          console.log('✅ Users Store: Removed user from store:', deletedUser.username)
         }
         
         return response
       } catch (error) {
-        console.error('❌ Users Store: Error deleting user:', error)
+        console.error('❌ Users Store: Error deleting user:', error.message)
+        this.error = {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          timestamp: new Date()
+        }
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async bulkDeleteUsers(userIds) {
+      if (import.meta.env.DEV) console.log('🔄 Users Store: Bulk deleting users:', userIds)
+      this.loading = true
+      this.error = null
+      
+      try {
+        const response = await adminAPI.bulkDeleteUsers(userIds)
+        if (import.meta.env.DEV) console.log('✅ Users Store: Bulk delete completed')
+        
+        // Remove successfully deleted users from store
+        if (response.deleted_users) {
+          // Remove by username since that's what we get back
+          const deletedUsernames = response.deleted_users
+          this.users = this.users.filter(user => !deletedUsernames.includes(user.username))
+        } else if (response.successful_deletions > 0) {
+          // Fallback: remove by user ID if we don't get usernames back
+          this.users = this.users.filter(user => !userIds.includes(user.id))
+        }
+        
+        return response
+      } catch (error) {
+        console.error('❌ Users Store: Error in bulk delete:', error.message)
         this.error = {
           message: error.message,
           status: error.response?.status,
@@ -160,12 +196,12 @@ export const useUsersStore = defineStore('users', {
 
     // Utility actions
     clearError() {
-      console.log('🧹 Users Store: Clearing error')
+      if (import.meta.env.DEV) console.log('🧹 Users Store: Clearing error')
       this.error = null
     },
 
     reset() {
-      console.log('🔄 Users Store: Resetting store')
+      if (import.meta.env.DEV) console.log('🔄 Users Store: Resetting store')
       this.users = []
       this.loading = false
       this.error = null
@@ -174,12 +210,14 @@ export const useUsersStore = defineStore('users', {
 
     // For debugging
     logState() {
-      console.log('📊 Users Store State:')
-      console.log('  Users:', this.users)
-      console.log('  Loading:', this.loading)
-      console.log('  Error:', this.error)
-      console.log('  Last Updated:', this.lastUpdated)
-      console.log('  Active Users:', this.activeUserCount, '/', this.userCount)
+      if (import.meta.env.DEV) {
+        console.log('📊 Users Store State:')
+        console.log('  Users:', this.users.length)
+        console.log('  Loading:', this.loading)
+        console.log('  Error:', this.error)
+        console.log('  Last Updated:', this.lastUpdated)
+        console.log('  Active Users:', this.activeUserCount, '/', this.userCount)
+      }
     }
   }
 })

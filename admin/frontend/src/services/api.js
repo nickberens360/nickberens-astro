@@ -781,6 +781,12 @@ class AdminAPI {
     return await this.client.delete(`/users/${userId}`)
   }
 
+  async bulkDeleteUsers(userIds) {
+    return await this.client.delete('/users/bulk', {
+      data: { user_ids: userIds }
+    })
+  }
+
   // Authentication token methods removed - now using HTTPOnly cookies exclusively
   // These methods are kept for backward compatibility but do nothing
   setAuthToken(token) {
