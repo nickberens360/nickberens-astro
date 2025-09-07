@@ -210,10 +210,10 @@
 
           <v-divider/>
 
-          <v-list-item to="/admin/change-password">
+          <v-list-item to="/user-settings">
             <v-list-item-title>
-              <v-icon start>$lock</v-icon>
-              Change Password
+              <v-icon start>$account</v-icon>
+              User Settings
             </v-list-item-title>
           </v-list-item>
 
