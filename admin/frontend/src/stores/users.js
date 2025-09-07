@@ -198,6 +198,34 @@ export const useUsersStore = defineStore('users', {
       }
     },
 
+    async reactivateUser(userId) {
+      this.loading = true
+      this.error = null
+      
+      try {
+        const response = await adminAPI.reactivateUser(userId)
+        
+        // Update the user in the store
+        const userIndex = this.users.findIndex(u => u.id === userId)
+        if (userIndex !== -1) {
+          this.users[userIndex].is_active = true
+        }
+        
+        return response
+      } catch (error) {
+        console.error('❌ Users Store: Error reactivating user:', error.message)
+        this.error = {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          timestamp: new Date()
+        }
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
     async bulkDeactivateUsers(userIds) {
       
       // Validate input

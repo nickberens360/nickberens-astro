@@ -791,6 +791,10 @@ class AdminAPI {
     return await this.client.post('/users/bulk/deactivate', { user_ids: userIds })
   }
 
+  async reactivateUser(userId) {
+    return await this.client.post(`/users/${userId}/reactivate`)
+  }
+
   // Authentication token methods removed - now using HTTPOnly cookies exclusively
   // These methods are kept for backward compatibility but do nothing
   setAuthToken(token) {

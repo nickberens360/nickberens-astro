@@ -2652,6 +2652,70 @@ async def deactivate_admin_user(
 
 
 @router.post(
+    "/users/{user_id}/reactivate",
+    tags=["Admin Management"],
+    summary="Reactivate a deactivated admin user",
+    description="""
+            **Reactivate a deactivated admin user account.**
+            
+            **Actions Performed:**
+            - Sets user as active
+            - User can log in again
+            
+            **Security:**
+            - Cannot reactivate your own account (must be active to use this endpoint)
+            - Action is audit logged
+            """,
+)
+async def reactivate_admin_user(
+    user_id: int,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Reactivate a deactivated admin user account."""
+    try:
+        current_user_id = session["user_id"]
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Get user info before reactivation
+        user_info = admin_db_manager.get_admin_user_by_id(user_id)
+        if not user_info:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Check if user is already active
+        if user_info.get("is_active"):
+            raise HTTPException(status_code=400, detail="User is already active")
+
+        # Reactivate the user
+        success = admin_db_manager.reactivate_admin_user(user_id)
+        if success:
+            # Log the action
+            audit_logger.log_action(
+                action=AuditAction.USER_REACTIVATE,
+                username=session["username"],
+                details={
+                    "resource": "admin_user",
+                    "target_user_id": user_id,
+                    "target_username": user_info.get("username"),
+                    "reactivated_by": current_user_id,
+                },
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+            logger.info(f"Admin user {user_id} reactivated by user {current_user_id}")
+            return {"success": True, "message": f"User {user_info.get('username')} reactivated successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to reactivate user")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reactivating admin user: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error reactivating admin user")
+
+
+@router.post(
     "/users/bulk/deactivate",
     tags=["Admin Management"],
     summary="Bulk deactivate admin users",

@@ -188,6 +188,16 @@
                       >
                         Deactivate User
                       </v-list-item>
+
+                      <!-- Reactivate User - Only for inactive users -->
+                      <v-list-item
+                        v-if="!item.is_active"
+                        @click="confirmReactivateUser(item)"
+                        prepend-icon="$account-check"
+                        class="text-success"
+                      >
+                        Reactivate User
+                      </v-list-item>
                       
                       <!-- Delete User - Only for non-current users -->
                       <v-list-item
@@ -351,6 +361,53 @@
             </v-btn>
           </v-card-actions>
         </v-form>
+      </v-card>
+    </v-dialog>
+
+    <!-- Reactivate Confirmation Dialog -->
+    <v-dialog v-model="showReactivateDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="d-flex align-center text-success">
+          <v-icon class="me-3">$account-check</v-icon>
+          Reactivate User
+        </v-card-title>
+
+        <v-divider></v-divider>
+
+        <v-card-text v-if="userToReactivate">
+          <p class="mb-4">
+            Are you sure you want to reactivate user <strong>{{ userToReactivate.username }}</strong>?
+          </p>
+
+          <v-alert type="info" variant="tonal" class="mb-3">
+            <strong>This will:</strong>
+            <ul class="mt-2">
+              <li>Allow the user to log in again</li>
+              <li>Restore access to all admin features based on their role</li>
+            </ul>
+          </v-alert>
+        </v-card-text>
+
+        <v-divider></v-divider>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="showReactivateDialog = false"
+            :disabled="reactivating"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="success"
+            variant="flat"
+            @click="reactivateUserAction"
+            :loading="reactivating"
+          >
+            Reactivate User
+          </v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -834,14 +891,17 @@ const adminStore = useAdminStore()
 const loading = ref(false)
 const creating = ref(false)
 const deactivating = ref(false)
+const reactivating = ref(false)
 const deleting = ref(false)
 const showCreateDialog = ref(false)
 const showDeactivateDialog = ref(false)
+const showReactivateDialog = ref(false)
 const showDeleteDialog = ref(false)
 const showDetailsDialog = ref(false)
 const showPassword = ref(false)
 const createFormValid = ref(false)
 const userToDeactivate = ref(null)
+const userToReactivate = ref(null)
 const userToDelete = ref(null)
 const userToView = ref(null)
 const createForm = ref(null)
@@ -966,6 +1026,11 @@ const confirmDeactivateUser = (user) => {
   showDeactivateDialog.value = true
 }
 
+const confirmReactivateUser = (user) => {
+  userToReactivate.value = user
+  showReactivateDialog.value = true
+}
+
 const viewUserDetails = (user) => {
   userToView.value = user
   showDetailsDialog.value = true
@@ -991,6 +1056,23 @@ const deactivateUserAction = async () => {
     showError(message)
   } finally {
     deactivating.value = false
+  }
+}
+
+const reactivateUserAction = async () => {
+  if (!userToReactivate.value) return
+
+  reactivating.value = true
+  try {
+    const result = await usersStore.reactivateUser(userToReactivate.value.id)
+    showSuccess(result?.message || 'User reactivated successfully')
+    showReactivateDialog.value = false
+    userToReactivate.value = null
+  } catch (error) {
+    const message = error.response?.data?.detail || 'Failed to reactivate user'
+    showError(message)
+  } finally {
+    reactivating.value = false
   }
 }
 

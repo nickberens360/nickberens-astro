@@ -1391,6 +1391,22 @@ class AdminDatabaseManager:
             logger.error(f"Error deactivating admin user {user_id}: {str(e)}", exc_info=True)
             return False
 
+    def reactivate_admin_user(self, user_id: int) -> bool:
+        """Reactivate a deactivated admin user."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE admin_users SET is_active = 1, updated_at = ? WHERE id = ?", (datetime.now(), user_id)
+                )
+                success = cursor.rowcount > 0
+                if success:
+                    logger.info(f"Reactivated admin user ID: {user_id}")
+                return success
+        except Exception as e:
+            logger.error(f"Error reactivating admin user {user_id}: {str(e)}", exc_info=True)
+            return False
+
     def delete_admin_user(self, user_id: int) -> bool:
         """
         Permanently delete an admin user account.
