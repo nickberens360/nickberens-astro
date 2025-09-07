@@ -42,11 +42,62 @@
 
             <v-divider></v-divider>
 
+            <!-- Bulk Actions Banner -->
+            <v-expand-transition>
+              <v-card
+                v-if="selectedUsers.length > 0"
+                class="bulk-actions-card ma-4 mb-0"
+                color="primary"
+                variant="tonal"
+              >
+                <v-card-text class="pa-3">
+                  <div class="d-flex align-center justify-space-between">
+                    <div class="d-flex align-center">
+                      <v-icon class="mr-2">$checkbox-marked</v-icon>
+                      <span class="font-weight-medium">
+                        {{ selectedUsers.length }} {{ selectedUsers.length === 1 ? 'user' : 'users' }} selected
+                      </span>
+                    </div>
+                    <v-btn-group variant="outlined" density="compact">
+                      <v-btn
+                        @click="clearSelection"
+                        :loading="false"
+                        class="mr-3"
+                      >
+                        Clear Selection
+                      </v-btn>
+                      <v-btn
+                        prepend-icon="$account-off"
+                        @click="showBulkDeactivateDialog = true"
+                        :disabled="!canBulkDeactivate"
+                        :loading="bulkDeactivating"
+                        class="mr-3"
+                      >
+                        Deactivate
+                      </v-btn>
+                      <v-btn
+                        color="error"
+                        prepend-icon="$delete"
+                        @click="showBulkDeleteDialog = true"
+                        :disabled="!canBulkDelete"
+                        :loading="bulkDeleting"
+                      >
+                        Delete
+                      </v-btn>
+                    </v-btn-group>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-expand-transition>
+
             <v-card-text class="pa-0">
               <v-data-table
+                v-model="selectedUsers"
                 :headers="headers"
                 :items="users"
                 :loading="storeLoading"
+                show-select
+                item-value="id"
                 item-key="id"
                 class="elevation-0"
                 :items-per-page="25"
@@ -446,6 +497,142 @@
       </v-card>
     </v-dialog>
 
+    <!-- Bulk Delete Dialog -->
+    <v-dialog v-model="showBulkDeleteDialog" max-width="600px" persistent>
+      <v-card>
+        <v-card-title class="text-h5 error--text">
+          <v-icon start color="error">$alert</v-icon>
+          Bulk Delete Users
+        </v-card-title>
+
+        <v-card-text>
+          <v-alert
+            color="error"
+            variant="tonal"
+            class="mb-4"
+          >
+            <strong>WARNING:</strong> You are about to permanently delete {{ selectedUsers.length }} user{{ selectedUsers.length === 1 ? '' : 's' }}. This action cannot be undone.
+          </v-alert>
+
+          <div class="mb-4">
+            <div class="text-subtitle-2 mb-2">Users to be deleted:</div>
+            <v-list dense class="pa-0">
+              <v-list-item
+                v-for="userId in selectedUsers.slice(0, 5)"
+                :key="userId"
+                density="compact"
+              >
+                <template #prepend>
+                  <v-icon size="small" color="error">$account-remove</v-icon>
+                </template>
+                <v-list-item-title>
+                  {{ getUserById(userId)?.username || 'Unknown User' }}
+                </v-list-item-title>
+                <v-list-item-subtitle v-if="getUserById(userId)?.email">
+                  {{ getUserById(userId).email }}
+                </v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item v-if="selectedUsers.length > 5" density="compact">
+                <v-list-item-title class="text-medium-emphasis">
+                  ... and {{ selectedUsers.length - 5 }} more
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </div>
+
+          <v-text-field
+            v-model="bulkDeleteConfirmText"
+            label="Type 'DELETE ALL' to confirm"
+            placeholder="DELETE ALL"
+            variant="outlined"
+            density="compact"
+            :rules="[v => v === 'DELETE ALL' || 'You must type DELETE ALL to confirm']"
+            class="mt-4"
+          ></v-text-field>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="cancelBulkDelete"
+            :disabled="bulkDeleting"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="bulkDeleteUsers"
+            :loading="bulkDeleting"
+            :disabled="bulkDeleteConfirmText !== 'DELETE ALL'"
+          >
+            <v-icon start>$delete-forever</v-icon>
+            Delete {{ selectedUsers.length }} User{{ selectedUsers.length === 1 ? '' : 's' }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Bulk Deactivate Dialog -->
+    <v-dialog v-model="showBulkDeactivateDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5">
+          <v-icon start color="warning">$account-off</v-icon>
+          Deactivate Users
+        </v-card-title>
+
+        <v-card-text>
+          <p>Are you sure you want to deactivate {{ selectedUsers.length }} user{{ selectedUsers.length === 1 ? '' : 's' }}?</p>
+          
+          <div class="mt-4">
+            <div class="text-subtitle-2 mb-2">Users to be deactivated:</div>
+            <v-list dense class="pa-0">
+              <v-list-item
+                v-for="userId in selectedUsers.slice(0, 5)"
+                :key="userId"
+                density="compact"
+              >
+                <template #prepend>
+                  <v-icon size="small" color="warning">$account-off</v-icon>
+                </template>
+                <v-list-item-title>
+                  {{ getUserById(userId)?.username || 'Unknown User' }}
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item v-if="selectedUsers.length > 5" density="compact">
+                <v-list-item-title class="text-medium-emphasis">
+                  ... and {{ selectedUsers.length - 5 }} more
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </div>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="showBulkDeactivateDialog = false"
+            :disabled="bulkDeactivating"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="warning"
+            variant="flat"
+            @click="bulkDeactivateUsers"
+            :loading="bulkDeactivating"
+          >
+            <v-icon start>$account-off</v-icon>
+            Deactivate {{ selectedUsers.length }} User{{ selectedUsers.length === 1 ? '' : 's' }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- User Details Dialog -->
     <v-dialog v-model="showDetailsDialog" max-width="700px">
       <v-card v-if="userToView">
@@ -658,6 +845,14 @@ const userToView = ref(null)
 const createForm = ref(null)
 const deleteConfirmText = ref('')
 
+// Bulk operations state
+const selectedUsers = ref([])
+const showBulkDeleteDialog = ref(false)
+const showBulkDeactivateDialog = ref(false)
+const bulkDeleteConfirmText = ref('')
+const bulkDeleting = ref(false)
+const bulkDeactivating = ref(false)
+
 const newUser = ref({
   username: '',
   email: '',
@@ -712,6 +907,28 @@ const users = computed(() => {
 const storeLoading = computed(() => usersStore.loading)
 const error = computed(() => usersStore.error)
 const lastUpdated = computed(() => usersStore.lastUpdated)
+
+// Bulk operation computed properties
+const canBulkDelete = computed(() => {
+  // Check if any selected user is the current user
+  const currentUserId = 1 // TODO: Get from auth store
+  return selectedUsers.value.length > 0 && !selectedUsers.value.includes(currentUserId)
+})
+
+const canBulkDeactivate = computed(() => {
+  // Check if any selected user is the current user or already inactive
+  const currentUserId = 1 // TODO: Get from auth store
+  const hasCurrentUser = selectedUsers.value.includes(currentUserId)
+  const allAlreadyInactive = selectedUsers.value.every(id => {
+    const user = getUserById(id)
+    return user && !user.is_active
+  })
+  return selectedUsers.value.length > 0 && !hasCurrentUser && !allAlreadyInactive
+})
+
+const getUserById = (id) => {
+  return users.value.find(u => u.id === id)
+}
 
 // Methods
 const loadUsers = async () => {
@@ -803,6 +1020,101 @@ const deleteUserAction = async () => {
   }
 }
 
+// Bulk operation methods
+const clearSelection = () => {
+  selectedUsers.value = []
+}
+
+const bulkDeleteUsers = async () => {
+  if (bulkDeleteConfirmText.value !== 'DELETE ALL') return
+  
+  bulkDeleting.value = true
+  const errors = []
+  const successes = []
+  
+  try {
+    for (const userId of selectedUsers.value) {
+      try {
+        console.log(`🔄 Deleting user ${userId}...`)
+        await usersStore.deleteUser(userId)
+        successes.push(userId)
+      } catch (error) {
+        console.error(`❌ Failed to delete user ${userId}:`, error)
+        errors.push({ userId, error: error.response?.data?.detail || error.message })
+      }
+    }
+    
+    if (successes.length > 0) {
+      showSuccess(`Successfully deleted ${successes.length} user${successes.length === 1 ? '' : 's'}`)
+    }
+    
+    if (errors.length > 0) {
+      const errorMsg = errors.map(e => {
+        const user = getUserById(e.userId)
+        return `${user?.username || 'User ' + e.userId}: ${e.error}`
+      }).join('\n')
+      showError(`Failed to delete ${errors.length} user${errors.length === 1 ? '' : 's'}:\n${errorMsg}`)
+    }
+    
+    // Clear selection and close dialog
+    clearSelection()
+    showBulkDeleteDialog.value = false
+    bulkDeleteConfirmText.value = ''
+    
+  } catch (error) {
+    console.error('❌ Bulk delete error:', error)
+    showError('An unexpected error occurred during bulk delete')
+  } finally {
+    bulkDeleting.value = false
+  }
+}
+
+const cancelBulkDelete = () => {
+  showBulkDeleteDialog.value = false
+  bulkDeleteConfirmText.value = ''
+}
+
+const bulkDeactivateUsers = async () => {
+  bulkDeactivating.value = true
+  const errors = []
+  const successes = []
+  
+  try {
+    for (const userId of selectedUsers.value) {
+      try {
+        console.log(`🔄 Deactivating user ${userId}...`)
+        await usersStore.deactivateUser(userId)
+        successes.push(userId)
+      } catch (error) {
+        console.error(`❌ Failed to deactivate user ${userId}:`, error)
+        errors.push({ userId, error: error.response?.data?.detail || error.message })
+      }
+    }
+    
+    if (successes.length > 0) {
+      showSuccess(`Successfully deactivated ${successes.length} user${successes.length === 1 ? '' : 's'}`)
+    }
+    
+    if (errors.length > 0) {
+      const errorMsg = errors.map(e => {
+        const user = getUserById(e.userId)
+        return `${user?.username || 'User ' + e.userId}: ${e.error}`
+      }).join('\n')
+      showError(`Failed to deactivate ${errors.length} user${errors.length === 1 ? '' : 's'}:\n${errorMsg}`)
+    }
+    
+    // Clear selection and close dialog
+    clearSelection()
+    showBulkDeactivateDialog.value = false
+    
+  } catch (error) {
+    console.error('❌ Bulk deactivate error:', error)
+    showError('An unexpected error occurred during bulk deactivate')
+  } finally {
+    bulkDeactivating.value = false
+  }
+}
+
 const cancelCreateUser = () => {
   showCreateDialog.value = false
   resetCreateForm()
@@ -832,7 +1144,12 @@ const getRoleColor = (role) => {
 const formatDate = (dateString) => {
   if (!dateString) return 'Never'
   try {
-    return format(new Date(dateString), 'MMM d, yyyy h:mm a')
+    // If the date string doesn't include timezone info, append 'Z' to treat it as UTC
+    const dateStr = dateString.includes('Z') || dateString.includes('+') || dateString.includes('-') 
+      ? dateString 
+      : dateString.replace(' ', 'T') + 'Z'
+    
+    return format(new Date(dateStr), 'MMM d, yyyy h:mm a')
   } catch (error) {
     return 'Invalid date'
   }
@@ -841,11 +1158,18 @@ const formatDate = (dateString) => {
 const getAccountAge = (createdDate) => {
   if (!createdDate) return 'Unknown'
   try {
-    const created = new Date(createdDate)
+    // If the date string doesn't include timezone info, append 'Z' to treat it as UTC
+    const dateStr = createdDate.includes('Z') || createdDate.includes('+') || createdDate.includes('-') 
+      ? createdDate 
+      : createdDate.replace(' ', 'T') + 'Z'
+    
+    const created = new Date(dateStr)
     const now = new Date()
     const diffInMs = now - created
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
     
+    // Handle negative values (shouldn't happen with proper UTC parsing)
+    if (diffInDays < 0) return 'Created today'
     if (diffInDays === 0) return 'Created today'
     if (diffInDays === 1) return '1 day old'
     if (diffInDays < 30) return `${diffInDays} days old`

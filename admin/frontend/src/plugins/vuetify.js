@@ -19,7 +19,7 @@ import {
   mdiSpeedometer, mdiGauge, mdiIpNetwork, mdiCheckCircleOutline,
 
   // User Management Icons
-  mdiAccountPlus, mdiAccountOff, mdiAccountCheck, mdiEmail, mdiShieldAccount,
+  mdiAccountPlus, mdiAccountOff, mdiAccountCheck, mdiAccountRemove, mdiEmail, mdiShieldAccount,
   mdiCloseCircle,
 
   // Status & Feedback
@@ -156,6 +156,7 @@ const iconAliases = {
   // User Management
   'account-plus': mdiAccountPlus,
   'account-off': mdiAccountOff,
+  'account-remove': mdiAccountRemove,
   'account-check': mdiAccountCheck,
   'account-details': mdiAccountDetails,
   'account-group': mdiAccountGroup,
