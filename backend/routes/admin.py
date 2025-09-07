@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import ValidationError
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
@@ -56,6 +57,33 @@ logger = logging.getLogger(__name__)
 
 # Initialize audit logger
 audit_logger = AuditLogger()
+
+
+# Debug dependency to log raw request data for bulk delete
+async def log_bulk_delete_request(request: Request):
+    """Debug dependency to log the raw request body for bulk delete debugging"""
+    if request.url.path.endswith("/users/bulk") and request.method == "DELETE":
+        try:
+            body = await request.body()
+            logger.info(f"Bulk delete raw request body: {body.decode('utf-8')}")
+
+            # Parse and log the JSON data
+            if body:
+                import json
+
+                try:
+                    data = json.loads(body.decode("utf-8"))
+                    logger.info(f"Bulk delete parsed JSON: {data}")
+                    if "user_ids" in data:
+                        logger.info(f"User IDs received: {data['user_ids']} (type: {type(data['user_ids'])})")
+                        for i, user_id in enumerate(data["user_ids"]):
+                            logger.info(f"  user_id[{i}]: {user_id} (type: {type(user_id)})")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse JSON: {e}")
+        except Exception as e:
+            logger.error(f"Error logging bulk delete request: {e}")
+    return True
+
 
 router = APIRouter()
 
@@ -2649,79 +2677,14 @@ async def deactivate_admin_user(
 
 
 @router.delete(
-    "/users/{user_id}",
-    summary="Permanently delete admin user",
-    description="Permanently delete an admin user account. This action cannot be undone.",
-    dependencies=[Depends(require_admin_auth)],
-)
-async def delete_admin_user(
-    user_id: int,
-    request: Request,
-    session: Dict[str, Any] = Depends(require_admin_auth),
-):
-    """
-    Permanently delete an admin user account.
-
-    Security restrictions:
-        - Cannot delete your own account (prevents lockout)
-        - Only admin users can delete other users
-        - Action is logged for audit purposes
-        - Terminates all sessions for the deleted user
-    """
-    try:
-        # Prevent self-deletion to avoid lockout
-        if user_id == session["user_id"]:
-            raise HTTPException(status_code=400, detail="Cannot delete your own account")
-
-        # Get user info before deletion for audit logging
-        user_to_delete = admin_db_manager.get_admin_user_by_id(user_id)
-        if not user_to_delete:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        # Permanently delete the user
-        success = admin_db_manager.delete_admin_user(user_id)
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to delete user")
-
-        client_ip = request.client.host if request.client else "unknown"
-        user_agent = request.headers.get("User-Agent", "")
-
-        # Audit log deletion
-        audit_logger.log_action(
-            action=AuditAction.USER_DELETE,
-            username=session["username"],
-            details={
-                "deleted_user_id": user_id,
-                "deleted_username": user_to_delete["username"],
-                "deleted_by": session["user_id"],
-            },
-            ip_address=client_ip,
-            user_agent=user_agent,
-        )
-
-        logger.info(
-            f"Admin user {user_id} ({user_to_delete['username']}) permanently deleted by user {session['user_id']}"
-        )
-
-        return {"success": True, "message": "User permanently deleted"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting admin user: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error deleting admin user")
-
-
-@router.delete(
     "/users/bulk",
     summary="Bulk delete admin users",
     description="Permanently delete multiple admin users at once. This action cannot be undone.",
-    dependencies=[Depends(require_admin_auth)],
 )
 async def bulk_delete_admin_users(
-    request: Request,
     bulk_request: BulkDeleteUsersRequest,
     session: Dict[str, Any] = Depends(require_admin_auth),
+    request: Request = None,
 ):
     """
     Permanently delete multiple admin users at once.
@@ -2833,3 +2796,67 @@ async def bulk_delete_admin_users(
     except Exception as e:
         logger.error(f"Error in bulk delete admin users: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error processing bulk delete operation")
+
+
+@router.delete(
+    "/users/{user_id}",
+    summary="Permanently delete admin user",
+    description="Permanently delete an admin user account. This action cannot be undone.",
+    dependencies=[Depends(require_admin_auth)],
+)
+async def delete_admin_user(
+    user_id: int,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+):
+    """
+    Permanently delete an admin user account.
+
+    Security restrictions:
+        - Cannot delete your own account (prevents lockout)
+        - Only admin users can delete other users
+        - Action is logged for audit purposes
+        - Terminates all sessions for the deleted user
+    """
+    try:
+        # Prevent self-deletion to avoid lockout
+        if user_id == session["user_id"]:
+            raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+        # Get user info before deletion for audit logging
+        user_to_delete = admin_db_manager.get_admin_user_by_id(user_id)
+        if not user_to_delete:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Permanently delete the user
+        success = admin_db_manager.delete_admin_user(user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete user")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Audit log deletion
+        audit_logger.log_action(
+            action=AuditAction.USER_DELETE,
+            username=session["username"],
+            details={
+                "deleted_user_id": user_id,
+                "deleted_username": user_to_delete["username"],
+                "deleted_by": session["user_id"],
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(
+            f"Admin user {user_id} ({user_to_delete['username']}) permanently deleted by user {session['user_id']}"
+        )
+
+        return {"success": True, "message": "User permanently deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting admin user: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting admin user")

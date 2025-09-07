@@ -181,6 +181,7 @@ const iconAliases = {
 
   // Content types
   info: mdiInformation,
+  information: mdiInformation,
   folder: mdiFolder,
   'list-bulleted': mdiFormatListBulleted,
   description: mdiFileDocument,
