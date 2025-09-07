@@ -1250,6 +1250,18 @@ class AdminDatabaseManager:
             logger.error(f"Error getting admin user {username}: {str(e)}", exc_info=True)
             return None
 
+    def get_admin_user_by_id(self, user_id: int) -> Optional[Dict]:
+        """Get admin user by ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM admin_users WHERE id = ?", (user_id,))
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting admin user by ID {user_id}: {str(e)}", exc_info=True)
+            return None
+
     # Security events and rate limiting helpers used by audit logger and auth flows
     def record_security_event(
         self,
@@ -1361,6 +1373,30 @@ class AdminDatabaseManager:
             logger.error(f"Error getting all admin users: {str(e)}", exc_info=True)
             return []
 
+    def get_admin_users_by_ids(self, user_ids: List[int]) -> Dict[int, Dict]:
+        """Get admin users by their IDs in a single query to prevent N+1 queries."""
+        if not user_ids:
+            return {}
+
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Create placeholders for the IN clause
+                placeholders = ",".join("?" * len(user_ids))
+                cursor.execute(
+                    f"""
+                    SELECT id, username, email, role, is_active, created_at, last_login_at, updated_at
+                    FROM admin_users
+                    WHERE id IN ({placeholders})
+                    """,
+                    user_ids,
+                )
+                # Return as a dictionary keyed by user_id for easy lookup
+                return {row["id"]: dict(row) for row in cursor.fetchall()}
+        except Exception as e:
+            logger.error(f"Error getting admin users by IDs {user_ids}: {str(e)}", exc_info=True)
+            return {}
+
     def deactivate_admin_user(self, user_id: int) -> bool:
         """Deactivate an admin user."""
         try:
@@ -1377,6 +1413,61 @@ class AdminDatabaseManager:
                 return success
         except Exception as e:
             logger.error(f"Error deactivating admin user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def reactivate_admin_user(self, user_id: int) -> bool:
+        """Reactivate a deactivated admin user."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE admin_users SET is_active = 1, updated_at = ? WHERE id = ?", (datetime.now(), user_id)
+                )
+                success = cursor.rowcount > 0
+                if success:
+                    logger.info(f"Reactivated admin user ID: {user_id}")
+                return success
+        except Exception as e:
+            logger.error(f"Error reactivating admin user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def delete_admin_user(self, user_id: int) -> bool:
+        """
+        Permanently delete an admin user account.
+        This action cannot be undone and will remove all user data.
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # First verify the user exists
+                cursor.execute("SELECT username FROM admin_users WHERE id = ?", (user_id,))
+                user = cursor.fetchone()
+                if not user:
+                    logger.warning(f"Attempted to delete non-existent user ID: {user_id}")
+                    return False
+
+                username = user[0]
+
+                # Delete the user's sessions first (foreign key constraint)
+                cursor.execute("DELETE FROM admin_sessions WHERE user_id = ?", (user_id,))
+                deleted_sessions = cursor.rowcount
+
+                # Delete the user account
+                cursor.execute("DELETE FROM admin_users WHERE id = ?", (user_id,))
+                deleted_users = cursor.rowcount
+
+                if deleted_users == 1:
+                    logger.info(
+                        f"Successfully deleted admin user {username} (ID: {user_id}) and {deleted_sessions} associated sessions"
+                    )
+                    return True
+                else:
+                    logger.error(f"Failed to delete admin user {user_id} - no rows affected")
+                    return False
+
+        except Exception as e:
+            logger.error(f"Error deleting admin user {user_id}: {str(e)}", exc_info=True)
             return False
 
     def get_admin_setting(self, setting_key: str) -> Optional[str]:

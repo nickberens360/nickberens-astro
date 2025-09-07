@@ -282,3 +282,11 @@ class UpdateUserRequest(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = Field(None, pattern="^(admin|viewer|owner)$")
     is_active: Optional[bool] = None
+
+
+class BulkDeleteUsersRequest(BaseModel):
+    user_ids: List[int] = Field(..., min_length=1, max_length=50, description="List of user IDs to delete")
+
+
+class BulkDeactivateUsersRequest(BaseModel):
+    user_ids: List[int] = Field(..., min_length=1, max_length=50, description="List of user IDs to deactivate")

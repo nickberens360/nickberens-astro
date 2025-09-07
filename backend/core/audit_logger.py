@@ -28,6 +28,7 @@ class AuditAction(Enum):
     USER_UPDATE = "user_update"
     USER_DELETE = "user_delete"
     USER_DEACTIVATE = "user_deactivate"
+    USER_REACTIVATE = "user_reactivate"
     USER_ROLE_CHANGE = "user_role_change"
 
     # 2FA operations

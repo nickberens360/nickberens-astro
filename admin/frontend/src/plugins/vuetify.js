@@ -3,7 +3,7 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import {
   // Navigation & Core
   mdiHome, mdiViewDashboard, mdiMagnify, mdiChartLine, mdiFileDocument,
-  mdiAccountGroup, mdiAccount, mdiMenu, mdiClose, mdiRefresh, mdiExport,
+  mdiAccountGroup, mdiAccount, mdiAccountDetails, mdiMenu, mdiClose, mdiRefresh, mdiExport,
 
   // Actions & Controls
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
@@ -17,6 +17,10 @@ import {
   mdiFlag, mdiCached, mdiMessageText, mdiKey, mdiImport, mdiShieldCheck, mdiAlertCircle,
   mdiRobot, mdiGoogle, mdiDatabase, mdiTimer, mdiFingerprint, mdiBookOpen,
   mdiSpeedometer, mdiGauge, mdiIpNetwork, mdiCheckCircleOutline,
+
+  // User Management Icons
+  mdiAccountPlus, mdiAccountOff, mdiAccountCheck, mdiAccountRemove, mdiEmail, mdiShieldAccount,
+  mdiCloseCircle,
 
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -149,6 +153,17 @@ const iconAliases = {
   'ip-network': mdiIpNetwork,
   'check-circle-outline': mdiCheckCircleOutline,
 
+  // User Management
+  'account-plus': mdiAccountPlus,
+  'account-off': mdiAccountOff,
+  'account-remove': mdiAccountRemove,
+  'account-check': mdiAccountCheck,
+  'account-details': mdiAccountDetails,
+  'account-group': mdiAccountGroup,
+  email: mdiEmail,
+  'shield-account': mdiShieldAccount,
+  'close-circle': mdiCloseCircle,
+
   // Status
   alert: mdiAlert,
   check: mdiCheck,
@@ -166,6 +181,7 @@ const iconAliases = {
 
   // Content types
   info: mdiInformation,
+  information: mdiInformation,
   folder: mdiFolder,
   'list-bulleted': mdiFormatListBulleted,
   description: mdiFileDocument,

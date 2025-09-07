@@ -369,6 +369,12 @@ const navigationItems = computed(() => [
     //do nest children
   },
   {
+    name: 'users',
+    title: 'User Management',
+    to: '/users',
+    icon: '$account-group'
+  },
+  {
     name: 'settings',
     title: 'Settings',
     to: '/settings/followup',
