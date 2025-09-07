@@ -251,9 +251,9 @@ export const useUsersStore = defineStore('users', {
         
         // Update successfully deactivated users in store
         if (response.deactivated_user_ids && response.deactivated_user_ids.length > 0) {
-          const deactivatedIds = response.deactivated_user_ids
+          const deactivatedIdsSet = new Set(response.deactivated_user_ids)
           this.users.forEach(user => {
-            if (deactivatedIds.includes(user.id)) {
+            if (deactivatedIdsSet.has(user.id)) {
               user.is_active = false
             }
           })

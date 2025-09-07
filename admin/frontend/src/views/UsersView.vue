@@ -1229,7 +1229,7 @@ const resetCreateForm = () => {
 
 const getRoleColor = (role) => {
   switch (role) {
-    case 'admin': return 'error'
+    case 'admin': return 'primary'
     case 'viewer': return 'info'
     default: return 'grey'
   }

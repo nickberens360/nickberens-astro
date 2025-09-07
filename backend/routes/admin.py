@@ -2529,9 +2529,11 @@ async def create_admin_user(
 ) -> Dict[str, Any]:
     """Create a new admin user."""
     try:
-        # Validate password strength
-        if len(user_data.password) < 12:
-            raise HTTPException(status_code=400, detail="Password must be at least 12 characters long")
+        # Validate password strength using centralized validator
+        try:
+            admin_auth_manager.validate_password_strength(user_data.password)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
         # Check if username already exists
         existing_user = admin_db_manager.get_admin_user(user_data.username)
@@ -2763,13 +2765,16 @@ async def bulk_deactivate_admin_users(
         if current_user_id in user_ids:
             raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
 
-        # Verify all users exist before deactivating any
-        user_infos = {}
-        for user_id in user_ids:
-            user_info = admin_db_manager.get_admin_user_by_id(user_id)
-            if not user_info:
-                raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
-            user_infos[user_id] = user_info
+        # Verify all users exist before deactivating any (single query to prevent N+1 problem)
+        user_infos = admin_db_manager.get_admin_users_by_ids(user_ids)
+
+        # Check if all requested users were found
+        missing_user_ids = [user_id for user_id in user_ids if user_id not in user_infos]
+        if missing_user_ids:
+            if len(missing_user_ids) == 1:
+                raise HTTPException(status_code=404, detail=f"User with ID {missing_user_ids[0]} not found")
+            else:
+                raise HTTPException(status_code=404, detail=f"Users with IDs {missing_user_ids} not found")
 
         # Deactivate users
         successful_deactivations = []
@@ -2870,11 +2875,14 @@ async def bulk_delete_admin_users(
         client_ip = request.client.host if request.client else "unknown"
         user_agent = request.headers.get("User-Agent", "")
 
+        # Get all users at once to prevent N+1 query problem
+        users_to_delete = admin_db_manager.get_admin_users_by_ids(user_ids)
+
         # Process each user deletion
         for user_id in user_ids:
             try:
-                # Get user info before deletion for audit logging
-                user_to_delete = admin_db_manager.get_admin_user_by_id(user_id)
+                # Get user info from our batch fetch
+                user_to_delete = users_to_delete.get(user_id)
                 if not user_to_delete:
                     failed_deletions.append({"user_id": user_id, "error": "User not found"})
                     continue

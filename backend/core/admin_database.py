@@ -1373,6 +1373,30 @@ class AdminDatabaseManager:
             logger.error(f"Error getting all admin users: {str(e)}", exc_info=True)
             return []
 
+    def get_admin_users_by_ids(self, user_ids: List[int]) -> Dict[int, Dict]:
+        """Get admin users by their IDs in a single query to prevent N+1 queries."""
+        if not user_ids:
+            return {}
+
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Create placeholders for the IN clause
+                placeholders = ",".join("?" * len(user_ids))
+                cursor.execute(
+                    f"""
+                    SELECT id, username, email, role, is_active, created_at, last_login_at, updated_at
+                    FROM admin_users
+                    WHERE id IN ({placeholders})
+                    """,
+                    user_ids,
+                )
+                # Return as a dictionary keyed by user_id for easy lookup
+                return {row["id"]: dict(row) for row in cursor.fetchall()}
+        except Exception as e:
+            logger.error(f"Error getting admin users by IDs {user_ids}: {str(e)}", exc_info=True)
+            return {}
+
     def deactivate_admin_user(self, user_id: int) -> bool:
         """Deactivate an admin user."""
         try:
