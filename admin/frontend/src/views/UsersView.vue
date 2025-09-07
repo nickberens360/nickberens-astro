@@ -902,7 +902,6 @@ const roleRules = [
 
 // Computed properties
 const users = computed(() => {
-  console.log('🔍 UsersView computed: Getting users from store:', usersStore.users)
   return usersStore.users
 })
 
@@ -934,7 +933,6 @@ const getUserById = (id) => {
 
 // Methods
 const loadUsers = async () => {
-  console.log('🔄 UsersView: Reloading users via store...')
   await usersStore.fetchUsers()
 }
 
@@ -945,7 +943,6 @@ const createUserAction = async () => {
 
   creating.value = true
   try {
-    console.log('🔄 UsersView: Creating user via store:', newUser.value)
     const result = await usersStore.createUser({
       username: newUser.value.username,
       email: newUser.value.email || null,
@@ -957,7 +954,6 @@ const createUserAction = async () => {
     showCreateDialog.value = false
     resetCreateForm()
   } catch (error) {
-    console.error('❌ UsersView: Error creating user:', error)
     const message = error.response?.data?.detail || 'Failed to create user'
     showError(message)
   } finally {
@@ -971,13 +967,11 @@ const confirmDeactivateUser = (user) => {
 }
 
 const viewUserDetails = (user) => {
-  console.log('🔍 UsersView: Viewing details for user:', user.username)
   userToView.value = user
   showDetailsDialog.value = true
 }
 
 const confirmDeleteUser = (user) => {
-  console.log('🔄 UsersView: Confirming delete for user:', user.username)
   userToDelete.value = user
   deleteConfirmText.value = ''
   showDeleteDialog.value = true
@@ -988,13 +982,11 @@ const deactivateUserAction = async () => {
 
   deactivating.value = true
   try {
-    console.log('🔄 UsersView: Deactivating user via store:', userToDeactivate.value.id)
     const result = await usersStore.deactivateUser(userToDeactivate.value.id)
     showSuccess(result?.message || 'User deactivated successfully')
     showDeactivateDialog.value = false
     userToDeactivate.value = null
   } catch (error) {
-    console.error('❌ UsersView: Error deactivating user:', error)
     const message = error.response?.data?.detail || 'Failed to deactivate user'
     showError(message)
   } finally {
@@ -1007,14 +999,12 @@ const deleteUserAction = async () => {
 
   deleting.value = true
   try {
-    console.log('🔄 UsersView: Permanently deleting user via store:', userToDelete.value.id)
     const result = await usersStore.deleteUser(userToDelete.value.id)
     showSuccess(result?.message || 'User permanently deleted')
     showDeleteDialog.value = false
     userToDelete.value = null
     deleteConfirmText.value = ''
   } catch (error) {
-    console.error('❌ UsersView: Error deleting user:', error)
     const message = error.response?.data?.detail || 'Failed to delete user'
     showError(message)
   } finally {
@@ -1030,12 +1020,28 @@ const clearSelection = () => {
 const bulkDeleteUsers = async () => {
   if (bulkDeleteConfirmText.value !== 'DELETE ALL') return
   
+  // Validate selected users before attempting bulk delete
+  if (!selectedUsers.value || selectedUsers.value.length === 0) {
+    showError('No users selected for deletion')
+    return
+  }
+  
+  if (selectedUsers.value.length > 50) {
+    showError('Cannot delete more than 50 users at once')
+    return
+  }
+  
+  // Ensure all selected values are valid integers (accept both string and number IDs)
+  const validUserIds = selectedUsers.value.filter(id => Number.isInteger(Number(id)) && Number(id) > 0)
+  if (validUserIds.length !== selectedUsers.value.length) {
+    showError('Invalid user selection. Please refresh and try again.')
+    return
+  }
+  
   bulkDeleting.value = true
   
   try {
-    console.log(`🔄 Bulk deleting ${selectedUsers.value.length} users...`)
-    const response = await usersStore.bulkDeleteUsers(selectedUsers.value)
-    console.log('✅ Bulk delete response:', response)
+    const response = await usersStore.bulkDeleteUsers(validUserIds)
     
     // Handle response messaging
     if (response.success) {
@@ -1069,7 +1075,6 @@ const bulkDeleteUsers = async () => {
     bulkDeleteConfirmText.value = ''
     
   } catch (error) {
-    console.error('❌ Bulk delete error:', error)
     const message = error.response?.data?.detail || error.message || 'An unexpected error occurred during bulk delete'
     showError(message)
   } finally {
@@ -1084,31 +1089,30 @@ const cancelBulkDelete = () => {
 
 const bulkDeactivateUsers = async () => {
   bulkDeactivating.value = true
-  const errors = []
-  const successes = []
   
   try {
-    for (const userId of selectedUsers.value) {
-      try {
-        console.log(`🔄 Deactivating user ${userId}...`)
-        await usersStore.deactivateUser(userId)
-        successes.push(userId)
-      } catch (error) {
-        console.error(`❌ Failed to deactivate user ${userId}:`, error)
-        errors.push({ userId, error: error.response?.data?.detail || error.message })
-      }
+    // Ensure all selected values are valid integers (accept both string and number IDs)
+    const validUserIds = selectedUsers.value.filter(id => Number.isInteger(Number(id)) && Number(id) > 0)
+    
+    if (validUserIds.length === 0) {
+      showError('No valid users selected for deactivation')
+      return
+    }
+
+    // Use the bulk deactivate endpoint
+    const response = await usersStore.bulkDeactivateUsers(validUserIds)
+    
+    // Handle response
+    if (response.successful_deactivations > 0) {
+      showSuccess(`Successfully deactivated ${response.successful_deactivations} user${response.successful_deactivations === 1 ? '' : 's'}`)
     }
     
-    if (successes.length > 0) {
-      showSuccess(`Successfully deactivated ${successes.length} user${successes.length === 1 ? '' : 's'}`)
-    }
-    
-    if (errors.length > 0) {
-      const errorMsg = errors.map(e => {
-        const user = getUserById(e.userId)
-        return `${user?.username || 'User ' + e.userId}: ${e.error}`
+    if (response.failed_deactivations > 0 && response.failed_user_ids) {
+      const errorMsg = response.failed_user_ids.map(userId => {
+        const user = getUserById(userId)
+        return `${user?.username || 'User ' + userId}: Failed to deactivate`
       }).join('\n')
-      showError(`Failed to deactivate ${errors.length} user${errors.length === 1 ? '' : 's'}:\n${errorMsg}`)
+      showError(`Failed to deactivate ${response.failed_deactivations} user${response.failed_deactivations === 1 ? '' : 's'}:\n${errorMsg}`)
     }
     
     // Clear selection and close dialog
@@ -1116,8 +1120,8 @@ const bulkDeactivateUsers = async () => {
     showBulkDeactivateDialog.value = false
     
   } catch (error) {
-    console.error('❌ Bulk deactivate error:', error)
-    showError('An unexpected error occurred during bulk deactivate')
+    const errorMessage = error.response?.data?.detail || error.message || 'An unexpected error occurred during bulk deactivation'
+    showError(errorMessage)
   } finally {
     bulkDeactivating.value = false
   }
@@ -1153,9 +1157,9 @@ const formatDate = (dateString) => {
   if (!dateString) return 'Never'
   try {
     // If the date string doesn't include timezone info, append 'Z' to treat it as UTC
-    const dateStr = dateString.includes('Z') || dateString.includes('+') || dateString.includes('-') 
-      ? dateString 
-      : dateString.replace(' ', 'T') + 'Z'
+    const dateStr = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(dateString)
+      ? dateString.replace(' ', 'T') + 'Z'
+      : dateString
     
     return format(new Date(dateStr), 'MMM d, yyyy h:mm a')
   } catch (error) {
@@ -1167,9 +1171,9 @@ const getAccountAge = (createdDate) => {
   if (!createdDate) return 'Unknown'
   try {
     // If the date string doesn't include timezone info, append 'Z' to treat it as UTC
-    const dateStr = createdDate.includes('Z') || createdDate.includes('+') || createdDate.includes('-') 
-      ? createdDate 
-      : createdDate.replace(' ', 'T') + 'Z'
+    const dateStr = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(createdDate)
+      ? createdDate.replace(' ', 'T') + 'Z'
+      : createdDate
     
     const created = new Date(dateStr)
     const now = new Date()
@@ -1199,8 +1203,6 @@ const isCurrentUser = (user) => {
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🚀 UsersView: Component mounted, loading users...')
-  usersStore.logState()
   await usersStore.fetchUsers()
 })
 </script>
