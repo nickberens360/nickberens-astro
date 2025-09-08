@@ -949,7 +949,7 @@ const emailRules = [
 
 const passwordRules = [
   v => !!v || 'Password is required',
-  v => (v && v.length >= 12) || 'Password must be at least 12 characters',
+  v => (v && v.length >= 8) || 'Password must be at least 8 characters',
   v => /(?=.*[a-z])/.test(v) || 'Password must contain at least one lowercase letter',
   v => /(?=.*[A-Z])/.test(v) || 'Password must contain at least one uppercase letter',
   v => /(?=.*\d)/.test(v) || 'Password must contain at least one number',

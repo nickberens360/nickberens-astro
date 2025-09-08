@@ -19,7 +19,7 @@
           </div>
           <div class="ml-3">
             <div class="brand-title text-h6 font-weight-bold">
-              RAG LMS
+              RAG MNGR
             </div>
           </div>
         </div>

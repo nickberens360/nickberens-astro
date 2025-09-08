@@ -795,6 +795,15 @@ class AdminAPI {
     return await this.client.post(`/users/${userId}/reactivate`)
   }
 
+  // User profile management
+  async updateDisplayName(displayName) {
+    return await this.client.put('/user/display-name', { display_name: displayName })
+  }
+
+  async updateEmail(email, password) {
+    return await this.client.put('/user/email', { email, password })
+  }
+
   // Authentication token methods removed - now using HTTPOnly cookies exclusively
   // These methods are kept for backward compatibility but do nothing
   setAuthToken(token) {

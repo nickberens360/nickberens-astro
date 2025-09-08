@@ -162,6 +162,7 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { adminAPI } from '@/services/api'
 
 // Get notification system from parent
 const notifications = inject('notifications')
@@ -235,14 +236,21 @@ const confirmPasswordRules = [
 ]
 
 // Methods
-const loadUserData = () => {
-  // TODO: Load actual user data from the store/API
-  // For now, use placeholder data
-  const userData = adminStore.user || { username: 'admin', email: 'admin@example.com' }
-  displayName.value = userData.display_name || userData.username || 'Admin User'
-  originalDisplayName.value = displayName.value
-  email.value = userData.email || 'admin@example.com'
-  originalEmail.value = email.value
+const loadUserData = async () => {
+  try {
+    // Get current user data from the store first
+    await adminStore.checkAuth()
+    const userData = adminStore.user
+    if (userData) {
+      displayName.value = userData.display_name || userData.username || 'Admin User'
+      originalDisplayName.value = displayName.value
+      email.value = userData.email || ''
+      originalEmail.value = email.value
+    }
+  } catch (error) {
+    console.error('Error loading user data:', error)
+    notifications.showError('Failed to load user data')
+  }
 }
 
 const handleDisplayNameChange = async () => {
@@ -251,13 +259,18 @@ const handleDisplayNameChange = async () => {
 
   displayNameLoading.value = true
   try {
-    // TODO: Implement API call to update display name
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+    const response = await adminAPI.updateDisplayName(displayName.value)
     
-    originalDisplayName.value = displayName.value
-    notifications.showSuccess('Display name updated successfully')
+    if (response.success) {
+      originalDisplayName.value = displayName.value
+      // Update the store with the new display name
+      await adminStore.checkAuth()
+      notifications.showSuccess('Display name updated successfully')
+    } else {
+      throw new Error(response.data.message || 'Failed to update display name')
+    }
   } catch (error) {
-    notifications.showError('Failed to update display name. Please try again.')
+    notifications.showError(error.response?.data?.detail || 'Failed to update display name. Please try again.')
     console.error('Display name update error:', error)
   } finally {
     displayNameLoading.value = false
@@ -270,14 +283,19 @@ const handleEmailChange = async () => {
 
   emailLoading.value = true
   try {
-    // TODO: Implement API call to update email
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+    const response = await adminAPI.updateEmail(email.value, emailPassword.value)
     
-    originalEmail.value = email.value
-    emailPassword.value = ''
-    notifications.showSuccess('Email address updated successfully')
+    if (response.success) {
+      originalEmail.value = email.value
+      emailPassword.value = ''
+      // Update the store with the new email
+      await adminStore.checkAuth()
+      notifications.showSuccess('Email address updated successfully')
+    } else {
+      throw new Error(response.data.message || 'Failed to update email address')
+    }
   } catch (error) {
-    notifications.showError('Failed to update email address. Please check your password and try again.')
+    notifications.showError(error.response?.data?.detail || 'Failed to update email address. Please check your password and try again.')
     console.error('Email update error:', error)
   } finally {
     emailLoading.value = false
@@ -295,20 +313,23 @@ const handlePasswordChange = async () => {
 
   passwordLoading.value = true
   try {
-    // TODO: Implement API call to change password
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+    const response = await adminAPI.changePassword(currentPassword.value, newPassword.value)
     
-    // Clear password fields on success
-    currentPassword.value = ''
-    newPassword.value = ''
-    confirmPassword.value = ''
-    showCurrentPassword.value = false
-    showNewPassword.value = false
-    showConfirmPassword.value = false
-    
-    notifications.showSuccess('Password changed successfully')
+    if (response.success) {
+      // Clear password fields on success
+      currentPassword.value = ''
+      newPassword.value = ''
+      confirmPassword.value = ''
+      showCurrentPassword.value = false
+      showNewPassword.value = false
+      showConfirmPassword.value = false
+      
+      notifications.showSuccess('Password changed successfully')
+    } else {
+      throw new Error(response.data.message || 'Failed to change password')
+    }
   } catch (error) {
-    notifications.showError('Failed to change password. Please check your current password and try again.')
+    notifications.showError(error.response?.data?.detail || 'Failed to change password. Please check your current password and try again.')
     console.error('Password change error:', error)
   } finally {
     passwordLoading.value = false
