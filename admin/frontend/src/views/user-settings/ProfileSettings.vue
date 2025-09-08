@@ -163,6 +163,13 @@
 import { ref, computed, inject, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { adminAPI } from '@/services/api'
+import { 
+  getBasicPasswordRules, 
+  getStrongPasswordRules, 
+  getDisplayNameRules, 
+  getEmailRules, 
+  getPasswordConfirmationRules 
+} from '@/utils/validation'
 
 // Get notification system from parent
 const notifications = inject('notifications')
@@ -204,36 +211,12 @@ const passwordMatchError = computed(() => {
   return newPassword.value !== confirmPassword.value ? 'Passwords do not match' : ''
 })
 
-// Validation rules
-const displayNameRules = [
-  v => !!v || 'Display name is required',
-  v => v.length >= 2 || 'Display name must be at least 2 characters',
-  v => v.length <= 50 || 'Display name must be less than 50 characters'
-]
-
-const emailRules = [
-  v => !!v || 'Email is required',
-  v => /.+@.+\..+/.test(v) || 'Email must be valid'
-]
-
-const passwordRules = [
-  v => !!v || 'Password is required',
-  v => v.length >= 8 || 'Password must be at least 8 characters'
-]
-
-const newPasswordRules = [
-  v => !!v || 'New password is required',
-  v => v.length >= 8 || 'Password must be at least 8 characters',
-  v => /[A-Z]/.test(v) || 'Password must contain at least one uppercase letter',
-  v => /[a-z]/.test(v) || 'Password must contain at least one lowercase letter',
-  v => /[0-9]/.test(v) || 'Password must contain at least one number',
-  v => /[^A-Za-z0-9]/.test(v) || 'Password must contain at least one special character'
-]
-
-const confirmPasswordRules = [
-  v => !!v || 'Please confirm your password',
-  v => v === newPassword.value || 'Passwords do not match'
-]
+// Validation rules using shared utility functions
+const displayNameRules = getDisplayNameRules()
+const emailRules = getEmailRules()
+const passwordRules = getBasicPasswordRules()
+const newPasswordRules = getStrongPasswordRules()
+const confirmPasswordRules = computed(() => getPasswordConfirmationRules(newPassword.value))
 
 // Methods
 const loadUserData = async () => {
@@ -267,7 +250,7 @@ const handleDisplayNameChange = async () => {
       await adminStore.checkAuth()
       notifications.showSuccess('Display name updated successfully')
     } else {
-      throw new Error(response.data.message || 'Failed to update display name')
+      throw new Error(response.message || 'Failed to update display name')
     }
   } catch (error) {
     notifications.showError(error.response?.data?.detail || 'Failed to update display name. Please try again.')
@@ -292,7 +275,7 @@ const handleEmailChange = async () => {
       await adminStore.checkAuth()
       notifications.showSuccess('Email address updated successfully')
     } else {
-      throw new Error(response.data.message || 'Failed to update email address')
+      throw new Error(response.message || 'Failed to update email address')
     }
   } catch (error) {
     notifications.showError(error.response?.data?.detail || 'Failed to update email address. Please check your password and try again.')
@@ -326,7 +309,7 @@ const handlePasswordChange = async () => {
       
       notifications.showSuccess('Password changed successfully')
     } else {
-      throw new Error(response.data.message || 'Failed to change password')
+      throw new Error(response.message || 'Failed to change password')
     }
   } catch (error) {
     notifications.showError(error.response?.data?.detail || 'Failed to change password. Please check your current password and try again.')

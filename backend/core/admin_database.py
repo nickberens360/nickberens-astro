@@ -337,8 +337,6 @@ class AdminDatabaseManager:
         import secrets
         import string
 
-        import bcrypt
-
         # Default credentials (require secure password via env var)
         username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
         password = os.getenv("ADMIN_DEFAULT_PASSWORD")
@@ -376,8 +374,6 @@ class AdminDatabaseManager:
     def _ensure_default_admin_user(self, cursor):
         """Ensure the default admin user exists and has correct password format."""
         import os
-
-        import bcrypt
 
         default_username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin").lower()
         default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
@@ -1716,7 +1712,6 @@ class AdminDatabaseManager:
     def verify_user_password(self, user_id: int, password: str) -> bool:
         """Verify a user's password."""
         try:
-            import bcrypt
 
             with self.get_connection() as conn:
                 cursor = conn.cursor()
