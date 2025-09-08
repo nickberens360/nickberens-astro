@@ -882,6 +882,7 @@ import { useNotifications } from '../composables/useNotifications.js'
 import { format } from 'date-fns'
 import { useUsersStore } from '../stores/users.js'
 import { useAdminStore } from '../stores/admin.js'
+import { getEmailRules, getStrongPasswordRules } from '../utils/validation.js'
 
 const { showSuccess, showError } = useNotifications()
 const usersStore = useUsersStore()
@@ -943,18 +944,12 @@ const usernameRules = [
   v => /^[a-zA-Z0-9_]+$/.test(v) || 'Username can only contain letters, numbers, and underscores'
 ]
 
+// Use shared validation utility functions for consistency
 const emailRules = [
   v => !v || /.+@.+\..+/.test(v) || 'Email must be valid'
 ]
 
-const passwordRules = [
-  v => !!v || 'Password is required',
-  v => (v && v.length >= 8) || 'Password must be at least 8 characters',
-  v => /(?=.*[a-z])/.test(v) || 'Password must contain at least one lowercase letter',
-  v => /(?=.*[A-Z])/.test(v) || 'Password must contain at least one uppercase letter',
-  v => /(?=.*\d)/.test(v) || 'Password must contain at least one number',
-  v => /(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(v) || 'Password must contain at least one special character'
-]
+const passwordRules = getStrongPasswordRules()
 
 const roleRules = [
   v => !!v || 'Role is required'
