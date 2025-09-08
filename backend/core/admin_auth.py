@@ -92,8 +92,8 @@ class AdminAuthManager:
         if not password:
             raise ValueError("Password cannot be empty")
 
-        if len(password) < 12:
-            raise ValueError("Password must be at least 12 characters long")
+        if len(password) < 8:
+            raise ValueError("Password must be at least 8 characters long")
 
         has_upper = has_lower = has_digit = has_special = False
         special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"

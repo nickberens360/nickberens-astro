@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import bcrypt
+
 from .database_utils import get_database_path
 
 logger = logging.getLogger(__name__)
@@ -310,6 +312,9 @@ class AdminDatabaseManager:
                 # Migrate API keys from environment variables if needed
                 self._migrate_api_keys_from_environment(cursor)
 
+                # Add display_name column if it doesn't exist
+                self._add_display_name_column(cursor)
+
                 # Check if we need to create a default admin user
                 cursor.execute("SELECT COUNT(*) FROM admin_users")
                 user_count = cursor.fetchone()[0]
@@ -331,8 +336,6 @@ class AdminDatabaseManager:
         """Create a default admin user."""
         import secrets
         import string
-
-        import bcrypt
 
         # Default credentials (require secure password via env var)
         username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
@@ -371,8 +374,6 @@ class AdminDatabaseManager:
     def _ensure_default_admin_user(self, cursor):
         """Ensure the default admin user exists and has correct password format."""
         import os
-
-        import bcrypt
 
         default_username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin").lower()
         default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
@@ -628,6 +629,21 @@ class AdminDatabaseManager:
 
         except Exception as e:
             logger.error(f"Error in API key migration: {str(e)}", exc_info=True)
+
+    def _add_display_name_column(self, cursor):
+        """Add display_name column to admin_users table if it doesn't exist."""
+        try:
+            # Check if display_name column already exists
+            cursor.execute("PRAGMA table_info(admin_users)")
+            columns = [column[1] for column in cursor.fetchall()]
+
+            if "display_name" not in columns:
+                cursor.execute("ALTER TABLE admin_users ADD COLUMN display_name TEXT")
+                logger.info("Added display_name column to admin_users table")
+            else:
+                logger.info("display_name column already exists in admin_users table")
+        except Exception as e:
+            logger.error(f"Error adding display_name column: {str(e)}", exc_info=True)
 
     # Follow-up category management methods
     def get_followup_categories(self, active_only: bool = True) -> List[Dict]:
@@ -1250,6 +1266,18 @@ class AdminDatabaseManager:
             logger.error(f"Error getting admin user {username}: {str(e)}", exc_info=True)
             return None
 
+    def get_admin_user_by_id(self, user_id: int) -> Optional[Dict]:
+        """Get admin user by ID."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM admin_users WHERE id = ?", (user_id,))
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting admin user by ID {user_id}: {str(e)}", exc_info=True)
+            return None
+
     # Security events and rate limiting helpers used by audit logger and auth flows
     def record_security_event(
         self,
@@ -1361,6 +1389,30 @@ class AdminDatabaseManager:
             logger.error(f"Error getting all admin users: {str(e)}", exc_info=True)
             return []
 
+    def get_admin_users_by_ids(self, user_ids: List[int]) -> Dict[int, Dict]:
+        """Get admin users by their IDs in a single query to prevent N+1 queries."""
+        if not user_ids:
+            return {}
+
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Create placeholders for the IN clause
+                placeholders = ",".join("?" * len(user_ids))
+                cursor.execute(
+                    f"""
+                    SELECT id, username, email, role, is_active, created_at, last_login_at, updated_at
+                    FROM admin_users
+                    WHERE id IN ({placeholders})
+                    """,
+                    user_ids,
+                )
+                # Return as a dictionary keyed by user_id for easy lookup
+                return {row["id"]: dict(row) for row in cursor.fetchall()}
+        except Exception as e:
+            logger.error(f"Error getting admin users by IDs {user_ids}: {str(e)}", exc_info=True)
+            return {}
+
     def deactivate_admin_user(self, user_id: int) -> bool:
         """Deactivate an admin user."""
         try:
@@ -1377,6 +1429,61 @@ class AdminDatabaseManager:
                 return success
         except Exception as e:
             logger.error(f"Error deactivating admin user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def reactivate_admin_user(self, user_id: int) -> bool:
+        """Reactivate a deactivated admin user."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE admin_users SET is_active = 1, updated_at = ? WHERE id = ?", (datetime.now(), user_id)
+                )
+                success = cursor.rowcount > 0
+                if success:
+                    logger.info(f"Reactivated admin user ID: {user_id}")
+                return success
+        except Exception as e:
+            logger.error(f"Error reactivating admin user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def delete_admin_user(self, user_id: int) -> bool:
+        """
+        Permanently delete an admin user account.
+        This action cannot be undone and will remove all user data.
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # First verify the user exists
+                cursor.execute("SELECT username FROM admin_users WHERE id = ?", (user_id,))
+                user = cursor.fetchone()
+                if not user:
+                    logger.warning(f"Attempted to delete non-existent user ID: {user_id}")
+                    return False
+
+                username = user[0]
+
+                # Delete the user's sessions first (foreign key constraint)
+                cursor.execute("DELETE FROM admin_sessions WHERE user_id = ?", (user_id,))
+                deleted_sessions = cursor.rowcount
+
+                # Delete the user account
+                cursor.execute("DELETE FROM admin_users WHERE id = ?", (user_id,))
+                deleted_users = cursor.rowcount
+
+                if deleted_users == 1:
+                    logger.info(
+                        f"Successfully deleted admin user {username} (ID: {user_id}) and {deleted_sessions} associated sessions"
+                    )
+                    return True
+                else:
+                    logger.error(f"Failed to delete admin user {user_id} - no rows affected")
+                    return False
+
+        except Exception as e:
+            logger.error(f"Error deleting admin user {user_id}: {str(e)}", exc_info=True)
             return False
 
     def get_admin_setting(self, setting_key: str) -> Optional[str]:
@@ -1555,6 +1662,69 @@ class AdminDatabaseManager:
         except Exception as e:
             logger.error(f"Error cleaning up old rate limits: {str(e)}", exc_info=True)
             return 0
+
+    def update_user_display_name(self, user_id: int, display_name: str) -> bool:
+        """Update user's display name."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Update the display_name field
+                cursor.execute(
+                    "UPDATE admin_users SET display_name = ?, updated_at = ? WHERE id = ?",
+                    (display_name, datetime.now(), user_id),
+                )
+                if cursor.rowcount == 1:
+                    logger.info(f"Updated display name for user ID {user_id}")
+                    return True
+                else:
+                    logger.warning(f"Failed to update display name for user ID {user_id} - user not found")
+                    return False
+        except Exception as e:
+            logger.error(f"Error updating display name for user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def update_user_email(self, user_id: int, email: str) -> bool:
+        """Update user's email address."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Check if email is already in use by another user
+                cursor.execute("SELECT id FROM admin_users WHERE email = ? AND id != ?", (email, user_id))
+                if cursor.fetchone():
+                    logger.warning(f"Email {email} is already in use by another user")
+                    return False
+
+                # Update the email field
+                cursor.execute(
+                    "UPDATE admin_users SET email = ?, updated_at = ? WHERE id = ?", (email, datetime.now(), user_id)
+                )
+                if cursor.rowcount == 1:
+                    logger.info(f"Updated email for user ID {user_id}")
+                    return True
+                else:
+                    logger.warning(f"Failed to update email for user ID {user_id} - user not found")
+                    return False
+        except Exception as e:
+            logger.error(f"Error updating email for user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def verify_user_password(self, user_id: int, password: str) -> bool:
+        """Verify a user's password."""
+        try:
+
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT password_hash FROM admin_users WHERE id = ?", (user_id,))
+                result = cursor.fetchone()
+                if result:
+                    # Ensure the hash is in bytes format for bcrypt.checkpw
+                    hash_bytes = result[0] if isinstance(result[0], bytes) else result[0].encode("utf-8")
+                    return bcrypt.checkpw(password.encode("utf-8"), hash_bytes)
+                return False
+        except Exception as e:
+            logger.error(f"Error verifying password for user {user_id}: {str(e)}", exc_info=True)
+            return False
 
 
 # Global database manager instance - lazy loaded to prevent circular imports

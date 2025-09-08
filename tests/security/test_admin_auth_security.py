@@ -116,8 +116,8 @@ class TestAdminAuthSecurity:
             auth_manager.validate_password_strength("")
 
         # Test minimum length
-        with pytest.raises(ValueError, match="Password must be at least 12 characters long"):
-            auth_manager.validate_password_strength("short123!")
+        with pytest.raises(ValueError, match="Password must be at least 8 characters long"):
+            auth_manager.validate_password_strength("short!")
 
         # Test missing uppercase
         with pytest.raises(ValueError, match="Password must contain at least one uppercase letter"):

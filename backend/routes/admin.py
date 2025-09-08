@@ -12,13 +12,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import ValidationError
 
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
 from ..core.api_key_manager import api_key_manager
-from ..core.audit_logger import AuditAction, AuditLogger
+from ..core.audit_logger import AuditAction, AuditLogger, audit_logger
 
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
 from ..core.query_data_manager import query_data_manager
@@ -33,6 +35,8 @@ from ..core.settings_schemas import (
 )
 from ..models.admin_models import (
     AdminUser,
+    BulkDeactivateUsersRequest,
+    BulkDeleteUsersRequest,
     BulkQuestionRequest,
     CategoryDeleteRequest,
     ChangePasswordRequest,
@@ -45,6 +49,8 @@ from ..models.admin_models import (
     LoginResponse,
     OverviewStats,
     QueryResponse,
+    UpdateDisplayNameRequest,
+    UpdateEmailRequest,
     UpdateFollowupCategoryRequest,
     UpdateFollowupQuestionRequest,
     UpdateWelcomeQuestionRequest,
@@ -54,6 +60,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize audit logger
 audit_logger = AuditLogger()
+
 
 router = APIRouter()
 
@@ -218,10 +225,13 @@ async def logout(
 @router.get("/auth/me")
 async def get_current_user_info(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
     """Get current authenticated user information (excluding sensitive data)."""
+    # Get full user data including display_name
+    user_info = admin_db_manager.get_admin_user_by_id(session["user_id"])
     user_data = {
         "id": session["user_id"],
         "username": session["username"],
         "email": session.get("email"),
+        "display_name": user_info.get("display_name") if user_info else None,
         "role": session["role"],
         "last_login_at": session.get("last_login_at"),
     }
@@ -321,6 +331,62 @@ async def create_user(
     except Exception as e:
         logger.error(f"Create user error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create user")
+
+
+# User profile endpoints
+@router.put("/user/display-name")
+async def update_display_name(
+    request_data: UpdateDisplayNameRequest, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update current user's display name."""
+    try:
+        user_id = session["user_id"]
+        success = admin_db_manager.update_user_display_name(user_id, request_data.display_name)
+
+        if success:
+            audit_logger.log_action(
+                action=AuditAction.USER_UPDATE,
+                username=session["username"],
+                details={"field": "display_name", "new_value": request_data.display_name},
+            )
+            return {"success": True, "message": "Display name updated successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to update display name")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Display name update error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update display name")
+
+
+@router.put("/user/email")
+async def update_email(
+    request_data: UpdateEmailRequest, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update current user's email address with password verification."""
+    try:
+        user_id = session["user_id"]
+
+        # Verify current password first
+        if not admin_db_manager.verify_user_password(user_id, request_data.password):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+        success = admin_db_manager.update_user_email(user_id, request_data.email)
+
+        if success:
+            audit_logger.log_action(
+                action=AuditAction.USER_UPDATE,
+                username=session["username"],
+                details={"field": "email", "new_value": request_data.email},
+            )
+            return {"success": True, "message": "Email address updated successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to update email address - email may already be in use")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Email update error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update email address")
 
 
 # Stats endpoints
@@ -2448,3 +2514,577 @@ async def update_security_settings(
     except Exception as e:
         logger.error(f"Error updating security settings: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating security settings")
+
+
+# User Management endpoints
+@router.get(
+    "/users",
+    tags=["Admin Management"],
+    summary="Get Admin Users",
+    description="""
+            **Get all admin users with safe information (excluding password hashes).**
+            
+            **Access Control:**
+            - Requires admin authentication
+            - Only users with admin role can access
+            
+            **Returns:**
+            - List of admin users with safe fields only
+            - User creation and last login timestamps
+            - User roles and active status
+            
+            **Security:**
+            - Password hashes are never returned
+            - Audit logged for security monitoring
+            """,
+)
+async def get_admin_users(
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> List[Dict[str, Any]]:
+    """Get all admin users (safe information only)."""
+    try:
+        users = admin_db_manager.get_all_admin_users()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "admin_users", "user_count": len(users)},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return users
+
+    except Exception as e:
+        logger.error(f"Error getting admin users: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching admin users")
+
+
+@router.post(
+    "/users",
+    tags=["Admin Management"],
+    summary="Create Admin User",
+    description="""
+            **Create a new admin user account.**
+            
+            **Requirements:**
+            - Username must be unique
+            - Password must meet security requirements (min 12 characters)
+            - Email is optional but recommended
+            - Role defaults to 'viewer' if not specified
+            
+            **Security:**
+            - Password is securely hashed with bcrypt
+            - Creation is audit logged
+            - Only admin users can create other users
+            """,
+)
+async def create_admin_user(
+    request: Request,
+    user_data: CreateUserRequest,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a new admin user."""
+    try:
+        # Validate password strength using centralized validator
+        try:
+            admin_auth_manager.validate_password_strength(user_data.password)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        # Check if username already exists
+        existing_user = admin_db_manager.get_admin_user(user_data.username)
+        if existing_user:
+            raise HTTPException(status_code=409, detail="Username already exists")
+
+        # Hash password
+        password_bytes = user_data.password.encode("utf-8")
+        password_hash = bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
+
+        # Create user
+        user_id = admin_db_manager.create_admin_user(
+            username=user_data.username,
+            email=user_data.email,
+            password_hash=password_hash,
+            role=user_data.role or "viewer",
+        )
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.USER_CREATE,
+            username=session["username"],
+            details={
+                "resource": "admin_user",
+                "new_user_id": user_id,
+                "new_username": user_data.username,
+                "new_role": user_data.role or "viewer",
+                "created_by": session["user_id"],
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Admin user {user_data.username} created by user {session['user_id']}")
+
+        # Return safe user data (no password hash)
+        new_user = admin_db_manager.get_admin_user(user_data.username)
+        if new_user:
+            # Remove password hash for response
+            safe_user = {k: v for k, v in new_user.items() if k != "password_hash"}
+            return {"success": True, "message": "User created successfully", "user": safe_user}
+        else:
+            return {"success": True, "message": "User created successfully", "user_id": user_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating admin user: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating admin user")
+
+
+@router.put(
+    "/users/{user_id}/deactivate",
+    tags=["Admin Management"],
+    summary="Deactivate Admin User",
+    description="""
+            **Deactivate an admin user account.**
+            
+            **Actions Performed:**
+            - Sets user as inactive
+            - Expires all user sessions immediately
+            - User cannot log in until reactivated
+            
+            **Security:**
+            - Cannot deactivate your own account (prevents lockout)
+            - Action is audit logged
+            - All user sessions are terminated
+            """,
+)
+async def deactivate_admin_user(
+    request: Request,
+    user_id: int,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Deactivate an admin user."""
+    try:
+        # Prevent self-deactivation
+        if user_id == session["user_id"]:
+            raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+
+        # Check if user exists
+        user_info = admin_db_manager.get_admin_user_by_id(user_id)
+        if not user_info:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Deactivate user
+        success = admin_db_manager.deactivate_admin_user(user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to deactivate user")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.USER_DEACTIVATE,
+            username=session["username"],
+            details={
+                "resource": "admin_user",
+                "target_user_id": user_id,
+                "target_username": user_info.get("username"),
+                "deactivated_by": session["user_id"],
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(f"Admin user {user_id} deactivated by user {session['user_id']}")
+
+        return {"success": True, "message": "User deactivated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deactivating admin user: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deactivating admin user")
+
+
+@router.post(
+    "/users/{user_id}/reactivate",
+    tags=["Admin Management"],
+    summary="Reactivate a deactivated admin user",
+    description="""
+            **Reactivate a deactivated admin user account.**
+            
+            **Actions Performed:**
+            - Sets user as active
+            - User can log in again
+            
+            **Security:**
+            - Cannot reactivate your own account (must be active to use this endpoint)
+            - Action is audit logged
+            """,
+)
+async def reactivate_admin_user(
+    user_id: int,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Reactivate a deactivated admin user account."""
+    try:
+        current_user_id = session["user_id"]
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Get user info before reactivation
+        user_info = admin_db_manager.get_admin_user_by_id(user_id)
+        if not user_info:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Check if user is already active
+        if user_info.get("is_active"):
+            raise HTTPException(status_code=400, detail="User is already active")
+
+        # Reactivate the user
+        success = admin_db_manager.reactivate_admin_user(user_id)
+        if success:
+            # Log the action
+            audit_logger.log_action(
+                action=AuditAction.USER_REACTIVATE,
+                username=session["username"],
+                details={
+                    "resource": "admin_user",
+                    "target_user_id": user_id,
+                    "target_username": user_info.get("username"),
+                    "reactivated_by": current_user_id,
+                },
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+            logger.info(f"Admin user {user_id} reactivated by user {current_user_id}")
+            return {"success": True, "message": f"User {user_info.get('username')} reactivated successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to reactivate user")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reactivating admin user: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error reactivating admin user")
+
+
+@router.post(
+    "/users/bulk/deactivate",
+    tags=["Admin Management"],
+    summary="Bulk deactivate admin users",
+    description="""
+            **Deactivate multiple admin users at once.**
+            
+            **Actions Performed:**
+            - Sets users as inactive
+            - Expires all user sessions immediately for each user
+            - Users cannot log in until reactivated
+            
+            **Security:**
+            - Cannot deactivate your own account (prevents lockout)
+            - Action is audit logged for each user
+            - All user sessions are terminated for each deactivated user
+            
+            **Request Format:**
+            ```json
+            {
+                "user_ids": [1, 2, 3]
+            }
+            ```
+            """,
+)
+async def bulk_deactivate_admin_users(
+    bulk_request: BulkDeactivateUsersRequest,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Deactivate multiple admin users at once."""
+    try:
+        user_ids = bulk_request.user_ids
+        current_user_id = session["user_id"]
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Validate request
+        if not user_ids:
+            raise HTTPException(status_code=400, detail="No user IDs provided")
+
+        if len(user_ids) > 50:
+            raise HTTPException(status_code=400, detail="Cannot deactivate more than 50 users at once")
+
+        # Prevent self-deactivation
+        if current_user_id in user_ids:
+            raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+
+        # Verify all users exist before deactivating any (single query to prevent N+1 problem)
+        user_infos = admin_db_manager.get_admin_users_by_ids(user_ids)
+
+        # Check if all requested users were found
+        missing_user_ids = [user_id for user_id in user_ids if user_id not in user_infos]
+        if missing_user_ids:
+            if len(missing_user_ids) == 1:
+                raise HTTPException(status_code=404, detail=f"User with ID {missing_user_ids[0]} not found")
+            else:
+                raise HTTPException(status_code=404, detail=f"Users with IDs {missing_user_ids} not found")
+
+        # Deactivate users
+        successful_deactivations = []
+        failed_deactivations = []
+
+        for user_id in user_ids:
+            try:
+                success = admin_db_manager.deactivate_admin_user(user_id)
+                if success:
+                    successful_deactivations.append(user_id)
+
+                    # Log audit entry for each deactivation
+                    audit_logger.log_action(
+                        action=AuditAction.USER_DEACTIVATE,
+                        username=session["username"],
+                        details={
+                            "resource": "admin_user",
+                            "target_user_id": user_id,
+                            "target_username": user_infos[user_id].get("username"),
+                            "deactivated_by": current_user_id,
+                            "bulk_operation": True,
+                        },
+                        ip_address=client_ip,
+                        user_agent=user_agent,
+                    )
+                else:
+                    failed_deactivations.append(user_id)
+            except Exception as e:
+                logger.error(f"Error deactivating user {user_id}: {str(e)}")
+                failed_deactivations.append(user_id)
+
+        # Log summary
+        logger.info(
+            f"Bulk deactivation completed by user {current_user_id}: "
+            f"{len(successful_deactivations)} successful, {len(failed_deactivations)} failed"
+        )
+
+        # Prepare response
+        response_data = {
+            "success": True,
+            "total_requested": len(user_ids),
+            "successful_deactivations": len(successful_deactivations),
+            "failed_deactivations": len(failed_deactivations),
+            "deactivated_user_ids": successful_deactivations,
+        }
+
+        if failed_deactivations:
+            response_data["failed_user_ids"] = failed_deactivations
+            response_data["message"] = (
+                f"Bulk deactivation partially completed. "
+                f"{len(successful_deactivations)} users deactivated, "
+                f"{len(failed_deactivations)} failed."
+            )
+        else:
+            response_data["message"] = f"Successfully deactivated {len(successful_deactivations)} users"
+
+        return response_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in bulk deactivate admin users: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deactivating admin users")
+
+
+@router.delete(
+    "/users/bulk",
+    summary="Bulk delete admin users",
+    description="Permanently delete multiple admin users at once. This action cannot be undone.",
+)
+async def bulk_delete_admin_users(
+    bulk_request: BulkDeleteUsersRequest,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+):
+    """
+    Permanently delete multiple admin users at once.
+
+    Security restrictions:
+        - Cannot delete your own account (prevents lockout)
+        - Only admin users can delete other users
+        - All deletions are logged for audit purposes
+        - Terminates all sessions for deleted users
+    """
+    try:
+        user_ids = bulk_request.user_ids
+        current_user_id = session["user_id"]
+
+        # Prevent self-deletion to avoid lockout
+        if current_user_id in user_ids:
+            raise HTTPException(status_code=400, detail="Cannot delete your own account in bulk operation")
+
+        # Track successful deletions and failures
+        successful_deletions = []
+        failed_deletions = []
+        audit_entries = []
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Get all users at once to prevent N+1 query problem
+        users_to_delete = admin_db_manager.get_admin_users_by_ids(user_ids)
+
+        # Process each user deletion
+        for user_id in user_ids:
+            try:
+                # Get user info from our batch fetch
+                user_to_delete = users_to_delete.get(user_id)
+                if not user_to_delete:
+                    failed_deletions.append({"user_id": user_id, "error": "User not found"})
+                    continue
+
+                # Permanently delete the user
+                success = admin_db_manager.delete_admin_user(user_id)
+                if not success:
+                    failed_deletions.append(
+                        {
+                            "user_id": user_id,
+                            "username": user_to_delete["username"],
+                            "error": "Failed to delete user from database",
+                        }
+                    )
+                    continue
+
+                # Track successful deletion
+                successful_deletions.append({"user_id": user_id, "username": user_to_delete["username"]})
+
+                # Prepare audit entry
+                audit_entries.append(
+                    {
+                        "deleted_user_id": user_id,
+                        "deleted_username": user_to_delete["username"],
+                    }
+                )
+
+            except Exception as e:
+                failed_deletions.append({"user_id": user_id, "error": f"Unexpected error: {str(e)}"})
+
+        # Log all successful deletions in a single audit entry
+        if successful_deletions:
+            audit_logger.log_action(
+                action=AuditAction.USER_DELETE,
+                username=session["username"],
+                details={
+                    "bulk_operation": True,
+                    "deleted_users": audit_entries,
+                    "deleted_by": current_user_id,
+                    "total_deleted": len(successful_deletions),
+                },
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+
+            logger.info(
+                f"Bulk deletion: {len(successful_deletions)} users deleted by user {current_user_id}. "
+                f"Users: {[d['username'] for d in successful_deletions]}"
+            )
+
+        # Prepare response
+        response_data = {
+            "success": len(failed_deletions) == 0,
+            "total_requested": len(user_ids),
+            "successful_deletions": len(successful_deletions),
+            "failed_deletions": len(failed_deletions),
+        }
+
+        if successful_deletions:
+            response_data["deleted_users"] = [d["username"] for d in successful_deletions]
+
+        if failed_deletions:
+            response_data["failures"] = failed_deletions
+
+        if len(successful_deletions) > 0 and len(failed_deletions) == 0:
+            response_data["message"] = f"Successfully deleted {len(successful_deletions)} user(s)"
+        elif len(successful_deletions) > 0 and len(failed_deletions) > 0:
+            response_data["message"] = (
+                f"Partially completed: {len(successful_deletions)} deleted, {len(failed_deletions)} failed"
+            )
+        else:
+            response_data["message"] = "No users were deleted due to errors"
+
+        return response_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in bulk delete admin users: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error processing bulk delete operation")
+
+
+@router.delete(
+    "/users/{user_id}",
+    summary="Permanently delete admin user",
+    description="Permanently delete an admin user account. This action cannot be undone.",
+    dependencies=[Depends(require_admin_auth)],
+)
+async def delete_admin_user(
+    user_id: int,
+    request: Request,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+):
+    """
+    Permanently delete an admin user account.
+
+    Security restrictions:
+        - Cannot delete your own account (prevents lockout)
+        - Only admin users can delete other users
+        - Action is logged for audit purposes
+        - Terminates all sessions for the deleted user
+    """
+    try:
+        # Prevent self-deletion to avoid lockout
+        if user_id == session["user_id"]:
+            raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+        # Get user info before deletion for audit logging
+        user_to_delete = admin_db_manager.get_admin_user_by_id(user_id)
+        if not user_to_delete:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Permanently delete the user
+        success = admin_db_manager.delete_admin_user(user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete user")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        # Audit log deletion
+        audit_logger.log_action(
+            action=AuditAction.USER_DELETE,
+            username=session["username"],
+            details={
+                "deleted_user_id": user_id,
+                "deleted_username": user_to_delete["username"],
+                "deleted_by": session["user_id"],
+            },
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        logger.info(
+            f"Admin user {user_id} ({user_to_delete['username']}) permanently deleted by user {session['user_id']}"
+        )
+
+        return {"success": True, "message": "User permanently deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting admin user: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error deleting admin user")
