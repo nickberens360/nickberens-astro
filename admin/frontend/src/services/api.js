@@ -38,19 +38,25 @@ class AdminAPI {
         return response.data
       },
       (error) => {
-        if (import.meta.env.DEV) {
+        // Don't log expected 401 errors for auth endpoints (like /auth/me checks)
+        const isAuthEndpoint = error.config?.url?.includes('/auth/')
+        const is401 = error.response?.status === 401
+        
+        if (import.meta.env.DEV && !(isAuthEndpoint && is401)) {
           console.error('API Error:', error.response?.data || error.message)
         }
         
         // Handle common error cases
         if (error.response?.status === 401) {
           // SECURITY FIX: Better authentication state management
-          if (import.meta.env.DEV) {
+          if (import.meta.env.DEV && !isAuthEndpoint) {
             console.debug('Unauthorized access - authentication required')
           }
           
-          // Trigger logout and redirect for authentication errors
-          this.handleAuthenticationError()
+          // Only trigger logout and redirect for non-auth endpoint 401s
+          if (!isAuthEndpoint) {
+            this.handleAuthenticationError()
+          }
         } else if (error.response?.status === 404) {
           if (import.meta.env.DEV) {
             console.error('API endpoint not found')
@@ -306,7 +312,10 @@ class AdminAPI {
     try {
       return await this.client.get('/auth/me')
     } catch (error) {
-      console.error('Failed to get current user:', error)
+      // Don't log 401 errors as they're expected when not authenticated
+      if (error.response?.status !== 401 && import.meta.env.DEV) {
+        console.error('Failed to get current user:', error)
+      }
       throw error
     }
   }
@@ -793,6 +802,15 @@ class AdminAPI {
 
   async reactivateUser(userId) {
     return await this.client.post(`/users/${userId}/reactivate`)
+  }
+
+  // User profile management
+  async updateDisplayName(displayName) {
+    return await this.client.put('/user/display-name', { display_name: displayName })
+  }
+
+  async updateEmail(email, password) {
+    return await this.client.put('/user/email', { email, password })
   }
 
   // Authentication token methods removed - now using HTTPOnly cookies exclusively

@@ -20,7 +20,7 @@ from pydantic import ValidationError
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
 from ..core.api_key_manager import api_key_manager
-from ..core.audit_logger import AuditAction, AuditLogger
+from ..core.audit_logger import AuditAction, AuditLogger, audit_logger
 
 # CSRF protection removed - session-based auth is inherently CSRF-resistant for our use case
 from ..core.query_data_manager import query_data_manager
@@ -49,6 +49,8 @@ from ..models.admin_models import (
     LoginResponse,
     OverviewStats,
     QueryResponse,
+    UpdateDisplayNameRequest,
+    UpdateEmailRequest,
     UpdateFollowupCategoryRequest,
     UpdateFollowupQuestionRequest,
     UpdateWelcomeQuestionRequest,
@@ -223,10 +225,13 @@ async def logout(
 @router.get("/auth/me")
 async def get_current_user_info(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
     """Get current authenticated user information (excluding sensitive data)."""
+    # Get full user data including display_name
+    user_info = admin_db_manager.get_admin_user_by_id(session["user_id"])
     user_data = {
         "id": session["user_id"],
         "username": session["username"],
         "email": session.get("email"),
+        "display_name": user_info.get("display_name") if user_info else None,
         "role": session["role"],
         "last_login_at": session.get("last_login_at"),
     }
@@ -326,6 +331,62 @@ async def create_user(
     except Exception as e:
         logger.error(f"Create user error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create user")
+
+
+# User profile endpoints
+@router.put("/user/display-name")
+async def update_display_name(
+    request_data: UpdateDisplayNameRequest, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update current user's display name."""
+    try:
+        user_id = session["user_id"]
+        success = admin_db_manager.update_user_display_name(user_id, request_data.display_name)
+
+        if success:
+            audit_logger.log_action(
+                action=AuditAction.USER_UPDATE,
+                username=session["username"],
+                details={"field": "display_name", "new_value": request_data.display_name},
+            )
+            return {"success": True, "message": "Display name updated successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to update display name")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Display name update error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update display name")
+
+
+@router.put("/user/email")
+async def update_email(
+    request_data: UpdateEmailRequest, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update current user's email address with password verification."""
+    try:
+        user_id = session["user_id"]
+
+        # Verify current password first
+        if not admin_db_manager.verify_user_password(user_id, request_data.password):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+        success = admin_db_manager.update_user_email(user_id, request_data.email)
+
+        if success:
+            audit_logger.log_action(
+                action=AuditAction.USER_UPDATE,
+                username=session["username"],
+                details={"field": "email", "new_value": request_data.email},
+            )
+            return {"success": True, "message": "Email address updated successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to update email address - email may already be in use")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Email update error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update email address")
 
 
 # Stats endpoints

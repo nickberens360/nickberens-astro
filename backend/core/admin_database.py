@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import bcrypt
+
 from .database_utils import get_database_path
 
 logger = logging.getLogger(__name__)
@@ -310,6 +312,9 @@ class AdminDatabaseManager:
                 # Migrate API keys from environment variables if needed
                 self._migrate_api_keys_from_environment(cursor)
 
+                # Add display_name column if it doesn't exist
+                self._add_display_name_column(cursor)
+
                 # Check if we need to create a default admin user
                 cursor.execute("SELECT COUNT(*) FROM admin_users")
                 user_count = cursor.fetchone()[0]
@@ -331,8 +336,6 @@ class AdminDatabaseManager:
         """Create a default admin user."""
         import secrets
         import string
-
-        import bcrypt
 
         # Default credentials (require secure password via env var)
         username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
@@ -371,8 +374,6 @@ class AdminDatabaseManager:
     def _ensure_default_admin_user(self, cursor):
         """Ensure the default admin user exists and has correct password format."""
         import os
-
-        import bcrypt
 
         default_username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin").lower()
         default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
@@ -628,6 +629,21 @@ class AdminDatabaseManager:
 
         except Exception as e:
             logger.error(f"Error in API key migration: {str(e)}", exc_info=True)
+
+    def _add_display_name_column(self, cursor):
+        """Add display_name column to admin_users table if it doesn't exist."""
+        try:
+            # Check if display_name column already exists
+            cursor.execute("PRAGMA table_info(admin_users)")
+            columns = [column[1] for column in cursor.fetchall()]
+
+            if "display_name" not in columns:
+                cursor.execute("ALTER TABLE admin_users ADD COLUMN display_name TEXT")
+                logger.info("Added display_name column to admin_users table")
+            else:
+                logger.info("display_name column already exists in admin_users table")
+        except Exception as e:
+            logger.error(f"Error adding display_name column: {str(e)}", exc_info=True)
 
     # Follow-up category management methods
     def get_followup_categories(self, active_only: bool = True) -> List[Dict]:
@@ -1646,6 +1662,69 @@ class AdminDatabaseManager:
         except Exception as e:
             logger.error(f"Error cleaning up old rate limits: {str(e)}", exc_info=True)
             return 0
+
+    def update_user_display_name(self, user_id: int, display_name: str) -> bool:
+        """Update user's display name."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Update the display_name field
+                cursor.execute(
+                    "UPDATE admin_users SET display_name = ?, updated_at = ? WHERE id = ?",
+                    (display_name, datetime.now(), user_id),
+                )
+                if cursor.rowcount == 1:
+                    logger.info(f"Updated display name for user ID {user_id}")
+                    return True
+                else:
+                    logger.warning(f"Failed to update display name for user ID {user_id} - user not found")
+                    return False
+        except Exception as e:
+            logger.error(f"Error updating display name for user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def update_user_email(self, user_id: int, email: str) -> bool:
+        """Update user's email address."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Check if email is already in use by another user
+                cursor.execute("SELECT id FROM admin_users WHERE email = ? AND id != ?", (email, user_id))
+                if cursor.fetchone():
+                    logger.warning(f"Email {email} is already in use by another user")
+                    return False
+
+                # Update the email field
+                cursor.execute(
+                    "UPDATE admin_users SET email = ?, updated_at = ? WHERE id = ?", (email, datetime.now(), user_id)
+                )
+                if cursor.rowcount == 1:
+                    logger.info(f"Updated email for user ID {user_id}")
+                    return True
+                else:
+                    logger.warning(f"Failed to update email for user ID {user_id} - user not found")
+                    return False
+        except Exception as e:
+            logger.error(f"Error updating email for user {user_id}: {str(e)}", exc_info=True)
+            return False
+
+    def verify_user_password(self, user_id: int, password: str) -> bool:
+        """Verify a user's password."""
+        try:
+
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT password_hash FROM admin_users WHERE id = ?", (user_id,))
+                result = cursor.fetchone()
+                if result:
+                    # Ensure the hash is in bytes format for bcrypt.checkpw
+                    hash_bytes = result[0] if isinstance(result[0], bytes) else result[0].encode("utf-8")
+                    return bcrypt.checkpw(password.encode("utf-8"), hash_bytes)
+                return False
+        except Exception as e:
+            logger.error(f"Error verifying password for user {user_id}: {str(e)}", exc_info=True)
+            return False
 
 
 # Global database manager instance - lazy loaded to prevent circular imports

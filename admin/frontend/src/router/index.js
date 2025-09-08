@@ -113,6 +113,25 @@ const router = createRouter({
           }
         },
         {
+          path: 'user-settings',
+          name: 'user-settings',
+          component: () => import('@/views/UserSettingsView.vue'),
+          meta: {
+            title: 'User Settings',
+            icon: 'account'
+          },
+          children: [
+            {
+              path: '',
+              name: 'user-settings-profile',
+              component: () => import('@/views/user-settings/ProfileSettings.vue'),
+              meta: {
+                title: 'Profile Settings'
+              }
+            }
+          ]
+        },
+        {
           path: 'change-password',
           name: 'change-password',
           component: () => import('@/views/ChangePassword.vue'),
