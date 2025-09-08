@@ -104,6 +104,180 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
    - warn_unused_configs: true
    - Relaxed settings: no_implicit_optional: false, strict_optional: false
 
+## Backend API Routes
+
+The backend exposes the following REST API endpoints:
+
+### Public Endpoints (No Authentication Required)
+
+#### Health & Status
+- `GET /` - Basic health check (returns status: healthy/degraded)
+- `GET /status` - Detailed system status with rate limits and initialization status
+- `GET /health` - Health check with service validation for load balancers
+- `GET /rate-limits` - AI model rate limit status monitoring
+- `GET /db-paths` - Debug endpoint for database path information
+- `GET /welcome-questions` - Active welcome questions for homepage
+
+#### Main Query API
+- `POST /query` - **Primary endpoint** for AI-powered knowledge queries with streaming responses
+- `GET /default-model` - Get configured default response model for frontend initialization
+
+#### Smart Query Testing (Advanced)
+- `POST /api/smart-query` - Advanced smart query with detailed metadata
+- `GET /api/smart-query/status` - Check unified retriever system status
+- `POST /api/smart-query/analyze` - Analyze query intent without retrieving documents
+
+### Public Knowledge Base (Read-Only)
+- `GET /api/knowledge/documents` - Browse indexed documents (paginated)
+- `GET /api/knowledge/stats` - Knowledge base statistics and metrics
+- `GET /api/knowledge/sources` - List unique content sources
+- `GET /api/knowledge/documents/{document_id}` - Get specific document content
+
+### Admin-Protected Endpoints (Session Authentication Required)
+
+#### Authentication & User Management
+- `POST /admin/api/auth/login` - Admin login with credentials
+- `POST /admin/api/auth/logout` - Admin logout and session cleanup
+- `GET /admin/api/auth/me` - Current user information
+- `POST /admin/api/auth/change-password` - Change user password
+- `POST /admin/api/auth/create-user` - Create new admin user (admin role required)
+- `PUT /admin/api/user/display-name` - Update user display name
+- `PUT /admin/api/user/email` - Update user email address
+
+#### Admin Dashboard Analytics
+- `GET /admin/api/stats/overview` - Overview statistics for dashboard
+- `GET /admin/api/queries` - List queries with filtering and pagination
+- `GET /admin/api/queries/{query_id}` - Get detailed query information
+- `POST /admin/api/queries/{query_id}/feedback` - Update query feedback
+- `GET /admin/api/queries/insights` - Query analytics and insights
+
+#### Performance Monitoring
+- `GET /admin/api/performance/metrics` - Performance metrics with comparison
+- `GET /admin/api/performance/timeline` - Timeline data for performance charts
+- `GET /admin/api/performance/percentiles` - Response time percentiles
+
+#### Knowledge Base Management
+- `GET /admin/api/knowledge/documents` - Indexed documents with management features
+- `GET /admin/api/knowledge/stats` - Knowledge base statistics
+- `GET /admin/api/knowledge/sources` - Content sources with management options
+- `GET /admin/api/knowledge/documents/{document_id}` - Document content
+- `PUT /admin/api/knowledge/sources/{source_path}` - Update source metadata
+- `DELETE /admin/api/knowledge/sources/{source_path}` - Delete source and chunks
+- `GET /admin/api/knowledge/files/{file_path}/content` - Get file content
+- `PUT /admin/api/knowledge/files/{file_path}/content` - Update file content
+- `POST /admin/api/knowledge/upload` - Upload new files to knowledge base
+- `GET /admin/api/knowledge/files` - List files in knowledge directory
+
+#### Content Gap Analysis
+- `GET /admin/api/content/gaps` - Content gaps from analytics
+- `PATCH /admin/api/content/gaps/{gap_id}` - Update content gap status
+- `GET /admin/api/content/popular-topics` - Popular query topics analysis
+- `GET /admin/api/content/sources` - Source usage analytics
+
+#### Settings Management
+
+**System Configuration**
+- `GET /admin/api/settings/system-config` - System-wide configuration settings
+- `PUT /admin/api/settings/system-config` - Update system configuration
+
+**Response Settings**
+- `GET /admin/api/settings/response` - Response model and generation settings
+- `PUT /admin/api/settings/response` - Update response settings
+
+**Query Routing**
+- `GET /admin/api/settings/routing` - Query routing configuration
+- `PUT /admin/api/settings/routing` - Update routing settings
+
+**RAG Configuration**
+- `GET /admin/api/settings/rag-config` - RAG system configuration
+- `PUT /admin/api/settings/rag-config` - Update RAG settings
+
+**Security Settings**
+- `GET /admin/api/settings/security` - Security and rate limiting settings
+- `PUT /admin/api/settings/security` - Update security configuration
+
+**Feature Toggles**
+- `GET /admin/api/settings/features` - Feature flags and toggles
+- `PUT /admin/api/settings/features` - Update feature flags
+
+**API Key Management**
+- `GET /admin/api/settings/api-keys` - List configured API keys
+- `POST /admin/api/settings/api-keys` - Create new API key
+- `PUT /admin/api/settings/api-keys/{key_name}` - Update API key
+- `POST /admin/api/settings/api-keys/{key_name}/toggle` - Enable/disable API key
+- `DELETE /admin/api/settings/api-keys/{key_name}` - Delete API key
+- `POST /admin/api/settings/api-keys/{key_name}/validate` - Validate API key
+- `POST /admin/api/settings/api-keys/migrate-from-env` - Migrate from environment variables
+
+**Follow-up Questions Management**
+- `GET /admin/api/settings/followup` - Follow-up settings configuration
+- `PUT /admin/api/settings/followup` - Update follow-up settings
+- `POST /admin/api/settings/followup/reset` - Reset to default settings
+- `GET /admin/api/settings/followup/categories` - List followup categories
+- `POST /admin/api/settings/followup/categories` - Create new category
+- `PUT /admin/api/settings/followup/categories/{category_id}` - Update category
+- `POST /admin/api/settings/followup/categories/{category_id}/delete` - Delete category with strategy
+- `GET /admin/api/settings/followup/categories/{category_id}/stats` - Category usage statistics
+- `GET /admin/api/settings/followup/questions` - List followup questions
+- `POST /admin/api/settings/followup/questions` - Create new question
+- `PUT /admin/api/settings/followup/questions/{question_id}` - Update question
+- `DELETE /admin/api/settings/followup/questions/{question_id}` - Delete question
+- `POST /admin/api/settings/followup/questions/bulk` - Bulk update questions
+
+**Welcome Questions**
+- `GET /admin/api/settings/welcome/questions` - List welcome questions
+- `POST /admin/api/settings/welcome/questions` - Create welcome question
+- `PUT /admin/api/settings/welcome/questions/{question_id}` - Update welcome question
+- `DELETE /admin/api/settings/welcome/questions/{question_id}` - Delete welcome question
+
+**Settings Cache Management**
+- `GET /admin/api/settings/cache/status` - Settings cache status
+- `POST /admin/api/settings/cache/invalidate` - Invalidate settings cache
+
+#### Security & Monitoring
+- `GET /admin/api/security/alerts` - Security alerts and suspicious activity
+- `GET /admin/api/security/session-stats` - Session security statistics
+- `GET /admin/api/export/csv` - Export query data as CSV
+
+#### System Refresh
+- `POST /admin/api/refresh` - Trigger knowledge base refresh
+- `GET /admin/api/refresh/status` - Check refresh status
+
+#### User Management (Admin Role Required)
+- `GET /admin/api/users` - List all admin users
+- `POST /admin/api/users` - Create new admin user
+- `PUT /admin/api/users/{user_id}/deactivate` - Deactivate user
+- `POST /admin/api/users/{user_id}/reactivate` - Reactivate user
+- `POST /admin/api/users/bulk/deactivate` - Bulk deactivate users
+- `DELETE /admin/api/users/bulk` - Bulk delete users
+- `DELETE /admin/api/users/{user_id}` - Permanently delete user
+
+#### Testing & Debug
+- `POST /admin/api/test/reset-database` - Reset database for testing
+
+### Protected Query Logs (Admin Authentication)
+- `GET /api/query-logs` - View query logs with filtering (rate limited)
+- `GET /api/query-logs/stats` - Query log statistics
+- `DELETE /api/query-logs` - Clear all query logs (destructive)
+- `GET /api/query-logs/download` - Export logs as JSON
+- `GET /api/query-logs/health` - Query logging system health check
+- `GET /api/query-logs/admin` - Web interface for query log management
+
+### Rate Limiting
+Most admin endpoints are rate limited:
+- Authentication: 5 requests/minute
+- Query logs: 60 requests/minute  
+- Stats/performance: 30 requests/minute
+- Settings updates: 10 requests/minute
+- System refresh: 5 requests/minute
+
+### Response Formats
+- **Streaming**: `/query` endpoint supports streaming responses for real-time AI generation
+- **JSON**: All other endpoints return structured JSON responses
+- **Pagination**: List endpoints support limit/offset pagination
+- **Filtering**: Most list endpoints support filtering by date, type, status, etc.
+- **Error Handling**: Consistent HTTP status codes with detailed error messages
+
 ## Smart Retriever Architecture
 
 ### Unified System (NO MANUAL CONFIGURATION NEEDED!)

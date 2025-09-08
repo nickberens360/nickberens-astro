@@ -67,6 +67,48 @@ class AppConfig:
         logger.error("Invalid MAX_RESULTS value. Using default value of 15.")
         MAX_RESULTS = 15
 
+    # RAG Best Practices Configuration - Feature Flags
+    RAG_USE_MMR = os.getenv("RAG_USE_MMR", "false").lower() == "true"
+    RAG_USE_HEADING_SPLITTER = os.getenv("RAG_USE_HEADING_SPLITTER", "false").lower() == "true"
+    RAG_ENABLE_DELETE = os.getenv("RAG_ENABLE_DELETE", "false").lower() == "true"
+    RAG_SAFE_DELETE = os.getenv("RAG_SAFE_DELETE", "true").lower() == "true"
+
+    # RAG Score Threshold (distance - lower is better)
+    try:
+        RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.2"))
+        if RAG_SCORE_THRESHOLD < 0.0 or RAG_SCORE_THRESHOLD > 1.0:
+            logger.error("Invalid RAG_SCORE_THRESHOLD value. Using default value of 0.2.")
+            RAG_SCORE_THRESHOLD = 0.2
+    except ValueError:
+        logger.error("Invalid RAG_SCORE_THRESHOLD value. Using default value of 0.2.")
+        RAG_SCORE_THRESHOLD = 0.2
+
+    # RAG Index Directories
+    RAG_INDEX_DIRS = os.getenv("RAG_INDEX_DIRS", "backend/knowledge,public").split(",")
+    RAG_INDEX_DIRS = [dir.strip() for dir in RAG_INDEX_DIRS if dir.strip()]
+
+    # MMR Configuration
+    try:
+        RAG_MMR_K = int(os.getenv("RAG_MMR_K", "4"))
+        if RAG_MMR_K < 1:
+            RAG_MMR_K = 4
+    except ValueError:
+        RAG_MMR_K = 4
+
+    try:
+        RAG_MMR_FETCH_K = int(os.getenv("RAG_MMR_FETCH_K", "20"))
+        if RAG_MMR_FETCH_K < RAG_MMR_K:
+            RAG_MMR_FETCH_K = max(20, RAG_MMR_K * 2)
+    except ValueError:
+        RAG_MMR_FETCH_K = 20
+
+    try:
+        RAG_MMR_LAMBDA_MULT = float(os.getenv("RAG_MMR_LAMBDA_MULT", "0.5"))
+        if RAG_MMR_LAMBDA_MULT < 0.0 or RAG_MMR_LAMBDA_MULT > 1.0:
+            RAG_MMR_LAMBDA_MULT = 0.5
+    except ValueError:
+        RAG_MMR_LAMBDA_MULT = 0.5
+
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
 
     # Default Statistics Configuration

@@ -104,6 +104,34 @@ const router = createRouter({
           ]
         },
         {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/UsersView.vue'),
+          meta: {
+            title: 'User Management',
+            icon: '$users'
+          }
+        },
+        {
+          path: 'user-settings',
+          name: 'user-settings',
+          component: () => import('@/views/UserSettingsView.vue'),
+          meta: {
+            title: 'User Settings',
+            icon: 'account'
+          },
+          children: [
+            {
+              path: '',
+              name: 'user-settings-profile',
+              component: () => import('@/views/user-settings/ProfileSettings.vue'),
+              meta: {
+                title: 'Profile Settings'
+              }
+            }
+          ]
+        },
+        {
           path: 'change-password',
           name: 'change-password',
           component: () => import('@/views/ChangePassword.vue'),
@@ -121,25 +149,23 @@ const router = createRouter({
             icon: 'settings'
           },
           children: [
+            // Phase 2: 5-Section Organization
             {
-              path: '',
-              name: 'settings-overview',
-              redirect: 'followup'
-            },
-            {
-              path: 'followup',
-              name: 'settings-followup',
-              component: () => import('@/views/settings/FollowupSettings.vue'),
+              path: 'core',
+              name: 'settings-core',
+              component: () => import('@/views/settings/CoreSettings.vue'),
               meta: {
-                title: 'Follow-up Questions'
+                title: 'Core Settings',
+                description: 'LLM models, API keys, and system mode'
               }
             },
             {
-              path: 'welcome',
-              name: 'settings-welcome',
-              component: () => import('@/views/settings/WelcomeSettings.vue'),
+              path: 'search-retrieval',
+              name: 'settings-search-retrieval',
+              component: () => import('@/views/settings/SearchRetrievalSettings.vue'),
               meta: {
-                title: 'Welcome Questions'
+                title: 'Search & Retrieval',
+                description: 'Query routing and RAG configuration'
               }
             },
             {
@@ -147,39 +173,8 @@ const router = createRouter({
               name: 'settings-response',
               component: () => import('@/views/settings/ResponseSettings.vue'),
               meta: {
-                title: 'Response Settings'
-              }
-            },
-            {
-              path: 'routing',
-              name: 'settings-routing',
-              component: () => import('@/views/settings/RoutingSettings.vue'),
-              meta: {
-                title: 'Query Routing'
-              }
-            },
-            {
-              path: 'features',
-              name: 'settings-features',
-              component: () => import('@/views/settings/FeatureSettings.vue'),
-              meta: {
-                title: 'Feature Flags'
-              }
-            },
-            {
-              path: 'api-keys',
-              name: 'settings-api-keys',
-              component: () => import('@/views/settings/ApiKeysSettings.vue'),
-              meta: {
-                title: 'API Keys'
-              }
-            },
-            {
-              path: 'system',
-              name: 'settings-system',
-              component: () => import('@/views/settings/SystemSettings.vue'),
-              meta: {
-                title: 'System Config'
+                title: 'Response Settings',
+                description: 'Response formatting and caching'
               }
             },
             {
@@ -187,7 +182,17 @@ const router = createRouter({
               name: 'settings-security',
               component: () => import('@/views/settings/SecuritySettings.vue'),
               meta: {
-                title: 'Security & Privacy'
+                title: 'Security & Monitoring',
+                description: 'Security settings and analytics'
+              }
+            },
+            {
+              path: 'ux',
+              name: 'settings-ux',
+              component: () => import('@/views/settings/UXSettings.vue'),
+              meta: {
+                title: 'User Experience',
+                description: 'Welcome messages and user-facing features'
               }
             }
           ]

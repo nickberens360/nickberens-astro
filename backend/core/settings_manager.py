@@ -10,14 +10,18 @@ from typing import Any, Dict, Optional, TypeVar
 
 from .admin_database import admin_db_manager
 from .settings_schemas import (
+    CoreSettings,
     FeatureFlags,
     FollowUpSettings,
     QueryRoutingSettings,
+    RagConfigurationSettings,
     ResponseSettings,
+    SearchRetrievalSettings,
     SecuritySettings,
     SettingKeys,
     SystemConfigurationSettings,
     SystemSettings,
+    UXSettings,
 )
 
 logger = logging.getLogger(__name__)
@@ -225,6 +229,111 @@ class SettingsManager:
         """Set security settings in database."""
         return self._set_setting_in_db(SettingKeys.SECURITY_SETTINGS, settings.to_json(), updated_by)
 
+    def get_rag_config_settings(self) -> RagConfigurationSettings:
+        """Get RAG configuration settings with caching."""
+        cached = self.cache.get(SettingKeys.RAG_CONFIG_SETTINGS)
+        if cached:
+            return cached
+
+        # Get from database
+        settings_json = self._get_setting_from_db(SettingKeys.RAG_CONFIG_SETTINGS)
+        if settings_json:
+            settings = RagConfigurationSettings.from_json(settings_json)
+        else:
+            # Return defaults if no settings exist
+            settings = RagConfigurationSettings()
+
+        # Cache the result
+        self.cache.set(SettingKeys.RAG_CONFIG_SETTINGS, settings)
+        return settings
+
+    def set_rag_config_settings(self, settings: RagConfigurationSettings, updated_by: int) -> bool:
+        """Set RAG configuration settings in database."""
+        # Validate settings before saving
+        is_valid, errors = settings.validate()
+        if not is_valid:
+            logger.error(f"Invalid RAG configuration settings: {errors}")
+            return False
+
+        success = self._set_setting_in_db(SettingKeys.RAG_CONFIG_SETTINGS, settings.to_json(), updated_by)
+        if success:
+            # Invalidate cache so next get will fetch fresh data
+            self.cache.invalidate(SettingKeys.RAG_CONFIG_SETTINGS)
+            logger.info("RAG configuration settings updated successfully")
+        return success
+
+    def get_core_settings(self) -> CoreSettings:
+        """Get core settings with caching."""
+        cached = self.cache.get(SettingKeys.CORE_SETTINGS)
+        if cached:
+            return cached
+
+        json_str = self._get_setting_from_db(SettingKeys.CORE_SETTINGS)
+        if json_str:
+            try:
+                settings = CoreSettings.from_json(json_str)
+                self.cache.set(SettingKeys.CORE_SETTINGS, settings)
+                return settings
+            except Exception as e:
+                logger.warning(f"Failed to parse core settings from DB: {e}")
+
+        # Return defaults if no DB value or parse error
+        defaults = CoreSettings()
+        self.cache.set(SettingKeys.CORE_SETTINGS, defaults)
+        return defaults
+
+    def set_core_settings(self, settings: CoreSettings, updated_by: int) -> bool:
+        """Set core settings in database."""
+        return self._set_setting_in_db(SettingKeys.CORE_SETTINGS, settings.to_json(), updated_by)
+
+    def get_ux_settings(self) -> UXSettings:
+        """Get UX settings with caching."""
+        cached = self.cache.get(SettingKeys.UX_SETTINGS)
+        if cached:
+            return cached
+
+        json_str = self._get_setting_from_db(SettingKeys.UX_SETTINGS)
+        if json_str:
+            try:
+                settings = UXSettings.from_json(json_str)
+                self.cache.set(SettingKeys.UX_SETTINGS, settings)
+                return settings
+            except Exception as e:
+                logger.warning(f"Failed to parse UX settings from DB: {e}")
+
+        # Return defaults if no DB value or parse error
+        defaults = UXSettings()
+        self.cache.set(SettingKeys.UX_SETTINGS, defaults)
+        return defaults
+
+    def set_ux_settings(self, settings: UXSettings, updated_by: int) -> bool:
+        """Set UX settings in database."""
+        return self._set_setting_in_db(SettingKeys.UX_SETTINGS, settings.to_json(), updated_by)
+
+    def get_search_retrieval_settings(self) -> SearchRetrievalSettings:
+        """Get search retrieval settings with caching."""
+        cached = self.cache.get(SettingKeys.SEARCH_RETRIEVAL_SETTINGS)
+        if cached:
+            return cached
+
+        json_str = self._get_setting_from_db(SettingKeys.SEARCH_RETRIEVAL_SETTINGS)
+        if json_str:
+            try:
+                settings = SearchRetrievalSettings.from_json(json_str)
+                self.cache.set(SettingKeys.SEARCH_RETRIEVAL_SETTINGS, settings)
+                return settings
+            except Exception as e:
+                logger.warning(f"Failed to parse search retrieval settings from DB: {e}")
+
+        # Return defaults if no DB value or parse error
+        defaults = SearchRetrievalSettings()
+        self.cache.set(SettingKeys.SEARCH_RETRIEVAL_SETTINGS, defaults)
+        return defaults
+
+    def set_search_retrieval_settings(self, settings: SearchRetrievalSettings, updated_by: int) -> bool:
+        """Set search retrieval settings in database."""
+        return self._set_setting_in_db(SettingKeys.SEARCH_RETRIEVAL_SETTINGS, settings.to_json(), updated_by)
+
     def get_all_settings(self) -> SystemSettings:
         """Get all settings as unified SystemSettings object."""
         return SystemSettings(
@@ -250,6 +359,7 @@ class SettingsManager:
             self.get_feature_flags()
             self.get_system_config_settings()
             self.get_security_settings()
+            self.get_rag_config_settings()
             logger.info("Settings cache warmed up successfully")
         except Exception as e:
             logger.error(f"Error warming up settings cache: {e}")
@@ -269,6 +379,7 @@ class SettingsManager:
             SettingKeys.FEATURE_FLAGS,
             SettingKeys.SYSTEM_CONFIG_SETTINGS,
             SettingKeys.SECURITY_SETTINGS,
+            SettingKeys.RAG_CONFIG_SETTINGS,
         ]:
             cached_settings[key] = key in cache_keys
 
@@ -282,6 +393,21 @@ class SettingsManager:
     # Convenience methods for backward compatibility
     def is_feature_enabled(self, feature_name: str) -> bool:
         """Check if a feature flag is enabled."""
+        # Handle consolidated settings that moved to other schemas
+        if feature_name == "enable_analytics":
+            security_settings = self.get_security_settings()
+            return security_settings.enable_analytics
+        elif feature_name == "enable_rate_limiting":
+            security_settings = self.get_security_settings()
+            return security_settings.enable_rate_limiting
+        elif feature_name == "enable_smart_routing":
+            routing_settings = self.get_routing_settings()
+            return routing_settings.enable_smart_routing
+        elif feature_name in ["enable_caching", "enable_response_caching"]:
+            response_settings = self.get_response_settings()
+            return response_settings.enable_caching
+
+        # Check remaining flags in FeatureFlags schema
         features = self.get_feature_flags()
         return getattr(features, feature_name, False)
 

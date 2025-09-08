@@ -13,7 +13,7 @@ sys.path.insert(0, str(project_root))
 
 def main():
     # Set default environment variables
-    os.environ.setdefault("ADMIN_PORT", "8001")
+    os.environ.setdefault("ADMIN_PORT", "8000")
 
     # Admin dashboard uses session-based authentication
     print("🔐 Admin authentication: Session-based (no tokens required)")

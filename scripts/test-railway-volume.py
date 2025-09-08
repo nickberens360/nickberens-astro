@@ -19,7 +19,7 @@ def test_path_access(path: Path) -> bool:
         path.mkdir(parents=True, exist_ok=True)
         test_file = path / ".write_test"
         test_file.write_text("Railway volume test")
-        content = test_file.read_text()
+        test_file.read_text()
         test_file.unlink()
         logger.info(f"✅ Path {path} is writable")
         return True
@@ -85,7 +85,7 @@ def main():
         Path.cwd() / "backend" / "logs",  # Current working directory (EPHEMERAL)
     ]
 
-    test_paths = persistent_paths + ephemeral_paths
+    persistent_paths + ephemeral_paths
 
     persistent_working = []
     ephemeral_working = []

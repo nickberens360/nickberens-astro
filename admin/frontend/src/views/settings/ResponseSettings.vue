@@ -15,6 +15,10 @@
       </v-card-title>
       
       <v-card-text class="pa-0">
+        <v-alert type="info" variant="tonal" class="ma-6 mb-4">
+          This page controls the <strong>chat response</strong> provider, models, and formatting. The <em>processing LLM</em>
+          used for background tasks is configured in <strong>System Settings</strong>.
+        </v-alert>
         <v-alert v-if="store.error" type="error" variant="tonal" class="ma-6 mb-4">
           {{ store.error }}
         </v-alert>
@@ -106,14 +110,20 @@
 
         <v-divider></v-divider>
 
-        <!-- Enable Response Caching Row -->
+        <!-- Caching Section Header -->
+        <div class="section-header">
+          <v-icon color="primary" class="section-icon">$cached</v-icon>
+          <div class="section-title">Response Caching Settings</div>
+        </div>
+
+        <!-- Enable General Caching Row -->
         <div class="response-row">
           <div class="response-content">
             <div class="response-left">
               <v-icon color="primary" class="response-icon">$cached</v-icon>
               <div class="response-info">
-                <div class="response-title text-high-emphasis">Enable Response Caching</div>
-                <div class="response-description text-medium-emphasis">Cache responses to improve performance for repeated queries</div>
+                <div class="response-title text-high-emphasis">Enable Caching</div>
+                <div class="response-description text-medium-emphasis">Master toggle for all response caching functionality</div>
               </div>
             </div>
             <div class="response-right">
@@ -132,14 +142,41 @@
 
         <v-divider></v-divider>
 
-        <!-- Cache TTL Row -->
+        <!-- Enable Response Caching Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$message-text</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Enable Response Caching</div>
+                <div class="response-description text-medium-emphasis">Cache generated responses to improve performance for repeated queries</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-switch
+                v-model="store.settings.enable_response_caching"
+                color="primary"
+                inset
+                hide-details
+                :disabled="!store.settings.enable_caching"
+              />
+              <div class="response-status text-medium-emphasis">
+                {{ store.settings.enable_response_caching ? 'Enabled' : 'Disabled' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Unified Cache TTL Row -->
         <div class="response-row">
           <div class="response-content">
             <div class="response-left">
               <v-icon color="primary" class="response-icon">$clock</v-icon>
               <div class="response-info">
                 <div class="response-title text-high-emphasis">Cache TTL (seconds)</div>
-                <div class="response-description text-medium-emphasis">How long to keep cached responses (60s - 24h)</div>
+                <div class="response-description text-medium-emphasis">Unified cache duration for all response types (60s - 24h)</div>
               </div>
             </div>
             <div class="response-right">
@@ -157,6 +194,194 @@
             </div>
           </div>
         </div>
+
+        <v-divider></v-divider>
+
+        <!-- Response Formatting Section Header -->
+        <div class="section-header">
+          <v-icon color="primary" class="section-icon">$format-text</v-icon>
+          <div class="section-title">Response Formatting</div>
+        </div>
+
+        <!-- Preferred Response Length Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$text-long</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Preferred Response Length</div>
+                <div class="response-description text-medium-emphasis">Default length preference for generated responses</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-select
+                v-model="store.settings.preferred_response_length"
+                :items="responseLengthOptions"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="width: 160px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Response Style Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$format-text</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Response Style</div>
+                <div class="response-description text-medium-emphasis">Tone and style for generated responses</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-select
+                v-model="store.settings.response_style"
+                :items="responseStyleOptions"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="width: 160px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Include Sources Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$link-variant</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Include Sources</div>
+                <div class="response-description text-medium-emphasis">Include source references in generated responses</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-switch
+                v-model="store.settings.include_sources"
+                color="primary"
+                inset
+                hide-details
+              />
+              <div class="response-status text-medium-emphasis">
+                {{ store.settings.include_sources ? 'Enabled' : 'Disabled' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Source Format Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$format-list</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Source Format</div>
+                <div class="response-description text-medium-emphasis">How to display source references</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-select
+                v-model="store.settings.source_format"
+                :items="sourceFormatOptions"
+                variant="outlined"
+                density="compact"
+                hide-details
+                :disabled="!store.settings.include_sources"
+                style="width: 140px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Max Sources Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$numeric</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Max Sources</div>
+                <div class="response-description text-medium-emphasis">Maximum number of sources to include (0-20)</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-text-field
+                v-model.number="store.settings.max_sources"
+                type="number"
+                variant="outlined"
+                density="compact"
+                :min="0"
+                :max="20"
+                :disabled="!store.settings.include_sources"
+                hide-details
+                style="width: 120px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Enable Markdown Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$markdown</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Enable Markdown</div>
+                <div class="response-description text-medium-emphasis">Allow markdown formatting in responses</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-switch
+                v-model="store.settings.enable_markdown"
+                color="primary"
+                inset
+                hide-details
+              />
+              <div class="response-status text-medium-emphasis">
+                {{ store.settings.enable_markdown ? 'Enabled' : 'Disabled' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Enable Code Highlighting Row -->
+        <div class="response-row">
+          <div class="response-content">
+            <div class="response-left">
+              <v-icon color="primary" class="response-icon">$code-braces</v-icon>
+              <div class="response-info">
+                <div class="response-title text-high-emphasis">Enable Code Highlighting</div>
+                <div class="response-description text-medium-emphasis">Enable syntax highlighting for code blocks</div>
+              </div>
+            </div>
+            <div class="response-right">
+              <v-switch
+                v-model="store.settings.enable_code_highlighting"
+                color="primary"
+                inset
+                hide-details
+              />
+              <div class="response-status text-medium-emphasis">
+                {{ store.settings.enable_code_highlighting ? 'Enabled' : 'Disabled' }}
+              </div>
+            </div>
+          </div>
+        </div>
       </v-card-text>
     </v-card>
   </div>
@@ -169,6 +394,27 @@ import { useNotifications } from '@/composables/useNotifications'
 
 const store = useResponseSettingsStore()
 const { showSuccess, showError } = useNotifications()
+
+// Response formatting options
+const responseLengthOptions = [
+  { title: 'Brief', value: 'brief' },
+  { title: 'Medium', value: 'medium' },
+  { title: 'Detailed', value: 'detailed' },
+  { title: 'Comprehensive', value: 'comprehensive' }
+]
+
+const responseStyleOptions = [
+  { title: 'Conversational', value: 'conversational' },
+  { title: 'Professional', value: 'professional' },
+  { title: 'Technical', value: 'technical' },
+  { title: 'Casual', value: 'casual' }
+]
+
+const sourceFormatOptions = [
+  { title: 'Numbered', value: 'numbered' },
+  { title: 'Bulleted', value: 'bulleted' },
+  { title: 'Inline', value: 'inline' }
+]
 
 onMounted(() => {
   store.loadData()
@@ -185,6 +431,25 @@ const saveSettings = async () => {
 </script>
 
 <style scoped>
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 24px 24px 16px 24px;
+  background: rgba(var(--v-theme-primary), 0.04);
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.12);
+}
+
+.section-icon {
+  margin-right: 12px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgb(var(--v-theme-primary));
+}
+
 /* Response Settings Row Layout */
 .response-row {
   padding: 20px 24px;

@@ -550,11 +550,20 @@ class QueryRouter:
 
     async def _keyword_matching_fallback(self, question: str, chat_history: Optional[List[Dict]]) -> Dict[str, Any]:
         """Focus on keyword-based matching."""
+        # Honor SearchRetrievalSettings.enable_fuzzy_matching for keyword fallback behavior
+        try:
+            from .settings_manager import get_settings_manager
+
+            sr_settings = get_settings_manager().get_search_retrieval_settings()
+            fuzzy_enabled = bool(getattr(sr_settings, "enable_fuzzy_matching", True))
+        except Exception:
+            fuzzy_enabled = True
+
         return {
             "strategy": "keyword_matching",
             "query_type": "keyword",
             "search_method": "keyword_only",
-            "use_fuzzy_matching": True,
+            "use_fuzzy_matching": fuzzy_enabled,
             "confidence": 0.4,
             "fallback_applied": True,
         }

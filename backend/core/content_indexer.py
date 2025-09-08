@@ -236,10 +236,26 @@ class ContentIndexer:
                     splitter = splitter_for_ext(file_path.suffix)
                     chunks = splitter.split_documents(docs)
 
-                    # Add rich metadata to each chunk
-                    for chunk in chunks:
+                    # Add rich metadata to each chunk including enhanced RAG metadata
+                    for chunk_index, chunk in enumerate(chunks):
                         base_metadata = self.extract_content_metadata(chunk, file_path)
+
+                        # Add enhanced metadata for RAG best practices
+                        enhanced_metadata = {
+                            "chunk_index": chunk_index,
+                            "chunk_size": len(chunk.page_content),
+                            "file_hash": file_hash,
+                            "total_chunks": len(chunks),
+                        }
+
+                        # Add deterministic chunk ID for better vector store management
+                        file_hash_short = file_hash[:8]
+                        chunk_id = f"{file_hash_short}-c{chunk_index}"
+                        enhanced_metadata["chunk_id"] = chunk_id
+
+                        # Merge all metadata
                         chunk.metadata.update(base_metadata)
+                        chunk.metadata.update(enhanced_metadata)
 
                     all_documents.extend(chunks)
                     files_processed += 1

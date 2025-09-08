@@ -15,6 +15,10 @@
       </v-card-title>
       
       <v-card-text class="pa-0">
+        <v-alert type="info" variant="tonal" class="ma-6 mb-4">
+          Response model selection for chat is managed in <strong>Core Settings → Response Settings</strong>.
+          This page primarily configures the <em>processing LLM</em> used for background tasks (indexing, reformulation).
+        </v-alert>
         <v-alert v-if="error" type="error" variant="tonal" class="ma-6 mb-4">
           {{ error }}
         </v-alert>
@@ -34,14 +38,20 @@
               </div>
             </div>
             <div class="setting-right">
-              <v-select
-                v-model="settings.response_llm"
-                :items="llmOptions"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="width: 160px;"
-              />
+              <div>
+                <v-select
+                  v-model="settings.response_llm"
+                  :items="llmOptions"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 160px;"
+                  :disabled="true"
+                />
+                <div class="text-caption text-medium-emphasis mt-1" style="max-width: 320px;">
+                  This setting is managed in Core Settings → Response Settings and shown here for reference.
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -123,145 +133,6 @@
 
         <v-divider></v-divider>
 
-        <!-- Cache TTL Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$cached</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Cache TTL</div>
-                <div class="setting-description text-medium-emphasis">Cache time-to-live in seconds (60-86400)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model.number="settings.cache_ttl_seconds"
-                type="number"
-                variant="outlined"
-                density="compact"
-                :min="60"
-                :max="86400"
-                hide-details
-                style="width: 120px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Max Cache Size Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$database</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Max Cache Size</div>
-                <div class="setting-description text-medium-emphasis">Maximum number of cache entries (10-10000)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model.number="settings.max_cache_size"
-                type="number"
-                variant="outlined"
-                density="compact"
-                :min="10"
-                :max="10000"
-                hide-details
-                style="width: 120px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Rate Limit Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$timer</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Rate Limit</div>
-                <div class="setting-description text-medium-emphasis">Request rate limiting (e.g., "100/minute")</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model="settings.rate_limit"
-                variant="outlined"
-                density="compact"
-                placeholder="100/minute"
-                hide-details
-                style="width: 140px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Search Similarity Threshold Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$search</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Search Similarity Threshold</div>
-                <div class="setting-description text-medium-emphasis">Minimum similarity for search results (0-100%)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <div class="setting-slider">
-                <v-slider
-                  v-model="searchThresholdPercent"
-                  :min="0"
-                  :max="100"
-                  :step="1"
-                  thumb-label="always"
-                  show-ticks="always"
-                  color="primary"
-                  track-color="grey-lighten-3"
-                  thumb-color="primary"
-                  hide-details
-                  style="width: 200px;"
-                />
-                <div class="setting-value text-medium-emphasis">{{ searchThresholdPercent }}%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Max Search Results Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$format-list-bulleted</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Max Search Results</div>
-                <div class="setting-description text-medium-emphasis">Maximum number of search results (1-100)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model.number="settings.max_search_results"
-                type="number"
-                variant="outlined"
-                density="compact"
-                :min="1"
-                :max="100"
-                hide-details
-                style="width: 120px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
         <!-- Smart Model Selection Row -->
         <div class="setting-row">
           <div class="setting-content">
@@ -309,12 +180,6 @@ const settings = ref({
   processing_claude_model: 'claude-3-haiku-20240307',
   processing_gemini_model: 'gemini-1.5-flash',
   embedding_model: 'models/embedding-001',
-  cache_ttl_seconds: 3600,
-  max_cache_size: 1000,
-  rate_limit: '100/minute',
-  search_similarity_threshold: 0.55,
-  max_search_results: 15,
-  retrieval_score_threshold: 0.3,
   enable_smart_model_selection: true,
   enable_response_smart_selection: true,
   default_search_k: 8,
@@ -348,14 +213,6 @@ const geminiModelOptions = [
   { title: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro' },
   { title: 'Gemini Pro', value: 'gemini-pro' }
 ]
-
-// Convert search threshold to percentage for display
-const searchThresholdPercent = computed({
-  get: () => Math.round(settings.value.search_similarity_threshold * 100),
-  set: (value) => {
-    settings.value.search_similarity_threshold = value / 100
-  }
-})
 
 // Load settings on mount
 const loadSettings = async () => {

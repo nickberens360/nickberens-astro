@@ -77,8 +77,8 @@
             <div class="routing-left">
               <v-icon color="primary" class="routing-icon">$tune</v-icon>
               <div class="routing-info">
-                <div class="routing-title text-high-emphasis">Similarity Threshold</div>
-                <div class="routing-description text-medium-emphasis">Minimum similarity score for matching results</div>
+                <div class="routing-title text-high-emphasis">Search Result Threshold</div>
+                <div class="routing-description text-medium-emphasis">Minimum similarity score required to include results in responses (0.0 = very strict, 1.0 = very inclusive)</div>
               </div>
             </div>
             <div class="routing-right">

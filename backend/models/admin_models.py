@@ -26,6 +26,15 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
+class UpdateDisplayNameRequest(BaseModel):
+    display_name: str = Field(..., min_length=2, max_length=50, description="Display name for the user")
+
+
+class UpdateEmailRequest(BaseModel):
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", description="Valid email address")
+    password: str = Field(..., min_length=1, description="Current password for verification")
+
+
 class CreateUserRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8, max_length=128)
@@ -282,3 +291,11 @@ class UpdateUserRequest(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = Field(None, pattern="^(admin|viewer|owner)$")
     is_active: Optional[bool] = None
+
+
+class BulkDeleteUsersRequest(BaseModel):
+    user_ids: List[int] = Field(..., min_length=1, max_length=50, description="List of user IDs to delete")
+
+
+class BulkDeactivateUsersRequest(BaseModel):
+    user_ids: List[int] = Field(..., min_length=1, max_length=50, description="List of user IDs to deactivate")

@@ -15,6 +15,11 @@
       </v-card-title>
       
       <v-card-text class="pa-0">
+        <v-alert type="info" variant="tonal" class="ma-6 mb-4">
+          Security settings here govern rate limiting, analytics, and logging privacy. <strong>Excluded IPs</strong> and
+          <strong>IP anonymization</strong> now apply to query logging. Feature flags like caching and routing are managed in
+          their respective settings pages.
+        </v-alert>
         <v-alert v-if="error" type="error" variant="tonal" class="ma-6 mb-4">
           {{ error }}
         </v-alert>
@@ -49,14 +54,46 @@
 
         <v-divider></v-divider>
 
+        <!-- Analytics & Monitoring Section Header -->
+        <div class="section-header">
+          <v-icon color="primary" class="section-icon">$chart-line</v-icon>
+          <div class="section-title">Analytics & Monitoring</div>
+        </div>
+
+        <!-- Enable Analytics Row -->
+        <div class="setting-row">
+          <div class="setting-content">
+            <div class="setting-left">
+              <v-icon color="primary" class="setting-icon">$chart-line</v-icon>
+              <div class="setting-info">
+                <div class="setting-title text-high-emphasis">Enable Analytics</div>
+                <div class="setting-description text-medium-emphasis">Collect and analyze system usage statistics and performance metrics</div>
+              </div>
+            </div>
+            <div class="setting-right">
+              <v-switch
+                v-model="settings.enable_analytics"
+                color="primary"
+                inset
+                hide-details
+              />
+              <div class="setting-status text-medium-emphasis">
+                {{ settings.enable_analytics ? 'Enabled' : 'Disabled' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
         <!-- Query Logging Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
               <v-icon color="primary" class="setting-icon">$clipboard-list</v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Query Logging</div>
-                <div class="setting-description text-medium-emphasis">Enable logging of user queries for analytics</div>
+                <div class="setting-title text-high-emphasis">Enable Query Logging</div>
+                <div class="setting-description text-medium-emphasis">Log all user queries for analysis and improvement</div>
               </div>
             </div>
             <div class="setting-right">
@@ -81,8 +118,8 @@
             <div class="setting-left">
               <v-icon color="primary" class="setting-icon">$clock-outline</v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Log Retention Period</div>
-                <div class="setting-description text-medium-emphasis">Number of days to retain query logs (1-365)</div>
+                <div class="setting-title text-high-emphasis">Query Log Retention (Days)</div>
+                <div class="setting-description text-medium-emphasis">Number of days to keep query logs before automatic deletion</div>
               </div>
             </div>
             <div class="setting-right">
@@ -93,9 +130,9 @@
                 density="compact"
                 :min="1"
                 :max="365"
-                suffix="days"
+                :disabled="!settings.enable_query_logging"
                 hide-details
-                style="width: 140px;"
+                style="width: 120px;"
               />
             </div>
           </div>
@@ -183,14 +220,20 @@
 
         <v-divider></v-divider>
 
-        <!-- Rate Limiting Row -->
+        <!-- Rate Limiting & Protection Section Header -->
+        <div class="section-header">
+          <v-icon color="primary" class="section-icon">$shield</v-icon>
+          <div class="section-title">Rate Limiting & Protection</div>
+        </div>
+
+        <!-- Enable Rate Limiting Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
               <v-icon color="primary" class="setting-icon">$speedometer</v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Rate Limiting</div>
-                <div class="setting-description text-medium-emphasis">Enable request rate limiting protection</div>
+                <div class="setting-title text-high-emphasis">Enable Rate Limiting</div>
+                <div class="setting-description text-medium-emphasis">Limit the number of requests to prevent abuse and ensure fair usage</div>
               </div>
             </div>
             <div class="setting-right">
@@ -209,28 +252,55 @@
 
         <v-divider></v-divider>
 
-        <!-- Max Requests Per Minute Row -->
+        <!-- Rate Limit Requests Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$gauge</v-icon>
+              <v-icon color="primary" class="setting-icon">$numeric</v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Request Limit</div>
-                <div class="setting-description text-medium-emphasis">Maximum requests per minute per IP (1-1000)</div>
+                <div class="setting-title text-high-emphasis">Rate Limit Requests</div>
+                <div class="setting-description text-medium-emphasis">Maximum number of requests allowed per time window (1-10000)</div>
               </div>
             </div>
             <div class="setting-right">
               <v-text-field
-                v-model.number="settings.max_requests_per_minute"
+                v-model.number="settings.rate_limit_requests"
                 type="number"
                 variant="outlined"
                 density="compact"
                 :min="1"
-                :max="1000"
-                suffix="req/min"
-                hide-details
-                style="width: 160px;"
+                :max="10000"
                 :disabled="!settings.enable_rate_limiting"
+                hide-details
+                style="width: 120px;"
+              />
+            </div>
+          </div>
+        </div>
+
+        <v-divider></v-divider>
+
+        <!-- Rate Limit Window Row -->
+        <div class="setting-row">
+          <div class="setting-content">
+            <div class="setting-left">
+              <v-icon color="primary" class="setting-icon">$clock-outline</v-icon>
+              <div class="setting-info">
+                <div class="setting-title text-high-emphasis">Rate Limit Window (seconds)</div>
+                <div class="setting-description text-medium-emphasis">Time window for rate limit counting (1-3600 seconds)</div>
+              </div>
+            </div>
+            <div class="setting-right">
+              <v-text-field
+                v-model.number="settings.rate_limit_window"
+                type="number"
+                variant="outlined"
+                density="compact"
+                :min="1"
+                :max="3600"
+                :disabled="!settings.enable_rate_limiting"
+                hide-details
+                style="width: 120px;"
               />
             </div>
           </div>
@@ -264,14 +334,14 @@
 
         <v-divider></v-divider>
 
-        <!-- Low Similarity Threshold Row -->
+        <!-- Low Query Quality Threshold Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
               <v-icon color="primary" class="setting-icon">$alert-circle</v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Low Similarity Threshold</div>
-                <div class="setting-description text-medium-emphasis">Flag queries with similarity below this threshold</div>
+                <div class="setting-title text-high-emphasis">Quality Alert Threshold</div>
+                <div class="setting-description text-medium-emphasis">Flag queries with similarity scores below this threshold for quality monitoring and analysis</div>
               </div>
             </div>
             <div class="setting-right">
@@ -337,14 +407,21 @@ const adminStore = useAdminStore()
 const settings = ref({
   excluded_ips: [],
   anonymize_ips: true,
+  // Analytics & Monitoring (consolidated from FeatureFlags)
+  enable_analytics: true,
   enable_query_logging: true,
-  low_similarity_threshold: 0.7,
+  enable_audit_logging: true,
   query_log_retention_days: 30,
+  // Quality Monitoring
+  low_similarity_threshold: 0.7,
+  // Session Security
   session_timeout_minutes: 480,
   enable_session_fingerprinting: true,
-  enable_audit_logging: true,
+  // Rate Limiting (consolidated from FeatureFlags)
   enable_rate_limiting: true,
-  max_requests_per_minute: 100,
+  rate_limit_requests: 100,
+  rate_limit_window: 60,
+  // Input Validation
   enable_input_validation: true
 })
 
@@ -415,6 +492,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 24px 24px 16px 24px;
+  background: rgba(var(--v-theme-primary), 0.04);
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.12);
+}
+
+.section-icon {
+  margin-right: 12px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgb(var(--v-theme-primary));
+}
+
 /* Settings Row Layout */
 .setting-row {
   padding: 20px 24px;

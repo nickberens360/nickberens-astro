@@ -3,7 +3,7 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import {
   // Navigation & Core
   mdiHome, mdiViewDashboard, mdiMagnify, mdiChartLine, mdiFileDocument,
-  mdiAccountGroup, mdiAccount, mdiMenu, mdiClose, mdiRefresh, mdiExport,
+  mdiAccountGroup, mdiAccount, mdiAccountDetails, mdiMenu, mdiClose, mdiRefresh, mdiExport,
 
   // Actions & Controls
   mdiLock, mdiLockOutline, mdiLockCheck, mdiLogout, mdiFilter, mdiEye,
@@ -16,7 +16,18 @@ import {
   mdiTag, mdiTagOutline, mdiClipboardList, mdiAlertOctagon, mdiReply, mdiRoad,
   mdiFlag, mdiCached, mdiMessageText, mdiKey, mdiImport, mdiShieldCheck, mdiAlertCircle,
   mdiRobot, mdiGoogle, mdiDatabase, mdiTimer, mdiFingerprint, mdiBookOpen,
-  mdiSpeedometer, mdiGauge, mdiIpNetwork, mdiCheckCircleOutline,
+  mdiSpeedometer, mdiGauge, mdiIpNetwork, mdiCheckCircleOutline, mdiShield,
+
+  // User Management Icons
+  mdiAccountPlus, mdiAccountOff, mdiAccountCheck, mdiAccountRemove, mdiEmail, mdiShieldAccount,
+  mdiCloseCircle, mdiAccountHeart,
+
+  // Settings Navigation Icons
+  mdiCogBox, mdiMagnifyScan,
+
+  // Missing Icons - Adding these to fix Vue warnings
+  mdiMessageQuestion, mdiFeatureSearch, mdiWrench, mdiSourceBranch,
+  mdiTextLong, mdiLinkVariant, mdiFormatListNumbered, mdiLanguageMarkdown,
 
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -30,7 +41,10 @@ import {
 
   // Theme & System
   mdiWeatherNight, mdiWhiteBalanceSunny, mdiMemory, mdiChartBar,
-  mdiLightbulbOutline, mdiLightbulb, mdiTableLarge, mdiTestTube
+  mdiLightbulbOutline, mdiLightbulb, mdiTableLarge, mdiTestTube,
+  
+  // New RAG Settings Icons
+  mdiCog as mdiConstructionIcon, mdiDeveloperBoard
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -149,6 +163,17 @@ const iconAliases = {
   'ip-network': mdiIpNetwork,
   'check-circle-outline': mdiCheckCircleOutline,
 
+  // User Management
+  'account-plus': mdiAccountPlus,
+  'account-off': mdiAccountOff,
+  'account-remove': mdiAccountRemove,
+  'account-check': mdiAccountCheck,
+  'account-details': mdiAccountDetails,
+  'account-group': mdiAccountGroup,
+  email: mdiEmail,
+  'shield-account': mdiShieldAccount,
+  'close-circle': mdiCloseCircle,
+
   // Status
   alert: mdiAlert,
   check: mdiCheck,
@@ -166,6 +191,7 @@ const iconAliases = {
 
   // Content types
   info: mdiInformation,
+  information: mdiInformation,
   folder: mdiFolder,
   'list-bulleted': mdiFormatListBulleted,
   description: mdiFileDocument,
@@ -206,7 +232,40 @@ const iconAliases = {
   'bar_chart': mdiChartBar,
   lightbulb: mdiLightbulbOutline,
   recommend: mdiLightbulb,
-  table: mdiTableLarge
+  table: mdiTableLarge,
+
+  // RAG Settings Icons (using existing imports)
+  image: mdiFileDocument,
+  map: mdiMapMarker,
+  bug: mdiAlert,
+  storage: mdiDatabase,
+  'developer-mode': mdiDeveloperBoard,
+  construction: mdiCog,
+  speed: mdiGauge,
+  api: mdiCog,
+  diversity: mdiTune,
+  'format-header': mdiFormatTextVariant,
+  'database-search': mdiMagnify,
+  'folder-search': mdiFolder,
+
+  // Settings Navigation Icons
+  'cog-box': mdiCogBox,
+  'magnify-scan': mdiMagnifyScan,
+  'message-reply': mdiReply,
+  'account-heart': mdiAccountHeart,
+
+  // Missing icon aliases - fix for Vue warnings
+  'message-question': mdiMessageQuestion,
+  'feature-search': mdiFeatureSearch,
+  'wrench': mdiWrench,
+  'source-branch': mdiSourceBranch,
+  'text-long': mdiTextLong,
+  'link-variant': mdiLinkVariant,
+  'format-list': mdiFormatListNumbered,
+  'markdown': mdiLanguageMarkdown,
+  'code-braces': mdiCodeBraces,
+  'chart-line': mdiChartLine,
+  'shield': mdiShield
 }
 
 export default createVuetify({
