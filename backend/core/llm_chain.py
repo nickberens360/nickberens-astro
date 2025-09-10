@@ -647,11 +647,12 @@ class CacheManager:
             cache_components.append("hist_len:0")
 
         # Add model information
-        model_name = model or getattr(config, "CLAUDE_MODEL", "default")
+        from backend.core.config import AppConfig
+
+        model_name = model or getattr(AppConfig, "CLAUDE_MODEL", "default")
         cache_components.append(f"model:{model_name}")
 
         # Add relevant configuration that affects retrieval/generation
-        from backend.core.config import AppConfig
 
         config_hash_parts = [
             f"threshold:{AppConfig.RAG_SCORE_THRESHOLD}",

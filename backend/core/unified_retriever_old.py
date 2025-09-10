@@ -256,7 +256,7 @@ class UnifiedRetriever:
 
         This method provides compatibility with LangChain's retriever interface.
         """
-        return self.semantic_search(query, k, filter_content_types)
+        return self.semantic_search(query=query, k=k, filter_content_types=filter_content_types)
 
     def semantic_search(
         self, query: str, k: int = None, filter_content_types: Optional[List[str]] = None, score_threshold: float = None

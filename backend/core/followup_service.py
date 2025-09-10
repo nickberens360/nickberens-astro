@@ -5,7 +5,9 @@ import threading
 from typing import Dict, List, Optional, Tuple
 
 from .admin_database import admin_db_manager
-from .settings_manager import get_settings_manager
+
+# get_settings_manager no longer needed directly for feature-flag gate
+# Note: settings are fetched via this service's own cache; no direct SettingsManager use here
 from .settings_schemas import FollowUpSettings
 
 logger = logging.getLogger(__name__)
@@ -283,12 +285,7 @@ class FollowUpService:
             A list of follow-up questions.
         """
         try:
-            # Check global feature flag first
-            settings_manager = get_settings_manager()
-            if not settings_manager.is_feature_enabled("enable_followup_questions"):
-                logger.debug("Follow-up questions disabled via feature flag")
-                return []
-
+            # Use only FollowUpSettings.enabled to control feature
             settings = self._get_settings()
 
             # If disabled, return no questions

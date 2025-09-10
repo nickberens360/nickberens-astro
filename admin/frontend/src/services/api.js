@@ -757,47 +757,107 @@ class AdminAPI {
 
   // System Configuration Settings endpoints
   async getSystemConfigSettings() {
-    return await this.client.get('/settings/system-config')
+    try {
+      const response = await this.client.get('/settings/system-config')
+      return response
+    } catch (error) {
+      console.error('Failed to get system config settings:', error)
+      throw error
+    }
   }
 
   async updateSystemConfigSettings(settingsData) {
-    return await this.client.put('/settings/system-config', settingsData)
+    try {
+      const response = await this.client.put('/settings/system-config', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update system config settings:', error)
+      throw error
+    }
   }
 
   // Security Settings endpoints
   async getSecuritySettings() {
-    return await this.client.get('/settings/security')
+    try {
+      const response = await this.client.get('/settings/security')
+      return response
+    } catch (error) {
+      console.error('Failed to get security settings:', error)
+      throw error
+    }
   }
 
   async updateSecuritySettings(settingsData) {
-    return await this.client.put('/settings/security', settingsData)
+    try {
+      const response = await this.client.put('/settings/security', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update security settings:', error)
+      throw error
+    }
   }
 
   // Core Settings endpoints
   async getCoreSettings() {
-    return await this.client.get('/settings/core')
+    try {
+      const response = await this.client.get('/settings/core')
+      return response
+    } catch (error) {
+      console.error('Failed to get core settings:', error)
+      throw error
+    }
   }
 
   async updateCoreSettings(settingsData) {
-    return await this.client.put('/settings/core', settingsData)
+    try {
+      const response = await this.client.put('/settings/core', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update core settings:', error)
+      throw error
+    }
   }
 
   // UX Settings endpoints
   async getUXSettings() {
-    return await this.client.get('/settings/ux')
+    try {
+      const response = await this.client.get('/settings/ux')
+      return response
+    } catch (error) {
+      console.error('Failed to get UX settings:', error)
+      throw error
+    }
   }
 
   async updateUXSettings(settingsData) {
-    return await this.client.put('/settings/ux', settingsData)
+    try {
+      const response = await this.client.put('/settings/ux', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update UX settings:', error)
+      throw error
+    }
   }
 
   // Search Retrieval Settings endpoints
   async getSearchRetrievalSettings() {
-    return await this.client.get('/settings/search-retrieval')
+    try {
+      const response = await this.client.get('/settings/search-retrieval')
+      return response
+    } catch (error) {
+      console.error('Failed to get search retrieval settings:', error)
+      throw error
+    }
   }
 
   async updateSearchRetrievalSettings(settingsData) {
-    return await this.client.put('/settings/search-retrieval', settingsData)
+    try {
+      const response = await this.client.put('/settings/search-retrieval', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update search retrieval settings:', error)
+      throw error
+    }
   }
 
   // User Management endpoints

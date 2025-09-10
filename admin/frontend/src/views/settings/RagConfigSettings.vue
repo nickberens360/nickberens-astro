@@ -211,14 +211,35 @@ import { useNotifications } from '@/composables/useNotifications'
 const store = useRagConfigStore()
 const { showSuccess, showError } = useNotifications()
 
-// Get blog URL based on environment
+// Get blog URL based on environment with validation
 const getBlogUrl = (article = 'understanding-rag-score-thresholds') => {
-  // In production, use the main site domain
-  if (import.meta.env.PROD) {
-    return `https://nickberens.com/blog/${article}`
+  // Validate article parameter
+  if (!article || typeof article !== 'string') {
+    console.warn('Invalid article parameter for getBlogUrl:', article)
+    article = 'understanding-rag-score-thresholds'
   }
-  // In development, use localhost:4321 (Astro dev server)
-  return `http://localhost:4321/blog/${article}`
+  
+  // Sanitize article to prevent invalid URLs
+  const sanitizedArticle = article.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
+  
+  try {
+    // In production, use the main site domain
+    if (import.meta.env.PROD) {
+      const url = `https://nickberens.com/blog/${sanitizedArticle}`
+      new URL(url) // Validate URL format
+      return url
+    }
+    // In development, use localhost:4321 (Astro dev server)
+    const url = `http://localhost:4321/blog/${sanitizedArticle}`
+    new URL(url) // Validate URL format
+    return url
+  } catch (error) {
+    console.error('Failed to generate valid blog URL:', error)
+    // Return a safe fallback URL
+    return import.meta.env.PROD 
+      ? 'https://nickberens.com/blog' 
+      : 'http://localhost:4321/blog'
+  }
 }
 
 onMounted(() => {
