@@ -45,7 +45,7 @@
             </v-btn>
           </div>
         </v-card-title>
-        
+
         <v-card-text>
           <!-- Active Questions List -->
           <div v-if="questions.length > 0">
@@ -97,7 +97,7 @@
               </div>
             </div>
           </div>
-          
+
           <div v-else class="text-center py-8 text-medium-emphasis">
             <v-icon size="48" class="mb-4">$message-question</v-icon>
             <div class="text-h6 mb-2">No Welcome Questions</div>
@@ -108,16 +108,6 @@
               @click="showCreateQuestionDialog"
             >
               Add First Question
-            </v-btn>
-          </div>
-
-          <div class="text-center mt-4">
-            <v-btn
-              variant="outlined"
-              @click="$router.push('/settings/welcome')"
-              prepend-icon="$settings"
-            >
-              Manage All Questions
             </v-btn>
           </div>
         </v-card-text>
@@ -238,67 +228,24 @@
 
           <!-- Categories List -->
           <v-divider class="mb-4"></v-divider>
-          
+
           <div class="pa-6">
             <div class="d-flex justify-space-between align-center mb-4">
               <h3 class="text-h6">Question Categories</h3>
-              <v-btn
-                variant="outlined"
-                size="small"
-                prepend-icon="$settings"
-                @click="openFullFollowupManager"
-              >
-                Manage All
-              </v-btn>
-            </div>
-
-            <div v-if="followupCategories.length > 0">
-              <v-list>
-                <v-list-item
-                  v-for="category in followupCategories.slice(0, 5)"
-                  :key="category.id"
-                  class="px-0"
+              <div class="d-flex align-center">
+                <v-btn
+                  variant="outlined"
+                  size="small"
+                  prepend-icon="$plus"
+                  @click="openCreateFollowupCategoryDialog"
                 >
-                  <template #prepend>
-                    <v-avatar :color="category.is_active ? 'success' : 'grey'" size="24" class="mr-3">
-                      <v-icon size="14" color="white">$tag</v-icon>
-                    </v-avatar>
-                  </template>
-                  
-                  <v-list-item-title>{{ category.name }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ category.question_count || 0 }} questions</v-list-item-subtitle>
-                  
-                  <template #append>
-                    <v-chip
-                      :color="category.is_active ? 'success' : 'grey'"
-                      size="x-small"
-                      variant="tonal"
-                    >
-                      {{ category.is_active ? 'Active' : 'Inactive' }}
-                    </v-chip>
-                  </template>
-                </v-list-item>
-              </v-list>
-              
-              <div v-if="followupCategories.length > 5" class="text-center mt-2">
-                <v-btn variant="text" size="small" @click="openFullFollowupManager">
-                  View {{ followupCategories.length - 5 }} more categories
+                  Create Category
                 </v-btn>
               </div>
             </div>
-            
-            <div v-else class="text-center py-6 text-medium-emphasis">
-              <v-icon size="48" class="mb-3">$help-circle</v-icon>
-              <div class="text-h6 mb-2">No Follow-up Categories</div>
-              <p class="text-body-2 mb-4">Create categories to organize follow-up questions by topic.</p>
-              <v-btn
-                color="primary"
-                prepend-icon="$plus"
-                @click="showCreateFollowupCategoryDialog"
-              >
-                Create First Category
-              </v-btn>
-            </div>
+
+            <!-- Use the full-featured FollowupAccordion for in-place management -->
+            <FollowupAccordion :key="followupKey" @changed="onFollowupChanged" @edit-category="onEditFollowupCategory" />
           </div>
         </v-card-text>
       </v-card>
@@ -309,12 +256,12 @@
           <v-icon color="primary" class="mr-2">$feature-search</v-icon>
           User-Facing Features
         </v-card-title>
-        
+
         <v-card-text class="pa-0">
           <v-alert v-if="featureError" type="error" variant="tonal" class="ma-6 mb-4">
             {{ featureError }}
           </v-alert>
-          
+
           <v-alert v-if="featureSuccess" type="success" variant="tonal" class="ma-6 mb-4">
             {{ featureSuccess }}
           </v-alert>
@@ -354,7 +301,10 @@
                 <v-icon color="primary" class="setting-icon">$wrench</v-icon>
                 <div class="setting-info">
                   <div class="setting-title text-high-emphasis">Enable Query Preprocessing</div>
-                  <div class="setting-description text-medium-emphasis">Enhance user queries with preprocessing and optimization</div>
+                  <div class="setting-description text-medium-emphasis">
+                    Enhance user queries with preprocessing and optimization
+                    <a :href="getBlogUrl('query-preprocessing-security-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -489,6 +439,15 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Create/Edit Follow-up Category Dialog -->
+    <CategoryDialog
+      v-model="showCategoryDialog"
+      :category="editingCategory"
+      :loading="saving"
+      @save="saveFollowupCategory"
+      @cancel="onCancelCategoryDialog"
+    />
   </div>
 </template>
 
@@ -499,6 +458,8 @@ import { useUXSettingsStore } from '@/stores/uxSettings'
 import { useFeatureSettingsStore } from '@/stores/featureSettings'
 import { adminAPI as apiService } from '@/services/api'
 import { format, parseISO } from 'date-fns'
+import FollowupAccordion from '@/components/FollowupAccordion.vue'
+import CategoryDialog from '@/components/CategoryDialog.vue'
 
 const adminStore = useAdminStore()
 const uxStore = useUXSettingsStore()
@@ -509,7 +470,7 @@ const featureStore = useFeatureSettingsStore()
 // Welcome questions state
 const questions = ref([])
 const activeQuestions = computed(() => questions.value.filter(q => q.is_active))
-const sortedQuestions = computed(() => 
+const sortedQuestions = computed(() =>
   [...questions.value].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 )
 
@@ -537,6 +498,9 @@ const serviceTypeOptions = [
 const saving = ref(false)
 const featureError = ref('')
 const featureSuccess = ref('')
+const followupKey = ref(0)
+const showCategoryDialog = ref(false)
+const editingCategory = ref(null)
 
 // Question dialog state
 const showQuestionDialog = ref(false)
@@ -571,17 +535,17 @@ const loadAllSettings = async () => {
   try {
     // Load UX settings through store
     await uxStore.loadData()
-    
+
     // Load feature flags via store
     await featureStore.loadData()
-    
+
     // Load welcome questions
     await loadQuestions()
-    
+
     // Load followup settings and categories
     await loadFollowupSettings()
     await loadFollowupCategories()
-    
+
   } catch (err) {
     console.error('Failed to load settings:', err)
     featureError.value = 'Failed to load settings: ' + (err.response?.data?.detail || err.message)
@@ -593,16 +557,16 @@ const saveAllSettings = async () => {
     saving.value = true
     featureError.value = ''
     featureSuccess.value = ''
-    
+
     // Save feature flags via store
     await featureStore.updateFeatureFlags()
-    
+
     featureSuccess.value = 'User experience settings saved successfully!'
-    
+
     setTimeout(() => {
       featureSuccess.value = ''
     }, 3000)
-    
+
   } catch (err) {
     console.error('Failed to save settings:', err)
     featureError.value = 'Failed to save settings: ' + (err.response?.data?.detail || err.message)
@@ -722,7 +686,7 @@ const loadFollowupCategories = async () => {
     // Use the working getFollowupCategories endpoint directly
     const response = await apiService.getFollowupCategories()
     followupCategories.value = response || []
-    
+
     // Load question counts separately for each category
     for (const category of followupCategories.value) {
       try {
@@ -761,7 +725,7 @@ const openFullFollowupManager = () => {
   // Open the full followup settings in a new tab/modal or navigate to it
   // For now, we could navigate to a dedicated followup route or show info
   featureSuccess.value = 'Full followup manager will open the complete FollowupSettings component'
-  
+
   // TODO: Implement either:
   // 1. Navigate to a dedicated followup route
   // 2. Open the FollowupSettings component in a modal
@@ -771,6 +735,63 @@ const openFullFollowupManager = () => {
 onMounted(() => {
   loadAllSettings()
 })
+
+// Handle FollowupAccordion change events to refresh counts
+const onFollowupChanged = async () => {
+  featureSuccess.value = 'Follow-up questions updated'
+  try {
+    await loadFollowupCategories()
+  } catch (e) {
+    // ignore refresh errors
+  } finally {
+    setTimeout(() => { featureSuccess.value = '' }, 2000)
+  }
+}
+
+// Open create/edit dialogs
+const openCreateFollowupCategoryDialog = () => {
+  editingCategory.value = null
+  showCategoryDialog.value = true
+}
+
+const onEditFollowupCategory = (cat) => {
+  editingCategory.value = cat
+  showCategoryDialog.value = true
+}
+
+// Save handler from CategoryDialog
+const saveFollowupCategory = async (data) => {
+  try {
+    if (data && data.id) {
+      await apiService.updateFollowupCategory(data.id, data)
+    } else {
+      await apiService.createFollowupCategory(data)
+    }
+    showCategoryDialog.value = false
+    editingCategory.value = null
+    // Force reload of FollowupAccordion
+    followupKey.value++
+    await loadFollowupCategories()
+    featureSuccess.value = data && data.id ? 'Category updated' : 'Category created'
+    setTimeout(() => { featureSuccess.value = '' }, 2000)
+  } catch (e) {
+    console.error('Failed to save follow-up category', e)
+    featureError.value = 'Failed to save category: ' + (e.response?.data?.detail || e.message)
+  }
+}
+
+const onCancelCategoryDialog = () => {
+  showCategoryDialog.value = false
+  editingCategory.value = null
+}
+
+// Get blog URL based on environment
+const getBlogUrl = (article = 'understanding-rag-score-thresholds') => {
+  if (import.meta.env.PROD) {
+    return `https://nickberens.com/blog/${article}`
+  }
+  return `http://localhost:4321/blog/${article}`
+}
 </script>
 
 <style scoped>

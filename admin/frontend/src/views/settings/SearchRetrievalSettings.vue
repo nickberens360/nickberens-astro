@@ -48,7 +48,10 @@
                 <v-icon color="primary" class="setting-icon">$brain</v-icon>
                 <div class="setting-info">
                   <div class="setting-title text-high-emphasis">Enable Smart Routing</div>
-                  <div class="setting-description text-medium-emphasis">Use intelligent routing algorithms for query processing and intent analysis</div>
+                  <div class="setting-description text-medium-emphasis">
+                    Use intelligent routing algorithms for query processing and intent analysis
+                    <a :href="getBlogUrl('smart-query-routing-in-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -74,7 +77,10 @@
                 <v-icon color="primary" class="setting-icon">$target</v-icon>
                 <div class="setting-info">
                   <div class="setting-title text-high-emphasis">Enable Fuzzy Matching</div>
-                  <div class="setting-description text-medium-emphasis">Allow approximate string matching for better query results and typo tolerance</div>
+                  <div class="setting-description text-medium-emphasis">
+                    Allow approximate string matching for better query results and typo tolerance
+                    <a :href="getBlogUrl('fuzzy-matching-thresholds-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -100,7 +106,9 @@
                 <v-icon color="primary" class="setting-icon">$tune</v-icon>
                 <div class="setting-info">
                   <div class="setting-title text-high-emphasis">Search Result Threshold</div>
-                  <div class="setting-description text-medium-emphasis">Minimum similarity score required to include results in responses (0.0 = very strict, 1.0 = very inclusive)</div>
+                  <div class="setting-description text-medium-emphasis">Minimum similarity score required to include results in responses (0.0 = very strict, 1.0 = very inclusive)
+                    <a :href="getBlogUrl('calibrating-fuzzy-thresholds')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -133,7 +141,10 @@
                 <v-icon color="primary" class="setting-icon">$numeric</v-icon>
                 <div class="setting-info">
                   <div class="setting-title text-high-emphasis">Max Search Results</div>
-                  <div class="setting-description text-medium-emphasis">Maximum number of search results to return per query</div>
+                  <div class="setting-description text-medium-emphasis">
+                    Maximum number of search results to return per query
+                    <a :href="getBlogUrl('tuning-max-search-results-in-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -160,7 +171,10 @@
                 <v-icon color="primary" class="setting-icon">$tune</v-icon>
                 <div class="setting-info">
                   <div class="setting-title text-high-emphasis">Fuzzy Threshold</div>
-                  <div class="setting-description text-medium-emphasis">Threshold for fuzzy string matching accuracy (lower = more tolerant of typos)</div>
+                  <div class="setting-description text-medium-emphasis">
+                    Threshold for fuzzy string matching accuracy (lower = more tolerant of typos)
+                    <a :href="getBlogUrl('calibrating-fuzzy-thresholds')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
