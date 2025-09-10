@@ -261,34 +261,10 @@
             {{ systemSuccess }}
           </v-alert>
 
-          <!-- Debug Mode Toggle -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon color="warning" class="setting-icon">$bug</v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Debug Mode</div>
-                  <div class="setting-description text-medium-emphasis">Enable detailed logging and debug information</div>
-                </div>
-              </div>
-              <div class="setting-right">
-                <v-switch
-                  v-model="featureFlags.enable_debug_mode"
-                  color="warning"
-                  inset
-                  hide-details
-                />
-                <div class="setting-status text-medium-emphasis">
-                  {{ featureFlags.enable_debug_mode ? 'Enabled' : 'Disabled' }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <v-divider></v-divider>
+          <!-- Debug Mode temporarily hidden -->
 
           <!-- Maintenance Mode Toggle -->
-          <div class="setting-row">
+          <div class="setting-row" v-if="featureStore && featureStore.featureFlags">
             <div class="setting-content">
               <div class="setting-left">
                 <v-icon color="error" class="setting-icon">$wrench</v-icon>
@@ -299,13 +275,14 @@
               </div>
               <div class="setting-right">
                 <v-switch
-                  v-model="featureFlags.enable_maintenance_mode"
+                  v-model="featureStore.featureFlags.enable_maintenance_mode"
+                  @update:model-value="() => featureStore.updateFeatureFlags()"
                   color="error"
                   inset
                   hide-details
                 />
                 <div class="setting-status text-medium-emphasis">
-                  {{ featureFlags.enable_maintenance_mode ? 'Enabled' : 'Disabled' }}
+                  {{ featureStore.featureFlags.enable_maintenance_mode ? 'Enabled' : 'Disabled' }}
                 </div>
               </div>
             </div>
@@ -396,10 +373,12 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { useCoreSettingsStore } from '@/stores/coreSettings'
+import { useFeatureSettingsStore } from '@/stores/featureSettings'
 import { adminAPI as apiService } from '@/services/api'
 
 const adminStore = useAdminStore()
 const coreStore = useCoreSettingsStore()
+const featureStore = useFeatureSettingsStore()
 
 // Reactive state for different settings
 const responseSettings = ref({
@@ -413,10 +392,7 @@ const systemSettings = ref({
   processing_llm: 'claude_haiku'
 })
 
-const featureFlags = ref({
-  enable_debug_mode: false,
-  enable_maintenance_mode: false
-})
+// Feature flags come from centralized store
 
 // Loading and error states
 const loading = ref(false)
@@ -517,11 +493,8 @@ const loadAllSettings = async () => {
       systemSettings.value = { ...systemSettings.value, ...systemData }
     }
     
-    // Load feature flags
-    const featureData = await apiService.getFeatureFlags()
-    if (featureData) {
-      featureFlags.value = { ...featureFlags.value, ...featureData }
-    }
+    // Load feature flags via store
+    await featureStore.loadData()
     
     // Load API keys
     await fetchKeys()
@@ -548,8 +521,8 @@ const saveAllSettings = async () => {
     // Save system settings
     await apiService.updateSystemConfigSettings(systemSettings.value)
     
-    // Save feature flags
-    await apiService.updateFeatureFlags(featureFlags.value)
+    // Save feature flags via store
+    await featureStore.updateFeatureFlags()
     
     modelSuccess.value = 'Core settings saved successfully!'
     systemSuccess.value = 'System mode updated successfully!'

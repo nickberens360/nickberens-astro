@@ -111,7 +111,8 @@ def _get_response_caching_settings() -> tuple[bool, int]:
 
         settings_manager = get_settings_manager()
         rs = settings_manager.get_response_settings()
-        enabled = bool(getattr(rs, "enable_caching", ENABLE_CACHING))
+        # Respect module-level ENABLE_CACHING as a master switch for tests/env overrides
+        enabled = bool(ENABLE_CACHING and getattr(rs, "enable_caching", True))
         ttl = int(getattr(rs, "cache_ttl_seconds", CACHE_TTL))
         # Bound TTL to sane limits as ResponseSettings does
         ttl = max(60, min(86400, ttl))

@@ -2,7 +2,7 @@
   <div>
     <v-card elevation="2">
       <v-card-title class="text-h6 font-weight-bold pa-6 d-flex align-center justify-space-between">
-        <span>Feature Flags & RAG Settings</span>
+        <span>Feature Flags</span>
         <v-btn
           color="primary"
           variant="elevated"
@@ -138,40 +138,24 @@ const formatFeatureName = (key) => {
 
 const getFeatureDescription = (key) => {
   const descriptions = {
-    // Legacy feature flags
-    enable_illustrations: 'Show illustration images in responses',
-    enable_geolocation: 'Use location-based query processing',
-    enable_analytics: 'Collect and analyze usage statistics',
-    enable_debug_logging: 'Enable detailed debug logging',
-    enable_response_caching: 'Cache responses for better performance',
-    enable_query_preprocessing: 'Preprocess queries for better accuracy',
-    enable_followup_questions: 'Generate follow-up questions after responses',
-    enable_smart_routing: 'Use intelligent query routing',
-    enable_caching: 'Enable response and query caching',
     enable_debug_mode: 'Enable debug mode for troubleshooting',
     enable_maintenance_mode: 'Put system in maintenance mode',
-    enable_rate_limiting: 'Enable API rate limiting',
-    enable_api_versioning: 'Enable API versioning support'
+    enable_api_versioning: 'Enable API versioning support',
+    enable_illustrations: 'Show illustration images in responses',
+    enable_geolocation: 'Use location-based query processing',
+    enable_query_preprocessing: 'Preprocess queries for better accuracy'
   }
   return descriptions[key] || 'Feature setting'
 }
 
 const getSettingType = (key) => {
   const types = {
-    // Boolean settings (existing feature flags)
-    enable_illustrations: 'boolean',
-    enable_geolocation: 'boolean', 
-    enable_analytics: 'boolean',
-    enable_debug_logging: 'boolean',
-    enable_response_caching: 'boolean',
-    enable_query_preprocessing: 'boolean',
-    enable_followup_questions: 'boolean',
-    enable_smart_routing: 'boolean',
-    enable_caching: 'boolean',
     enable_debug_mode: 'boolean',
     enable_maintenance_mode: 'boolean',
-    enable_rate_limiting: 'boolean',
-    enable_api_versioning: 'boolean'
+    enable_api_versioning: 'boolean',
+    enable_illustrations: 'boolean',
+    enable_geolocation: 'boolean',
+    enable_query_preprocessing: 'boolean'
   }
   return types[key] || 'boolean'
 }
@@ -188,20 +172,12 @@ const getFieldPlaceholder = (key) => {
 
 const getFeatureIcon = (key) => {
   const icons = {
-    // Legacy feature flags
-    enable_illustrations: '$image',
-    enable_geolocation: '$map',
-    enable_analytics: '$chart',
-    enable_debug_logging: '$bug',
-    enable_response_caching: '$cached',
-    enable_query_preprocessing: '$tune',
-    enable_followup_questions: '$help',
-    enable_smart_routing: '$route',
-    enable_caching: '$storage',
     enable_debug_mode: '$developer-mode',
     enable_maintenance_mode: '$construction',
-    enable_rate_limiting: '$speed',
-    enable_api_versioning: '$api'
+    enable_api_versioning: '$api',
+    enable_illustrations: '$image',
+    enable_geolocation: '$map',
+    enable_query_preprocessing: '$tune'
   }
   return icons[key]
 }
@@ -318,10 +294,8 @@ const saveFeatureFlags = async () => {
 // Only show active and meaningful feature flags managed in FeatureFlags schema
 const filteredKeys = computed(() => {
   const allowed = new Set([
-    'enable_debug_mode',
     'enable_maintenance_mode',
     'enable_api_versioning',
-    'enable_illustrations',
     'enable_geolocation',
     'enable_query_preprocessing'
   ])

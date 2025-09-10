@@ -261,15 +261,20 @@ class AppConfig:
         if not origin or not isinstance(origin, str):
             return False
 
-        # Allow wildcard only in development
+        # Allow wildcard only when not in production
         if origin == "*":
-            env = os.getenv("ENVIRONMENT", "development").lower()
-            if env in ["development", "dev", "local"]:
+            # Determine production dynamically: prefer ENVIRONMENT override for tests, fallback to AppConfig
+            env = os.getenv("ENVIRONMENT")
+            if env is not None:
+                is_prod = env.lower() in ["production", "prod"]
+            else:
+                is_prod = AppConfig.is_production()
+
+            if not is_prod:
                 logger.warning("Wildcard CORS origin allowed in development mode")
                 return True
-            else:
-                logger.error("Wildcard CORS origin not allowed in production")
-                return False
+            logger.error("Wildcard CORS origin not allowed in production")
+            return False
 
         # Basic URL validation
         try:
@@ -285,11 +290,21 @@ class AppConfig:
                 logger.warning(f"Invalid CORS origin scheme: {origin}")
                 return False
 
-            # Enforce HTTPS for production domains (not localhost)
+            # Enforce HTTPS for public domains (allow HTTP for local/private networks)
             netloc_lower = parsed.netloc.lower()
-            if not netloc_lower.startswith("localhost") and not netloc_lower.startswith("127.0.0.1"):
+            host = parsed.hostname or ""
+            is_private_ip = False
+            try:
+                ip_obj = ipaddress.ip_address(host)
+                is_private_ip = ip_obj.is_private or ip_obj.is_loopback
+            except ValueError:
+                # Not an IP address
+                is_private_ip = False
+
+            is_localhost = host.startswith("localhost") or host.startswith("127.0.0.1")
+            if not is_localhost and not is_private_ip:
                 if parsed.scheme != "https":
-                    logger.warning(f"Non-HTTPS origin for production domain: {origin}")
+                    logger.warning(f"Non-HTTPS origin for production/public domain: {origin}")
                     return False
 
             # Check domain format - basic validation
@@ -372,6 +387,11 @@ class AppConfig:
     RATE_LIMIT = os.getenv("RATE_LIMIT", "5/minute")
 
     # Query Logging Configuration
+    @classmethod
+    def is_production(cls) -> bool:
+        """Convenience method for tests to patch production mode."""
+        return cls.IS_PRODUCTION
+
     @classmethod
     def get_excluded_ips(cls) -> List[str]:
         """Get and validate excluded IPs from environment."""

@@ -229,12 +229,22 @@
       </v-menu>
     </v-app-bar>
 
-    <v-main>
+<v-main>
       <v-container
         fluid
         class="ds-p-8"
         style="background-color: rgb(var(--v-theme-background));"
       >
+        <!-- Maintenance Mode Banner -->
+        <v-alert
+          v-if="featureStore && featureStore.featureFlags && featureStore.featureFlags.enable_maintenance_mode"
+          type="warning"
+          variant="tonal"
+          class="mb-4"
+        >
+          <v-icon start>$construction</v-icon>
+          Maintenance mode is enabled. Public endpoints are unavailable. Admins can still access settings here.
+        </v-alert>
         <router-view v-slot="{ Component }">
           <Transition
             name="fade"
@@ -292,6 +302,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { storeToRefs } from 'pinia'
 import { useAdminStore } from '@/stores/admin'
+import { useFeatureSettingsStore } from '@/stores/featureSettings'
 import { formatDate } from '@/types/admin'
 import TimeRangeSelector from '@/components/TimeRangeSelector.vue'
 
@@ -301,6 +312,7 @@ const { mobile } = useDisplay()
 const theme = useTheme()
 
 const adminStore = useAdminStore()
+const featureStore = useFeatureSettingsStore()
 
 // Local state
 const drawer = ref(true)
@@ -495,6 +507,8 @@ onMounted(() => {
   if (mobile.value) {
     drawer.value = false
   }
+  // Load feature flags for maintenance banner
+  featureStore.loadData().catch(() => {})
 })
 
 onUnmounted(() => {

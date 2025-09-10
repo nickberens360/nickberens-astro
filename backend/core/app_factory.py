@@ -57,8 +57,23 @@ else:
 
 
 async def maintenance_mode_middleware(request: Request, call_next):
-    """Middleware to check for maintenance mode feature flag."""
+    """Middleware to check for maintenance mode feature flag with admin bypass and override.
+
+    - Bypasses maintenance for admin routes so admins can log in and toggle it off
+    - Honors FORCE_DISABLE_MAINTENANCE env to immediately disable maintenance checks
+    """
     try:
+        # Allow admin routes during maintenance (so admin can recover)
+        path = request.url.path or ""
+        if path.startswith("/api/admin") or path.startswith("/admin"):
+            return await call_next(request)
+
+        # Emergency override via env var
+        import os
+
+        if os.getenv("FORCE_DISABLE_MAINTENANCE", "false").lower() == "true":
+            return await call_next(request)
+
         settings_manager = get_settings_manager()
         if settings_manager.is_feature_enabled("enable_maintenance_mode"):
             from fastapi.responses import JSONResponse

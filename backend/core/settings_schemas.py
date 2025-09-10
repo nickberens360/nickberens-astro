@@ -18,6 +18,8 @@ class FollowUpSettings:
     enabled: bool = True
     service_type: str = "static"  # static, dynamic, contextual
     max_questions: int = 1
+    # New: threshold (0.1..1.0) to bias follow-up generation relevance
+    relevance_threshold: float = 0.7
     include_technical: bool = True
     include_personal: bool = True
     include_creative: bool = True
@@ -53,6 +55,15 @@ class FollowUpSettings:
 
         # Ensure max_questions is within reasonable bounds
         validated_data["max_questions"] = max(1, min(5, validated_data["max_questions"]))
+
+        # Validate relevance_threshold
+        if not isinstance(validated_data.get("relevance_threshold"), (int, float)):
+            try:
+                validated_data["relevance_threshold"] = float(validated_data.get("relevance_threshold"))
+            except (ValueError, TypeError):
+                validated_data["relevance_threshold"] = defaults.relevance_threshold
+        # Bound to 0.1..1.0
+        validated_data["relevance_threshold"] = max(0.1, min(1.0, float(validated_data["relevance_threshold"])))
 
         # Validate service_type
         valid_service_types = ["static", "dynamic", "contextual"]
@@ -393,6 +404,14 @@ class FeatureFlags:
     enable_debug_mode: bool = False
     enable_maintenance_mode: bool = False
     enable_api_versioning: bool = False
+
+    # Back-compat flags expected by tests/legacy callers (mapped elsewhere at runtime)
+    enable_followup_questions: bool = True
+    enable_smart_routing: bool = True
+    enable_caching: bool = True
+    enable_response_caching: bool = True
+    enable_analytics: bool = True
+    enable_rate_limiting: bool = True
 
     # User Experience flags
     enable_illustrations: bool = True

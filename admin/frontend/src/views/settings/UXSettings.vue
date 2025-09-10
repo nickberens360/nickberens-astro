@@ -21,7 +21,7 @@
 
     <div class="grid-container">
       <!-- Welcome Questions Management Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card elevation="2" class="mb-6" v-if="featureStore && featureStore.featureFlags">
         <v-card-title class="text-h6 font-weight-bold pa-6 d-flex justify-space-between align-center">
           <div class="d-flex align-center">
             <v-icon color="primary" class="mr-2">$message-question</v-icon>
@@ -319,31 +319,7 @@
             {{ featureSuccess }}
           </v-alert>
 
-          <!-- Enable Illustrations Row -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$image</v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Enable Illustrations</div>
-                  <div class="setting-description text-medium-emphasis">Show relevant illustrations and images with responses</div>
-                </div>
-              </div>
-              <div class="setting-right">
-                <v-switch
-                  v-model="featureFlags.enable_illustrations"
-                  color="primary"
-                  inset
-                  hide-details
-                />
-                <div class="setting-status text-medium-emphasis">
-                  {{ featureFlags.enable_illustrations ? 'Enabled' : 'Disabled' }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <v-divider></v-divider>
+          <!-- Enable Illustrations Row hidden for now -->
 
           <!-- Enable Geolocation Row -->
           <div class="setting-row">
@@ -357,13 +333,13 @@
               </div>
               <div class="setting-right">
                 <v-switch
-                  v-model="featureFlags.enable_geolocation"
+                  v-model="featureStore.featureFlags.enable_geolocation"
                   color="primary"
                   inset
                   hide-details
                 />
                 <div class="setting-status text-medium-emphasis">
-                  {{ featureFlags.enable_geolocation ? 'Enabled' : 'Disabled' }}
+                  {{ featureStore.featureFlags.enable_geolocation ? 'Enabled' : 'Disabled' }}
                 </div>
               </div>
             </div>
@@ -383,13 +359,13 @@
               </div>
               <div class="setting-right">
                 <v-switch
-                  v-model="featureFlags.enable_query_preprocessing"
+                  v-model="featureStore.featureFlags.enable_query_preprocessing"
                   color="primary"
                   inset
                   hide-details
                 />
                 <div class="setting-status text-medium-emphasis">
-                  {{ featureFlags.enable_query_preprocessing ? 'Enabled' : 'Disabled' }}
+                  {{ featureStore.featureFlags.enable_query_preprocessing ? 'Enabled' : 'Disabled' }}
                 </div>
               </div>
             </div>
@@ -409,13 +385,13 @@
               </div>
               <div class="setting-right">
                 <v-switch
-                  v-model="featureFlags.enable_api_versioning"
+                  v-model="featureStore.featureFlags.enable_api_versioning"
                   color="primary"
                   inset
                   hide-details
                 />
                 <div class="setting-status text-medium-emphasis">
-                  {{ featureFlags.enable_api_versioning ? 'Enabled' : 'Disabled' }}
+                  {{ featureStore.featureFlags.enable_api_versioning ? 'Enabled' : 'Disabled' }}
                 </div>
               </div>
             </div>
@@ -520,19 +496,15 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { useUXSettingsStore } from '@/stores/uxSettings'
+import { useFeatureSettingsStore } from '@/stores/featureSettings'
 import { adminAPI as apiService } from '@/services/api'
 import { format, parseISO } from 'date-fns'
 
 const adminStore = useAdminStore()
 const uxStore = useUXSettingsStore()
+const featureStore = useFeatureSettingsStore()
 
-// Reactive state for features
-const featureFlags = ref({
-  enable_illustrations: true,
-  enable_geolocation: true,
-  enable_query_preprocessing: true,
-  enable_api_versioning: false
-})
+// Feature flags come from centralized store
 
 // Welcome questions state
 const questions = ref([])
@@ -600,11 +572,8 @@ const loadAllSettings = async () => {
     // Load UX settings through store
     await uxStore.loadData()
     
-    // Load feature flags
-    const featureData = await apiService.getFeatureFlags()
-    if (featureData) {
-      featureFlags.value = { ...featureFlags.value, ...featureData }
-    }
+    // Load feature flags via store
+    await featureStore.loadData()
     
     // Load welcome questions
     await loadQuestions()
@@ -625,8 +594,8 @@ const saveAllSettings = async () => {
     featureError.value = ''
     featureSuccess.value = ''
     
-    // Save feature flags
-    await apiService.updateFeatureFlags(featureFlags.value)
+    // Save feature flags via store
+    await featureStore.updateFeatureFlags()
     
     featureSuccess.value = 'User experience settings saved successfully!'
     
