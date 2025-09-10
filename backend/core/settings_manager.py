@@ -400,6 +400,11 @@ class SettingsManager:
         elif feature_name == "enable_rate_limiting":
             security_settings = self.get_security_settings()
             return security_settings.enable_rate_limiting
+        elif feature_name == "enable_followup_questions":
+            # Follow-up questions are controlled by FollowUpSettings.enabled
+            # Keep this mapping here so callers using the old feature flag continue to work
+            followup_settings = self.get_followup_settings()
+            return followup_settings.enabled
         elif feature_name == "enable_smart_routing":
             routing_settings = self.get_routing_settings()
             return routing_settings.enable_smart_routing
