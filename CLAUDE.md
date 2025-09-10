@@ -108,21 +108,25 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 
 The backend exposes the following REST API endpoints:
 
-> **Note**: Some legacy endpoints use mixed route patterns (root level vs `/api/` prefixed). Future development should standardize all public endpoints under `/api/` prefix for consistency.
+> Note: Public endpoints are standardized under the `/api/` prefix. Root-level variants remain as temporary aliases for compatibility and will be deprecated.
 
 ### Public Endpoints (No Authentication Required)
 
 #### Health & Status
-- `GET /` - Basic health check (returns status: healthy/degraded)
-- `GET /status` - Detailed system status with rate limits and initialization status
-- `GET /health` - Health check with service validation for load balancers
-- `GET /rate-limits` - AI model rate limit status monitoring
-- `GET /db-paths` - Debug endpoint for database path information
-- `GET /welcome-questions` - Active welcome questions for homepage
+- `GET /api/` - Basic health check (alias of `/api/health`)
+- `GET /api/status` - Detailed system status with rate limits and initialization status
+- `GET /api/health` - Health check with service validation for load balancers
+- `GET /api/rate-limits` - AI model rate limit status monitoring
+- `GET /api/db-paths` - Debug endpoint for database path information
+- `GET /api/welcome-questions` - Active welcome questions for homepage
+
+Legacy aliases (temporary): `GET /`, `/status`, `/health`, `/rate-limits`, `/db-paths`, `/welcome-questions`.
 
 #### Main Query API
-- `POST /query` - **Primary endpoint** for AI-powered knowledge queries with streaming responses
-- `GET /default-model` - Get configured default response model for frontend initialization
+- `POST /api/query` - Primary endpoint for AI-powered knowledge queries with streaming responses
+- `GET /api/default-model` - Get configured default response model for frontend initialization
+
+Legacy aliases (temporary): `POST /query`, `GET /default-model`.
 
 #### Smart Query Testing (Advanced)
 - `POST /api/smart-query` - Advanced smart query with detailed metadata
@@ -138,25 +142,28 @@ The backend exposes the following REST API endpoints:
 ### Admin-Protected Endpoints (Session Authentication Required)
 
 #### Authentication & User Management
-- `POST /admin/api/auth/login` - Admin login with credentials
-- `POST /admin/api/auth/logout` - Admin logout and session cleanup
-- `GET /admin/api/auth/me` - Current user information
-- `POST /admin/api/auth/change-password` - Change user password
-- `POST /admin/api/auth/create-user` - Create new admin user (admin role required)
-- `PUT /admin/api/user/display-name` - Update user display name
-- `PUT /admin/api/user/email` - Update user email address
+- `POST /api/admin/auth/login` - Admin login with credentials
+- `POST /api/admin/auth/logout` - Admin logout and session cleanup
+- `GET /api/admin/auth/me` - Current user information
+- `POST /api/admin/auth/change-password` - Change user password
+- `POST /api/admin/auth/create-user` - Create new admin user (admin role required)
+- `PUT /api/admin/user/display-name` - Update user display name
+- `PUT /api/admin/user/email` - Update user email address
 
 #### Admin Dashboard Analytics
-- `GET /admin/api/stats/overview` - Overview statistics for dashboard
-- `GET /admin/api/queries` - List queries with filtering and pagination
-- `GET /admin/api/queries/{query_id}` - Get detailed query information
-- `POST /admin/api/queries/{query_id}/feedback` - Update query feedback
-- `GET /admin/api/queries/insights` - Query analytics and insights
+- `GET /api/admin/stats/overview` - Overview statistics for dashboard
+- `GET /api/admin/queries` - List queries with filtering and pagination
+- `GET /api/admin/queries/{query_id}` - Get detailed query information
+- `POST /api/admin/queries/{query_id}/feedback` - Update query feedback
+- `GET /api/admin/queries/insights` - Query analytics and insights
 
 #### Performance Monitoring
-- `GET /admin/api/performance/metrics` - Performance metrics with comparison
-- `GET /admin/api/performance/timeline` - Timeline data for performance charts
-- `GET /admin/api/performance/percentiles` - Response time percentiles
+- `GET /api/admin/performance/metrics` - Performance metrics with comparison
+- `GET /api/admin/performance/timeline` - Timeline data for performance charts
+- `GET /api/admin/performance/percentiles` - Response time percentiles
+
+#### Deprecation Notice
+- Root-level public endpoints and `/api/public/*` are deprecated and will be removed in a future release. Use `/api/*`.
 
 #### Knowledge Base Management
 - `GET /admin/api/knowledge/documents` - Indexed documents with management features

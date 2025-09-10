@@ -255,16 +255,51 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
         stats,
     )
 
-    # Core public routes (no prefix)
-    app.include_router(health.router)
-    app.include_router(query.router)
+    # Core public routes (no prefix) — kept as temporary aliases (hidden from schema)
+    app.include_router(health.router, include_in_schema=False)
+    app.include_router(query.router, include_in_schema=False)
 
-    # Public API routes
-    app.include_router(smart_query.router, prefix="/api/public")
-    app.include_router(content.router, prefix="/api/public")
-    app.include_router(stats.router, prefix="/api/public")
-    app.include_router(performance.router, prefix="/api/public")
-    app.include_router(knowledge_public.router, prefix="/api/public")
+    # Standardized public routes under /api
+    app.include_router(health.router, prefix="/api")
+    app.include_router(query.router, prefix="/api")
+
+    # Public API routes — serve under /api (new standard) and keep /api/public as compatibility alias
+    app.include_router(smart_query.router, prefix="/api")
+    app.include_router(content.router, prefix="/api")
+    app.include_router(stats.router, prefix="/api")
+    app.include_router(performance.router, prefix="/api")
+    app.include_router(knowledge_public.router, prefix="/api")
+
+    # Backward-compatible aliases for one deprecation cycle (hidden from schema)
+    app.include_router(smart_query.router, prefix="/api/public", include_in_schema=False)
+    app.include_router(content.router, prefix="/api/public", include_in_schema=False)
+    app.include_router(stats.router, prefix="/api/public", include_in_schema=False)
+    app.include_router(performance.router, prefix="/api/public", include_in_schema=False)
+    app.include_router(knowledge_public.router, prefix="/api/public", include_in_schema=False)
+
+    # Add deprecation headers for legacy paths
+    @app.middleware("http")
+    async def legacy_deprecation_middleware(request: Request, call_next):
+        response = await call_next(request)
+        try:
+            path = request.url.path or ""
+            legacy_paths = {
+                "/",
+                "/status",
+                "/health",
+                "/rate-limits",
+                "/db-paths",
+                "/welcome-questions",
+                "/query",
+                "/default-model",
+            }
+            if path in legacy_paths or path.startswith("/api/public/"):
+                response.headers["Deprecation"] = "true"
+                response.headers["Link"] = '</docs/api-routing-standardization-plan.md>; rel="deprecation"'
+        except Exception:
+            # Best-effort; never block requests on header injection
+            pass
+        return response
 
     # Admin API routes - consolidated under /api/admin
     app.include_router(admin.router, prefix="/api/admin")

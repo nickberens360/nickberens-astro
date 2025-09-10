@@ -40,7 +40,8 @@
               <v-avatar size="28" color="primary" variant="tonal" class="mr-3">
                 <v-icon size="16">$tag</v-icon>
               </v-avatar>
-              <v-checkbox
+<!-- TODO: enable  once integrated
+             <v-checkbox
                 v-model="selectedCategories"
                 :value="cat.id"
                 hide-details
@@ -48,7 +49,7 @@
                 class="mr-3 category-checkbox"
                 @click.stop
                 @update:model-value="emitSelectedCategories"
-              />
+              />-->
               <div class="category-info">
                 <div class="category-name font-weight-medium">{{ cat.display_name }}</div>
                 <div class="category-meta text-caption text-medium-emphasis mt-1">
@@ -185,8 +186,6 @@
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
-
-    <div class="ds-mt-4 ds-text-xs text-medium-emphasis">Model: {{ model }}</div>
 
     <!-- Add/Edit Dialog -->
     <v-dialog v-model="showDialog" max-width="580px">
