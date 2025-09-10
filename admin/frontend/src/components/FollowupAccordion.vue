@@ -689,9 +689,7 @@ defineExpose({
 .add-question-section {
   border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
-</style>
 
-<style scoped>
 /* Clean category title */
 .category-title-clean {
   padding: 16px 20px;
@@ -716,15 +714,7 @@ defineExpose({
   gap: 8px;
 }
 
-.inactive-indicator {
-  color: rgb(var(--v-theme-warning));
-  font-weight: 600;
-  background: rgba(var(--v-theme-warning), 0.12);
-  padding: 1px 8px;
-  border-radius: 6px;
-}
-
-/* Hover-revealed category actions */
+/* Category actions are always visible */
 .category-actions {
   opacity: 1;
   transition: opacity 0.2s ease;
@@ -742,17 +732,28 @@ defineExpose({
   margin-right: 12px !important;
 }
 
-/* Question panel content */
-.question-panel-content {
-  padding: 20px !important;
-  /*background: rgba(var(--v-theme-surface), 0.2) !important;*/
+/* Enhanced inactive indicator styling */
+.inactive-indicator {
+  color: rgb(var(--v-theme-warning));
+  font-weight: 600;
+  background: rgba(var(--v-theme-warning), 0.12);
+  padding: 1px 8px;
+  border-radius: 6px;
 }
 
+/* Question panel content - consolidated styling */
+.question-panel-content {
+  background: rgba(var(--v-theme-surface-variant), 0.02);
+  border-left: 2px solid rgba(var(--v-theme-primary), 0.18);
+  padding: 20px !important;
+}
+
+/* Enhanced empty questions styling */
 .empty-questions {
   padding: 24px 0;
+  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
 }
-
-/* Remove duplicate question styles overridden above to ensure consistent padding and right-aligned actions */
 
 /* Visual hierarchy improvements */
 .v-expansion-panels {

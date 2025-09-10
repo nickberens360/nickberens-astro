@@ -85,7 +85,7 @@ def main():
         Path.cwd() / "backend" / "logs",  # Current working directory (EPHEMERAL)
     ]
 
-    persistent_paths + ephemeral_paths
+    test_paths = persistent_paths + ephemeral_paths
 
     persistent_working = []
     ephemeral_working = []

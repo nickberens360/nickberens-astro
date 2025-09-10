@@ -508,7 +508,7 @@ onMounted(() => {
     drawer.value = false
   }
   // Load feature flags for maintenance banner
-  featureStore.loadData().catch(() => {})
+  featureStore.loadData().catch(error => console.error('Failed to load feature flags:', error))
 })
 
 onUnmounted(() => {

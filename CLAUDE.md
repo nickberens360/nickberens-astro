@@ -108,6 +108,8 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 
 The backend exposes the following REST API endpoints:
 
+> **Note**: Some legacy endpoints use mixed route patterns (root level vs `/api/` prefixed). Future development should standardize all public endpoints under `/api/` prefix for consistency.
+
 ### Public Endpoints (No Authentication Required)
 
 #### Health & Status
@@ -246,11 +248,13 @@ The backend exposes the following REST API endpoints:
 #### User Management (Admin Role Required)
 - `GET /admin/api/users` - List all admin users
 - `POST /admin/api/users` - Create new admin user
-- `PUT /admin/api/users/{user_id}/deactivate` - Deactivate user
+- `POST /admin/api/users/{user_id}/deactivate` - Deactivate user (standardized to POST)
 - `POST /admin/api/users/{user_id}/reactivate` - Reactivate user
 - `POST /admin/api/users/bulk/deactivate` - Bulk deactivate users
 - `DELETE /admin/api/users/bulk` - Bulk delete users
 - `DELETE /admin/api/users/{user_id}` - Permanently delete user
+
+> **API Design Note**: User activation/deactivation uses `POST` for consistency, as these are action-oriented operations on sub-resources rather than direct resource updates.
 
 #### Testing & Debug
 - `POST /admin/api/test/reset-database` - Reset database for testing

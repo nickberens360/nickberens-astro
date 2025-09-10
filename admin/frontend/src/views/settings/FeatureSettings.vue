@@ -190,6 +190,17 @@ const saveFeatureFlags = async () => {
     showError(`Failed to save feature flags: ${err.message}`)
   }
 }
+
+// Only show active and meaningful feature flags managed in FeatureFlags schema
+const filteredKeys = computed(() => {
+  const allowed = new Set([
+    'enable_maintenance_mode',
+    'enable_api_versioning',
+    'enable_geolocation',
+    'enable_query_preprocessing'
+  ])
+  return Object.keys(store.featureFlags).filter(k => allowed.has(k))
+})
 </script>
 
 <style scoped>
@@ -291,13 +302,3 @@ const saveFeatureFlags = async () => {
   }
 }
 </style>
-// Only show active and meaningful feature flags managed in FeatureFlags schema
-const filteredKeys = computed(() => {
-  const allowed = new Set([
-    'enable_maintenance_mode',
-    'enable_api_versioning',
-    'enable_geolocation',
-    'enable_query_preprocessing'
-  ])
-  return Object.keys(store.featureFlags).filter(k => allowed.has(k))
-})

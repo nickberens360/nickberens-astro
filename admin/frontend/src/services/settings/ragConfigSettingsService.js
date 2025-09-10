@@ -90,52 +90,6 @@ export class RagConfigSettingsService {
     }
   }
 
-  /**
-   * Validate RAG configuration
-   * @param {Object} configData - Configuration to validate
-   * @returns {Promise<Object>} Validation results
-   */
-  async validateRagConfig(configData) {
-    try {
-      // Client-side validation that matches backend validation
-      const errors = []
-      
-      if (configData.rag_score_threshold < 0.0 || configData.rag_score_threshold > 1.0) {
-        errors.push('Score threshold must be between 0.0 and 1.0')
-      }
-      
-      if (configData.rag_mmr_k < 1 || configData.rag_mmr_k > 20) {
-        errors.push('MMR K must be between 1 and 20')
-      }
-      
-      if (configData.rag_mmr_fetch_k < 10 || configData.rag_mmr_fetch_k > 100) {
-        errors.push('MMR Fetch K must be between 10 and 100')
-      }
-      
-      if (configData.rag_mmr_lambda_mult < 0.0 || configData.rag_mmr_lambda_mult > 1.0) {
-        errors.push('MMR Lambda multiplier must be between 0.0 and 1.0')
-      }
-      
-      if (!configData.rag_index_dirs || configData.rag_index_dirs.trim() === '') {
-        errors.push('Index directories cannot be empty')
-      }
-
-      if (configData.rag_mmr_k > configData.rag_mmr_fetch_k) {
-        errors.push('MMR K cannot be greater than MMR Fetch K')
-      }
-
-      return {
-        valid: errors.length === 0,
-        errors: errors
-      }
-    } catch (error) {
-      console.error('Error validating RAG configuration:', error)
-      return {
-        valid: false,
-        errors: ['Failed to validate configuration']
-      }
-    }
-  }
 }
 
 const ragConfigService = new RagConfigSettingsService()
