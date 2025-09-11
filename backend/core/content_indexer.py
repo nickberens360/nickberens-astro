@@ -11,6 +11,8 @@ This module provides focused functionality for:
 import hashlib
 import json
 import logging
+import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -20,6 +22,7 @@ from langchain_core.language_models import BaseLanguageModel
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
 from .fast_content_classifier import FastContentClassifier
+from .llm_utils import _MAX_TEXT_LENGTH_FOR_TOPICS  # reuse existing truncation constant
 from .llm_utils import extract_topics_with_llm, generate_document_context
 from .startup_content_classifier import StartupContentClassifier
 
@@ -41,6 +44,21 @@ class ContentIndexer:
         self._document_contexts: Dict[str, str] = {}  # Cache for document contexts
         self.use_fast_classifier = use_fast_classifier
         self.classification_mode = classification_mode
+        self.use_per_file_classification: bool = True  # Phase 1 feature flag (default on)
+        self._file_classification_cache: Dict[str, Dict[str, Any]] = {}
+        self._metrics: Dict[str, int] = {
+            "llm_classifications_performed": 0,
+            "llm_classifications_fallback_chunk": 0,
+        }
+        # Phase 2 (optional) heterogeneity fallback flag via env
+        self.enable_heterogeneity_fallback: bool = os.getenv("ENABLE_HETEROGENEITY_FALLBACK", "false").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        self._heterogeneity_threshold: float = 0.35  # average Jaccard similarity threshold
+        self._heterogeneity_chunk_fraction: float = 0.5  # fraction of chunks below per-chunk threshold to trigger
+        self._heterogeneity_per_chunk_threshold: float = 0.25
 
         # Initialize classifiers based on mode
         if classification_mode == "fast" or (classification_mode == "hybrid" and use_fast_classifier):
@@ -63,7 +81,13 @@ class ContentIndexer:
                 sha256_hash.update(byte_block)
         return sha256_hash.hexdigest()
 
-    def extract_content_metadata(self, doc: Document, file_path: Path) -> Dict[str, Any]:
+    def get_metrics(self) -> Dict[str, int]:
+        """Return a copy of simple indexing metrics for reporting."""
+        return dict(self._metrics)
+
+    def extract_content_metadata(
+        self, doc: Document, file_path: Path, precomputed: Dict[str, Any] | None = None
+    ) -> Dict[str, Any]:
         """Extract metadata using the configured classification mode.
 
         Modes:
@@ -72,6 +96,26 @@ class ContentIndexer:
         - "hybrid": Use startup LLM classification (recommended)
         """
         content = doc.page_content
+
+        # Short-circuit with precomputed file-level metadata (Phase 1 reuse)
+        if precomputed is not None:
+            # Namespaced file-level keys for lineage/debug
+            file_topics = [t.strip() for t in (precomputed.get("content_type", "").split(",")) if t.strip()]
+            merged = dict(precomputed)
+            merged.update(
+                {
+                    "file_topics": file_topics,
+                    "file_keywords": precomputed.get("content_keywords", ""),
+                    "file_topic_confidence": precomputed.get("topic_confidence", 0.0),
+                    "file_classification_method": precomputed.get("classification_method", "startup_llm"),
+                }
+            )
+            # Legacy/flattened keys populated from file-level values
+            merged.setdefault("content_types", precomputed.get("content_type", ""))
+            merged.setdefault("classification_method", precomputed.get("classification_method", "startup_llm"))
+            merged.setdefault("topic_confidence", precomputed.get("topic_confidence", 0.0))
+            merged.setdefault("content_keywords", precomputed.get("content_keywords", ""))
+            return merged
 
         # Route to appropriate classification method based on mode
         if self.classification_mode == "startup_llm" or self.classification_mode == "hybrid":
@@ -182,10 +226,24 @@ class ContentIndexer:
         return True
 
     def should_skip_file(
-        self, file_path: Path, file_hash: str, indexed_files: Dict[str, str], force_reindex: bool
+        self, file_path: Path, file_hash: str, indexed_files: Dict[str, Any], force_reindex: bool
     ) -> bool:
-        """Check if a file should be skipped during indexing."""
-        return str(file_path) in indexed_files and indexed_files[str(file_path)] == file_hash and not force_reindex
+        """Check if a file should be skipped during indexing.
+
+        Backward compatible with legacy index_metadata schema where the value
+        was a plain hash string, and the new schema where it's an object
+        {"hash": <str>, "classification": <dict>}.
+        """
+        if force_reindex:
+            return False
+        entry = indexed_files.get(str(file_path))
+        if entry is None:
+            return False
+        if isinstance(entry, str):
+            return entry == file_hash
+        if isinstance(entry, dict):
+            return entry.get("hash") == file_hash
+        return False
 
     def process_directory(self, directory: str, force_reindex: bool = False) -> Tuple[List[Document], int, int]:
         """
@@ -199,11 +257,11 @@ class ContentIndexer:
             logger.warning(f"Directory {directory} does not exist")
             return [], 0, 0
 
-        # Track indexed files
+        # Track indexed files (read even on force_reindex to reuse persisted classification)
         index_metadata_path = Path(self.persist_dir) / "index_metadata.json"
-        indexed_files = {}
+        indexed_files: Dict[str, Any] = {}
 
-        if index_metadata_path.exists() and not force_reindex:
+        if index_metadata_path.exists():
             with open(index_metadata_path, "r", encoding="utf-8") as f:
                 indexed_files = json.load(f)
 
@@ -236,9 +294,60 @@ class ContentIndexer:
                     splitter = splitter_for_ext(file_path.suffix)
                     chunks = splitter.split_documents(docs)
 
+                    # Phase 1: compute once-per-file classification (startup_llm/hybrid) and reuse
+                    precomputed: Dict[str, Any] | None = None
+                    if (
+                        self.use_per_file_classification
+                        and (self.classification_mode in ("startup_llm", "hybrid"))
+                        and self.startup_classifier is not None
+                    ):
+                        cached = self._file_classification_cache.get(file_hash)
+                        # Phase 3: check persisted classification for same hash
+                        persisted_entry = indexed_files.get(str(file_path))
+                        if isinstance(persisted_entry, dict) and persisted_entry.get("hash") == file_hash:
+                            persisted_class = persisted_entry.get("classification")
+                            if isinstance(persisted_class, dict) and persisted_class:
+                                cached = persisted_class
+                                logger.info(
+                                    f"Using persisted file-level classification for {file_path.name} (hash match)."
+                                )
+                        if cached is None:
+                            representative_doc = self._build_representative_document(docs, file_path)
+                            try:
+                                cached = self.startup_classifier.classify_content_with_llm(
+                                    representative_doc, file_path
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    f"File-level classification failed for {file_path.name}: {e}. Falling back to per-chunk path."
+                                )
+                                cached = None
+                            if cached is not None:
+                                self._file_classification_cache[file_hash] = cached
+                                # Telemetry: count one LLM classification per file
+                                self._metrics["llm_classifications_performed"] += 1
+                        precomputed = cached
+
+                    # Phase 2: detect heterogeneity and optionally enable per-chunk fallback
+                    use_per_chunk_fallback = False
+                    if self.enable_heterogeneity_fallback and precomputed is not None and len(chunks) >= 2:
+                        try:
+                            use_per_chunk_fallback = self._is_file_heterogeneous(chunks)
+                            if use_per_chunk_fallback:
+                                logger.info(
+                                    f"Heterogeneity detected for {file_path.name}; using per-chunk LLM classification."
+                                )
+                        except Exception as e:
+                            logger.debug(f"Heterogeneity detection failed for {file_path.name}: {e}")
+
                     # Add rich metadata to each chunk including enhanced RAG metadata
                     for chunk_index, chunk in enumerate(chunks):
-                        base_metadata = self.extract_content_metadata(chunk, file_path)
+                        if use_per_chunk_fallback:
+                            base_metadata = self.extract_content_metadata(chunk, file_path, precomputed=None)
+                            # Telemetry: count chunk-level fallbacks
+                            self._metrics["llm_classifications_fallback_chunk"] += 1
+                        else:
+                            base_metadata = self.extract_content_metadata(chunk, file_path, precomputed=precomputed)
 
                         # Add enhanced metadata for RAG best practices
                         enhanced_metadata = {
@@ -260,7 +369,11 @@ class ContentIndexer:
                     all_documents.extend(chunks)
                     files_processed += 1
                     total_chunks += len(chunks)
-                    indexed_files[str(file_path)] = file_hash
+                    # Persist Phase 3 payload (hash + minimal classification block)
+                    record: Dict[str, Any] = {"hash": file_hash}
+                    if precomputed is not None:
+                        record["classification"] = precomputed
+                    indexed_files[str(file_path)] = record
                     logger.info(f"Processed {file_path.name}: {len(chunks)} chunks")
 
                 except Exception as e:
@@ -271,7 +384,128 @@ class ContentIndexer:
         with open(index_metadata_path, "w", encoding="utf-8") as f:
             json.dump(indexed_files, f)
 
+        logger.info(
+            "Indexing metrics: files_processed=%d, total_chunks=%d, llm_classifications_performed=%d",
+            files_processed,
+            total_chunks,
+            self._metrics.get("llm_classifications_performed", 0),
+        )
+
         return all_documents, files_processed, total_chunks
+
+    def _build_representative_document(self, docs: List[Document], file_path: Path) -> Document:
+        """Construct a representative Document for per-file classification.
+
+        Strategy:
+        - For JSON and known special files, use the first loader doc (often the full object).
+        - For others, merge with a fixed separator and sample head/middle/tail windows
+          within `_MAX_TEXT_LENGTH_FOR_TOPICS` to reduce topic bias.
+        """
+        ext = file_path.suffix.lower()
+
+        # Prefer full-object doc for JSON and special cases
+        if ext == ".json" or file_path.name == "illustrations.json":
+            base_doc = docs[0]
+            return Document(page_content=base_doc.page_content, metadata=base_doc.metadata)
+
+        # Merge documents with a clear break to avoid semantic bleed
+        separator = "\n\n# --- DOC BREAK ---\n\n"
+        merged = separator.join(d.page_content for d in docs if d and d.page_content)
+
+        # If small enough, return as-is
+        if len(merged) <= _MAX_TEXT_LENGTH_FOR_TOPICS:
+            return Document(page_content=merged, metadata={"source": str(file_path)})
+
+        # Deterministic head/middle/tail sampling
+        limit = _MAX_TEXT_LENGTH_FOR_TOPICS
+        window = max(limit // 3, 1)
+        n = len(merged)
+        head = merged[:window]
+        mid_start = max(min((n // 2) - (window // 2), n - window), 0)
+        middle = merged[mid_start : mid_start + window]
+        tail = merged[-window:]
+
+        sample = separator.join([head, middle, tail])
+        return Document(page_content=sample, metadata={"source": str(file_path)})
+
+    def _is_file_heterogeneous(self, chunks: List[Document]) -> bool:
+        """Detect mixed-topic files using lightweight token Jaccard similarity.
+
+        - Tokenize chunks into lowercase words >=4 chars, strip stopwords.
+        - Compute top-K tokens per chunk and for the whole file.
+        - Compute Jaccard similarity between each chunk's token set and the file token set.
+        - Trigger heterogeneity if average similarity < threshold and
+          fraction of chunks below per-chunk threshold exceeds configured fraction.
+        """
+        if not chunks:
+            return False
+
+        def tokenize(text: str) -> List[str]:
+            words = re.findall(r"\b[a-z]{4,}\b", text.lower())
+            stop = {
+                "this",
+                "that",
+                "with",
+                "from",
+                "they",
+                "were",
+                "been",
+                "have",
+                "will",
+                "would",
+                "could",
+                "about",
+                "there",
+                "their",
+                "which",
+                "these",
+                "those",
+                "into",
+                "your",
+                "also",
+                "some",
+                "more",
+                "such",
+                "like",
+                "when",
+                "what",
+                "where",
+                "them",
+            }
+            return [w for w in words if w not in stop]
+
+        def topk(tokens: List[str], k: int = 20) -> List[str]:
+            freq: Dict[str, int] = {}
+            for t in tokens:
+                freq[t] = freq.get(t, 0) + 1
+            return [w for w, _ in sorted(freq.items(), key=lambda x: x[1], reverse=True)[:k]]
+
+        # File-level token set from all chunks
+        all_tokens: List[str] = []
+        chunk_token_sets: List[set[str]] = []
+        for c in chunks:
+            tks = tokenize(c.page_content)
+            chunk_set = set(topk(tks))
+            chunk_token_sets.append(chunk_set)
+            all_tokens.extend(tks)
+
+        file_set = set(topk(all_tokens, k=40)) or set()
+        if not file_set:
+            return False
+
+        def jaccard(a: set[str], b: set[str]) -> float:
+            if not a and not b:
+                return 1.0
+            inter = len(a & b)
+            union = len(a | b)
+            return inter / union if union else 0.0
+
+        sims = [jaccard(s, file_set) for s in chunk_token_sets]
+        avg_sim = sum(sims) / len(sims)
+        low_count = sum(1 for s in sims if s < self._heterogeneity_per_chunk_threshold)
+        frac_low = low_count / len(sims)
+
+        return avg_sim < self._heterogeneity_threshold and frac_low >= self._heterogeneity_chunk_fraction
 
     def generate_document_context(self, documents: List[Document], file_path: Path) -> str:
         """Generate or retrieve cached document context using fast method or LLM."""

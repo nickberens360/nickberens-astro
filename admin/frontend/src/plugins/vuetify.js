@@ -28,6 +28,7 @@ import {
   // Missing Icons - Adding these to fix Vue warnings
   mdiMessageQuestion, mdiFeatureSearch, mdiWrench, mdiSourceBranch,
   mdiTextLong, mdiLinkVariant, mdiFormatListNumbered, mdiLanguageMarkdown,
+  mdiEyeOutline, mdiCodeTags,
 
   // Status & Feedback
   mdiAlert, mdiCheck, mdiCheckCircle, mdiClockOutline, mdiTrendingUp,
@@ -265,7 +266,9 @@ const iconAliases = {
   'markdown': mdiLanguageMarkdown,
   'code-braces': mdiCodeBraces,
   'chart-line': mdiChartLine,
-  'shield': mdiShield
+  'shield': mdiShield,
+  'preview': mdiEyeOutline,
+  'code': mdiCodeTags
 }
 
 export default createVuetify({

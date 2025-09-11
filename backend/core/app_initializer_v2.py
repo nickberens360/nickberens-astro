@@ -224,6 +224,13 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     unified_retriever = UnifiedRetriever(
         embeddings, indexing_llm, use_fast_classifier=True, classification_mode="hybrid"
     )
+    # Respect environment flag for heterogeneity fallback (default OFF)
+    try:
+        env_flag = os.getenv("ENABLE_HETEROGENEITY_FALLBACK", "false").lower() in ("1", "true", "yes")
+        unified_retriever.content_indexer.enable_heterogeneity_fallback = env_flag
+        logger.info(f"Heterogeneity fallback enabled: {env_flag}")
+    except Exception:
+        logger.debug("Could not configure heterogeneity fallback on content indexer")
 
     # Auto-index all content directories
     directories_to_index = [
@@ -257,7 +264,18 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
             total_chunks += chunks
             logger.info(f"📁 Indexed {directory}: {files} files, {chunks} chunks")
 
-    logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
+    # Log concise metrics after indexing
+    try:
+        metrics = unified_retriever.content_indexer.get_metrics()
+        logger.info(
+            "✅ Total indexed: %d files, %d chunks | LLM file classifications: %d | Per-chunk fallbacks: %d",
+            total_files,
+            total_chunks,
+            metrics.get("llm_classifications_performed", 0),
+            metrics.get("llm_classifications_fallback_chunk", 0),
+        )
+    except Exception:
+        logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
 
     # Follow-up pregeneration removed in simplification - using static questions only
     logger.info("⚡ Using static follow-up questions for instant responses")
