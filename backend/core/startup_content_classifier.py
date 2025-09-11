@@ -16,6 +16,7 @@ from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
 
 from .llm_utils import extract_topics_with_llm
+from .taxonomy_loader import get_topic_taxonomy
 
 logger = logging.getLogger(__name__)
 
@@ -86,39 +87,66 @@ class StartupContentClassifier:
         return metadata
 
     def _extract_heuristic_topics(self, content: str, file_path: Path) -> List[str]:
-        """Extract topics using heuristic patterns as a complement to LLM analysis."""
+        """Extract topics using taxonomy-driven heuristics (fallback to hardcoded)."""
         content_lower = content.lower()
         file_name_lower = file_path.name.lower()
         detected_topics = set()
 
-        # File name based hints
-        file_hints = {
-            "about": ["about", "bio", "personal", "profile", "readme"],
-            "experience": ["resume", "cv", "work", "career", "employment", "experience"],
-            "skills": ["skills", "technologies", "expertise", "competencies", "stack"],
-            "creative": ["illustration", "art", "design", "gallery", "portfolio", "creative"],
-            "project": ["project", "projects", "development", "portfolio", "work"],
-        }
+        taxonomy = get_topic_taxonomy()
+        if taxonomy and isinstance(taxonomy.get("categories"), dict):
+            import re
 
-        for topic, hints in file_hints.items():
-            if any(hint in file_name_lower for hint in hints):
-                detected_topics.add(topic)
+            for topic, cfg in taxonomy["categories"].items():
+                syn = [s.lower() for s in (cfg.get("synonyms") or []) if isinstance(s, str)]
+                regexes = [r for r in (cfg.get("regex") or []) if isinstance(r, str)]
 
-        # Content-based detection (more conservative than fast classifier)
-        if any(word in content_lower for word in ["experience", "worked", "employment", "company", "role"]):
-            detected_topics.add("experience")
+                # File name hints via synonyms
+                if any(h in file_name_lower for h in syn):
+                    detected_topics.add(topic)
 
-        if any(word in content_lower for word in ["skill", "technology", "programming", "proficient"]):
-            detected_topics.add("skills")
+                # Content-based synonym match
+                if any(h in content_lower for h in syn):
+                    detected_topics.add(topic)
 
-        if any(word in content_lower for word in ["about", "background", "philosophy", "passion"]):
-            detected_topics.add("about")
+                # Content-based regex match
+                for pattern in regexes:
+                    try:
+                        if re.search(pattern, content_lower):
+                            detected_topics.add(topic)
+                            break
+                    except re.error:
+                        continue
 
-        if any(word in content_lower for word in ["illustration", "art", "design", "creative"]):
-            detected_topics.add("creative")
+        # Fallback heuristics to preserve behavior
+        if not detected_topics:
+            # File name based hints
+            file_hints = {
+                "about": ["about", "bio", "personal", "profile", "readme"],
+                "experience": ["resume", "cv", "work", "career", "employment", "experience"],
+                "skills": ["skills", "technologies", "expertise", "competencies", "stack"],
+                "creative": ["illustration", "art", "design", "gallery", "portfolio", "creative"],
+                "project": ["project", "projects", "development", "portfolio", "work"],
+            }
 
-        if any(word in content_lower for word in ["project", "built", "developed", "created"]):
-            detected_topics.add("project")
+            for topic, hints in file_hints.items():
+                if any(hint in file_name_lower for hint in hints):
+                    detected_topics.add(topic)
+
+            # Content-based detection (more conservative than fast classifier)
+            if any(word in content_lower for word in ["experience", "worked", "employment", "company", "role"]):
+                detected_topics.add("experience")
+
+            if any(word in content_lower for word in ["skill", "technology", "programming", "proficient"]):
+                detected_topics.add("skills")
+
+            if any(word in content_lower for word in ["about", "background", "philosophy", "passion"]):
+                detected_topics.add("about")
+
+            if any(word in content_lower for word in ["illustration", "art", "design", "creative"]):
+                detected_topics.add("creative")
+
+            if any(word in content_lower for word in ["project", "built", "developed", "created"]):
+                detected_topics.add("project")
 
         if self._detect_code_content(content):
             detected_topics.add("technical")
@@ -153,14 +181,22 @@ class StartupContentClassifier:
         keywords.update(technical_terms)
         keywords.update(acronyms)
 
-        # Topic-specific keyword extraction
-        topic_keywords = {
-            "skills": ["javascript", "python", "react", "vue", "node", "typescript", "css", "html"],
-            "experience": ["company", "role", "position", "manager", "director", "lead"],
-            "creative": ["illustration", "art", "design", "portfolio", "gallery"],
-            "project": ["built", "created", "developed", "github", "repository"],
-            "technical": ["code", "programming", "software", "api", "database"],
-        }
+        # Topic-specific keyword extraction (taxonomy-driven if available)
+        taxonomy = get_topic_taxonomy()
+        if taxonomy and isinstance(taxonomy.get("categories"), dict):
+            topic_keywords: Dict[str, List[str]] = {}
+            for topic, cfg in taxonomy["categories"].items():
+                syn = [s.lower() for s in (cfg.get("synonyms") or []) if isinstance(s, str)]
+                extra = [s.lower() for s in (cfg.get("keywords") or []) if isinstance(s, str)]
+                topic_keywords[topic] = list({*syn, *extra})
+        else:
+            topic_keywords = {
+                "skills": ["javascript", "python", "react", "vue", "node", "typescript", "css", "html"],
+                "experience": ["company", "role", "position", "manager", "director", "lead"],
+                "creative": ["illustration", "art", "design", "portfolio", "gallery"],
+                "project": ["built", "created", "developed", "github", "repository"],
+                "technical": ["code", "programming", "software", "api", "database"],
+            }
 
         for topic in topics:
             if topic in topic_keywords:

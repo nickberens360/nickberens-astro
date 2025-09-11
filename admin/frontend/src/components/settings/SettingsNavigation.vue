@@ -43,6 +43,12 @@ const navigationTabs = [
     description: 'Query routing and RAG configuration'
   },
   {
+    value: 'search-taxonomy',
+    title: 'Search & Taxonomy',
+    icon: '$tag',
+    description: 'Categories, synonyms, and regex patterns'
+  },
+  {
     value: 'response',
     title: 'Response Settings',
     icon: '$message-reply',
@@ -66,6 +72,7 @@ const currentTab = computed(() => {
   const routeName = route.name
   if (routeName === 'settings-core') return 'core'
   if (routeName === 'settings-search-retrieval') return 'search-retrieval'
+  if (routeName === 'settings-taxonomy') return 'search-taxonomy'
   if (routeName === 'settings-response') return 'response'
   if (routeName === 'settings-security') return 'security'
   if (routeName === 'settings-ux') return 'ux'
@@ -76,6 +83,7 @@ const navigateToTab = (tabValue) => {
   const routeMap = {
     'core': 'settings-core',
     'search-retrieval': 'settings-search-retrieval',
+    'search-taxonomy': 'settings-taxonomy',
     'response': 'settings-response',
     'security': 'settings-security',
     'ux': 'settings-ux'

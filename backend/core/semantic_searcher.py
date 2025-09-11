@@ -9,6 +9,8 @@ This module provides focused functionality for:
 """
 
 import logging
+import os
+import shutil
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -22,6 +24,12 @@ try:
 except ImportError:
     # Fallback to community version if new package not available
     from langchain_community.vectorstores import Chroma  # type: ignore
+
+# Chroma error type (optional import, we will fall back to string-matching)
+try:
+    from chromadb.errors import InternalError as ChromaInternalError  # type: ignore
+except Exception:  # pragma: no cover - not present in all environments
+    ChromaInternalError = Exception  # type: ignore
 
 from .config import AppConfig
 
@@ -82,11 +90,42 @@ class SemanticSearcher:
             embedding_function=self.embeddings,
         )
 
+    def _reset_store(self) -> None:
+        """Safely reset the persistent vector store directory and reinitialize."""
+        try:
+            persist_path = Path(self.persist_dir)
+            # Safety check: ensure we only ever delete within the project tree
+            if persist_path.is_dir() and str(persist_path).startswith("backend/"):
+                shutil.rmtree(persist_path, ignore_errors=True)
+                logger.warning(f"Resetting Chroma vector store due to corruption at {persist_path}")
+            Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
+            self._initialize_store()
+        except Exception as e:
+            logger.error(f"Failed to reset vector store: {e}")
+            raise
+
     def add_documents(self, documents: List[Document]) -> None:
         """Add documents to the vector store."""
-        if documents and self.vector_store is not None:
+        if not documents or self.vector_store is None:
+            return
+        try:
             self.vector_store.add_documents(documents)
             logger.info(f"Added {len(documents)} documents to vector store")
+        except Exception as e:
+            # Detect malformed underlying DB and auto-recover when allowed
+            message = str(e).lower()
+            force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() in {"1", "true", "yes"}
+            is_malformed = "database disk image is malformed" in message or "is malformed" in message
+            if isinstance(e, ChromaInternalError) and is_malformed or (is_malformed and force_rebuild):
+                logger.error(f"Chroma store appears corrupted: {e}. Force rebuild: {force_rebuild}")
+                if force_rebuild:
+                    # Reset the store and retry once
+                    self._reset_store()
+                    self.vector_store.add_documents(documents)
+                    logger.info(f"Recovered vector store and added {len(documents)} documents after reset")
+                    return
+            # If not recoverable, re-raise
+            raise
 
     def get_retriever(
         self, search_kwargs: Optional[Dict] = None, filter_content_types: Optional[List[str]] = None

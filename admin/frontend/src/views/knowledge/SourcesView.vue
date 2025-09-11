@@ -61,6 +61,25 @@
               <div class="text-truncate" style="max-width: 400px" :title="item.path">
                 {{ item.path }}
               </div>
+              <!-- Non-editable indicator at end of path with tooltip -->
+              <v-tooltip
+                v-if="isNonEditableFile(item.path)"
+                :text="getNonEditableTooltip(item.path)"
+                location="top"
+                :max-width="300"
+                content-class="kb-tooltip"
+              >
+                <template #activator="{ props }">
+                  <v-icon
+                    v-bind="props"
+                    size="18"
+                    color="info"
+                    class="ms-2"
+                  >
+                    mdi-help-circle-outline
+                  </v-icon>
+                </template>
+              </v-tooltip>
             </div>
           </template>
           <template v-slot:item.content_type="{ item }">
@@ -80,15 +99,41 @@
           </template>
           <template v-slot:item.actions="{ item }">
             <div class="d-flex align-center gap-1">
-              <v-btn
-                icon="$edit"
-                size="small"
-                variant="text"
-                color="green"
-                @click="viewFileContent(item)"
-                :disabled="loading"
-                title="View/Edit File Content"
-              ></v-btn>
+              <!-- Edit button with conditional tooltip/disable for non-editable types -->
+              <v-tooltip
+                v-if="isNonEditableFile(item.path)"
+                :text="getNonEditableTooltip(item.path)"
+                location="top"
+                :max-width="300"
+                content-class="kb-tooltip"
+              >
+                <template #activator="{ props }">
+                  <!-- Wrap disabled button in span so tooltip still works -->
+                  <span v-bind="props">
+                    <v-btn
+                      icon="$edit"
+                      size="small"
+                      variant="text"
+                      color="grey"
+                      :disabled="true"
+                      title="View/Edit File Content"
+                    ></v-btn>
+                  </span>
+                </template>
+              </v-tooltip>
+              <template v-else>
+                <v-btn
+                  icon="$edit"
+                  size="small"
+                  variant="text"
+                  color="green"
+                  @click="viewFileContent(item)"
+                  :disabled="loading"
+                  title="View/Edit File Content"
+                ></v-btn>
+              </template>
+
+              <!-- Delete button -->
               <v-btn
                 icon="$delete"
                 size="small"
@@ -539,7 +584,7 @@ const viewFileContent = (source) => {
 
   // Check if this is a binary file type that can't be edited
   const ext = source.path.split('.').pop()?.toLowerCase()
-  const binaryTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
+  const binaryTypes = ['pdf', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
 
   if (binaryTypes.includes(ext)) {
     showAlert(`Cannot edit binary file: ${source.path}. File type: ${ext.toUpperCase()}. This file contains binary data that cannot be edited as text.`, 'warning')
@@ -556,10 +601,28 @@ const handleFileSaved = () => {
   loadSources()
 }
 
+// Helpers to control edit availability and tooltip messaging
+const isNonEditableFile = (filePath) => {
+  if (!filePath) return false
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  return ['pdf', 'docx'].includes(ext)
+}
+
+const getNonEditableTooltip = (filePath) => {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  if (ext === 'pdf') {
+    return 'PDF files cannot be edited here. Download or replace the file instead.'
+  }
+  if (ext === 'docx') {
+    return 'DOCX files are binary and not editable in-browser. Upload a new version or convert to Markdown/HTML to edit.'
+  }
+  return 'This file type is not editable.'
+}
+
 const isBinaryFile = (filePath) => {
   if (!filePath) return false
   const ext = filePath.split('.').pop()?.toLowerCase()
-  const binaryTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
+  const binaryTypes = ['pdf', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
   return binaryTypes.includes(ext)
 }
 
@@ -577,5 +640,10 @@ onMounted(() => {
 /* Ensure proper spacing for content type chips */
 .gap-1 > .v-chip {
   margin: 2px;
+}
+
+/* Ensure tooltip text wraps nicely at ~300px */
+:deep(.kb-tooltip) {
+  white-space: normal;
 }
 </style>

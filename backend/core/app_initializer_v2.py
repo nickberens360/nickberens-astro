@@ -20,6 +20,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 from .config import AppConfig
 from .settings_manager import get_settings_manager
 from .smart_illustration_service import SmartIllustrationService
+from .taxonomy_loader import get_topic_taxonomy
 from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
@@ -191,6 +192,21 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
             - llm: BaseLanguageModel for user-facing queries
     """
     logger.info("🚀 Initializing application with unified retriever system...")
+
+    # Log taxonomy status for observability
+    try:
+        tax = get_topic_taxonomy()
+        if tax and isinstance(tax.get("categories"), dict):
+            cats = [str(k) for k in tax["categories"].keys()]
+            logger.info(
+                "📚 Topic taxonomy loaded: %d categories -> %s",
+                len(cats),
+                ", ".join(cats[:8]) + (" …" if len(cats) > 8 else ""),
+            )
+        else:
+            logger.info("📚 Topic taxonomy not found/invalid; using fallback heuristics")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not load topic taxonomy: {e}")
 
     # Ensure logs directory exists during app initialization
     backend_dir = Path(__file__).parent.parent.resolve()

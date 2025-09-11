@@ -192,17 +192,21 @@ class AdminAuthManager:
         now = datetime.now()
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
+            # Serialize session writes to avoid DB lock contention
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
 
-                # Limit concurrent sessions per user (max 5)
-                cursor.execute("SELECT COUNT(*) FROM admin_sessions WHERE user_id = ? AND is_active = 1", (user_id,))
-                active_sessions = cursor.fetchone()[0]
-
-                if active_sessions >= 5:
-                    # Expire oldest session - SQLite doesn't support ORDER BY in UPDATE, so use subquery
+                    # Limit concurrent sessions per user (max 5)
                     cursor.execute(
-                        """
+                        "SELECT COUNT(*) FROM admin_sessions WHERE user_id = ? AND is_active = 1", (user_id,)
+                    )
+                    active_sessions = cursor.fetchone()[0]
+
+                    if active_sessions >= 5:
+                        # Expire oldest session - SQLite doesn't support ORDER BY in UPDATE, so use subquery
+                        cursor.execute(
+                            """
                         UPDATE admin_sessions
                         SET is_active = 0
                         WHERE id = (
@@ -212,24 +216,24 @@ class AdminAuthManager:
                             LIMIT 1
                         )
                         """,
-                        (user_id,),
-                    )
+                            (user_id,),
+                        )
 
-                cursor.execute(
-                    """
+                    cursor.execute(
+                        """
                     INSERT INTO admin_sessions 
                     (id, user_id, started_at, last_active_at, ip_address, user_agent, is_active)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),
-                )
+                        (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),
+                    )
 
-                # Create and store session fingerprint
-                fingerprint = session_fingerprinter.create_fingerprint(ip_address or "unknown", user_agent or "")
-                session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
+                    # Create and store session fingerprint
+                    fingerprint = session_fingerprinter.create_fingerprint(ip_address or "unknown", user_agent or "")
+                    session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
 
-                logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
-                return session_id
+                    logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
+                    return session_id
 
         except Exception as e:
             logger.error(f"Error creating session for user {user_id}: {str(e)}", exc_info=True)
@@ -314,12 +318,13 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
-                    (datetime.now(), session_id),
-                )
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
+                        (datetime.now(), session_id),
+                    )
         except Exception as e:
             logger.error(f"Error updating session activity {session_id[:8]}...: {str(e)}", exc_info=True)
 
@@ -329,10 +334,11 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
-                logger.info(f"Expired session {session_id[:8]}...")
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
+                    logger.info(f"Expired session {session_id[:8]}...")
         except Exception as e:
             logger.error(f"Error expiring session {session_id[:8]}...: {str(e)}", exc_info=True)
 
@@ -342,10 +348,11 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
-                logger.info(f"Expired all sessions for user {user_id}")
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
+                    logger.info(f"Expired all sessions for user {user_id}")
         except Exception as e:
             logger.error(f"Error expiring sessions for user {user_id}: {str(e)}", exc_info=True)
 
@@ -454,9 +461,12 @@ class AdminAuthManager:
 
         try:
             # Update last login time
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"]))
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"])
+                    )
 
             # Create session
             session_id = self.create_session(user["id"], ip_address, user_agent)
@@ -505,9 +515,12 @@ class AdminAuthManager:
             )
 
             # Update last login time
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"]))
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"])
+                    )
 
             # Create session
             session_id = self.create_session(user["id"], ip_address, user_agent)
@@ -561,12 +574,13 @@ class AdminAuthManager:
             session_timeout_hours = self.get_dynamic_session_timeout_hours()
             expiry_cutoff = datetime.now() - timedelta(hours=session_timeout_hours)
 
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE admin_sessions SET is_active = 0 WHERE last_active_at < ? AND is_active = 1",
-                    (expiry_cutoff,),
-                )
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_sessions SET is_active = 0 WHERE last_active_at < ? AND is_active = 1",
+                        (expiry_cutoff,),
+                    )
                 expired_count = cursor.rowcount
                 if expired_count > 0:
                     logger.info(f"Cleaned up {expired_count} expired sessions")

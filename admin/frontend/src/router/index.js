@@ -169,6 +169,15 @@ const router = createRouter({
               }
             },
             {
+              path: 'taxonomy',
+              name: 'settings-taxonomy',
+              component: () => import('@/views/settings/TaxonomySettings.vue'),
+              meta: {
+                title: 'Search & Taxonomy',
+                description: 'Manage categories, synonyms, and regex patterns'
+              }
+            },
+            {
               path: 'response',
               name: 'settings-response',
               component: () => import('@/views/settings/ResponseSettings.vue'),
