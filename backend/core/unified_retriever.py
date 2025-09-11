@@ -164,8 +164,17 @@ class UnifiedRetriever:
 
             # Phase 2: heterogeneity detection and optional per-chunk fallback
             use_per_chunk_fallback = False
+            # Forced include by glob patterns
+            try:
+                if self.content_indexer._path_in_include(file_path_obj):
+                    use_per_chunk_fallback = True
+                    logger.info(f"Per-chunk LLM classification forced by include list for {file_path_obj.name}.")
+            except Exception:
+                pass
+            # Heuristic detection (when enabled)
             if (
-                getattr(self.content_indexer, "enable_heterogeneity_fallback", False)
+                not use_per_chunk_fallback
+                and getattr(self.content_indexer, "enable_heterogeneity_fallback", False)
                 and precomputed is not None
                 and len(chunks) >= 2
             ):

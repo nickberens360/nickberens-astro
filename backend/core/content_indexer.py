@@ -8,6 +8,7 @@ This module provides focused functionality for:
 - File filtering and validation
 """
 
+import fnmatch
 import hashlib
 import json
 import logging
@@ -59,6 +60,9 @@ class ContentIndexer:
         self._heterogeneity_threshold: float = 0.35  # average Jaccard similarity threshold
         self._heterogeneity_chunk_fraction: float = 0.5  # fraction of chunks below per-chunk threshold to trigger
         self._heterogeneity_per_chunk_threshold: float = 0.25
+        # Optional include list to force per-chunk fallback for specific paths (glob patterns)
+        include_env = os.getenv("HETEROGENEITY_FALLBACK_INCLUDE", "")
+        self._hetero_include_globs: List[str] = [g.strip() for g in include_env.split(",") if g.strip()]
 
         # Initialize classifiers based on mode
         if classification_mode == "fast" or (classification_mode == "hybrid" and use_fast_classifier):
@@ -330,7 +334,12 @@ class ContentIndexer:
 
                     # Phase 2: detect heterogeneity and optionally enable per-chunk fallback
                     use_per_chunk_fallback = False
-                    if self.enable_heterogeneity_fallback and precomputed is not None and len(chunks) >= 2:
+                    # Forced include by glob patterns
+                    if self._path_in_include(file_path):
+                        use_per_chunk_fallback = True
+                        logger.info(f"Per-chunk LLM classification forced by include list for {file_path.name}.")
+                    # Heuristic detection (when enabled)
+                    elif self.enable_heterogeneity_fallback and precomputed is not None and len(chunks) >= 2:
                         try:
                             use_per_chunk_fallback = self._is_file_heterogeneous(chunks)
                             if use_per_chunk_fallback:
@@ -506,6 +515,12 @@ class ContentIndexer:
         frac_low = low_count / len(sims)
 
         return avg_sim < self._heterogeneity_threshold and frac_low >= self._heterogeneity_chunk_fraction
+
+    def _path_in_include(self, file_path: Path) -> bool:
+        if not self._hetero_include_globs:
+            return False
+        s = str(file_path)
+        return any(fnmatch.fnmatch(s, pat) for pat in self._hetero_include_globs)
 
     def generate_document_context(self, documents: List[Document], file_path: Path) -> str:
         """Generate or retrieve cached document context using fast method or LLM."""
