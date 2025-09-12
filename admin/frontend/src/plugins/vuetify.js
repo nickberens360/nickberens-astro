@@ -297,6 +297,12 @@ export default createVuetify({
       elevation: 1,
       rounded: 'lg'
     },
+    VSnackbar: {
+      scrim: false,
+      contained: true,
+      retainFocus: false,
+      closeOnBack: false
+    },
     VBtn: {
       variant: 'flat',
       rounded: 'lg'

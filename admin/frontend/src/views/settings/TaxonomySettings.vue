@@ -500,6 +500,10 @@
   <v-snackbar
     v-model="undoSnack.open"
     timeout="6000"
+    :scrim="false"
+    :contained="true"
+    :retain-focus="false"
+    :close-on-back="false"
     location="bottom right"
   >
     Deleted '{{ undoSnack.name }}'.

@@ -339,7 +339,7 @@ export default {
       const k = 1024
       const sizes = ['Bytes', 'KB', 'MB']
       const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))  } ${  sizes[i]}`
+      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
     }
 
     const loadFile = async () => {
@@ -367,7 +367,7 @@ export default {
 
         originalContent.value = content
         currentContent.value = content
-        fileType.value = `.${  ext || 'txt'}`
+        fileType.value = `.${ext || 'txt'}`
         fileSize.value = response.size || 0
         hasUnsavedChanges.value = false
 

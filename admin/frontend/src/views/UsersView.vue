@@ -1341,7 +1341,7 @@ const bulkDeactivateUsers = async () => {
     if (response.failed_deactivations > 0 && response.failed_user_ids) {
       const errorMsg = response.failed_user_ids.map(userId => {
         const user = getUserById(userId)
-        return `${user?.username || `User ${  userId}`}: Failed to deactivate`
+        return `${user?.username || `User ${userId}`}: Failed to deactivate`
       }).join('\n')
       showError(`Failed to deactivate ${response.failed_deactivations} user${response.failed_deactivations === 1 ? '' : 's'}:\n${errorMsg}`)
     }

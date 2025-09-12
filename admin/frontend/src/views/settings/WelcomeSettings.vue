@@ -484,9 +484,9 @@ export default {
 
     // Form validation rules
     const questionRules = [
-      v => Boolean(v) || 'Question text is required',
-      v => (v && v.length >= 3) || 'Question must be at least 3 characters',
-      v => (v && v.length <= 500) || 'Question must be less than 500 characters'
+      v => !!(v && v.trim()) || 'Question text is required',
+      v => (v && v.trim().length >= 3) || 'Question must be at least 3 characters',
+      v => (v && v.trim().length <= 500) || 'Question must be less than 500 characters'
     ]
 
     const sortOrderRules = [

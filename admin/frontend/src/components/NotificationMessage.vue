@@ -6,6 +6,10 @@
       :model-value="true"
       :timeout="n.persistent ? -1 : n.timeout"
       :color="n.type"
+      :scrim="false"
+      :contained="true"
+      :retain-focus="false"
+      :close-on-back="false"
       location="top right"
       class="notification-item"
       @update:model-value="onUpdate(n.id, $event)"
@@ -79,4 +83,3 @@ const handleAction = (n) => {
   margin-top: 8px;
 }
 </style>
-

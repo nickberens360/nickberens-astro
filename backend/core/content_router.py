@@ -55,13 +55,13 @@ class ContentRouter:
                     try:
                         escaped = [re.escape(s.strip()) for s in synonyms]
                         # Word-boundary group for all synonyms, case-insensitive
-                        syn_pattern = re.compile(r"\\b(?:" + "|".join(escaped) + r")\\b", re.IGNORECASE)
+                        syn_pattern = re.compile(r"\b(?:" + "|".join(escaped) + r")\b", re.IGNORECASE)
                         patterns.append(syn_pattern)
                     except re.error:
                         # If building the grouped pattern fails, fall back to per-synonym tests
                         for s in synonyms:
                             try:
-                                patterns.append(re.compile(r"\\b" + re.escape(s.strip()) + r"\\b", re.IGNORECASE))
+                                patterns.append(re.compile(r"\b" + re.escape(s.strip()) + r"\b", re.IGNORECASE))
                             except re.error:
                                 continue
 

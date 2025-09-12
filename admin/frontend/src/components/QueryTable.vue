@@ -743,7 +743,7 @@ const activeFiltersCount = computed(() => {
 // Methods
 const truncateText = (text, maxLength) => {
   if (!text || text.length <= maxLength) return text;
-  return `${text.substring(0, maxLength)  }...`;
+  return `${text.substring(0, maxLength)}...`;
 };
 
 const getResponseTimeColor = (responseTime) => {

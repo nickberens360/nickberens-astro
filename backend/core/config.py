@@ -417,12 +417,14 @@ class AppConfig:
 
     @classmethod
     def get_ip_hash_salt(cls) -> str:
-        """Get IP hash salt with secure default generation."""
+        """Get IP hash salt with secure default generation.
+
+        Uses AppConfig production detection for consistency across the codebase.
+        """
         salt = os.getenv("IP_HASH_SALT", "")
-        environment = os.getenv("ENV", "development").lower()
 
         if not salt:
-            if environment in ["production", "prod"]:
+            if cls.IS_PRODUCTION:
                 raise ValueError(
                     "IP_HASH_SALT must be explicitly set in production environments. "
                     "Generate a secure salt using: python -c 'import secrets; print(secrets.token_urlsafe(32))'"

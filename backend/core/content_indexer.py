@@ -15,7 +15,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
@@ -299,7 +299,7 @@ class ContentIndexer:
                     chunks = splitter.split_documents(docs)
 
                     # Phase 1: compute once-per-file classification (startup_llm/hybrid) and reuse
-                    precomputed: Dict[str, Any] | None = None
+                    precomputed: Optional[Dict[str, Any]] = None
                     if (
                         self.use_per_file_classification
                         and (self.classification_mode in ("startup_llm", "hybrid"))

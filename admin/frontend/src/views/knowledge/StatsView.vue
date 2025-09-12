@@ -745,7 +745,7 @@ const updateCharts = () => {
         datasets: [{
           label: 'Document Count',
           data,
-          backgroundColor: colors.map(c => `${c  }80`), // Add transparency
+          backgroundColor: colors.map(c => `${c}80`), // Add transparency
           borderColor: colors,
           borderWidth: 2
         }]
