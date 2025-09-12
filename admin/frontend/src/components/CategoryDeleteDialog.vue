@@ -1,6 +1,14 @@
 <template>
-  <v-dialog v-model="dialog" max-width="640px" persistent>
-    <v-card class="dialog-card" elevation="12" rounded="xl">
+  <v-dialog
+    v-model="dialog"
+    max-width="640px"
+    persistent
+  >
+    <v-card
+      class="dialog-card"
+      elevation="12"
+      rounded="xl"
+    >
       <v-card-title class="dialog-header pa-6">
         <div class="d-flex align-center">
           <v-avatar 
@@ -9,10 +17,14 @@
             variant="tonal" 
             class="mr-4"
           >
-            <v-icon size="24">$alert-triangle</v-icon>
+            <v-icon size="24">
+              $alert-triangle
+            </v-icon>
           </v-avatar>
           <div class="flex-grow-1">
-            <h2 class="text-h5 font-weight-bold mb-1">Delete Category</h2>
+            <h2 class="text-h5 font-weight-bold mb-1">
+              Delete Category
+            </h2>
             <p class="text-body-2 text-medium-emphasis ma-0">
               {{ category?.display_name }} • {{ categoryStats?.question_count || 0 }} questions
             </p>
@@ -27,11 +39,14 @@
         </div>
       </v-card-title>
 
-      <v-divider class="border-opacity-12"></v-divider>
+      <v-divider class="border-opacity-12" />
 
       <v-card-text class="pa-6">
         <!-- Category has questions - show options -->
-        <div v-if="categoryStats?.question_count > 0" class="question-handling-section">
+        <div
+          v-if="categoryStats?.question_count > 0"
+          class="question-handling-section"
+        >
           <v-card
             color="warning"
             variant="tonal" 
@@ -41,7 +56,12 @@
           >
             <v-card-text class="pa-4">
               <div class="d-flex align-center">
-                <v-icon color="warning" class="mr-2">$information</v-icon>
+                <v-icon
+                  color="warning"
+                  class="mr-2"
+                >
+                  $information
+                </v-icon>
                 <span class="font-weight-medium">
                   This category contains <strong>{{ categoryStats.question_count }} questions</strong>. 
                   Choose how to handle them before deletion.
@@ -52,11 +72,19 @@
 
           <div class="strategy-section mb-6">
             <div class="section-title text-subtitle-1 font-weight-bold mb-4 d-flex align-center">
-              <v-icon size="18" class="mr-2">$tune</v-icon>
+              <v-icon
+                size="18"
+                class="mr-2"
+              >
+                $tune
+              </v-icon>
               Deletion Strategy
             </div>
             
-            <v-radio-group v-model="deleteStrategy" class="strategy-options">
+            <v-radio-group
+              v-model="deleteStrategy"
+              class="strategy-options"
+            >
               <!-- Move to another category -->
               <v-card 
                 class="strategy-option mb-3" 
@@ -66,14 +94,26 @@
                 rounded="lg"
               >
                 <v-card-text class="pa-4">
-                  <v-radio value="move" class="strategy-radio">
-                    <template v-slot:label>
+                  <v-radio
+                    value="move"
+                    class="strategy-radio"
+                  >
+                    <template #label>
                       <div class="d-flex align-center">
-                        <v-avatar size="32" color="info" variant="tonal" class="mr-3">
-                          <v-icon size="16">$chevron-right</v-icon>
+                        <v-avatar
+                          size="32"
+                          color="info"
+                          variant="tonal"
+                          class="mr-3"
+                        >
+                          <v-icon size="16">
+                            $chevron-right
+                          </v-icon>
                         </v-avatar>
                         <div>
-                          <div class="font-weight-bold text-body-1">Move questions to another category</div>
+                          <div class="font-weight-bold text-body-1">
+                            Move questions to another category
+                          </div>
                           <div class="text-caption text-medium-emphasis">
                             Transfer all questions to a different category
                           </div>
@@ -93,14 +133,26 @@
                 rounded="lg"
               >
                 <v-card-text class="pa-4">
-                  <v-radio value="delete_all" class="strategy-radio">
-                    <template v-slot:label>
+                  <v-radio
+                    value="delete_all"
+                    class="strategy-radio"
+                  >
+                    <template #label>
                       <div class="d-flex align-center">
-                        <v-avatar size="32" color="error" variant="tonal" class="mr-3">
-                          <v-icon size="16">$delete</v-icon>
+                        <v-avatar
+                          size="32"
+                          color="error"
+                          variant="tonal"
+                          class="mr-3"
+                        >
+                          <v-icon size="16">
+                            $delete
+                          </v-icon>
                         </v-avatar>
                         <div>
-                          <div class="font-weight-bold text-body-1 text-error">Delete all questions permanently</div>
+                          <div class="font-weight-bold text-body-1 text-error">
+                            Delete all questions permanently
+                          </div>
                           <div class="text-caption text-medium-emphasis">
                             ⚠️ This action cannot be undone
                           </div>
@@ -120,14 +172,26 @@
                 rounded="lg"
               >
                 <v-card-text class="pa-4">
-                  <v-radio value="deactivate" class="strategy-radio">
-                    <template v-slot:label>
+                  <v-radio
+                    value="deactivate"
+                    class="strategy-radio"
+                  >
+                    <template #label>
                       <div class="d-flex align-center">
-                        <v-avatar size="32" color="warning" variant="tonal" class="mr-3">
-                          <v-icon size="16">$eye-off</v-icon>
+                        <v-avatar
+                          size="32"
+                          color="warning"
+                          variant="tonal"
+                          class="mr-3"
+                        >
+                          <v-icon size="16">
+                            $eye-off
+                          </v-icon>
                         </v-avatar>
                         <div>
-                          <div class="font-weight-bold text-body-1">Deactivate instead of delete</div>
+                          <div class="font-weight-bold text-body-1">
+                            Deactivate instead of delete
+                          </div>
                           <div class="text-caption text-medium-emphasis">
                             Hide the category but keep questions intact
                           </div>
@@ -142,9 +206,17 @@
 
           <!-- Target category selection for move strategy -->
           <v-expand-transition>
-            <div v-if="deleteStrategy === 'move'" class="target-selection-section mb-6">
+            <div
+              v-if="deleteStrategy === 'move'"
+              class="target-selection-section mb-6"
+            >
               <div class="section-title text-subtitle-2 font-weight-medium mb-3 d-flex align-center">
-                <v-icon size="16" class="mr-2">$folder</v-icon>
+                <v-icon
+                  size="16"
+                  class="mr-2"
+                >
+                  $folder
+                </v-icon>
                 Select Target Category
               </div>
               <v-select
@@ -160,18 +232,26 @@
                 rounded="lg"
                 class="target-select"
               >
-                <template v-slot:item="{ props, item }">
+                <template #item="{ props, item }">
                   <v-list-item 
                     v-bind="props" 
                     class="target-category-item"
                     rounded="lg"
                   >
-                    <template v-slot:prepend>
-                      <v-avatar size="32" color="primary" variant="tonal">
-                        <v-icon size="16">$folder</v-icon>
+                    <template #prepend>
+                      <v-avatar
+                        size="32"
+                        color="primary"
+                        variant="tonal"
+                      >
+                        <v-icon size="16">
+                          $folder
+                        </v-icon>
                       </v-avatar>
                     </template>
-                    <v-list-item-title class="font-weight-medium">{{ item.raw.display_name }}</v-list-item-title>
+                    <v-list-item-title class="font-weight-medium">
+                      {{ item.raw.display_name }}
+                    </v-list-item-title>
                     <v-list-item-subtitle>{{ item.raw.name }}</v-list-item-subtitle>
                   </v-list-item>
                 </template>
@@ -181,15 +261,23 @@
 
           <!-- Confirmation for destructive operations -->
           <v-expand-transition>
-            <div v-if="deleteStrategy === 'delete_all'" class="confirmation-section mb-6">
-              <v-card color="error" variant="tonal" elevation="0" rounded="lg">
+            <div
+              v-if="deleteStrategy === 'delete_all'"
+              class="confirmation-section mb-6"
+            >
+              <v-card
+                color="error"
+                variant="tonal"
+                elevation="0"
+                rounded="lg"
+              >
                 <v-card-text class="pa-4">
                   <v-checkbox
                     v-model="confirmDestructive"
                     color="error"
                     class="confirmation-checkbox"
                   >
-                    <template v-slot:label>
+                    <template #label>
                       <span class="text-error font-weight-medium">
                         I understand this will permanently delete {{ categoryStats.question_count }} questions
                       </span>
@@ -202,7 +290,10 @@
         </div>
 
         <!-- Category has no questions - simple deletion -->
-        <div v-else class="empty-category-section">
+        <div
+          v-else
+          class="empty-category-section"
+        >
           <v-card
             color="success" 
             variant="tonal" 
@@ -212,11 +303,20 @@
           >
             <v-card-text class="pa-4">
               <div class="d-flex align-center">
-                <v-avatar size="32" color="success" variant="tonal" class="mr-3">
-                  <v-icon size="16">$check-circle</v-icon>
+                <v-avatar
+                  size="32"
+                  color="success"
+                  variant="tonal"
+                  class="mr-3"
+                >
+                  <v-icon size="16">
+                    $check-circle
+                  </v-icon>
                 </v-avatar>
                 <div>
-                  <div class="font-weight-medium">Safe to delete</div>
+                  <div class="font-weight-medium">
+                    Safe to delete
+                  </div>
                   <div class="text-caption text-medium-emphasis">
                     This category has no questions and can be safely deleted
                   </div>
@@ -240,41 +340,88 @@
         >
           <v-card-text class="pa-4">
             <div class="d-flex align-center mb-3">
-              <v-icon class="mr-2" size="18">$format-list-bulleted</v-icon>
+              <v-icon
+                class="mr-2"
+                size="18"
+              >
+                $format-list-bulleted
+              </v-icon>
               <span class="text-subtitle-2 font-weight-bold">Action Summary</span>
             </div>
             <div class="summary-content text-body-2">
               <template v-if="deleteStrategy === 'move'">
                 <div class="summary-item d-flex align-center mb-2">
-                  <v-icon size="16" color="info" class="mr-2">$chevron-right</v-icon>
+                  <v-icon
+                    size="16"
+                    color="info"
+                    class="mr-2"
+                  >
+                    $chevron-right
+                  </v-icon>
                   Move {{ categoryStats.question_count }} questions to "{{ targetCategoryName }}"
                 </div>
                 <div class="summary-item d-flex align-center">
-                  <v-icon size="16" color="warning" class="mr-2">$delete</v-icon>
+                  <v-icon
+                    size="16"
+                    color="warning"
+                    class="mr-2"
+                  >
+                    $delete
+                  </v-icon>
                   Delete category "{{ category?.display_name }}"
                 </div>
               </template>
               <template v-else-if="deleteStrategy === 'delete_all'">
                 <div class="summary-item d-flex align-center mb-2">
-                  <v-icon size="16" color="error" class="mr-2">$delete</v-icon>
+                  <v-icon
+                    size="16"
+                    color="error"
+                    class="mr-2"
+                  >
+                    $delete
+                  </v-icon>
                   <span class="text-error">Permanently delete {{ categoryStats.question_count }} questions</span>
                 </div>
                 <div class="summary-item d-flex align-center">
-                  <v-icon size="16" color="error" class="mr-2">$delete</v-icon>
+                  <v-icon
+                    size="16"
+                    color="error"
+                    class="mr-2"
+                  >
+                    $delete
+                  </v-icon>
                   <span class="text-error">Delete category "{{ category?.display_name }}"</span>
                 </div>
               </template>
               <template v-else-if="deleteStrategy === 'deactivate'">
                 <div class="summary-item d-flex align-center mb-2">
-                  <v-icon size="16" color="warning" class="mr-2">$eye-off</v-icon>
+                  <v-icon
+                    size="16"
+                    color="warning"
+                    class="mr-2"
+                  >
+                    $eye-off
+                  </v-icon>
                   Deactivate category "{{ category?.display_name }}"
                 </div>
                 <div class="summary-item d-flex align-center mb-2">
-                  <v-icon size="16" color="success" class="mr-2">$check-circle</v-icon>
+                  <v-icon
+                    size="16"
+                    color="success"
+                    class="mr-2"
+                  >
+                    $check-circle
+                  </v-icon>
                   Keep all {{ categoryStats.question_count }} questions intact
                 </div>
                 <div class="summary-item d-flex align-center">
-                  <v-icon size="16" color="info" class="mr-2">$eye-off</v-icon>
+                  <v-icon
+                    size="16"
+                    color="info"
+                    class="mr-2"
+                  >
+                    $eye-off
+                  </v-icon>
                   Category will be hidden from question selection
                 </div>
               </template>
@@ -283,16 +430,16 @@
         </v-card>
       </v-card-text>
 
-      <v-divider class="border-opacity-12"></v-divider>
+      <v-divider class="border-opacity-12" />
       
       <v-card-actions class="dialog-actions pa-6">
-        <v-spacer></v-spacer>
+        <v-spacer />
         <v-btn
           variant="outlined"
           size="large"
-          @click="cancel"
           :disabled="loading"
           class="mr-3"
+          @click="cancel"
         >
           Cancel
         </v-btn>
@@ -302,8 +449,8 @@
           size="large"
           :loading="loading"
           :disabled="!canProceed"
-          @click="confirmDelete"
           :prepend-icon="deleteStrategy === 'deactivate' ? '$eye-off' : '$delete'"
+          @click="confirmDelete"
         >
           <template v-if="deleteStrategy === 'deactivate'">
             Deactivate Category
@@ -366,13 +513,13 @@ export default {
 
     const canProceed = computed(() => {
       // No questions - can always proceed
-      if (!props.categoryStats?.question_count) return !!props.category?.id
+      if (!props.categoryStats?.question_count) return Boolean(props.category?.id)
       if (!props.category?.id) return false
       
       // Strategy-specific validation
       switch (deleteStrategy.value) {
         case 'move':
-          return !!targetCategoryId.value && targetCategoryId.value !== props.category.id
+          return Boolean(targetCategoryId.value) && targetCategoryId.value !== props.category.id
         case 'delete_all':
           return confirmDestructive.value
         case 'deactivate':

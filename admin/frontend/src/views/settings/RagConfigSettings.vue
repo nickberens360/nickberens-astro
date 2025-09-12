@@ -6,35 +6,67 @@
         <v-btn
           color="primary"
           variant="elevated"
-          @click="saveRagConfig"
           :loading="store.loading"
           prepend-icon="$check"
+          @click="saveRagConfig"
         >
           Save Changes
         </v-btn>
       </v-card-title>
       
       <v-card-text class="pa-0">
-        <v-alert v-if="store.error" type="error" variant="tonal" class="ma-6 mb-4">
+        <v-alert
+          v-if="store.error"
+          type="error"
+          variant="tonal"
+          class="ma-6 mb-4"
+        >
           {{ store.error }}
         </v-alert>
         
         <div v-if="store.ragConfig && Object.keys(store.ragConfig).length > 0">
           <!-- Retrieval Settings Section -->
           <div class="section-header">
-            <v-icon color="primary" class="section-icon">$tune</v-icon>
-            <div class="section-title">Retrieval Settings</div>
+            <v-icon
+              color="primary"
+              class="section-icon"
+            >
+              $tune
+            </v-icon>
+            <div class="section-title">
+              Retrieval Settings
+            </div>
           </div>
           
-          <div v-for="key in retrievalSettings" :key="key">
+          <div
+            v-for="key in retrievalSettings"
+            :key="key"
+          >
             <div class="feature-row">
               <div class="feature-content">
                 <div class="feature-left">
-                  <v-icon v-if="getFeatureIcon(key)" color="primary" class="feature-icon">{{ getFeatureIcon(key) }}</v-icon>
+                  <v-icon
+                    v-if="getFeatureIcon(key)"
+                    color="primary"
+                    class="feature-icon"
+                  >
+                    {{ getFeatureIcon(key) }}
+                  </v-icon>
                   <div class="feature-info">
-                    <div class="feature-title text-high-emphasis">{{ formatFeatureName(key) }}</div>
-                    <div class="feature-description text-medium-emphasis" v-if="hasLearnMoreLink(key)" v-html="getFeatureDescription(key)"></div>
-                    <div class="feature-description text-medium-emphasis" v-else>{{ getFeatureDescription(key) }}</div>
+                    <div class="feature-title text-high-emphasis">
+                      {{ formatFeatureName(key) }}
+                    </div>
+                    <div
+                      v-if="hasLearnMoreLink(key)"
+                      class="feature-description text-medium-emphasis"
+                      v-html="getFeatureDescription(key)"
+                    />
+                    <div
+                      v-else
+                      class="feature-description text-medium-emphasis"
+                    >
+                      {{ getFeatureDescription(key) }}
+                    </div>
                   </div>
                 </div>
                 <div class="feature-right">
@@ -102,24 +134,51 @@
                 </div>
               </div>
             </div>
-            <v-divider></v-divider>
+            <v-divider />
           </div>
 
           <!-- Content Processing Section -->
           <div class="section-header">
-            <v-icon color="primary" class="section-icon">$document</v-icon>
-            <div class="section-title">Content Processing</div>
+            <v-icon
+              color="primary"
+              class="section-icon"
+            >
+              $document
+            </v-icon>
+            <div class="section-title">
+              Content Processing
+            </div>
           </div>
           
-          <div v-for="key in processingSettings" :key="key">
+          <div
+            v-for="key in processingSettings"
+            :key="key"
+          >
             <div class="feature-row">
               <div class="feature-content">
                 <div class="feature-left">
-                  <v-icon v-if="getFeatureIcon(key)" color="primary" class="feature-icon">{{ getFeatureIcon(key) }}</v-icon>
+                  <v-icon
+                    v-if="getFeatureIcon(key)"
+                    color="primary"
+                    class="feature-icon"
+                  >
+                    {{ getFeatureIcon(key) }}
+                  </v-icon>
                   <div class="feature-info">
-                    <div class="feature-title text-high-emphasis">{{ formatFeatureName(key) }}</div>
-                    <div class="feature-description text-medium-emphasis" v-if="hasLearnMoreLink(key)" v-html="getFeatureDescription(key)"></div>
-                    <div class="feature-description text-medium-emphasis" v-else>{{ getFeatureDescription(key) }}</div>
+                    <div class="feature-title text-high-emphasis">
+                      {{ formatFeatureName(key) }}
+                    </div>
+                    <div
+                      v-if="hasLearnMoreLink(key)"
+                      class="feature-description text-medium-emphasis"
+                      v-html="getFeatureDescription(key)"
+                    />
+                    <div
+                      v-else
+                      class="feature-description text-medium-emphasis"
+                    >
+                      {{ getFeatureDescription(key) }}
+                    </div>
                   </div>
                 </div>
                 <div class="feature-right">
@@ -150,24 +209,51 @@
                 </div>
               </div>
             </div>
-            <v-divider></v-divider>
+            <v-divider />
           </div>
 
           <!-- Data Management Section -->
           <div class="section-header">
-            <v-icon color="primary" class="section-icon">$database</v-icon>
-            <div class="section-title">Data Management</div>
+            <v-icon
+              color="primary"
+              class="section-icon"
+            >
+              $database
+            </v-icon>
+            <div class="section-title">
+              Data Management
+            </div>
           </div>
           
-          <div v-for="(key, index) in dataManagementSettings" :key="key">
+          <div
+            v-for="(key, index) in dataManagementSettings"
+            :key="key"
+          >
             <div class="feature-row">
               <div class="feature-content">
                 <div class="feature-left">
-                  <v-icon v-if="getFeatureIcon(key)" color="primary" class="feature-icon">{{ getFeatureIcon(key) }}</v-icon>
+                  <v-icon
+                    v-if="getFeatureIcon(key)"
+                    color="primary"
+                    class="feature-icon"
+                  >
+                    {{ getFeatureIcon(key) }}
+                  </v-icon>
                   <div class="feature-info">
-                    <div class="feature-title text-high-emphasis">{{ formatFeatureName(key) }}</div>
-                    <div class="feature-description text-medium-emphasis" v-if="hasLearnMoreLink(key)" v-html="getFeatureDescription(key)"></div>
-                    <div class="feature-description text-medium-emphasis" v-else>{{ getFeatureDescription(key) }}</div>
+                    <div class="feature-title text-high-emphasis">
+                      {{ formatFeatureName(key) }}
+                    </div>
+                    <div
+                      v-if="hasLearnMoreLink(key)"
+                      class="feature-description text-medium-emphasis"
+                      v-html="getFeatureDescription(key)"
+                    />
+                    <div
+                      v-else
+                      class="feature-description text-medium-emphasis"
+                    >
+                      {{ getFeatureDescription(key) }}
+                    </div>
                   </div>
                 </div>
                 <div class="feature-right">
@@ -186,7 +272,7 @@
                 </div>
               </div>
             </div>
-            <v-divider v-if="index < dataManagementSettings.length - 1"></v-divider>
+            <v-divider v-if="index < dataManagementSettings.length - 1" />
           </div>
         </div>
         

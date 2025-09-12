@@ -3,7 +3,9 @@
     <!-- Upload Section -->
     <v-card class="mb-6">
       <v-card-title class="text-h6">
-        <v-icon class="me-2">$upload</v-icon>
+        <v-icon class="me-2">
+          $upload
+        </v-icon>
         Upload Documents
       </v-card-title>
       <v-card-text class="pa-6">
@@ -19,8 +21,11 @@
           show-size
           :rules="fileRules"
         >
-          <template v-slot:selection="{ fileNames }">
-            <template v-for="(fileName, index) in fileNames" :key="fileName">
+          <template #selection="{ fileNames }">
+            <template
+              v-for="(fileName, index) in fileNames"
+              :key="fileName"
+            >
               <v-chip
                 v-if="index < 3"
                 color="primary"
@@ -46,33 +51,41 @@
             color="primary"
             :disabled="!selectedFiles?.length || uploading"
             :loading="uploading"
-            @click="uploadFiles"
             prepend-icon="$cloud_upload"
             class="mr-4"
+            @click="uploadFiles"
           >
             Upload Files
           </v-btn>
           <v-btn
             variant="outlined"
-            @click="clearSelection"
             :disabled="!selectedFiles?.length || uploading"
+            @click="clearSelection"
           >
             Clear
           </v-btn>
           <v-btn
             color="secondary"
             prepend-icon="$refresh"
-            @click="refreshKnowledgeBase"
             :loading="refreshing"
             variant="outlined"
+            @click="refreshKnowledgeBase"
           >
             Refresh Index
           </v-btn>
         </div>
 
         <!-- Inline refresh status (non-intrusive) -->
-        <div v-if="refreshing" class="mt-2 text-caption text-medium-emphasis d-flex align-center">
-          <v-icon size="16" class="mr-1">$refresh</v-icon>
+        <div
+          v-if="refreshing"
+          class="mt-2 text-caption text-medium-emphasis d-flex align-center"
+        >
+          <v-icon
+            size="16"
+            class="mr-1"
+          >
+            $refresh
+          </v-icon>
           <span>
             Refreshing
             <template v-if="refreshInfo.current_file">: {{ refreshInfo.current_file }}</template>
@@ -80,13 +93,23 @@
           </span>
         </div>
 
-        <v-divider class="my-4"></v-divider>
+        <v-divider class="my-4" />
 
         <div class="text-body-2 text-medium-emphasis">
-          <v-icon size="small" class="me-1">$info</v-icon>
+          <v-icon
+            size="small"
+            class="me-1"
+          >
+            $info
+          </v-icon>
           <strong>Supported formats:</strong> .md, .pdf, .json, .txt, .html, .docx
           <br>
-          <v-icon size="small" class="me-1">$info</v-icon>
+          <v-icon
+            size="small"
+            class="me-1"
+          >
+            $info
+          </v-icon>
           <strong>Note:</strong> Files will be automatically indexed after upload. Use "Refresh Index" to force re-indexing.
         </div>
       </v-card-text>
@@ -95,16 +118,18 @@
     <!-- File List -->
     <v-card>
       <v-card-title class="text-h6 d-flex align-center">
-        <v-icon class="me-2">$format-list-bulleted</v-icon>
+        <v-icon class="me-2">
+          $format-list-bulleted
+        </v-icon>
         Knowledge Base Files
-        <v-spacer></v-spacer>
+        <v-spacer />
         <v-btn
           icon="$refresh"
           variant="text"
           size="small"
-          @click="loadFiles"
           :loading="loadingFiles"
-        ></v-btn>
+          @click="loadFiles"
+        />
       </v-card-title>
       <v-card-text class="pa-0">
         <v-data-table
@@ -113,44 +138,50 @@
           :loading="loadingFiles"
           item-key="name"
         >
-          <template v-slot:item.name="{ item }">
+          <template #[`item.name`]="{ item }">
             <div class="d-flex align-center">
-              <v-icon :color="getFileIcon(item.name).color" class="me-2">
+              <v-icon
+                :color="getFileIcon(item.name).color"
+                class="me-2"
+              >
                 {{ getFileIcon(item.name).icon }}
               </v-icon>
               {{ item.name }}
             </div>
           </template>
-          <template v-slot:item.size="{ item }">
+          <template #[`item.size`]="{ item }">
             {{ formatFileSize(item.size) }}
           </template>
-          <template v-slot:item.modified="{ item }">
+          <template #[`item.modified`]="{ item }">
             {{ formatDate(item.modified) }}
           </template>
-          <template v-slot:item.actions="{ item }">
+          <template #[`item.actions`]="{ item }">
             <v-btn
               v-if="canEdit(item.name)"
               icon="$edit"
               variant="text"
               size="small"
               color="primary"
-              @click="openFileEditor(item)"
               class="me-1"
-            ></v-btn>
+              @click="openFileEditor(item)"
+            />
             <v-btn
               icon="$delete"
               variant="text"
               size="small"
               color="error"
               @click="confirmDelete(item)"
-            ></v-btn>
+            />
           </template>
         </v-data-table>
       </v-card-text>
     </v-card>
 
     <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="deleteDialog" max-width="400">
+    <v-dialog
+      v-model="deleteDialog"
+      max-width="400"
+    >
       <v-card>
         <v-card-title>Confirm Delete</v-card-title>
         <v-card-text>
@@ -158,9 +189,20 @@
           This action cannot be undone.
         </v-card-text>
         <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn text @click="deleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" @click="deleteFile" :loading="deleting">Delete</v-btn>
+          <v-spacer />
+          <v-btn
+            text
+            @click="deleteDialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="deleting"
+            @click="deleteFile"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -229,7 +271,7 @@ const formatFileSize = (bytes) => {
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))  } ${  sizes[i]}`
 }
 
 const formatDate = (dateString) => {

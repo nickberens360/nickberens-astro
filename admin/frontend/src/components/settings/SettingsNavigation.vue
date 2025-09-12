@@ -1,21 +1,34 @@
 <template>
   <nav class="settings-nav">
-    <v-list class="settings-nav-list" nav density="comfortable" lines="two" rounded="lg">
+    <v-list
+      class="settings-nav-list"
+      nav
+      density="comfortable"
+      lines="two"
+      rounded="lg"
+    >
       <v-list-item
         v-for="tab in navigationTabs"
         :key="tab.value"
         :value="tab.value"
         :active="currentTab === tab.value"
-        @click="navigateToTab(tab.value)"
         class="settings-nav-item"
         :class="{ 'settings-nav-item--active': currentTab === tab.value }"
         rounded="lg"
+        @click="navigateToTab(tab.value)"
       >
-        <template v-slot:prepend>
-          <v-icon :icon="tab.icon" size="20" />
+        <template #prepend>
+          <v-icon
+            :icon="tab.icon"
+            size="20"
+          />
         </template>
-        <v-list-item-title class="settings-nav-title">{{ tab.title }}</v-list-item-title>
-        <v-list-item-subtitle class="settings-nav-description">{{ tab.description }}</v-list-item-subtitle>
+        <v-list-item-title class="settings-nav-title">
+          {{ tab.title }}
+        </v-list-item-title>
+        <v-list-item-subtitle class="settings-nav-description">
+          {{ tab.description }}
+        </v-list-item-subtitle>
       </v-list-item>
     </v-list>
   </nav>

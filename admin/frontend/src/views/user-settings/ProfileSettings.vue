@@ -1,13 +1,22 @@
 <template>
   <div class="profile-settings">
     <!-- Display Name Section -->
-    <v-card class="mb-6" rounded="lg" elevation="1">
+    <v-card
+      class="mb-6"
+      rounded="lg"
+      elevation="1"
+    >
       <v-card-title class="d-flex align-center">
-        <v-icon start>$account</v-icon>
+        <v-icon start>
+          $account
+        </v-icon>
         Display Name
       </v-card-title>
       <v-card-text>
-        <v-form ref="displayNameForm" @submit.prevent="handleDisplayNameChange">
+        <v-form
+          ref="displayNameForm"
+          @submit.prevent="handleDisplayNameChange"
+        >
           <v-text-field
             v-model="displayName"
             label="Display Name"
@@ -33,13 +42,22 @@
     </v-card>
 
     <!-- Email Section -->
-    <v-card class="mb-6" rounded="lg" elevation="1">
+    <v-card
+      class="mb-6"
+      rounded="lg"
+      elevation="1"
+    >
       <v-card-title class="d-flex align-center">
-        <v-icon start>$email</v-icon>
+        <v-icon start>
+          $email
+        </v-icon>
         Email Address
       </v-card-title>
       <v-card-text>
-        <v-form ref="emailForm" @submit.prevent="handleEmailChange">
+        <v-form
+          ref="emailForm"
+          @submit.prevent="handleEmailChange"
+        >
           <v-text-field
             v-model="email"
             label="Email Address"
@@ -78,13 +96,21 @@
     </v-card>
 
     <!-- Password Section -->
-    <v-card rounded="lg" elevation="1">
+    <v-card
+      rounded="lg"
+      elevation="1"
+    >
       <v-card-title class="d-flex align-center">
-        <v-icon start>$lock</v-icon>
+        <v-icon start>
+          $lock
+        </v-icon>
         Change Password
       </v-card-title>
       <v-card-text>
-        <v-form ref="passwordForm" @submit.prevent="handlePasswordChange">
+        <v-form
+          ref="passwordForm"
+          @submit.prevent="handlePasswordChange"
+        >
           <v-text-field
             v-model="currentPassword"
             label="Current Password"
@@ -94,8 +120,8 @@
             density="comfortable"
             :rules="passwordRules"
             :append-inner-icon="showCurrentPassword ? '$eye-off' : '$eye'"
-            @click:append-inner="showCurrentPassword = !showCurrentPassword"
             class="mb-4"
+            @click:append-inner="showCurrentPassword = !showCurrentPassword"
           />
           <v-text-field
             v-model="newPassword"
@@ -106,8 +132,8 @@
             density="comfortable"
             :rules="newPasswordRules"
             :append-inner-icon="showNewPassword ? '$eye-off' : '$eye'"
-            @click:append-inner="showNewPassword = !showNewPassword"
             class="mb-4"
+            @click:append-inner="showNewPassword = !showNewPassword"
           />
           <v-text-field
             v-model="confirmPassword"
@@ -118,9 +144,9 @@
             density="comfortable"
             :rules="confirmPasswordRules"
             :append-inner-icon="showConfirmPassword ? '$eye-off' : '$eye'"
-            @click:append-inner="showConfirmPassword = !showConfirmPassword"
             :error-messages="passwordMatchError"
             class="mb-4"
+            @click:append-inner="showConfirmPassword = !showConfirmPassword"
           />
           
           <!-- Password Requirements -->

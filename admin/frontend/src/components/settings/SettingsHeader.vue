@@ -2,7 +2,9 @@
   <div class="page-header mb-8">
     <div class="d-flex align-center justify-space-between">
       <div>
-        <h1 class="page-title text-h4 font-weight-bold mb-2">Settings</h1>
+        <h1 class="page-title text-h4 font-weight-bold mb-2">
+          Settings
+        </h1>
         <p class="page-subtitle text-body-1 text-medium-emphasis">
           Manage system configuration, follow-up questions, and feature settings
         </p>
@@ -11,10 +13,10 @@
         <v-btn
           color="warning"
           prepend-icon="$refresh"
-          @click="invalidateCache"
           :loading="cacheLoading"
           variant="elevated"
           size="default"
+          @click="invalidateCache"
         >
           Clear Cache
         </v-btn>

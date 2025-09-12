@@ -1,15 +1,31 @@
 <template>
-  <v-dialog v-model="dialog" max-width="1400px" persistent>
-    <v-card class="dialog-card" elevation="12">
+  <v-dialog
+    v-model="dialog"
+    max-width="1400px"
+    persistent
+  >
+    <v-card
+      class="dialog-card"
+      elevation="12"
+    >
       <v-card-title class="dialog-header pa-6 d-flex justify-space-between align-center">
         <div class="d-flex align-center">
-          <v-icon class="me-3" color="primary">$edit</v-icon>
+          <v-icon
+            class="me-3"
+            color="primary"
+          >
+            $edit
+          </v-icon>
           <div>
-            <h2 class="text-h6 font-weight-bold">File Editor</h2>
-            <p class="text-body-2 text-medium-emphasis ma-0">{{ filename }}</p>
+            <h2 class="text-h6 font-weight-bold">
+              File Editor
+            </h2>
+            <p class="text-body-2 text-medium-emphasis ma-0">
+              {{ filename }}
+            </p>
           </div>
         </div>
-        <v-spacer/>
+        <v-spacer />
         <v-chip
           :color="getFileTypeColor(fileType)"
           size="small"
@@ -20,9 +36,12 @@
         </v-chip>
       </v-card-title>
 
-      <v-divider class="border-opacity-25"/>
+      <v-divider class="border-opacity-25" />
 
-      <v-card-text class="pa-6" style="background: rgba(var(--v-theme-surface), 0.3);">
+      <v-card-text
+        class="pa-6"
+        style="background: rgba(var(--v-theme-surface), 0.3);"
+      >
         <v-alert
           v-if="error"
           type="error"
@@ -67,19 +86,40 @@
           <div
             ref="editorContainer"
             style="height: 500px; width: 100%;"
-          /></v-card>
+          />
+        </v-card>
       </v-card-text>
 
-      <v-divider class="border-opacity-25"/>
+      <v-divider class="border-opacity-25" />
 
       <v-card-actions class="pa-6 justify-space-between">
         <div class="d-flex align-center gap-2">
-          <v-chip size="small" variant="tonal" color="info" class="mr-4">
-            <v-icon start size="small">$text</v-icon>
+          <v-chip
+            size="small"
+            variant="tonal"
+            color="info"
+            class="mr-4"
+          >
+            <v-icon
+              start
+              size="small"
+            >
+              $text
+            </v-icon>
             {{ lineCount }} lines
           </v-chip>
-          <v-chip size="small" variant="tonal" color="info" class="mr-4">
-            <v-icon start size="small">$file</v-icon>
+          <v-chip
+            size="small"
+            variant="tonal"
+            color="info"
+            class="mr-4"
+          >
+            <v-icon
+              start
+              size="small"
+            >
+              $file
+            </v-icon>
             {{ formatFileSize(fileSize) }}
           </v-chip>
           <v-chip
@@ -88,7 +128,12 @@
             size="small"
             variant="flat"
           >
-            <v-icon start size="small">$pencil</v-icon>
+            <v-icon
+              start
+              size="small"
+            >
+              $pencil
+            </v-icon>
             Unsaved Changes
           </v-chip>
         </div>
@@ -98,18 +143,18 @@
             v-if="fileType === '.json'"
             prepend-icon="$format-text"
             variant="outlined"
-            @click="formatJson"
             :disabled="saving"
             class="rounded-lg mr-3"
+            @click="formatJson"
           >
             Format JSON
           </v-btn>
           <v-btn
             prepend-icon="$close"
             variant="outlined"
-            @click="handleCancel"
             :disabled="saving"
             class="rounded-lg mr-3"
+            @click="handleCancel"
           >
             Cancel
           </v-btn>
@@ -117,10 +162,10 @@
             color="primary"
             prepend-icon="$save"
             :loading="saving"
-            @click="saveFile"
             :disabled="!hasUnsavedChanges"
             class="rounded-lg"
             variant="flat"
+            @click="saveFile"
           >
             Save Changes
           </v-btn>
@@ -130,33 +175,50 @@
   </v-dialog>
 
   <!-- Unsaved Changes Confirmation Dialog -->
-  <v-dialog v-model="showCloseConfirm" max-width="480">
-    <v-card class="dialog-card" elevation="8">
+  <v-dialog
+    v-model="showCloseConfirm"
+    max-width="480"
+  >
+    <v-card
+      class="dialog-card"
+      elevation="8"
+    >
       <v-card-title class="dialog-header pa-6">
         <div class="d-flex align-center">
-          <v-icon class="me-3" color="warning">$alert</v-icon>
+          <v-icon
+            class="me-3"
+            color="warning"
+          >
+            $alert
+          </v-icon>
           <div>
-            <h2 class="text-h6 font-weight-bold">Discard Changes?</h2>
-            <p class="text-body-2 text-medium-emphasis ma-0">Unsaved changes will be lost</p>
+            <h2 class="text-h6 font-weight-bold">
+              Discard Changes?
+            </h2>
+            <p class="text-body-2 text-medium-emphasis ma-0">
+              Unsaved changes will be lost
+            </p>
           </div>
         </div>
       </v-card-title>
 
-      <v-divider class="border-opacity-25"/>
+      <v-divider class="border-opacity-25" />
 
       <v-card-text class="pa-6">
-        <p class="text-body-2 mb-0">You have unsaved changes that will be lost if you close without saving. Are you sure you want to continue?</p>
+        <p class="text-body-2 mb-0">
+          You have unsaved changes that will be lost if you close without saving. Are you sure you want to continue?
+        </p>
       </v-card-text>
 
-      <v-divider class="border-opacity-25"/>
+      <v-divider class="border-opacity-25" />
 
       <v-card-actions class="pa-6">
-        <v-spacer/>
+        <v-spacer />
         <v-btn
           prepend-icon="$close"
           variant="outlined"
-          @click="cancelClose"
           class="rounded-lg"
+          @click="cancelClose"
         >
           Cancel
         </v-btn>
@@ -164,8 +226,8 @@
           color="warning"
           prepend-icon="$delete"
           variant="flat"
-          @click="confirmClose"
           class="rounded-lg"
+          @click="confirmClose"
         >
           Discard Changes
         </v-btn>
@@ -277,7 +339,7 @@ export default {
       const k = 1024
       const sizes = ['Bytes', 'KB', 'MB']
       const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))  } ${  sizes[i]}`
     }
 
     const loadFile = async () => {
@@ -305,7 +367,7 @@ export default {
 
         originalContent.value = content
         currentContent.value = content
-        fileType.value = '.' + (ext || 'txt')
+        fileType.value = `.${  ext || 'txt'}`
         fileSize.value = response.size || 0
         hasUnsavedChanges.value = false
 

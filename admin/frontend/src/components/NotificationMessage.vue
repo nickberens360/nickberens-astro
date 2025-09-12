@@ -11,7 +11,9 @@
       @update:model-value="onUpdate(n.id, $event)"
     >
       <div class="d-flex align-center">
-        <div class="mr-2">{{ n.message }}</div>
+        <div class="mr-2">
+          {{ n.message }}
+        </div>
       </div>
 
       <template #actions>

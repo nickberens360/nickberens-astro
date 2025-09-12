@@ -3,7 +3,9 @@
     <!-- Page Header -->
     <div class="d-flex justify-space-between align-center mb-6">
       <div>
-        <h1 class="text-h5 font-weight-bold">Core Settings</h1>
+        <h1 class="text-h5 font-weight-bold">
+          Core Settings
+        </h1>
         <p class="text-body-2 text-medium-emphasis mt-1">
           Essential system configuration, LLM models, and API key management
         </p>
@@ -11,9 +13,9 @@
       <v-btn
         color="primary"
         variant="elevated"
-        @click="saveAllSettings"
         :loading="saving"
         prepend-icon="$check"
+        @click="saveAllSettings"
       >
         Save All Changes
       </v-btn>
@@ -21,14 +23,27 @@
 
     <div class="grid-container">
       <!-- LLM Configuration Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6">
-          <v-icon color="primary" class="mr-2">$brain</v-icon>
+          <v-icon
+            color="primary"
+            class="mr-2"
+          >
+            $brain
+          </v-icon>
           Language Model Configuration
         </v-card-title>
         
         <v-card-text class="pa-0">
-          <v-alert v-if="modelError" type="error" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            v-if="modelError"
+            type="error"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             {{ modelError }}
           </v-alert>
           
@@ -38,10 +53,19 @@
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$message-text</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $message-text
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Response LLM</div>
-                  <div class="setting-description text-medium-emphasis">Language model used for all user-facing chat responses</div>
+                  <div class="setting-title text-high-emphasis">
+                    Response LLM
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Language model used for all user-facing chat responses
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -57,16 +81,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Processing LLM Selection Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$cog</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $cog
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Processing LLM</div>
-                  <div class="setting-description text-medium-emphasis">Language model for background operations like content indexing</div>
+                  <div class="setting-title text-high-emphasis">
+                    Processing LLM
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Language model for background operations like content indexing
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -82,16 +115,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Smart Model Selection Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$tune</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $tune
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Smart Model Selection</div>
-                  <div class="setting-description text-medium-emphasis">Automatically choose between fast and quality models based on query complexity</div>
+                  <div class="setting-title text-high-emphasis">
+                    Smart Model Selection
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Automatically choose between fast and quality models based on query complexity
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -108,16 +150,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Claude Model Selection Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$robot</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $robot
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Claude Model</div>
-                  <div class="setting-description text-medium-emphasis">Specific Claude model for response generation</div>
+                  <div class="setting-title text-high-emphasis">
+                    Claude Model
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Specific Claude model for response generation
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -133,16 +184,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Gemini Model Selection Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$google</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $google
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Gemini Model</div>
-                  <div class="setting-description text-medium-emphasis">Specific Gemini model for response generation</div>
+                  <div class="setting-title text-high-emphasis">
+                    Gemini Model
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Specific Gemini model for response generation
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -161,17 +221,25 @@
       </v-card>
 
       <!-- API Keys Management Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6 d-flex justify-space-between align-center">
           <div class="d-flex align-center">
-            <v-icon color="primary" class="mr-2">$key</v-icon>
+            <v-icon
+              color="primary"
+              class="mr-2"
+            >
+              $key
+            </v-icon>
             API Keys
           </div>
           <v-btn
             color="primary"
             prepend-icon="$plus"
-            @click="showCreateDialog = true"
             size="small"
+            @click="showCreateDialog = true"
           >
             Add Key
           </v-btn>
@@ -189,8 +257,15 @@
           </v-alert>
 
           <!-- Active Keys List -->
-          <div v-if="activeKeys.length > 0" class="keys-list">
-            <div v-for="key in activeKeys" :key="key.id" class="key-item">
+          <div
+            v-if="activeKeys.length > 0"
+            class="keys-list"
+          >
+            <div
+              v-for="key in activeKeys"
+              :key="key.id"
+              class="key-item"
+            >
               <div class="key-info">
                 <div class="d-flex align-center">
                   <v-chip
@@ -213,8 +288,8 @@
                   size="small"
                   color="info"
                   variant="text"
-                  @click="validateKey(key)"
                   :loading="validating === key.key_name"
+                  @click="validateKey(key)"
                 />
                 <v-btn
                   icon="$pencil"
@@ -227,15 +302,18 @@
             </div>
           </div>
           
-          <div v-else class="text-center py-4 text-medium-emphasis">
+          <div
+            v-else
+            class="text-center py-4 text-medium-emphasis"
+          >
             No API keys configured. Add your first API key to get started.
           </div>
 
           <div class="text-center mt-4">
             <v-btn
               variant="outlined"
-              @click="$router.push('/settings/api-keys')"
               prepend-icon="$settings"
+              @click="$router.push('/settings/api-keys')"
             >
               Manage All Keys
             </v-btn>
@@ -244,14 +322,27 @@
       </v-card>
 
       <!-- System Mode Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6">
-          <v-icon color="primary" class="mr-2">$cog-box</v-icon>
+          <v-icon
+            color="primary"
+            class="mr-2"
+          >
+            $cog-box
+          </v-icon>
           System Mode
         </v-card-title>
         
         <v-card-text class="pa-0">
-          <v-alert v-if="systemError" type="error" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            v-if="systemError"
+            type="error"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             {{ systemError }}
           </v-alert>
           
@@ -260,22 +351,34 @@
           <!-- Debug Mode temporarily hidden -->
 
           <!-- Maintenance Mode Toggle -->
-          <div class="setting-row" v-if="featureStore && featureStore.featureFlags">
+          <div
+            v-if="featureStore && featureStore.featureFlags"
+            class="setting-row"
+          >
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="error" class="setting-icon">$wrench</v-icon>
+                <v-icon
+                  color="error"
+                  class="setting-icon"
+                >
+                  $wrench
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Maintenance Mode</div>
-                  <div class="setting-description text-medium-emphasis">Put the system into maintenance mode (blocks user queries)</div>
+                  <div class="setting-title text-high-emphasis">
+                    Maintenance Mode
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Put the system into maintenance mode (blocks user queries)
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
                 <v-switch
                   v-model="featureStore.featureFlags.enable_maintenance_mode"
-                  @update:model-value="() => featureStore.updateFeatureFlags()"
                   color="error"
                   inset
                   hide-details
+                  @update:model-value="() => featureStore.updateFeatureFlags()"
                 />
                 <div class="setting-status text-medium-emphasis">
                   {{ featureStore.featureFlags.enable_maintenance_mode ? 'Enabled' : 'Disabled' }}
@@ -288,14 +391,21 @@
     </div>
 
     <!-- Create/Edit API Key Dialog -->
-    <v-dialog v-model="showCreateDialog" max-width="600px" persistent>
+    <v-dialog
+      v-model="showCreateDialog"
+      max-width="600px"
+      persistent
+    >
       <v-card>
         <v-card-title>
           <span class="text-h6">{{ editingKey ? 'Edit' : 'Add' }} API Key</span>
         </v-card-title>
 
         <v-card-text>
-          <v-form v-model="formValid" ref="keyFormRef">
+          <v-form
+            ref="keyFormRef"
+            v-model="formValid"
+          >
             <v-text-field
               v-model="keyForm.key_name"
               label="Key Name"
@@ -326,13 +436,13 @@
               :rules="keyRules"
               :type="showKey ? 'text' : 'password'"
               :append-inner-icon="showKey ? '$eye-off' : '$eye'"
-              @click:append-inner="showKey = !showKey"
               rows="3"
               auto-grow
               :hint="editingKey ? 'Enter new API key to replace current key, or leave unchanged to keep existing key' : 'The actual API key from your provider'"
               persistent-hint
               required
               class="mt-4"
+              @click:append-inner="showKey = !showKey"
             />
 
             <v-alert
@@ -350,12 +460,17 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="closeDialog" :disabled="savingKey">Cancel</v-btn>
+          <v-btn
+            :disabled="savingKey"
+            @click="closeDialog"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="primary"
-            @click="saveKey"
             :loading="savingKey"
             :disabled="!formValid"
+            @click="saveKey"
           >
             {{ editingKey ? 'Update' : 'Create' }}
           </v-btn>
@@ -449,18 +564,18 @@ const keyTypeOptions = [
 
 // Form validation rules
 const nameRules = [
-  v => !!v || 'Key name is required',
+  v => Boolean(v) || 'Key name is required',
   v => (v && v.length >= 3) || 'Key name must be at least 3 characters',
   v => (v && /^[a-z0-9_]+$/.test(v)) || 'Key name must contain only lowercase letters, numbers, and underscores',
   v => !keys.value.some(k => k.key_name === v && k.id !== editingKey.value?.id) || 'Key name already exists'
 ]
 
 const typeRules = [
-  v => !!v || 'Key type is required'
+  v => Boolean(v) || 'Key type is required'
 ]
 
 const keyRules = [
-  v => !!v || 'API key is required',
+  v => Boolean(v) || 'API key is required',
   v => {
     if (!v) return 'API key is required'
     const isMasked = /^\*{10,}\w{4}$/.test(v)
@@ -497,7 +612,7 @@ const loadAllSettings = async () => {
     
   } catch (err) {
     console.error('Failed to load settings:', err)
-    modelError.value = 'Failed to load settings: ' + (err.response?.data?.detail || err.message)
+    modelError.value = `Failed to load settings: ${  err.response?.data?.detail || err.message}`
   } finally {
     loading.value = false
   }
@@ -523,7 +638,7 @@ const saveAllSettings = async () => {
     
   } catch (err) {
     console.error('Failed to save settings:', err)
-    const errorMsg = 'Failed to save settings: ' + (err.response?.data?.detail || err.message)
+    const errorMsg = `Failed to save settings: ${  err.response?.data?.detail || err.message}`
     modelError.value = errorMsg
     systemError.value = errorMsg
     showError(errorMsg)
@@ -598,7 +713,7 @@ const saveKey = async () => {
   if (!formValid.value) return
 
   savingKey.value = true
-  const isEditing = !!editingKey.value
+  const isEditing = Boolean(editingKey.value)
   
   try {
     if (isEditing) {

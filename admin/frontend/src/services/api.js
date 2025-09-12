@@ -921,10 +921,6 @@ class AdminAPI {
     return await this.client.get('/users')
   }
 
-  async createUser(userData) {
-    return await this.client.post('/users', userData)
-  }
-
   async deactivateUser(userId) {
     return await this.client.put(`/users/${userId}/deactivate`)
   }

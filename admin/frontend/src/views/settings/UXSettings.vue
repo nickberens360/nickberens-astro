@@ -3,7 +3,9 @@
     <!-- Page Header -->
     <div class="d-flex justify-space-between align-center mb-6">
       <div>
-        <h1 class="text-h5 font-weight-bold">User Experience Settings</h1>
+        <h1 class="text-h5 font-weight-bold">
+          User Experience Settings
+        </h1>
         <p class="text-body-2 text-medium-emphasis mt-1">
           Configure welcome messages and user-facing features for enhanced user experience
         </p>
@@ -11,9 +13,9 @@
       <v-btn
         color="primary"
         variant="elevated"
-        @click="saveAllSettings"
         :loading="saving"
         prepend-icon="$check"
+        @click="saveAllSettings"
       >
         Save All Changes
       </v-btn>
@@ -21,10 +23,19 @@
 
     <div class="grid-container">
       <!-- Welcome Questions Management Card -->
-      <v-card elevation="2" class="mb-6" v-if="featureStore && featureStore.featureFlags">
+      <v-card
+        v-if="featureStore && featureStore.featureFlags"
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6 d-flex justify-space-between align-center">
           <div class="d-flex align-center">
-            <v-icon color="primary" class="mr-2">$message-question</v-icon>
+            <v-icon
+              color="primary"
+              class="mr-2"
+            >
+              $message-question
+            </v-icon>
             Welcome Questions
           </div>
           <div class="d-flex align-center">
@@ -38,8 +49,8 @@
             <v-btn
               color="primary"
               prepend-icon="$plus"
-              @click="showCreateQuestionDialog"
               size="small"
+              @click="showCreateQuestionDialog"
             >
               Add Question
             </v-btn>
@@ -49,11 +60,20 @@
         <v-card-text>
           <!-- Active Questions List -->
           <div v-if="questions.length > 0">
-            <div v-for="(question, index) in sortedQuestions" :key="question.id" class="question-item">
+            <div
+              v-for="(question, index) in sortedQuestions"
+              :key="question.id"
+              class="question-item"
+            >
               <div class="question-content">
                 <div class="question-info">
                   <div class="d-flex align-center">
-                    <v-avatar size="24" color="primary" variant="tonal" class="mr-2">
+                    <v-avatar
+                      size="24"
+                      color="primary"
+                      variant="tonal"
+                      class="mr-2"
+                    >
                       <span class="text-caption font-weight-bold">{{ question.sort_order || (index + 1) }}</span>
                     </v-avatar>
                     <span class="font-weight-medium">{{ question.question_text }}</span>
@@ -98,10 +118,22 @@
             </div>
           </div>
 
-          <div v-else class="text-center py-8 text-medium-emphasis">
-            <v-icon size="48" class="mb-4">$message-question</v-icon>
-            <div class="text-h6 mb-2">No Welcome Questions</div>
-            <p class="text-body-2 mb-4">Add questions to help guide users when they visit your site.</p>
+          <div
+            v-else
+            class="text-center py-8 text-medium-emphasis"
+          >
+            <v-icon
+              size="48"
+              class="mb-4"
+            >
+              $message-question
+            </v-icon>
+            <div class="text-h6 mb-2">
+              No Welcome Questions
+            </div>
+            <p class="text-body-2 mb-4">
+              Add questions to help guide users when they visit your site.
+            </p>
             <v-btn
               color="primary"
               prepend-icon="$plus"
@@ -114,10 +146,18 @@
       </v-card>
 
       <!-- Follow-up Questions Management Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6 d-flex justify-space-between align-center">
           <div class="d-flex align-center">
-            <v-icon color="primary" class="mr-2">$message-reply</v-icon>
+            <v-icon
+              color="primary"
+              class="mr-2"
+            >
+              $message-reply
+            </v-icon>
             Follow-up Questions
           </div>
           <div class="d-flex align-center">
@@ -138,8 +178,8 @@
             <v-btn
               color="primary"
               prepend-icon="$plus"
-              @click="showCreateFollowupCategoryDialog"
               size="small"
+              @click="showCreateFollowupCategoryDialog"
             >
               Add Category
             </v-btn>
@@ -151,10 +191,19 @@
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$toggle-switch</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $toggle-switch
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Follow-up Questions</div>
-                  <div class="setting-description text-medium-emphasis">Generate suggested follow-up questions after responses</div>
+                  <div class="setting-title text-high-emphasis">
+                    Follow-up Questions
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Generate suggested follow-up questions after responses
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -172,16 +221,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Service Type Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$brain</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $brain
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Generation Method</div>
-                  <div class="setting-description text-medium-emphasis">How follow-up questions are generated</div>
+                  <div class="setting-title text-high-emphasis">
+                    Generation Method
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    How follow-up questions are generated
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -198,16 +256,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Max Questions Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$numeric</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $numeric
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Max Questions</div>
-                  <div class="setting-description text-medium-emphasis">Maximum number of follow-up questions to show</div>
+                  <div class="setting-title text-high-emphasis">
+                    Max Questions
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Maximum number of follow-up questions to show
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -227,11 +294,13 @@
           </div>
 
           <!-- Categories List -->
-          <v-divider class="mb-4"></v-divider>
+          <v-divider class="mb-4" />
 
           <div class="pa-6">
             <div class="d-flex justify-space-between align-center mb-4">
-              <h3 class="text-h6">Question Categories</h3>
+              <h3 class="text-h6">
+                Question Categories
+              </h3>
               <div class="d-flex align-center">
                 <v-btn
                   variant="outlined"
@@ -245,20 +314,37 @@
             </div>
 
             <!-- Use the full-featured FollowupAccordion for in-place management -->
-            <FollowupAccordion :key="followupKey" @changed="onFollowupChanged" @edit-category="onEditFollowupCategory" />
+            <FollowupAccordion
+              :key="followupKey"
+              @changed="onFollowupChanged"
+              @edit-category="onEditFollowupCategory"
+            />
           </div>
         </v-card-text>
       </v-card>
 
       <!-- User-Facing Features Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6">
-          <v-icon color="primary" class="mr-2">$feature-search</v-icon>
+          <v-icon
+            color="primary"
+            class="mr-2"
+          >
+            $feature-search
+          </v-icon>
           User-Facing Features
         </v-card-title>
 
         <v-card-text class="pa-0">
-          <v-alert v-if="featureError" type="error" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            v-if="featureError"
+            type="error"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             {{ featureError }}
           </v-alert>
 
@@ -270,10 +356,19 @@
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$map-marker</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $map-marker
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Enable Geolocation</div>
-                  <div class="setting-description text-medium-emphasis">Allow location-based features and personalized responses</div>
+                  <div class="setting-title text-high-emphasis">
+                    Enable Geolocation
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Allow location-based features and personalized responses
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -290,18 +385,29 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Enable Query Preprocessing Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$wrench</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $wrench
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Enable Query Preprocessing</div>
+                  <div class="setting-title text-high-emphasis">
+                    Enable Query Preprocessing
+                  </div>
                   <div class="setting-description text-medium-emphasis">
                     Enhance user queries with preprocessing and optimization
-                    <a :href="getBlogUrl('query-preprocessing-security-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                    <a
+                      :href="getBlogUrl('query-preprocessing-security-rag')"
+                      target="_blank"
+                      style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                    >Learn more →</a>
                   </div>
                 </div>
               </div>
@@ -319,16 +425,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Enable API Versioning Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$source-branch</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $source-branch
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Enable API Versioning</div>
-                  <div class="setting-description text-medium-emphasis">Support multiple API versions for backward compatibility</div>
+                  <div class="setting-title text-high-emphasis">
+                    Enable API Versioning
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Support multiple API versions for backward compatibility
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -349,14 +464,21 @@
     </div>
 
     <!-- Create/Edit Question Dialog -->
-    <v-dialog v-model="showQuestionDialog" max-width="600px" persistent>
+    <v-dialog
+      v-model="showQuestionDialog"
+      max-width="600px"
+      persistent
+    >
       <v-card>
         <v-card-title>
           <span class="text-h6">{{ editingQuestion ? 'Edit' : 'Add' }} Welcome Question</span>
         </v-card-title>
 
         <v-card-text>
-          <v-form v-model="formValid" ref="questionFormRef">
+          <v-form
+            ref="questionFormRef"
+            v-model="formValid"
+          >
             <v-textarea
               v-model="questionForm.question_text"
               label="Question Text"
@@ -379,7 +501,10 @@
                   hint="1 = first"
                 />
               </v-col>
-              <v-col cols="6" v-if="editingQuestion">
+              <v-col
+                v-if="editingQuestion"
+                cols="6"
+              >
                 <v-switch
                   v-model="questionForm.is_active"
                   label="Active"
@@ -393,12 +518,17 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="closeQuestionDialog" :disabled="savingQuestion">Cancel</v-btn>
+          <v-btn
+            :disabled="savingQuestion"
+            @click="closeQuestionDialog"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="primary"
-            @click="saveQuestion"
             :loading="savingQuestion"
             :disabled="!formValid"
+            @click="saveQuestion"
           >
             {{ editingQuestion ? 'Update' : 'Create' }}
           </v-btn>
@@ -407,14 +537,21 @@
     </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="showDeleteDialog" max-width="500px">
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="500px"
+    >
       <v-card>
         <v-card-title>
           <span class="text-h6">Confirm Deletion</span>
         </v-card-title>
 
         <v-card-text>
-          <v-alert type="error" variant="tonal" class="mb-4">
+          <v-alert
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
             This action cannot be undone.
           </v-alert>
 
@@ -426,11 +563,16 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="showDeleteDialog = false" :disabled="deletingQuestion">Cancel</v-btn>
+          <v-btn
+            :disabled="deletingQuestion"
+            @click="showDeleteDialog = false"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="error"
-            @click="confirmDeleteQuestion"
             :loading="deletingQuestion"
+            @click="confirmDeleteQuestion"
           >
             Delete
           </v-btn>
@@ -519,7 +661,7 @@ const questionForm = reactive({
 
 // Form validation rules
 const questionRules = [
-  v => !!v || 'Question text is required',
+  v => Boolean(v) || 'Question text is required',
   v => (v && v.length >= 3) || 'Question must be at least 3 characters',
   v => (v && v.length <= 500) || 'Question must be less than 500 characters'
 ]
@@ -547,7 +689,7 @@ const loadAllSettings = async () => {
 
   } catch (err) {
     console.error('Failed to load settings:', err)
-    featureError.value = 'Failed to load settings: ' + (err.response?.data?.detail || err.message)
+    featureError.value = `Failed to load settings: ${  err.response?.data?.detail || err.message}`
   }
 }
 
@@ -562,7 +704,7 @@ const saveAllSettings = async () => {
 
   } catch (err) {
     console.error('Failed to save settings:', err)
-    featureError.value = 'Failed to save settings: ' + (err.response?.data?.detail || err.message)
+    featureError.value = `Failed to save settings: ${  err.response?.data?.detail || err.message}`
     showError('Failed to save settings')
   } finally {
     saving.value = false
@@ -703,7 +845,7 @@ const saveFollowupSettings = async () => {
     showSuccess('Follow-up settings saved successfully!')
   } catch (error) {
     console.error('Failed to save followup settings:', error)
-    featureError.value = 'Failed to save follow-up settings: ' + (error.response?.data?.detail || error.message)
+    featureError.value = `Failed to save follow-up settings: ${  error.response?.data?.detail || error.message}`
     showError('Failed to save follow-up settings')
   }
 }
@@ -767,7 +909,7 @@ const saveFollowupCategory = async (data) => {
     showSuccess(data && data.id ? 'Category updated' : 'Category created')
   } catch (e) {
     console.error('Failed to save follow-up category', e)
-    featureError.value = 'Failed to save category: ' + (e.response?.data?.detail || e.message)
+    featureError.value = `Failed to save category: ${  e.response?.data?.detail || e.message}`
   }
 }
 

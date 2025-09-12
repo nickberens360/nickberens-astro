@@ -6,21 +6,30 @@
         <v-btn
           color="primary"
           variant="elevated"
-          @click="saveFeatureFlags"
           :loading="store.loading"
           prepend-icon="$check"
+          @click="saveFeatureFlags"
         >
           Save Changes
         </v-btn>
       </v-card-title>
       
       <v-card-text class="pa-0">
-        <v-alert v-if="store.error" type="error" variant="tonal" class="ma-6 mb-4">
+        <v-alert
+          v-if="store.error"
+          type="error"
+          variant="tonal"
+          class="ma-6 mb-4"
+        >
           {{ store.error }}
         </v-alert>
         
         <div v-if="store.featureFlags && filteredKeys.length > 0">
-          <v-alert type="info" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            type="info"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             This page shows active system/UX feature flags only. Settings for caching, routing, and RAG have dedicated
             pages (Response Settings, Routing Settings, and RAG Configuration).
           </v-alert>
@@ -31,10 +40,20 @@
             <div class="feature-row">
               <div class="feature-content">
                 <div class="feature-left">
-                  <v-icon v-if="getFeatureIcon(key)" color="primary" class="feature-icon">{{ getFeatureIcon(key) }}</v-icon>
+                  <v-icon
+                    v-if="getFeatureIcon(key)"
+                    color="primary"
+                    class="feature-icon"
+                  >
+                    {{ getFeatureIcon(key) }}
+                  </v-icon>
                   <div class="feature-info">
-                    <div class="feature-title text-high-emphasis">{{ formatFeatureName(key) }}</div>
-                    <div class="feature-description text-medium-emphasis">{{ getFeatureDescription(key) }}</div>
+                    <div class="feature-title text-high-emphasis">
+                      {{ formatFeatureName(key) }}
+                    </div>
+                    <div class="feature-description text-medium-emphasis">
+                      {{ getFeatureDescription(key) }}
+                    </div>
                   </div>
                 </div>
                 <div class="feature-right">
@@ -82,7 +101,9 @@
                         hide-details
                         style="width: 200px;"
                       />
-                      <div class="feature-status text-medium-emphasis">{{ store.featureFlags[key].toFixed(getFieldBounds(key).decimals || 1) }}</div>
+                      <div class="feature-status text-medium-emphasis">
+                        {{ store.featureFlags[key].toFixed(getFieldBounds(key).decimals || 1) }}
+                      </div>
                     </div>
                   </template>
                   
@@ -100,7 +121,7 @@
                 </div>
               </div>
             </div>
-            <v-divider v-if="index < filteredKeys.length - 1"></v-divider>
+            <v-divider v-if="index < filteredKeys.length - 1" />
           </div>
         </div>
         

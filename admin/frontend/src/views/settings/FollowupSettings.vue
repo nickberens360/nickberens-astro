@@ -2,56 +2,112 @@
   <div>
     <!-- Overview Cards -->
     <v-row class="mb-6">
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="success" size="large" class="me-3">$folder</v-icon>
+              <v-icon
+                color="success"
+                size="large"
+                class="me-3"
+              >
+                $folder
+              </v-icon>
               <div>
-                <div class="text-h6">{{ store.stats.active_categories }}</div>
-                <div class="text-body-2 text-medium-emphasis">Active Categories</div>
+                <div class="text-h6">
+                  {{ store.stats.active_categories }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Active Categories
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="primary" size="large" class="me-3">$help-circle</v-icon>
+              <v-icon
+                color="primary"
+                size="large"
+                class="me-3"
+              >
+                $help-circle
+              </v-icon>
               <div>
-                <div class="text-h6">{{ store.stats.total_questions }}</div>
-                <div class="text-body-2 text-medium-emphasis">Total Questions</div>
+                <div class="text-h6">
+                  {{ store.stats.total_questions }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Total Questions
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="warning" size="large" class="me-3">$alert</v-icon>
+              <v-icon
+                color="warning"
+                size="large"
+                class="me-3"
+              >
+                $alert
+              </v-icon>
               <div>
-                <div class="text-h6">{{ store.stats.inactive_categories }}</div>
-                <div class="text-body-2 text-medium-emphasis">Inactive Categories</div>
+                <div class="text-h6">
+                  {{ store.stats.inactive_categories }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Inactive Categories
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="info" size="large" class="me-3">$brain</v-icon>
+              <v-icon
+                color="info"
+                size="large"
+                class="me-3"
+              >
+                $brain
+              </v-icon>
               <div>
-                <div class="text-h6 text-capitalize">{{ store.settings.service_type || 'Static' }}</div>
-                <div class="text-body-2 text-medium-emphasis">Service Mode</div>
+                <div class="text-h6 text-capitalize">
+                  {{ store.settings.service_type || 'Static' }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Service Mode
+                </div>
               </div>
             </div>
           </v-card-text>
@@ -62,22 +118,36 @@
     <!-- System Settings Section -->
     <div class="ds-section-spacing">
       <div class="ds-content-spacing">
-        <h2 class="text-h6 ds-font-bold ds-mb-2">System Configuration</h2>
+        <h2 class="text-h6 ds-font-bold ds-mb-2">
+          System Configuration
+        </h2>
         <p class="ds-text-sm text-medium-emphasis">
           Configure follow-up question generation behavior and limits
         </p>
       </div>
 
       <v-card class="ds-card settings-card">
-        <v-card-text class="pa-0" style="padding: 0 !important;">
+        <v-card-text
+          class="pa-0"
+          style="padding: 0 !important;"
+        >
           <!-- Service Status Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$toggle-switch</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $toggle-switch
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Service Status</div>
-                  <div class="setting-description text-medium-emphasis">Toggle the follow-up question system on or off</div>
+                  <div class="setting-title text-high-emphasis">
+                    Service Status
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Toggle the follow-up question system on or off
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -95,16 +165,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Generation Method Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$brain</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $brain
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Generation Method</div>
-                  <div class="setting-description text-medium-emphasis">Choose how questions are generated and selected</div>
+                  <div class="setting-title text-high-emphasis">
+                    Generation Method
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Choose how questions are generated and selected
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -121,16 +200,25 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Question Limit Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$numeric</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $numeric
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Question Limit</div>
-                  <div class="setting-description text-medium-emphasis">Maximum number of follow-up questions to display</div>
+                  <div class="setting-title text-high-emphasis">
+                    Question Limit
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Maximum number of follow-up questions to display
+                  </div>
                 </div>
               </div>
               <div class="setting-right">
@@ -149,7 +237,9 @@
                     style="width: 200px;"
                     @update:model-value="updateSetting('max_questions', $event)"
                   />
-                  <div class="setting-status text-medium-emphasis">{{ store.settings.max_questions }} {{ store.settings.max_questions === 1 ? 'question' : 'questions' }}</div>
+                  <div class="setting-status text-medium-emphasis">
+                    {{ store.settings.max_questions }} {{ store.settings.max_questions === 1 ? 'question' : 'questions' }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -163,7 +253,9 @@
       <div class="ds-content-spacing">
         <div class="d-flex align-center justify-space-between">
           <div>
-            <h2 class="text-h6 ds-font-bold ds-mb-2">Category Management</h2>
+            <h2 class="text-h6 ds-font-bold ds-mb-2">
+              Category Management
+            </h2>
             <p class="ds-text-sm text-medium-emphasis">
               Manage question categories and their associated follow-up questions
             </p>
@@ -181,33 +273,38 @@
         <v-card-text class="pa-3">
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center">
-              <v-icon class="mr-2">$checkbox-marked</v-icon>
+              <v-icon class="mr-2">
+                $checkbox-marked
+              </v-icon>
               <span class="font-weight-medium">
                 {{ store.selectedCategories.length }} {{ store.selectedCategories.length === 1 ? 'category' : 'categories' }} selected
               </span>
             </div>
-            <v-btn-group variant="outlined" density="compact">
+            <v-btn-group
+              variant="outlined"
+              density="compact"
+            >
               <v-btn
                 prepend-icon="$eye"
-                @click="bulkActivate"
                 :loading="store.loading"
                 class="mr-3"
+                @click="bulkActivate"
               >
                 Activate
               </v-btn>
               <v-btn
                 prepend-icon="$eye-off"
-                @click="bulkDeactivate"
                 :loading="store.loading"
                 class="mr-3"
+                @click="bulkDeactivate"
               >
                 Deactivate
               </v-btn>
               <v-btn
                 color="error"
                 prepend-icon="$delete"
-                @click="bulkDelete"
                 :loading="store.loading"
+                @click="bulkDelete"
               >
                 Delete
               </v-btn>
@@ -231,16 +328,16 @@
             </div>
             <v-btn
               color="primary"
-              @click="showCategoryDialog = true"
               prepend-icon="$plus"
               variant="elevated"
+              @click="showCategoryDialog = true"
             >
               Add Category
             </v-btn>
           </div>
         </v-card-title>
 
-        <v-divider class="mx-6 mb-4"></v-divider>
+        <v-divider class="mx-6 mb-4" />
 
         <v-card-text class="ds-p-6 pt-0">
           <FollowupAccordion
@@ -258,21 +355,38 @@
           />
 
           <!-- Empty State -->
-          <div v-else class="empty-state text-center py-12">
-            <v-avatar size="80" color="grey-lighten-3" class="ds-mb-4">
-              <v-icon size="40" color="grey-lighten-1">$format-list-group</v-icon>
+          <div
+            v-else
+            class="empty-state text-center py-12"
+          >
+            <v-avatar
+              size="80"
+              color="grey-lighten-3"
+              class="ds-mb-4"
+            >
+              <v-icon
+                size="40"
+                color="grey-lighten-1"
+              >
+                $format-list-group
+              </v-icon>
             </v-avatar>
 
-            <h3 class="text-h6 ds-font-semibold ds-mb-2">No Categories Yet</h3>
-            <p class="text-body-2 text-medium-emphasis ds-mb-6 mx-auto" style="max-width: 320px;">
+            <h3 class="text-h6 ds-font-semibold ds-mb-2">
+              No Categories Yet
+            </h3>
+            <p
+              class="text-body-2 text-medium-emphasis ds-mb-6 mx-auto"
+              style="max-width: 320px;"
+            >
               Create your first category to organize follow-up questions
             </p>
 
             <v-btn
               color="primary"
               prepend-icon="$plus"
-              @click="showCategoryDialog = true"
               variant="elevated"
+              @click="showCategoryDialog = true"
             >
               Create First Category
             </v-btn>

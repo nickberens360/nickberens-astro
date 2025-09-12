@@ -15,7 +15,6 @@ from typing import Any, Dict, Optional, Tuple
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.utils import SecretStr
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig

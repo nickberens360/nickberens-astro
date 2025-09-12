@@ -2,11 +2,16 @@
   <div class="taxonomy-settings">
     <v-card elevation="2">
       <v-card-title class="d-flex align-center justify-space-between pa-6">
-        <div class="text-h6 font-weight-bold">Search & Taxonomy</div>
-        <div class="d-flex align-center" style="gap: 8px;">
+        <div class="text-h6 font-weight-bold">
+          Search & Taxonomy
+        </div>
+        <div
+          class="d-flex align-center"
+          style="gap: 8px;"
+        >
           <!-- Actions Menu -->
           <v-menu>
-            <template v-slot:activator="{ props }">
+            <template #activator="{ props }">
               <v-btn 
                 v-bind="props"
                 variant="text"
@@ -16,31 +21,34 @@
             </template>
             <v-list density="compact">
               <v-list-item @click="reloadFromServer">
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-icon>$undo</v-icon>
                 </template>
                 <v-list-item-title>Reload from Server</v-list-item-title>
               </v-list-item>
               <v-list-item @click="validateJson">
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-icon>$check</v-icon>
                 </template>
                 <v-list-item-title>Validate JSON</v-list-item-title>
               </v-list-item>
               <v-list-item @click="formatJson">
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-icon>$format-text</v-icon>
                 </template>
                 <v-list-item-title>Format JSON</v-list-item-title>
               </v-list-item>
-              <v-list-item @click="discardChanges" :disabled="!hasUnsavedChanges">
-                <template v-slot:prepend>
+              <v-list-item
+                :disabled="!hasUnsavedChanges"
+                @click="discardChanges"
+              >
+                <template #prepend>
                   <v-icon>$undo</v-icon>
                 </template>
                 <v-list-item-title>Discard Changes</v-list-item-title>
               </v-list-item>
               <v-list-item @click="openAutoGenerate">
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-icon>$auto-generate</v-icon>
                 </template>
                 <v-list-item-title>Auto-Generate Taxonomy</v-list-item-title>
@@ -54,16 +62,17 @@
             color="warning"
             size="small"
             variant="tonal"
-          >Unsaved changes
+          >
+            Unsaved changes
           </v-chip>
 
           <!-- Primary Action -->
           <v-btn
             variant="elevated"
             color="primary"
-            @click="publish"
             prepend-icon="$save"
             class="ml-3"
+            @click="publish"
           >
             Publish
           </v-btn>
@@ -76,14 +85,23 @@
           type="error"
           variant="tonal"
           class="mb-4"
-        >{{ error }}
+        >
+          {{ error }}
         </v-alert>
         <!-- Validation success is shown via a toast -->
 
         <!-- Fallback File Upload Section -->
-        <v-card variant="flat" class="mb-6">
+        <v-card
+          variant="flat"
+          class="mb-6"
+        >
           <v-card-title class="text-subtitle-1 font-weight-bold pa-4 d-flex align-center">
-            <v-icon color="primary" class="mr-2">$upload</v-icon>
+            <v-icon
+              color="primary"
+              class="mr-2"
+            >
+              $upload
+            </v-icon>
             Fallback Taxonomy File
             <v-chip
               :color="fallbackStatus.exists ? 'success' : 'warning'"
@@ -100,7 +118,10 @@
             a file on the server (backend/core/topic_taxonomy.json), replacing any existing fallback and
             refreshing the app to use it if needed.
           </div>
-          <v-card-text class="pa-4 d-flex align-center" style="gap: 8px;">
+          <v-card-text
+            class="pa-4 d-flex align-center"
+            style="gap: 8px;"
+          >
             <v-file-input
               v-model="fallbackFile"
               label="Upload JSON file"
@@ -114,19 +135,33 @@
             <!-- Fallback Actions Dropdown -->
             <v-menu>
               <template #activator="{ props }">
-                <v-btn v-bind="props" variant="text" icon="$dots-vertical" density="comfortable" />
+                <v-btn
+                  v-bind="props"
+                  variant="text"
+                  icon="$dots-vertical"
+                  density="comfortable"
+                />
               </template>
               <v-list density="compact">
                 <v-list-item @click="refreshFallbackStatus">
-                  <template #prepend><v-icon>$refresh</v-icon></template>
+                  <template #prepend>
+                    <v-icon>$refresh</v-icon>
+                  </template>
                   <v-list-item-title>Refresh Status</v-list-item-title>
                 </v-list-item>
-                <v-list-item @click="downloadFallback" :disabled="!fallbackStatus.exists">
-                  <template #prepend><v-icon>$download</v-icon></template>
+                <v-list-item
+                  :disabled="!fallbackStatus.exists"
+                  @click="downloadFallback"
+                >
+                  <template #prepend>
+                    <v-icon>$download</v-icon>
+                  </template>
                   <v-list-item-title>Download Fallback</v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="downloadFallbackTemplate">
-                  <template #prepend><v-icon>$file</v-icon></template>
+                  <template #prepend>
+                    <v-icon>$file</v-icon>
+                  </template>
                   <v-list-item-title>Download Template</v-list-item-title>
                 </v-list-item>
               </v-list>
@@ -135,9 +170,10 @@
               color="primary"
               variant="elevated"
               :disabled="!fallbackFile"
-              @click="uploadFallback"
               prepend-icon="$upload"
-            >Upload
+              @click="uploadFallback"
+            >
+              Upload
             </v-btn>
           </v-card-text>
         </v-card>
@@ -151,7 +187,8 @@
             <v-icon
               color="primary"
               class="mr-2"
-            >$code
+            >
+              $code
             </v-icon>
             Taxonomy JSON Editor
           </v-card-title>
@@ -167,7 +204,10 @@
               />
             </v-card>
 
-            <div class="mt-4 d-flex align-center" style="gap: 8px;">
+            <div
+              class="mt-4 d-flex align-center"
+              style="gap: 8px;"
+            >
               <v-text-field
                 v-model="testQuery"
                 label="Test Query"
@@ -182,7 +222,8 @@
                 variant="elevated"
                 class="ml-6"
                 @click="runTest"
-              >Test Detection
+              >
+                Test Detection
               </v-btn>
             </div>
 
@@ -207,11 +248,12 @@
               <v-icon
                 color="primary"
                 class="mr-2"
-              >$preview
+              >
+                $preview
               </v-icon>
               Live Preview
             </div>
-            <v-spacer/>
+            <v-spacer />
             <v-btn
               color="primary"
               variant="text"
@@ -223,34 +265,38 @@
           </v-card-title>
           <v-card-text class="pa-4">
             <div
-              class="preview-list"
               v-if="categoryList.length"
+              class="preview-list"
             >
-              <template v-for="(c, idx) in categoryList" :key="c.name">
+              <template
+                v-for="(c, idx) in categoryList"
+                :key="c.name"
+              >
                 <div class="preview-item">
                   <div class="item-title d-flex align-center">
                     <v-icon
                       size="18"
                       color="primary"
                       class="mr-1"
-                    >$tag
+                    >
+                      $tag
                     </v-icon>
                     {{ c.name }}
-                    <v-spacer/>
+                    <v-spacer />
                     <v-btn
                       size="small"
                       variant="text"
                       icon="$pencil"
-                      @click="openEditCategory(c)"
                       :title="`Edit ${c.name}`"
+                      @click="openEditCategory(c)"
                     />
                     <v-btn
                       size="small"
                       variant="text"
                       color="error"
                       icon="$delete"
-                      @click="deleteCategoryFromList(c.name)"
                       :title="`Delete ${c.name}`"
+                      @click="deleteCategoryFromList(c.name)"
                     />
                   </div>
                   <div class="item-line">
@@ -262,13 +308,17 @@
                     {{ (c.regex || []).join(' | ') || '—' }}
                   </div>
                 </div>
-                <v-divider v-if="idx < categoryList.length - 1" class="mt-3 mb-0" />
+                <v-divider
+                  v-if="idx < categoryList.length - 1"
+                  class="mt-3 mb-0"
+                />
               </template>
             </div>
             <div
               v-else
               class="text-medium-emphasis"
-            >No categories parsed yet.
+            >
+              No categories parsed yet.
             </div>
           </v-card-text>
         </v-card>
@@ -283,14 +333,18 @@
               <v-icon
                 color="primary"
                 class="mr-2"
-              >$tag
+              >
+                $tag
               </v-icon>
               {{
                 categoryDialog.isNew ? 'Add Category' : `Edit Category: ${categoryDialog.originalName}`
               }}
             </v-card-title>
             <v-card-text>
-              <div class="d-flex flex-column" style="gap: 16px;">
+              <div
+                class="d-flex flex-column"
+                style="gap: 16px;"
+              >
                 <v-text-field
                   v-model="categoryDialog.form.name"
                   label="Category Name"
@@ -361,18 +415,21 @@
                 color="error"
                 class="mr-auto"
                 @click="deleteCategory"
-              >Delete
+              >
+                Delete
               </v-btn>
               <v-btn
                 variant="text"
                 @click="closeCategoryDialog"
-              >Cancel
+              >
+                Cancel
               </v-btn>
               <v-btn
                 color="primary"
                 variant="elevated"
                 @click="saveCategory"
-              >Save
+              >
+                Save
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -389,7 +446,13 @@
   >
     Deleted '{{ undoSnack.name }}'.
     <template #actions>
-      <v-btn variant="text" color="primary" @click="undoDelete">Undo</v-btn>
+      <v-btn
+        variant="text"
+        color="primary"
+        @click="undoDelete"
+      >
+        Undo
+      </v-btn>
     </template>
   </v-snackbar>
 
@@ -400,7 +463,12 @@
   >
     <v-card>
       <v-card-title class="d-flex align-center">
-        <v-icon color="error" class="mr-2">$delete</v-icon>
+        <v-icon
+          color="error"
+          class="mr-2"
+        >
+          $delete
+        </v-icon>
         Confirm Delete
       </v-card-title>
       <v-card-text>
@@ -408,7 +476,11 @@
           You are about to delete category
           <strong>{{ deleteConfirm.name }}</strong>.
         </div>
-        <v-alert type="warning" variant="tonal" class="mb-4">
+        <v-alert
+          type="warning"
+          variant="tonal"
+          class="mb-4"
+        >
           This will remove the category from the taxonomy and auto-publish the change.
         </v-alert>
         <v-text-field
@@ -422,29 +494,47 @@
         />
       </v-card-text>
       <v-card-actions class="justify-end">
-        <v-btn variant="text" @click="deleteConfirm.open = false">Cancel</v-btn>
+        <v-btn
+          variant="text"
+          @click="deleteConfirm.open = false"
+        >
+          Cancel
+        </v-btn>
         <v-btn
           color="error"
           variant="elevated"
           :disabled="deleteConfirm.match !== deleteConfirm.name"
           @click="confirmDeleteAction"
-        >Delete</v-btn>
+        >
+          Delete
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
   <!-- Auto-Generate Taxonomy Dialog -->
-  <v-dialog v-model="autoGen.open" max-width="560">
+  <v-dialog
+    v-model="autoGen.open"
+    max-width="560"
+  >
     <v-card>
       <v-card-title class="d-flex align-center">
-        <v-icon color="primary" class="mr-2">$auto-generate</v-icon>
+        <v-icon
+          color="primary"
+          class="mr-2"
+        >
+          $auto-generate
+        </v-icon>
         Auto-Generate Taxonomy
       </v-card-title>
       <v-card-text>
         <div class="text-medium-emphasis mb-4">
           Proposes categories and synonyms from indexed content. Review and edit before publishing.
         </div>
-        <div class="d-flex" style="gap: 16px;">
+        <div
+          class="d-flex"
+          style="gap: 16px;"
+        >
           <v-text-field
             v-model.number="autoGen.options.max_categories"
             type="number"
@@ -473,12 +563,22 @@
         />
       </v-card-text>
       <v-card-actions class="justify-end">
-        <v-btn variant="text" @click="autoGen.open = false">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="runAutoGenerate">Generate</v-btn>
+        <v-btn
+          variant="text"
+          @click="autoGen.open = false"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="elevated"
+          @click="runAutoGenerate"
+        >
+          Generate
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
-
 </template>
 
 <script setup>
@@ -613,7 +713,7 @@ function openEditCategory(cat) {
   categoryDialog.form.synonyms = Array.isArray(cat.synonyms) ? [...cat.synonyms] : [];
   categoryDialog.form.regex = Array.isArray(cat.regex) ? [...cat.regex] : [];
   const meta = (cat.metadata && typeof cat.metadata === 'object') ? cat.metadata : {};
-  categoryDialog.form.metadata = { is_illustration_data: !!meta.is_illustration_data };
+  categoryDialog.form.metadata = { is_illustration_data: Boolean(meta.is_illustration_data) };
   categoryDialog.open = true;
 }
 
@@ -652,7 +752,7 @@ function saveCategory() {
     const entry = {
       synonyms: (categoryDialog.form.synonyms || []).map(s => String(s).trim()).filter(Boolean),
       regex: (categoryDialog.form.regex || []).map(s => String(s).trim()).filter(Boolean),
-      metadata: { is_illustration_data: !!categoryDialog.form.metadata.is_illustration_data },
+      metadata: { is_illustration_data: Boolean(categoryDialog.form.metadata.is_illustration_data) },
     };
 
     if (categoryDialog.isNew) {
@@ -963,8 +1063,8 @@ async function runAutoGenerate() {
 async function refreshFallbackStatus() {
   try {
     const resp = await adminAPI.getTaxonomyFallback();
-    fallbackStatus.exists = !!resp?.exists;
-    fallbackStatus.invalid = !!resp?.invalid;
+    fallbackStatus.exists = Boolean(resp?.exists);
+    fallbackStatus.invalid = Boolean(resp?.invalid);
   } catch (e) {
     // non-fatal
   }
@@ -997,7 +1097,7 @@ async function uploadFallback() {
 
 function discardChanges() {
   try {
-    if (!hasUnsavedChanges) return;
+    if (!hasUnsavedChanges.value) return;
     const ok = window.confirm('Discard all unsaved changes and revert to last loaded/published version?');
     if (!ok) return;
     let content = '';

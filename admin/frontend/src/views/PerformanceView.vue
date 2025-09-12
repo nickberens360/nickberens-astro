@@ -1,6 +1,5 @@
 <template>
   <div class="performance-view">
-    
     <v-row class="mb-6">
       <v-col
         v-for="metric in performanceMetrics"
@@ -21,7 +20,10 @@
     </v-row>
     
     <v-row>
-      <v-col cols="12" lg="8">
+      <v-col
+        cols="12"
+        lg="8"
+      >
         <PerformanceChart
           title="Response Time Timeline"
           :data="responseTimeData"
@@ -30,7 +32,10 @@
         />
       </v-col>
       
-      <v-col cols="12" lg="4">
+      <v-col
+        cols="12"
+        lg="4"
+      >
         <PerformanceChart
           title="Throughput"
           :data="throughputData"

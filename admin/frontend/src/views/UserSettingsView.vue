@@ -3,21 +3,31 @@
     <div class="user-settings-layout">
       <!-- Navigation Sidebar -->
       <nav class="user-settings-nav">
-        <v-list class="user-settings-nav-list" nav density="comfortable" rounded="lg">
+        <v-list
+          class="user-settings-nav-list"
+          nav
+          density="comfortable"
+          rounded="lg"
+        >
           <v-list-item
             v-for="tab in navigationTabs"
             :key="tab.value"
             :value="tab.value"
             :active="currentTab === tab.value"
-            @click="navigateToTab(tab.value)"
             class="user-settings-nav-item"
             :class="{ 'user-settings-nav-item--active': currentTab === tab.value }"
             rounded="lg"
+            @click="navigateToTab(tab.value)"
           >
-            <template v-slot:prepend>
-              <v-icon :icon="tab.icon" size="20" />
+            <template #prepend>
+              <v-icon
+                :icon="tab.icon"
+                size="20"
+              />
             </template>
-            <v-list-item-title class="user-settings-nav-title">{{ tab.title }}</v-list-item-title>
+            <v-list-item-title class="user-settings-nav-title">
+              {{ tab.title }}
+            </v-list-item-title>
           </v-list-item>
         </v-list>
       </nav>
@@ -26,8 +36,12 @@
       <main class="user-settings-content">
         <!-- Page Header -->
         <div class="user-settings-header">
-          <h2 class="text-h4 font-weight-bold mb-2">User Settings</h2>
-          <p class="text-body-1 text-medium-emphasis">Manage your account settings and preferences</p>
+          <h2 class="text-h4 font-weight-bold mb-2">
+            User Settings
+          </h2>
+          <p class="text-body-1 text-medium-emphasis">
+            Manage your account settings and preferences
+          </p>
         </div>
         
         <!-- Route Content -->

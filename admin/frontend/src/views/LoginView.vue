@@ -1,10 +1,23 @@
 <template>
-  <v-container class="fill-height" fluid>
-    <v-row align="center" justify="center">
-      <v-col cols="12" sm="8" md="6" lg="4">
+  <v-container
+    class="fill-height"
+    fluid
+  >
+    <v-row
+      align="center"
+      justify="center"
+    >
+      <v-col
+        cols="12"
+        sm="8"
+        md="6"
+        lg="4"
+      >
         <v-card>
           <v-card-title class="text-center">
-            <v-icon class="mr-2">$dashboard</v-icon>
+            <v-icon class="mr-2">
+              $dashboard
+            </v-icon>
             Admin Login
           </v-card-title>
           
@@ -17,7 +30,7 @@
               :error-messages="validation.username"
               data-testid="username"
               @keyup.enter="login"
-            ></v-text-field>
+            />
             
             <v-text-field
               v-model="formData.password"
@@ -28,7 +41,7 @@
               :error-messages="validation.password"
               data-testid="password"
               @keyup.enter="login"
-            ></v-text-field>
+            />
             
             <v-alert
               v-if="state.error"
@@ -44,7 +57,7 @@
           </v-card-text>
           
           <v-card-actions>
-            <v-spacer></v-spacer>
+            <v-spacer />
             <v-btn 
               color="primary" 
               size="large"

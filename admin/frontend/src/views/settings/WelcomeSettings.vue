@@ -2,42 +2,84 @@
   <div>
     <!-- Overview Cards -->
     <v-row class="mb-6">
-      <v-col cols="12" sm="6" md="4">
+      <v-col
+        cols="12"
+        sm="6"
+        md="4"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="primary" size="large" class="me-3">$message-text</v-icon>
+              <v-icon
+                color="primary"
+                size="large"
+                class="me-3"
+              >
+                $message-text
+              </v-icon>
               <div>
-                <div class="text-h6">{{ questions.filter(q => q.is_active).length }}</div>
-                <div class="text-body-2 text-medium-emphasis">Total Questions</div>
+                <div class="text-h6">
+                  {{ questions.filter(q => q.is_active).length }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Total Questions
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col
+        cols="12"
+        sm="6"
+        md="4"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="warning" size="large" class="me-3">$alert</v-icon>
+              <v-icon
+                color="warning"
+                size="large"
+                class="me-3"
+              >
+                $alert
+              </v-icon>
               <div>
-                <div class="text-h6">{{ questions.filter(q => !q.is_active).length }}</div>
-                <div class="text-body-2 text-medium-emphasis">Inactive Questions</div>
+                <div class="text-h6">
+                  {{ questions.filter(q => !q.is_active).length }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Inactive Questions
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col
+        cols="12"
+        sm="6"
+        md="4"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="info" size="large" class="me-3">$web</v-icon>
+              <v-icon
+                color="info"
+                size="large"
+                class="me-3"
+              >
+                $web
+              </v-icon>
               <div>
-                <div class="text-h6">{{ questions.filter(q => q.is_active).length }}</div>
-                <div class="text-body-2 text-medium-emphasis">Homepage Display</div>
+                <div class="text-h6">
+                  {{ questions.filter(q => q.is_active).length }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Homepage Display
+                </div>
               </div>
             </div>
           </v-card-text>
@@ -50,7 +92,9 @@
       <div class="section-header mb-6">
         <div class="d-flex align-center justify-space-between">
           <div>
-            <h2 class="section-title text-h5 font-weight-bold">Welcome Questions</h2>
+            <h2 class="section-title text-h5 font-weight-bold">
+              Welcome Questions
+            </h2>
             <p class="section-subtitle text-body-2 text-medium-emphasis">
               Manage the suggested questions shown to users on the homepage
             </p>
@@ -59,14 +103,25 @@
       </div>
 
       <!-- Questions List -->
-      <v-card class="questions-card" elevation="2">
+      <v-card
+        class="questions-card"
+        elevation="2"
+      >
         <v-card-title class="pa-6 pb-0">
           <div class="d-flex align-center">
-            <v-icon class="mr-3">$message-text</v-icon>
+            <v-icon class="mr-3">
+              $message-text
+            </v-icon>
             <span class="text-h6 font-weight-bold">Homepage Questions</span>
-            <v-spacer/>
+            <v-spacer />
 
-            <v-btn color="primary" size="small" @click="showCreateDialog" prepend-icon="$plus" class="mr-2">
+            <v-btn
+              color="primary"
+              size="small"
+              prepend-icon="$plus"
+              class="mr-2"
+              @click="showCreateDialog"
+            >
               Add Question
             </v-btn>
 
@@ -80,15 +135,22 @@
 
         <v-card-text class="pa-6">
           <div v-if="questions.length > 0">
-            <v-list lines="two" class="questions-list">
+            <v-list
+              lines="two"
+              class="questions-list"
+            >
               <v-list-item 
                 v-for="(question, index) in sortedQuestions" 
                 :key="question.id"
                 class="question-item"
                 :class="{ 'question-item--inactive': !question.is_active }"
               >
-                <template v-slot:prepend>
-                  <v-avatar size="40" color="primary" variant="tonal">
+                <template #prepend>
+                  <v-avatar
+                    size="40"
+                    color="primary"
+                    variant="tonal"
+                  >
                     <span class="text-body-1 font-weight-bold">{{ question.sort_order || (index + 1) }}</span>
                   </v-avatar>
                 </template>
@@ -99,13 +161,16 @@
 
                 <v-list-item-subtitle class="text-caption text-medium-emphasis">
                   <span>Created {{ formatDate(question.created_at) }}</span>
-                  <span v-if="!question.is_active" class="text-warning ml-2">• Inactive</span>
+                  <span
+                    v-if="!question.is_active"
+                    class="text-warning ml-2"
+                  >• Inactive</span>
                 </v-list-item-subtitle>
 
-                <template v-slot:append>
+                <template #append>
                   <div class="d-flex align-center gap-2">
                     <v-tooltip text="Edit question">
-                      <template v-slot:activator="{ props }">
+                      <template #activator="{ props }">
                         <v-btn
                           v-bind="props"
                           variant="text"
@@ -117,7 +182,7 @@
                     </v-tooltip>
 
                     <v-tooltip :text="question.is_active ? 'Deactivate' : 'Activate'">
-                      <template v-slot:activator="{ props }">
+                      <template #activator="{ props }">
                         <v-btn
                           v-bind="props"
                           variant="text"
@@ -129,7 +194,7 @@
                     </v-tooltip>
 
                     <v-tooltip text="Delete question">
-                      <template v-slot:activator="{ props }">
+                      <template #activator="{ props }">
                         <v-btn
                           v-bind="props"
                           variant="text"
@@ -147,13 +212,30 @@
           </div>
 
           <!-- Empty State -->
-          <div v-else class="empty-state text-center py-16">
-            <v-avatar size="120" color="grey-lighten-3" class="mb-6">
-              <v-icon size="60" color="grey-lighten-1">$message-text</v-icon>
+          <div
+            v-else
+            class="empty-state text-center py-16"
+          >
+            <v-avatar
+              size="120"
+              color="grey-lighten-3"
+              class="mb-6"
+            >
+              <v-icon
+                size="60"
+                color="grey-lighten-1"
+              >
+                $message-text
+              </v-icon>
             </v-avatar>
 
-            <h3 class="text-h5 font-weight-bold mb-3">No Questions Yet</h3>
-            <p class="text-body-1 text-medium-emphasis mb-8 mx-auto" style="max-width: 400px;">
+            <h3 class="text-h5 font-weight-bold mb-3">
+              No Questions Yet
+            </h3>
+            <p
+              class="text-body-1 text-medium-emphasis mb-8 mx-auto"
+              style="max-width: 400px;"
+            >
               Add welcome questions to help guide users when they first visit your site.
             </p>
 
@@ -161,8 +243,8 @@
               color="primary"
               size="large"
               prepend-icon="$plus"
-              @click="showCreateDialog"
               variant="elevated"
+              @click="showCreateDialog"
             >
               Add First Question
             </v-btn>
@@ -172,8 +254,16 @@
     </div>
 
     <!-- Create/Edit Question Dialog -->
-    <v-dialog v-model="showQuestionDialog" max-width="600px" persistent>
-      <v-card class="question-dialog" elevation="12" rounded="xl">
+    <v-dialog
+      v-model="showQuestionDialog"
+      max-width="600px"
+      persistent
+    >
+      <v-card
+        class="question-dialog"
+        elevation="12"
+        rounded="xl"
+      >
         <v-card-title class="dialog-header pa-6">
           <div class="d-flex align-center">
             <v-avatar
@@ -182,7 +272,9 @@
               variant="tonal"
               class="mr-4"
             >
-              <v-icon size="24">{{ editingQuestion ? '$pencil' : '$plus' }}</v-icon>
+              <v-icon size="24">
+                {{ editingQuestion ? '$pencil' : '$plus' }}
+              </v-icon>
             </v-avatar>
             <div class="flex-grow-1">
               <h2 class="text-h5 font-weight-bold mb-1">
@@ -195,10 +287,14 @@
           </div>
         </v-card-title>
 
-        <v-divider class="border-opacity-12"></v-divider>
+        <v-divider class="border-opacity-12" />
 
         <v-card-text class="pa-6">
-          <v-form ref="questionForm" v-model="formValid" @submit.prevent="saveQuestion">
+          <v-form
+            ref="questionForm"
+            v-model="formValid"
+            @submit.prevent="saveQuestion"
+          >
             <v-row>
               <v-col cols="12">
                 <v-textarea
@@ -215,7 +311,10 @@
                 />
               </v-col>
 
-              <v-col cols="12" md="6">
+              <v-col
+                cols="12"
+                md="6"
+              >
                 <v-text-field
                   v-model.number="questionFormData.sort_order"
                   label="Display Order"
@@ -228,7 +327,11 @@
                 />
               </v-col>
 
-              <v-col cols="12" md="6" v-if="editingQuestion">
+              <v-col
+                v-if="editingQuestion"
+                cols="12"
+                md="6"
+              >
                 <v-switch
                   v-model="questionFormData.is_active"
                   label="Active"
@@ -244,16 +347,16 @@
           </v-form>
         </v-card-text>
 
-        <v-divider class="border-opacity-12"></v-divider>
+        <v-divider class="border-opacity-12" />
 
         <v-card-actions class="dialog-actions pa-6">
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             variant="outlined"
             size="large"
-            @click="cancelQuestionEdit"
             :disabled="loading"
             class="mr-3"
+            @click="cancelQuestionEdit"
           >
             Cancel
           </v-btn>
@@ -272,8 +375,16 @@
     </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="showDeleteDialog" max-width="480px" persistent>
-      <v-card class="delete-dialog" elevation="12" rounded="xl">
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="480px"
+      persistent
+    >
+      <v-card
+        class="delete-dialog"
+        elevation="12"
+        rounded="xl"
+      >
         <v-card-title class="dialog-header pa-6">
           <div class="d-flex align-center">
             <v-avatar
@@ -282,10 +393,14 @@
               variant="tonal"
               class="mr-4"
             >
-              <v-icon size="24">$delete</v-icon>
+              <v-icon size="24">
+                $delete
+              </v-icon>
             </v-avatar>
             <div class="flex-grow-1">
-              <h2 class="text-h5 font-weight-bold mb-1">Delete Question</h2>
+              <h2 class="text-h5 font-weight-bold mb-1">
+                Delete Question
+              </h2>
               <p class="text-body-2 text-medium-emphasis ma-0">
                 This action cannot be undone
               </p>
@@ -293,7 +408,7 @@
           </div>
         </v-card-title>
 
-        <v-divider class="border-opacity-12"></v-divider>
+        <v-divider class="border-opacity-12" />
 
         <v-card-text class="pa-6">
           <p class="text-body-1 mb-4">
@@ -312,16 +427,16 @@
           </v-card>
         </v-card-text>
 
-        <v-divider class="border-opacity-12"></v-divider>
+        <v-divider class="border-opacity-12" />
 
         <v-card-actions class="dialog-actions pa-6">
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             variant="outlined"
             size="large"
-            @click="cancelDelete"
             :disabled="loading"
             class="mr-3"
+            @click="cancelDelete"
           >
             Cancel
           </v-btn>
@@ -330,15 +445,14 @@
             variant="elevated"
             size="large"
             :loading="loading"
-            @click="confirmDelete"
             prepend-icon="$delete"
+            @click="confirmDelete"
           >
             Delete Question
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </div>
 </template>
 
@@ -370,7 +484,7 @@ export default {
 
     // Form validation rules
     const questionRules = [
-      v => !!v || 'Question text is required',
+      v => Boolean(v) || 'Question text is required',
       v => (v && v.length >= 3) || 'Question must be at least 3 characters',
       v => (v && v.length <= 500) || 'Question must be less than 500 characters'
     ]

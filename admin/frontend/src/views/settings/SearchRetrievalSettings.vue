@@ -3,7 +3,9 @@
     <!-- Page Header -->
     <div class="d-flex justify-space-between align-center mb-6">
       <div>
-        <h1 class="text-h5 font-weight-bold">Search & Retrieval Settings</h1>
+        <h1 class="text-h5 font-weight-bold">
+          Search & Retrieval Settings
+        </h1>
         <p class="text-body-2 text-medium-emphasis mt-1">
           Configure query routing algorithms and RAG (Retrieval-Augmented Generation) parameters
         </p>
@@ -11,9 +13,9 @@
       <v-btn
         color="primary"
         variant="elevated"
-        @click="saveAllSettings"
         :loading="saving"
         prepend-icon="$check"
+        @click="saveAllSettings"
       >
         Save All Changes
       </v-btn>
@@ -21,19 +23,36 @@
 
     <div class="grid-container">
       <!-- Query Routing Configuration Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6">
-          <v-icon color="primary" class="mr-2">$route</v-icon>
+          <v-icon
+            color="primary"
+            class="mr-2"
+          >
+            $route
+          </v-icon>
           Query Routing Configuration
         </v-card-title>
         
         <v-card-text class="pa-0">
-          <v-alert type="info" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            type="info"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             These knobs control query-time behavior (routing choices, fuzzy keyword fallback) and do not change vector
             distances. For vector distance and MMR diversity, use the RAG section below.
           </v-alert>
 
-          <v-alert v-if="routingError" type="error" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            v-if="routingError"
+            type="error"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             {{ routingError }}
           </v-alert>
           
@@ -43,12 +62,23 @@
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$brain</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $brain
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Enable Smart Routing</div>
+                  <div class="setting-title text-high-emphasis">
+                    Enable Smart Routing
+                  </div>
                   <div class="setting-description text-medium-emphasis">
                     Use intelligent routing algorithms for query processing and intent analysis
-                    <a :href="getBlogUrl('smart-query-routing-in-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                    <a
+                      :href="getBlogUrl('smart-query-routing-in-rag')"
+                      target="_blank"
+                      style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                    >Learn more →</a>
                   </div>
                 </div>
               </div>
@@ -66,18 +96,29 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Enable Fuzzy Matching Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$target</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $target
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Enable Fuzzy Matching</div>
+                  <div class="setting-title text-high-emphasis">
+                    Enable Fuzzy Matching
+                  </div>
                   <div class="setting-description text-medium-emphasis">
                     Allow approximate string matching for better query results and typo tolerance
-                    <a :href="getBlogUrl('fuzzy-matching-thresholds-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                    <a
+                      :href="getBlogUrl('fuzzy-matching-thresholds-rag')"
+                      target="_blank"
+                      style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                    >Learn more →</a>
                   </div>
                 </div>
               </div>
@@ -95,17 +136,29 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Search Result Threshold Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$tune</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $tune
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Search Result Threshold</div>
-                  <div class="setting-description text-medium-emphasis">Minimum similarity score required to include results in responses (0.0 = very strict, 1.0 = very inclusive)
-                    <a :href="getBlogUrl('calibrating-fuzzy-thresholds')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                  <div class="setting-title text-high-emphasis">
+                    Search Result Threshold
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Minimum similarity score required to include results in responses (0.0 = very strict, 1.0 = very inclusive)
+                    <a
+                      :href="getBlogUrl('calibrating-fuzzy-thresholds')"
+                      target="_blank"
+                      style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                    >Learn more →</a>
                   </div>
                 </div>
               </div>
@@ -124,24 +177,37 @@
                     hide-details
                     style="width: 200px;"
                   />
-                  <div class="setting-status text-medium-emphasis">{{ routingSettings.similarity_threshold?.toFixed(1) }}</div>
+                  <div class="setting-status text-medium-emphasis">
+                    {{ routingSettings.similarity_threshold?.toFixed(1) }}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Max Search Results Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$numeric</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $numeric
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Max Search Results</div>
+                  <div class="setting-title text-high-emphasis">
+                    Max Search Results
+                  </div>
                   <div class="setting-description text-medium-emphasis">
                     Maximum number of search results to return per query
-                    <a :href="getBlogUrl('tuning-max-search-results-in-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                    <a
+                      :href="getBlogUrl('tuning-max-search-results-in-rag')"
+                      target="_blank"
+                      style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                    >Learn more →</a>
                   </div>
                 </div>
               </div>
@@ -160,18 +226,29 @@
             </div>
           </div>
 
-          <v-divider></v-divider>
+          <v-divider />
 
           <!-- Fuzzy Threshold Row -->
           <div class="setting-row">
             <div class="setting-content">
               <div class="setting-left">
-                <v-icon color="primary" class="setting-icon">$tune</v-icon>
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $tune
+                </v-icon>
                 <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">Fuzzy Threshold</div>
+                  <div class="setting-title text-high-emphasis">
+                    Fuzzy Threshold
+                  </div>
                   <div class="setting-description text-medium-emphasis">
                     Threshold for fuzzy string matching accuracy (lower = more tolerant of typos)
-                    <a :href="getBlogUrl('calibrating-fuzzy-thresholds')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                    <a
+                      :href="getBlogUrl('calibrating-fuzzy-thresholds')"
+                      target="_blank"
+                      style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                    >Learn more →</a>
                   </div>
                 </div>
               </div>
@@ -191,7 +268,9 @@
                     hide-details
                     style="width: 200px;"
                   />
-                  <div class="setting-status text-medium-emphasis">{{ routingSettings.fuzzy_threshold?.toFixed(1) }}</div>
+                  <div class="setting-status text-medium-emphasis">
+                    {{ routingSettings.fuzzy_threshold?.toFixed(1) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -200,19 +279,36 @@
       </v-card>
 
       <!-- RAG Configuration Card -->
-      <v-card elevation="2" class="mb-6">
+      <v-card
+        elevation="2"
+        class="mb-6"
+      >
         <v-card-title class="text-h6 font-weight-bold pa-6">
-          <v-icon color="primary" class="mr-2">$search</v-icon>
+          <v-icon
+            color="primary"
+            class="mr-2"
+          >
+            $search
+          </v-icon>
           RAG (Retrieval-Augmented Generation) Configuration
         </v-card-title>
         
         <v-card-text class="pa-0">
-          <v-alert type="info" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            type="info"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             These settings affect how the vector index retrieves documents (distance threshold, MMR diversity,
             heading-based chunking, and which folders to index). They are independent from query-time routing knobs above.
           </v-alert>
 
-          <v-alert v-if="ragError" type="error" variant="tonal" class="ma-6 mb-4">
+          <v-alert
+            v-if="ragError"
+            type="error"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
             {{ ragError }}
           </v-alert>
           
@@ -221,20 +317,38 @@
           <div v-if="ragSettings && Object.keys(ragSettings).length > 0">
             <!-- Retrieval Settings Section -->
             <div class="section-header">
-              <v-icon color="primary" class="section-icon">$tune</v-icon>
-              <div class="section-title">Vector Search Settings</div>
+              <v-icon
+                color="primary"
+                class="section-icon"
+              >
+                $tune
+              </v-icon>
+              <div class="section-title">
+                Vector Search Settings
+              </div>
             </div>
             
             <!-- Vector Search Threshold -->
             <div class="setting-row">
               <div class="setting-content">
                 <div class="setting-left">
-                  <v-icon color="primary" class="setting-icon">$filter</v-icon>
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $filter
+                  </v-icon>
                   <div class="setting-info">
-                    <div class="setting-title text-high-emphasis">Vector Search Threshold</div>
+                    <div class="setting-title text-high-emphasis">
+                      Vector Search Threshold
+                    </div>
                     <div class="setting-description text-medium-emphasis">
                       Distance threshold for filtering vector similarity results (0.0 = most strict, 1.0 = least strict)
-                      <a :href="getBlogUrl()" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                      <a
+                        :href="getBlogUrl()"
+                        target="_blank"
+                        style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                      >Learn more →</a>
                     </div>
                   </div>
                 </div>
@@ -253,30 +367,50 @@
                       hide-details
                       style="width: 200px;"
                     />
-                    <div class="setting-status text-medium-emphasis">{{ ragSettings.rag_score_threshold?.toFixed(1) }}</div>
+                    <div class="setting-status text-medium-emphasis">
+                      {{ ragSettings.rag_score_threshold?.toFixed(1) }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <v-divider></v-divider>
+            <v-divider />
 
             <!-- MMR Settings Section -->
             <div class="section-header">
-              <v-icon color="primary" class="section-icon">$diversity</v-icon>
-              <div class="section-title">Maximum Marginal Relevance (MMR)</div>
+              <v-icon
+                color="primary"
+                class="section-icon"
+              >
+                $diversity
+              </v-icon>
+              <div class="section-title">
+                Maximum Marginal Relevance (MMR)
+              </div>
             </div>
 
             <!-- Enable MMR -->
             <div class="setting-row">
               <div class="setting-content">
                 <div class="setting-left">
-                  <v-icon color="primary" class="setting-icon">$diversity</v-icon>
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $diversity
+                  </v-icon>
                   <div class="setting-info">
-                    <div class="setting-title text-high-emphasis">Enable MMR</div>
+                    <div class="setting-title text-high-emphasis">
+                      Enable MMR
+                    </div>
                     <div class="setting-description text-medium-emphasis">
                       Enable Maximum Marginal Relevance for diversity in search results
-                      <a :href="getBlogUrl('maximum-marginal-relevance-in-rag')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                      <a
+                        :href="getBlogUrl('maximum-marginal-relevance-in-rag')"
+                        target="_blank"
+                        style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                      >Learn more →</a>
                     </div>
                   </div>
                 </div>
@@ -294,16 +428,28 @@
               </div>
             </div>
 
-            <v-divider></v-divider>
+            <v-divider />
 
             <!-- MMR K Results -->
-            <div class="setting-row" v-show="ragSettings.rag_use_mmr">
+            <div
+              v-show="ragSettings.rag_use_mmr"
+              class="setting-row"
+            >
               <div class="setting-content">
                 <div class="setting-left">
-                  <v-icon color="primary" class="setting-icon">$numeric</v-icon>
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $numeric
+                  </v-icon>
                   <div class="setting-info">
-                    <div class="setting-title text-high-emphasis">MMR Results Count</div>
-                    <div class="setting-description text-medium-emphasis">Number of results to return when using MMR</div>
+                    <div class="setting-title text-high-emphasis">
+                      MMR Results Count
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Number of results to return when using MMR
+                    </div>
                   </div>
                 </div>
                 <div class="setting-right">
@@ -322,16 +468,28 @@
               </div>
             </div>
 
-            <v-divider v-show="ragSettings.rag_use_mmr"></v-divider>
+            <v-divider v-show="ragSettings.rag_use_mmr" />
 
             <!-- MMR Fetch K -->
-            <div class="setting-row" v-show="ragSettings.rag_use_mmr">
+            <div
+              v-show="ragSettings.rag_use_mmr"
+              class="setting-row"
+            >
               <div class="setting-content">
                 <div class="setting-left">
-                  <v-icon color="primary" class="setting-icon">$database-search</v-icon>
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $database-search
+                  </v-icon>
                   <div class="setting-info">
-                    <div class="setting-title text-high-emphasis">MMR Fetch Count</div>
-                    <div class="setting-description text-medium-emphasis">Number of candidates to fetch for MMR selection (higher = more diverse options)</div>
+                    <div class="setting-title text-high-emphasis">
+                      MMR Fetch Count
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Number of candidates to fetch for MMR selection (higher = more diverse options)
+                    </div>
                   </div>
                 </div>
                 <div class="setting-right">
@@ -350,16 +508,28 @@
               </div>
             </div>
 
-            <v-divider v-show="ragSettings.rag_use_mmr"></v-divider>
+            <v-divider v-show="ragSettings.rag_use_mmr" />
 
             <!-- MMR Lambda -->
-            <div class="setting-row" v-show="ragSettings.rag_use_mmr">
+            <div
+              v-show="ragSettings.rag_use_mmr"
+              class="setting-row"
+            >
               <div class="setting-content">
                 <div class="setting-left">
-                  <v-icon color="primary" class="setting-icon">$tune</v-icon>
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $tune
+                  </v-icon>
                   <div class="setting-info">
-                    <div class="setting-title text-high-emphasis">MMR Lambda Multiplier</div>
-                    <div class="setting-description text-medium-emphasis">Balance between relevance and diversity (0.0 = max diversity, 1.0 = max relevance)</div>
+                    <div class="setting-title text-high-emphasis">
+                      MMR Lambda Multiplier
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Balance between relevance and diversity (0.0 = max diversity, 1.0 = max relevance)
+                    </div>
                   </div>
                 </div>
                 <div class="setting-right">
@@ -377,30 +547,50 @@
                       hide-details
                       style="width: 200px;"
                     />
-                    <div class="setting-status text-medium-emphasis">{{ ragSettings.rag_mmr_lambda_mult?.toFixed(1) }}</div>
+                    <div class="setting-status text-medium-emphasis">
+                      {{ ragSettings.rag_mmr_lambda_mult?.toFixed(1) }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <v-divider v-show="ragSettings.rag_use_mmr"></v-divider>
+            <v-divider v-show="ragSettings.rag_use_mmr" />
 
             <!-- Content Processing Section -->
             <div class="section-header">
-              <v-icon color="primary" class="section-icon">$document</v-icon>
-              <div class="section-title">Content Processing</div>
+              <v-icon
+                color="primary"
+                class="section-icon"
+              >
+                $document
+              </v-icon>
+              <div class="section-title">
+                Content Processing
+              </div>
             </div>
 
             <!-- Heading Splitter -->
             <div class="setting-row">
               <div class="setting-content">
                 <div class="setting-left">
-                  <v-icon color="primary" class="setting-icon">$format-header</v-icon>
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $format-header
+                  </v-icon>
                   <div class="setting-info">
-                    <div class="setting-title text-high-emphasis">Use Heading Splitter</div>
+                    <div class="setting-title text-high-emphasis">
+                      Use Heading Splitter
+                    </div>
                     <div class="setting-description text-medium-emphasis">
                       Use heading-aware splitters for better Markdown/HTML content chunking
-                      <a :href="getBlogUrl('smart-document-chunking-heading-splitters')" target="_blank" style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;">Learn more →</a>
+                      <a
+                        :href="getBlogUrl('smart-document-chunking-heading-splitters')"
+                        target="_blank"
+                        style="color: rgb(var(--v-theme-primary)); text-decoration: none; font-weight: 500; margin-left: 8px;"
+                      >Learn more →</a>
                     </div>
                   </div>
                 </div>
@@ -418,16 +608,25 @@
               </div>
             </div>
 
-            <v-divider></v-divider>
+            <v-divider />
 
             <!-- Index Directories -->
             <div class="setting-row">
               <div class="setting-content">
                 <div class="setting-left">
-                  <v-icon color="primary" class="setting-icon">$folder-search</v-icon>
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $folder-search
+                  </v-icon>
                   <div class="setting-info">
-                    <div class="setting-title text-high-emphasis">Index Directories</div>
-                    <div class="setting-description text-medium-emphasis">Comma-separated list of directories to index for content search</div>
+                    <div class="setting-title text-high-emphasis">
+                      Index Directories
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Comma-separated list of directories to index for content search
+                    </div>
                   </div>
                 </div>
                 <div class="setting-right">
@@ -523,11 +722,11 @@ const loadAllSettings = async () => {
       }
     } catch (e) {
       // Soft-fail: leave defaults and surface a gentle message
-      ragError.value = 'Unable to load RAG configuration: ' + (e.message || 'unknown error')
+      ragError.value = `Unable to load RAG configuration: ${  e.message || 'unknown error'}`
     }
   } catch (err) {
     console.error('Failed to load settings:', err)
-    routingError.value = 'Failed to load settings: ' + (err.response?.data?.detail || err.message)
+    routingError.value = `Failed to load settings: ${  err.response?.data?.detail || err.message}`
     if (!ragError.value) ragError.value = 'RAG settings could not be loaded'
   }
 }
@@ -550,7 +749,7 @@ const saveAllSettings = async () => {
     
   } catch (err) {
     console.error('Failed to save settings:', err)
-    const errorMsg = 'Failed to save settings: ' + (err.response?.data?.detail || err.message)
+    const errorMsg = `Failed to save settings: ${  err.response?.data?.detail || err.message}`
     routingError.value = errorMsg
     ragError.value = errorMsg
     showError(errorMsg)

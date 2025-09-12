@@ -13,8 +13,16 @@
       <div class="sidebar-header ds-p-6">
         <div class="d-flex align-center">
           <div class="brand-logo">
-            <v-avatar color="primary" size="40">
-              <v-icon size="24" color="white">$dashboard</v-icon>
+            <v-avatar
+              color="primary"
+              size="40"
+            >
+              <v-icon
+                size="24"
+                color="white"
+              >
+                $dashboard
+              </v-icon>
             </v-avatar>
           </div>
           <div class="ml-3">
@@ -25,15 +33,22 @@
         </div>
       </div>
 
-      <v-divider class="ds-mb-4"/>
+      <v-divider class="ds-mb-4" />
 
       <!-- Main Menu Section -->
       <div class="ds-px-4">
         <div class="menu-label ds-text-xs ds-font-medium text-medium-emphasis ds-mb-3">
           MAIN MENU
         </div>
-        <v-list nav density="compact" class="ds-py-0">
-          <template v-for="item in navigationItems" :key="item.name">
+        <v-list
+          nav
+          density="compact"
+          class="ds-py-0"
+        >
+          <template
+            v-for="item in navigationItems"
+            :key="item.name"
+          >
             <!-- Main navigation item -->
             <v-list-item
               v-if="!item.children"
@@ -44,7 +59,9 @@
               :prepend-icon="item.icon"
               color="primary"
             >
-              <v-list-item-title class="font-weight-medium">{{ item.title }}</v-list-item-title>
+              <v-list-item-title class="font-weight-medium">
+                {{ item.title }}
+              </v-list-item-title>
             </v-list-item>
 
             <!-- Navigation item with children -->
@@ -54,7 +71,7 @@
               :value="item.name"
               class="mb-1"
             >
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-list-item
                   v-bind="props"
                   :prepend-icon="item.icon"
@@ -64,7 +81,9 @@
                   :active="$route.name === item.name || item.children.some(child => $route.name === child.name)"
                   @click="navigateToParent(item)"
                 >
-                  <v-list-item-title class="font-weight-medium">{{ item.title }}</v-list-item-title>
+                  <v-list-item-title class="font-weight-medium">
+                    {{ item.title }}
+                  </v-list-item-title>
                 </v-list-item>
               </template>
 
@@ -77,7 +96,9 @@
                 class="ms-4 nav-item"
                 color="primary"
               >
-                <v-list-item-title class="font-weight-medium">{{ child.title }}</v-list-item-title>
+                <v-list-item-title class="font-weight-medium">
+                  {{ child.title }}
+                </v-list-item-title>
               </v-list-item>
             </v-list-group>
           </template>
@@ -86,7 +107,7 @@
 
 
       <template #append>
-        <v-divider class="mb-2"/>
+        <v-divider class="mb-2" />
 
         <v-list density="compact">
           <div class="px-4 d-flex justify-space-between align-center mb-2">
@@ -133,14 +154,14 @@
         {{ currentPageTitle }}
       </v-toolbar-title>
 
-      <v-spacer/>
+      <v-spacer />
 
       <!-- Time Range Selector -->
       <TimeRangeSelector
         v-if="showTimeRangeSelector"
         :model-value="timeRange"
-        @update:model-value="setTimeRange"
         class="mr-4"
+        @update:model-value="setTimeRange"
       />
 
       <!-- Notifications (hidden until notification system is implemented) -->
@@ -170,34 +191,53 @@
       <!-- User Profile -->
       <v-menu>
         <template #activator="{ props }">
-          <div v-bind="props" class="user-profile-section d-flex align-center pa-2 rounded-lg cursor-pointer">
-            <v-avatar size="40" class="mr-3" color="primary">
-              <v-icon color="white">$account</v-icon>
+          <div
+            v-bind="props"
+            class="user-profile-section d-flex align-center pa-2 rounded-lg cursor-pointer"
+          >
+            <v-avatar
+              size="40"
+              class="mr-3"
+              color="primary"
+            >
+              <v-icon color="white">
+                $account
+              </v-icon>
             </v-avatar>
             <div class="user-info d-none d-sm-block">
-              <div class="user-name text-subtitle-1 font-weight-medium">{{ userDisplayName }}</div>
-              <div class="user-role text-caption text-medium-emphasis">{{ userRole }}</div>
+              <div class="user-name text-subtitle-1 font-weight-medium">
+                {{ userDisplayName }}
+              </div>
+              <div class="user-role text-caption text-medium-emphasis">
+                {{ userRole }}
+              </div>
             </div>
-            <v-icon class="ml-2 d-none d-sm-block">$chevron-down</v-icon>
+            <v-icon class="ml-2 d-none d-sm-block">
+              $chevron-down
+            </v-icon>
           </div>
         </template>
 
         <v-list width="200">
           <v-list-item @click="refreshData">
             <v-list-item-title>
-              <v-icon start>$refresh</v-icon>
+              <v-icon start>
+                $refresh
+              </v-icon>
               Refresh Data
             </v-list-item-title>
           </v-list-item>
 
           <v-list-item @click="exportData">
             <v-list-item-title>
-              <v-icon start>$export</v-icon>
+              <v-icon start>
+                $export
+              </v-icon>
               Export Data
             </v-list-item-title>
           </v-list-item>
 
-          <v-divider/>
+          <v-divider />
 
           <v-list-item @click="toggleTheme">
             <v-list-item-title>
@@ -208,20 +248,24 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-divider/>
+          <v-divider />
 
           <v-list-item to="/user-settings">
             <v-list-item-title>
-              <v-icon start>$account</v-icon>
+              <v-icon start>
+                $account
+              </v-icon>
               User Settings
             </v-list-item-title>
           </v-list-item>
 
-          <v-divider/>
+          <v-divider />
 
           <v-list-item @click="handleLogout">
             <v-list-item-title>
-              <v-icon start>$logout</v-icon>
+              <v-icon start>
+                $logout
+              </v-icon>
               Logout
             </v-list-item-title>
           </v-list-item>
@@ -229,7 +273,7 @@
       </v-menu>
     </v-app-bar>
 
-<v-main>
+    <v-main>
       <v-container
         fluid
         class="ds-p-8"
@@ -242,7 +286,9 @@
           variant="tonal"
           class="mb-4"
         >
-          <v-icon start>$construction</v-icon>
+          <v-icon start>
+            $construction
+          </v-icon>
           Maintenance mode is enabled. Public endpoints are unavailable. Admins can still access settings here.
         </v-alert>
         <router-view v-slot="{ Component }">
@@ -250,7 +296,7 @@
             name="fade"
             mode="out-in"
           >
-            <component :is="Component"/>
+            <component :is="Component" />
           </Transition>
         </router-view>
       </v-container>

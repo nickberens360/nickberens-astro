@@ -45,7 +45,7 @@ import {
   mdiLightbulbOutline, mdiLightbulb, mdiTableLarge, mdiTestTube,
   
   // New RAG Settings Icons
-  mdiCog as mdiConstructionIcon, mdiDeveloperBoard,
+  mdiDeveloperBoard,
   // Auto-generate
   mdiAutoFix
 } from '@mdi/js'
@@ -254,7 +254,6 @@ const iconAliases = {
   // Settings Navigation Icons
   'cog-box': mdiCogBox,
   'magnify-scan': mdiMagnifyScan,
-  'message-reply': mdiReply,
   'account-heart': mdiAccountHeart,
 
   // Missing icon aliases - fix for Vue warnings
@@ -270,8 +269,6 @@ const iconAliases = {
   'chart-line': mdiChartLine,
   'shield': mdiShield,
   'preview': mdiEyeOutline,
-  'code': mdiCodeTags
-  ,
   // Auto-generate taxonomy
   'auto-generate': mdiAutoFix
 }

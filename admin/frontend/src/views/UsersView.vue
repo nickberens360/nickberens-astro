@@ -6,7 +6,9 @@
         <v-col cols="12">
           <div class="d-flex align-center justify-space-between mb-6">
             <div>
-              <h1 class="text-h4 font-weight-bold">User Management</h1>
+              <h1 class="text-h4 font-weight-bold">
+                User Management
+              </h1>
               <p class="text-subtitle-1 text-medium-emphasis mt-1">
                 Manage admin users and their access permissions
               </p>
@@ -14,8 +16,8 @@
             <v-btn
               color="primary"
               prepend-icon="$account-plus"
-              @click="showCreateDialog = true"
               :loading="storeLoading"
+              @click="showCreateDialog = true"
             >
               Add User
             </v-btn>
@@ -28,9 +30,11 @@
         <v-col cols="12">
           <v-card>
             <v-card-title class="d-flex align-center pa-6">
-              <v-icon class="me-3">$users</v-icon>
+              <v-icon class="me-3">
+                $users
+              </v-icon>
               Admin Users
-              <v-spacer></v-spacer>
+              <v-spacer />
               <v-chip
                 :color="(users?.length || 0) > 0 ? 'success' : 'warning'"
                 variant="flat"
@@ -40,7 +44,7 @@
               </v-chip>
             </v-card-title>
 
-            <v-divider></v-divider>
+            <v-divider />
 
             <!-- Bulk Actions Banner -->
             <v-expand-transition>
@@ -53,34 +57,39 @@
                 <v-card-text class="pa-3">
                   <div class="d-flex align-center justify-space-between">
                     <div class="d-flex align-center">
-                      <v-icon class="mr-2">$checkbox-marked</v-icon>
+                      <v-icon class="mr-2">
+                        $checkbox-marked
+                      </v-icon>
                       <span class="font-weight-medium">
                         {{ selectedUsers.length }} {{ selectedUsers.length === 1 ? 'user' : 'users' }} selected
                       </span>
                     </div>
-                    <v-btn-group variant="outlined" density="compact">
+                    <v-btn-group
+                      variant="outlined"
+                      density="compact"
+                    >
                       <v-btn
-                        @click="clearSelection"
                         :loading="false"
                         class="mr-3"
+                        @click="clearSelection"
                       >
                         Clear Selection
                       </v-btn>
                       <v-btn
                         prepend-icon="$account-off"
-                        @click="showBulkDeactivateDialog = true"
                         :disabled="!canBulkDeactivate"
                         :loading="bulkDeactivating"
                         class="mr-3"
+                        @click="showBulkDeactivateDialog = true"
                       >
                         Deactivate
                       </v-btn>
                       <v-btn
                         color="error"
                         prepend-icon="$delete"
-                        @click="showBulkDeleteDialog = true"
                         :disabled="!canBulkDelete"
                         :loading="bulkDeleting"
+                        @click="showBulkDeleteDialog = true"
                       >
                         Delete
                       </v-btn>
@@ -103,16 +112,25 @@
                 :items-per-page="25"
               >
                 <!-- Username Column -->
-                <template #item.username="{ item }">
+                <template #[`item.username`]="{ item }">
                   <div class="d-flex align-center">
-                    <v-avatar size="32" class="me-3" color="primary">
+                    <v-avatar
+                      size="32"
+                      class="me-3"
+                      color="primary"
+                    >
                       <span class="text-white text-caption font-weight-bold">
                         {{ item.username.charAt(0).toUpperCase() }}
                       </span>
                     </v-avatar>
                     <div>
-                      <div class="font-weight-medium">{{ item.username }}</div>
-                      <div class="text-caption text-medium-emphasis" v-if="item.email">
+                      <div class="font-weight-medium">
+                        {{ item.username }}
+                      </div>
+                      <div
+                        v-if="item.email"
+                        class="text-caption text-medium-emphasis"
+                      >
                         {{ item.email }}
                       </div>
                     </div>
@@ -120,7 +138,7 @@
                 </template>
 
                 <!-- Role Column -->
-                <template #item.role="{ item }">
+                <template #[`item.role`]="{ item }">
                   <v-chip
                     :color="getRoleColor(item.role)"
                     variant="flat"
@@ -132,7 +150,7 @@
                 </template>
 
                 <!-- Status Column -->
-                <template #item.is_active="{ item }">
+                <template #[`item.is_active`]="{ item }">
                   <v-chip
                     :color="item.is_active ? 'success' : 'error'"
                     variant="flat"
@@ -144,21 +162,21 @@
                 </template>
 
                 <!-- Created Date Column -->
-                <template #item.created_at="{ item }">
+                <template #[`item.created_at`]="{ item }">
                   <div class="text-body-2">
                     {{ formatDate(item.created_at) }}
                   </div>
                 </template>
 
                 <!-- Last Login Column -->
-                <template #item.last_login_at="{ item }">
+                <template #[`item.last_login_at`]="{ item }">
                   <div class="text-body-2">
                     {{ item.last_login_at ? formatDate(item.last_login_at) : 'Never' }}
                   </div>
                 </template>
 
                 <!-- Actions Column -->
-                <template #item.actions="{ item }">
+                <template #[`item.actions`]="{ item }">
                   <v-menu>
                     <template #activator="{ props }">
                       <v-btn
@@ -166,25 +184,25 @@
                         variant="text"
                         size="small"
                         v-bind="props"
-                      ></v-btn>
+                      />
                     </template>
                     <v-list>
                       <!-- View Details - Always available -->
                       <v-list-item
-                        @click="viewUserDetails(item)"
                         prepend-icon="$account-details"
+                        @click="viewUserDetails(item)"
                       >
                         View Details
                       </v-list-item>
                       
-                      <v-divider v-if="!isCurrentUser(item)"></v-divider>
+                      <v-divider v-if="!isCurrentUser(item)" />
                       
                       <!-- Deactivate User - Only for active non-current users -->
                       <v-list-item
                         v-if="item.is_active && !isCurrentUser(item)"
-                        @click="confirmDeactivateUser(item)"
                         prepend-icon="$account-off"
                         class="text-warning"
+                        @click="confirmDeactivateUser(item)"
                       >
                         Deactivate User
                       </v-list-item>
@@ -192,9 +210,9 @@
                       <!-- Reactivate User - Only for inactive users -->
                       <v-list-item
                         v-if="!item.is_active"
-                        @click="confirmReactivateUser(item)"
                         prepend-icon="$account-check"
                         class="text-success"
+                        @click="confirmReactivateUser(item)"
                       >
                         Reactivate User
                       </v-list-item>
@@ -202,9 +220,9 @@
                       <!-- Delete User - Only for non-current users -->
                       <v-list-item
                         v-if="!isCurrentUser(item)"
-                        @click="confirmDeleteUser(item)"
                         prepend-icon="$delete-forever"
                         class="text-error"
+                        @click="confirmDeleteUser(item)"
                       >
                         Delete User
                       </v-list-item>
@@ -224,12 +242,22 @@
                 <!-- Empty State -->
                 <template #no-data>
                   <div class="text-center py-12">
-                    <v-icon size="64" class="mb-4 text-medium-emphasis">$account-group</v-icon>
-                    <h3 class="text-h6 mb-2">No users found</h3>
+                    <v-icon
+                      size="64"
+                      class="mb-4 text-medium-emphasis"
+                    >
+                      $account-group
+                    </v-icon>
+                    <h3 class="text-h6 mb-2">
+                      No users found
+                    </h3>
                     <p class="text-body-1 text-medium-emphasis mb-4">
                       Get started by creating your first admin user.
                     </p>
-                    <v-btn color="primary" @click="showCreateDialog = true">
+                    <v-btn
+                      color="primary"
+                      @click="showCreateDialog = true"
+                    >
                       Add First User
                     </v-btn>
                   </div>
@@ -238,8 +266,13 @@
                 <!-- Loading State -->
                 <template #loading>
                   <div class="text-center py-12">
-                    <v-progress-circular indeterminate color="primary"></v-progress-circular>
-                    <p class="mt-4 text-body-1">Loading users...</p>
+                    <v-progress-circular
+                      indeterminate
+                      color="primary"
+                    />
+                    <p class="mt-4 text-body-1">
+                      Loading users...
+                    </p>
                   </div>
                 </template>
               </v-data-table>
@@ -250,16 +283,26 @@
     </v-container>
 
     <!-- Create User Dialog -->
-    <v-dialog v-model="showCreateDialog" max-width="600px" persistent>
+    <v-dialog
+      v-model="showCreateDialog"
+      max-width="600px"
+      persistent
+    >
       <v-card>
         <v-card-title class="d-flex align-center">
-          <v-icon class="me-3">$account-plus</v-icon>
+          <v-icon class="me-3">
+            $account-plus
+          </v-icon>
           Create New User
         </v-card-title>
 
-        <v-divider></v-divider>
+        <v-divider />
 
-        <v-form ref="createForm" v-model="createFormValid" @submit.prevent="createUserAction">
+        <v-form
+          ref="createForm"
+          v-model="createFormValid"
+          @submit.prevent="createUserAction"
+        >
           <v-card-text class="pb-0">
             <v-row>
               <!-- Username -->
@@ -274,7 +317,7 @@
                   density="comfortable"
                   hint="Must be unique and contain only letters, numbers, and underscores"
                   persistent-hint
-                ></v-text-field>
+                />
               </v-col>
 
               <!-- Email -->
@@ -287,7 +330,7 @@
                   variant="outlined"
                   density="comfortable"
                   type="email"
-                ></v-text-field>
+                />
               </v-col>
 
               <!-- Password -->
@@ -302,10 +345,10 @@
                   :type="showPassword ? 'text' : 'password'"
                   variant="outlined"
                   density="comfortable"
-                  @click:append-inner="showPassword = !showPassword"
                   hint="Minimum 12 characters with uppercase, lowercase, numbers, and special characters"
                   persistent-hint
-                ></v-text-field>
+                  @click:append-inner="showPassword = !showPassword"
+                />
               </v-col>
 
               <!-- Role -->
@@ -319,7 +362,7 @@
                   prepend-inner-icon="$shield-account"
                   variant="outlined"
                   density="comfortable"
-                ></v-select>
+                />
               </v-col>
             </v-row>
 
@@ -343,11 +386,11 @@
           </v-card-text>
 
           <v-card-actions class="pa-6">
-            <v-spacer></v-spacer>
+            <v-spacer />
             <v-btn
               variant="text"
-              @click="cancelCreateUser"
               :disabled="creating"
+              @click="cancelCreateUser"
             >
               Cancel
             </v-btn>
@@ -365,21 +408,30 @@
     </v-dialog>
 
     <!-- Reactivate Confirmation Dialog -->
-    <v-dialog v-model="showReactivateDialog" max-width="500px">
+    <v-dialog
+      v-model="showReactivateDialog"
+      max-width="500px"
+    >
       <v-card>
         <v-card-title class="d-flex align-center text-success">
-          <v-icon class="me-3">$account-check</v-icon>
+          <v-icon class="me-3">
+            $account-check
+          </v-icon>
           Reactivate User
         </v-card-title>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <v-card-text v-if="userToReactivate">
           <p class="mb-4">
             Are you sure you want to reactivate user <strong>{{ userToReactivate.username }}</strong>?
           </p>
 
-          <v-alert type="info" variant="tonal" class="mb-3">
+          <v-alert
+            type="info"
+            variant="tonal"
+            class="mb-3"
+          >
             <strong>This will:</strong>
             <ul class="mt-2">
               <li>Allow the user to log in again</li>
@@ -388,22 +440,22 @@
           </v-alert>
         </v-card-text>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             variant="text"
-            @click="showReactivateDialog = false"
             :disabled="reactivating"
+            @click="showReactivateDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
             color="success"
             variant="flat"
-            @click="reactivateUserAction"
             :loading="reactivating"
+            @click="reactivateUserAction"
           >
             Reactivate User
           </v-btn>
@@ -412,21 +464,30 @@
     </v-dialog>
 
     <!-- Deactivate Confirmation Dialog -->
-    <v-dialog v-model="showDeactivateDialog" max-width="500px">
+    <v-dialog
+      v-model="showDeactivateDialog"
+      max-width="500px"
+    >
       <v-card>
         <v-card-title class="d-flex align-center text-error">
-          <v-icon class="me-3">$alert-circle</v-icon>
+          <v-icon class="me-3">
+            $alert-circle
+          </v-icon>
           Deactivate User
         </v-card-title>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <v-card-text v-if="userToDeactivate">
           <p class="mb-4">
             Are you sure you want to deactivate user <strong>{{ userToDeactivate.username }}</strong>?
           </p>
 
-          <v-alert type="warning" variant="tonal" class="mb-4">
+          <v-alert
+            type="warning"
+            variant="tonal"
+            class="mb-4"
+          >
             <div class="text-body-2">
               <strong>This action will:</strong>
               <ul class="mt-2 ml-4">
@@ -443,18 +504,18 @@
         </v-card-text>
 
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             variant="text"
-            @click="showDeactivateDialog = false"
             :disabled="deactivating"
+            @click="showDeactivateDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
             color="error"
-            @click="deactivateUserAction"
             :loading="deactivating"
+            @click="deactivateUserAction"
           >
             Deactivate User
           </v-btn>
@@ -463,14 +524,23 @@
     </v-dialog>
 
     <!-- Delete User Confirmation Dialog -->
-    <v-dialog v-model="showDeleteDialog" max-width="600px" persistent>
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="600px"
+      persistent
+    >
       <v-card v-if="userToDelete">
         <v-card-title class="d-flex align-center text-error">
-          <v-icon class="me-3" color="error">$delete-forever</v-icon>
+          <v-icon
+            class="me-3"
+            color="error"
+          >
+            $delete-forever
+          </v-icon>
           Permanently Delete User
         </v-card-title>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <v-card-text class="pa-6">
           <v-alert
@@ -498,7 +568,7 @@
             <li>Cannot be reversed or undone</li>
           </ul>
 
-          <v-divider class="my-4"></v-divider>
+          <v-divider class="my-4" />
 
           <div class="text-body-1 mb-3">
             <strong>Type "DELETE" to confirm:</strong>
@@ -533,21 +603,23 @@
         </v-card-text>
 
         <v-card-actions class="pa-6">
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             variant="text"
-            @click="showDeleteDialog = false"
             :disabled="deleting"
+            @click="showDeleteDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
             color="error"
-            @click="deleteUserAction"
             :loading="deleting"
             :disabled="deleteConfirmText !== 'DELETE'"
+            @click="deleteUserAction"
           >
-            <v-icon start>$delete-forever</v-icon>
+            <v-icon start>
+              $delete-forever
+            </v-icon>
             Delete Forever
           </v-btn>
         </v-card-actions>
@@ -555,10 +627,19 @@
     </v-dialog>
 
     <!-- Bulk Delete Dialog -->
-    <v-dialog v-model="showBulkDeleteDialog" max-width="600px" persistent>
+    <v-dialog
+      v-model="showBulkDeleteDialog"
+      max-width="600px"
+      persistent
+    >
       <v-card>
         <v-card-title class="text-h5 error--text">
-          <v-icon start color="error">$alert</v-icon>
+          <v-icon
+            start
+            color="error"
+          >
+            $alert
+          </v-icon>
           Bulk Delete Users
         </v-card-title>
 
@@ -572,15 +653,25 @@
           </v-alert>
 
           <div class="mb-4">
-            <div class="text-subtitle-2 mb-2">Users to be deleted:</div>
-            <v-list dense class="pa-0">
+            <div class="text-subtitle-2 mb-2">
+              Users to be deleted:
+            </div>
+            <v-list
+              dense
+              class="pa-0"
+            >
               <v-list-item
                 v-for="userId in selectedUsers.slice(0, 5)"
                 :key="userId"
                 density="compact"
               >
                 <template #prepend>
-                  <v-icon size="small" color="error">$account-remove</v-icon>
+                  <v-icon
+                    size="small"
+                    color="error"
+                  >
+                    $account-remove
+                  </v-icon>
                 </template>
                 <v-list-item-title>
                   {{ getUserById(userId)?.username || 'Unknown User' }}
@@ -589,7 +680,10 @@
                   {{ getUserById(userId).email }}
                 </v-list-item-subtitle>
               </v-list-item>
-              <v-list-item v-if="selectedUsers.length > 5" density="compact">
+              <v-list-item
+                v-if="selectedUsers.length > 5"
+                density="compact"
+              >
                 <v-list-item-title class="text-medium-emphasis">
                   ... and {{ selectedUsers.length - 5 }} more
                 </v-list-item-title>
@@ -605,27 +699,29 @@
             density="compact"
             :rules="[v => v === 'DELETE ALL' || 'You must type DELETE ALL to confirm']"
             class="mt-4"
-          ></v-text-field>
+          />
         </v-card-text>
 
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             color="grey"
             variant="text"
-            @click="cancelBulkDelete"
             :disabled="bulkDeleting"
+            @click="cancelBulkDelete"
           >
             Cancel
           </v-btn>
           <v-btn
             color="error"
             variant="flat"
-            @click="bulkDeleteUsers"
             :loading="bulkDeleting"
             :disabled="bulkDeleteConfirmText !== 'DELETE ALL'"
+            @click="bulkDeleteUsers"
           >
-            <v-icon start>$delete-forever</v-icon>
+            <v-icon start>
+              $delete-forever
+            </v-icon>
             Delete {{ selectedUsers.length }} User{{ selectedUsers.length === 1 ? '' : 's' }}
           </v-btn>
         </v-card-actions>
@@ -633,10 +729,18 @@
     </v-dialog>
 
     <!-- Bulk Deactivate Dialog -->
-    <v-dialog v-model="showBulkDeactivateDialog" max-width="500px">
+    <v-dialog
+      v-model="showBulkDeactivateDialog"
+      max-width="500px"
+    >
       <v-card>
         <v-card-title class="text-h5">
-          <v-icon start color="warning">$account-off</v-icon>
+          <v-icon
+            start
+            color="warning"
+          >
+            $account-off
+          </v-icon>
           Deactivate Users
         </v-card-title>
 
@@ -644,21 +748,34 @@
           <p>Are you sure you want to deactivate {{ selectedUsers.length }} user{{ selectedUsers.length === 1 ? '' : 's' }}?</p>
           
           <div class="mt-4">
-            <div class="text-subtitle-2 mb-2">Users to be deactivated:</div>
-            <v-list dense class="pa-0">
+            <div class="text-subtitle-2 mb-2">
+              Users to be deactivated:
+            </div>
+            <v-list
+              dense
+              class="pa-0"
+            >
               <v-list-item
                 v-for="userId in selectedUsers.slice(0, 5)"
                 :key="userId"
                 density="compact"
               >
                 <template #prepend>
-                  <v-icon size="small" color="warning">$account-off</v-icon>
+                  <v-icon
+                    size="small"
+                    color="warning"
+                  >
+                    $account-off
+                  </v-icon>
                 </template>
                 <v-list-item-title>
                   {{ getUserById(userId)?.username || 'Unknown User' }}
                 </v-list-item-title>
               </v-list-item>
-              <v-list-item v-if="selectedUsers.length > 5" density="compact">
+              <v-list-item
+                v-if="selectedUsers.length > 5"
+                density="compact"
+              >
                 <v-list-item-title class="text-medium-emphasis">
                   ... and {{ selectedUsers.length - 5 }} more
                 </v-list-item-title>
@@ -668,22 +785,24 @@
         </v-card-text>
 
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             color="grey"
             variant="text"
-            @click="showBulkDeactivateDialog = false"
             :disabled="bulkDeactivating"
+            @click="showBulkDeactivateDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
             color="warning"
             variant="flat"
-            @click="bulkDeactivateUsers"
             :loading="bulkDeactivating"
+            @click="bulkDeactivateUsers"
           >
-            <v-icon start>$account-off</v-icon>
+            <v-icon start>
+              $account-off
+            </v-icon>
             Deactivate {{ selectedUsers.length }} User{{ selectedUsers.length === 1 ? '' : 's' }}
           </v-btn>
         </v-card-actions>
@@ -691,43 +810,59 @@
     </v-dialog>
 
     <!-- User Details Dialog -->
-    <v-dialog v-model="showDetailsDialog" max-width="700px">
+    <v-dialog
+      v-model="showDetailsDialog"
+      max-width="700px"
+    >
       <v-card v-if="userToView">
         <v-card-title class="d-flex align-center">
-          <v-icon class="me-3">$account-details</v-icon>
+          <v-icon class="me-3">
+            $account-details
+          </v-icon>
           User Details: {{ userToView.username }}
         </v-card-title>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <v-card-text class="pa-6">
           <v-row>
             <!-- Basic Information Section -->
             <v-col cols="12">
               <h3 class="text-h6 mb-4 d-flex align-center">
-                <v-icon class="me-2">$account</v-icon>
+                <v-icon class="me-2">
+                  $account
+                </v-icon>
                 Basic Information
               </h3>
               <v-row>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Username"
                     :model-value="userToView.username"
                     readonly
                     variant="outlined"
                     density="comfortable"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Email"
                     :model-value="userToView.email || 'Not provided'"
                     readonly
                     variant="outlined"
                     density="comfortable"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Role"
                     :model-value="userToView.role"
@@ -746,7 +881,10 @@
                     </template>
                   </v-text-field>
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Status"
                     :model-value="userToView.is_active ? 'Active' : 'Inactive'"
@@ -771,56 +909,72 @@
 
             <!-- Account Activity Section -->
             <v-col cols="12">
-              <v-divider class="my-4"></v-divider>
+              <v-divider class="my-4" />
               <h3 class="text-h6 mb-4 d-flex align-center">
-                <v-icon class="me-2">$clock-outline</v-icon>
+                <v-icon class="me-2">
+                  $clock-outline
+                </v-icon>
                 Account Activity
               </h3>
               <v-row>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Account Created"
                     :model-value="formatDate(userToView.created_at)"
                     readonly
                     variant="outlined"
                     density="comfortable"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Last Login"
                     :model-value="userToView.last_login_at ? formatDate(userToView.last_login_at) : 'Never'"
                     readonly
                     variant="outlined"
                     density="comfortable"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="User ID"
                     :model-value="userToView.id"
                     readonly
                     variant="outlined"
                     density="comfortable"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Account Age"
                     :model-value="getAccountAge(userToView.created_at)"
                     readonly
                     variant="outlined"
                     density="comfortable"
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
             </v-col>
 
             <!-- Security Information Section -->
             <v-col cols="12">
-              <v-divider class="my-4"></v-divider>
+              <v-divider class="my-4" />
               <h3 class="text-h6 mb-4 d-flex align-center">
-                <v-icon class="me-2">$shield-check</v-icon>
+                <v-icon class="me-2">
+                  $shield-check
+                </v-icon>
                 Security Information
               </h3>
               <v-row>
@@ -849,7 +1003,7 @@
                     variant="outlined"
                     density="comfortable"
                     prepend-inner-icon="$lock-check"
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
             </v-col>
@@ -857,7 +1011,7 @@
         </v-card-text>
 
         <v-card-actions class="pa-6">
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             variant="text"
             @click="showDetailsDialog = false"
@@ -938,7 +1092,7 @@ const roleOptions = [
 ]
 
 const usernameRules = [
-  v => !!v || 'Username is required',
+  v => Boolean(v) || 'Username is required',
   v => (v && v.length >= 3) || 'Username must be at least 3 characters',
   v => (v && v.length <= 50) || 'Username must be less than 50 characters',
   v => /^[a-zA-Z0-9_]+$/.test(v) || 'Username can only contain letters, numbers, and underscores'
@@ -952,7 +1106,7 @@ const emailRules = [
 const passwordRules = getStrongPasswordRules()
 
 const roleRules = [
-  v => !!v || 'Role is required'
+  v => Boolean(v) || 'Role is required'
 ]
 
 // Computed properties
@@ -1187,7 +1341,7 @@ const bulkDeactivateUsers = async () => {
     if (response.failed_deactivations > 0 && response.failed_user_ids) {
       const errorMsg = response.failed_user_ids.map(userId => {
         const user = getUserById(userId)
-        return `${user?.username || 'User ' + userId}: Failed to deactivate`
+        return `${user?.username || `User ${  userId}`}: Failed to deactivate`
       }).join('\n')
       showError(`Failed to deactivate ${response.failed_deactivations} user${response.failed_deactivations === 1 ? '' : 's'}:\n${errorMsg}`)
     }
@@ -1235,7 +1389,7 @@ const formatDate = (dateString) => {
   try {
     // If the date string doesn't include timezone info, append 'Z' to treat it as UTC
     const dateStr = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(dateString)
-      ? dateString.replace(' ', 'T') + 'Z'
+      ? `${dateString.replace(' ', 'T')  }Z`
       : dateString
     
     return format(new Date(dateStr), 'MMM d, yyyy h:mm a')
@@ -1249,7 +1403,7 @@ const getAccountAge = (createdDate) => {
   try {
     // If the date string doesn't include timezone info, append 'Z' to treat it as UTC
     const dateStr = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(createdDate)
-      ? createdDate.replace(' ', 'T') + 'Z'
+      ? `${createdDate.replace(' ', 'T')  }Z`
       : createdDate
     
     const created = new Date(dateStr)

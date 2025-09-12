@@ -4,9 +4,9 @@
       <v-btn
         color="primary"
         prepend-icon="$refresh"
-        @click="loadStats"
         :loading="loading"
         variant="outlined"
+        @click="loadStats"
       >
         Refresh
       </v-btn>
@@ -14,15 +14,27 @@
 
     <!-- Key Metrics Row -->
     <v-row class="mb-6">
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card class="metric-style-card">
           <v-card-text class="pa-6">
             <div class="d-flex align-center justify-space-between mb-4">
               <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                 Content Health Score
               </div>
-              <v-avatar size="40" :color="getHealthBackgroundColor()" variant="flat">
-                <v-icon :color="getHealthIconColor()" size="20">$check-circle</v-icon>
+              <v-avatar
+                size="40"
+                :color="getHealthBackgroundColor()"
+                variant="flat"
+              >
+                <v-icon
+                  :color="getHealthIconColor()"
+                  size="20"
+                >
+                  $check-circle
+                </v-icon>
               </v-avatar>
             </div>
             <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -38,15 +50,27 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card class="metric-style-card">
           <v-card-text class="pa-6">
             <div class="d-flex align-center justify-space-between mb-4">
               <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                 Total Documents
               </div>
-              <v-avatar size="40" color="rgba(59, 130, 246, 0.1)" variant="flat">
-                <v-icon color="info" size="20">$document</v-icon>
+              <v-avatar
+                size="40"
+                color="rgba(59, 130, 246, 0.1)"
+                variant="flat"
+              >
+                <v-icon
+                  color="info"
+                  size="20"
+                >
+                  $document
+                </v-icon>
               </v-avatar>
             </div>
             <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -58,15 +82,27 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card class="metric-style-card">
           <v-card-text class="pa-6">
             <div class="d-flex align-center justify-space-between mb-4">
               <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                 Dominant Type
               </div>
-              <v-avatar size="40" color="rgba(139, 120, 255, 0.1)" variant="flat">
-                <v-icon color="accent" size="20">$chart</v-icon>
+              <v-avatar
+                size="40"
+                color="rgba(139, 120, 255, 0.1)"
+                variant="flat"
+              >
+                <v-icon
+                  color="accent"
+                  size="20"
+                >
+                  $chart
+                </v-icon>
               </v-avatar>
             </div>
             <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -78,15 +114,27 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card class="metric-style-card">
           <v-card-text class="pa-6">
             <div class="d-flex align-center justify-space-between mb-4">
               <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                 Content Diversity
               </div>
-              <v-avatar size="40" color="rgba(245, 158, 11, 0.1)" variant="flat">
-                <v-icon color="warning" size="20">$folder</v-icon>
+              <v-avatar
+                size="40"
+                color="rgba(245, 158, 11, 0.1)"
+                variant="flat"
+              >
+                <v-icon
+                  color="warning"
+                  size="20"
+                >
+                  $folder
+                </v-icon>
               </v-avatar>
             </div>
             <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -102,25 +150,41 @@
 
     <!-- Charts Row -->
     <v-row class="mb-6">
-      <v-col cols="12" md="6">
+      <v-col
+        cols="12"
+        md="6"
+      >
         <v-card>
           <v-card-title class="text-h6">
-            <v-icon class="me-2">$chart</v-icon>
+            <v-icon class="me-2">
+              $chart
+            </v-icon>
             Content Distribution
           </v-card-title>
           <v-card-text>
-            <canvas ref="pieChart" style="max-height: 300px;"></canvas>
+            <canvas
+              ref="pieChart"
+              style="max-height: 300px;"
+            />
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="6">
+      <v-col
+        cols="12"
+        md="6"
+      >
         <v-card>
           <v-card-title class="text-h6">
-            <v-icon class="me-2">$bar_chart</v-icon>
+            <v-icon class="me-2">
+              $bar_chart
+            </v-icon>
             Top Content Types
           </v-card-title>
           <v-card-text>
-            <canvas ref="barChart" style="max-height: 300px;"></canvas>
+            <canvas
+              ref="barChart"
+              style="max-height: 300px;"
+            />
           </v-card-text>
         </v-card>
       </v-col>
@@ -128,25 +192,49 @@
 
     <!-- Insights and Recommendations -->
     <v-row class="mb-6">
-      <v-col cols="12" md="6">
+      <v-col
+        cols="12"
+        md="6"
+      >
         <v-card>
           <v-card-title class="text-h6">
-            <v-icon class="me-2">$lightbulb</v-icon>
+            <v-icon class="me-2">
+              $lightbulb
+            </v-icon>
             Content Insights
           </v-card-title>
           <v-card-text>
             <v-list density="compact">
-              <v-list-item v-for="insight in contentInsights" :key="insight.title">
-                <template v-slot:prepend>
-                  <v-icon :color="insight.color" size="small">{{ insight.icon }}</v-icon>
+              <v-list-item
+                v-for="insight in contentInsights"
+                :key="insight.title"
+              >
+                <template #prepend>
+                  <v-icon
+                    :color="insight.color"
+                    size="small"
+                  >
+                    {{ insight.icon }}
+                  </v-icon>
                 </template>
                 <v-list-item-title class="d-flex align-center">
                   {{ insight.title }}
-                  <v-tooltip location="top" max-width="300px">
-                    <template v-slot:activator="{ props }">
-                      <v-icon v-bind="props" size="small" class="ml-2 text-medium-emphasis">$info</v-icon>
+                  <v-tooltip
+                    location="top"
+                    max-width="300px"
+                  >
+                    <template #activator="{ props }">
+                      <v-icon
+                        v-bind="props"
+                        size="small"
+                        class="ml-2 text-medium-emphasis"
+                      >
+                        $info
+                      </v-icon>
                     </template>
-                    <div class="text-body-2">{{ getRecommendationTooltip(insight.title) }}</div>
+                    <div class="text-body-2">
+                      {{ getRecommendationTooltip(insight.title) }}
+                    </div>
                   </v-tooltip>
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ insight.description }}</v-list-item-subtitle>
@@ -155,27 +243,50 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="6">
+      <v-col
+        cols="12"
+        md="6"
+      >
         <v-card>
           <v-card-title class="text-h6">
-            <v-icon class="me-2">$recommend</v-icon>
+            <v-icon class="me-2">
+              $recommend
+            </v-icon>
             Recommendations
           </v-card-title>
           <v-card-text>
             <v-list density="compact">
-              <v-list-item v-for="rec in recommendations" :key="rec.title">
-                <template v-slot:prepend>
-                  <v-chip :color="getPriorityColor(rec.priority)" size="x-small" class="me-2">
+              <v-list-item
+                v-for="rec in recommendations"
+                :key="rec.title"
+              >
+                <template #prepend>
+                  <v-chip
+                    :color="getPriorityColor(rec.priority)"
+                    size="x-small"
+                    class="me-2"
+                  >
                     {{ rec.priority }}
                   </v-chip>
                 </template>
                 <v-list-item-title class="d-flex align-center">
                   {{ rec.title }}
-                  <v-tooltip location="top" max-width="300px">
-                    <template v-slot:activator="{ props }">
-                      <v-icon v-bind="props" size="small" class="ml-2 text-medium-emphasis">$info</v-icon>
+                  <v-tooltip
+                    location="top"
+                    max-width="300px"
+                  >
+                    <template #activator="{ props }">
+                      <v-icon
+                        v-bind="props"
+                        size="small"
+                        class="ml-2 text-medium-emphasis"
+                      >
+                        $info
+                      </v-icon>
                     </template>
-                    <div class="text-body-2">{{ getRecommendationTooltip(rec.title) }}</div>
+                    <div class="text-body-2">
+                      {{ getRecommendationTooltip(rec.title) }}
+                    </div>
                   </v-tooltip>
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ rec.action }}</v-list-item-subtitle>
@@ -189,7 +300,9 @@
     <!-- Detailed Content Type Table -->
     <v-card>
       <v-card-title class="text-h6 d-flex align-center">
-        <v-icon class="me-2">$table</v-icon>
+        <v-icon class="me-2">
+          $table
+        </v-icon>
         Detailed Content Analysis
         <v-spacer />
         <v-text-field
@@ -208,7 +321,7 @@
           :search="typeSearch"
           density="compact"
         >
-          <template v-slot:item.type="{ item }">
+          <template #[`item.type`]="{ item }">
             <v-chip
               :color="getContentTypeColor(item.type)"
               size="small"
@@ -216,7 +329,7 @@
               {{ item.type }}
             </v-chip>
           </template>
-          <template v-slot:item.percentage="{ item }">
+          <template #[`item.percentage`]="{ item }">
             <div class="d-flex align-center">
               <v-progress-linear
                 :model-value="item.percentage"
@@ -226,13 +339,13 @@
                 class="me-2"
                 style="min-width: 100px"
               >
-                <template v-slot:default>
+                <template #default>
                   <span class="text-caption">{{ item.percentage.toFixed(1) }}%</span>
                 </template>
               </v-progress-linear>
             </div>
           </template>
-          <template v-slot:item.status="{ item }">
+          <template #[`item.status`]="{ item }">
             <v-chip
               :color="getStatusColor(item.status)"
               size="x-small"
@@ -632,7 +745,7 @@ const updateCharts = () => {
         datasets: [{
           label: 'Document Count',
           data,
-          backgroundColor: colors.map(c => c + '80'), // Add transparency
+          backgroundColor: colors.map(c => `${c  }80`), // Add transparency
           borderColor: colors,
           borderWidth: 2
         }]

@@ -6,21 +6,30 @@
         <v-btn
           color="primary"
           variant="elevated"
-          @click="saveSettings"
           :loading="loading"
           prepend-icon="$check"
+          @click="saveSettings"
         >
           Save Changes
         </v-btn>
       </v-card-title>
       
       <v-card-text class="pa-0">
-        <v-alert type="info" variant="tonal" class="ma-6 mb-4">
+        <v-alert
+          type="info"
+          variant="tonal"
+          class="ma-6 mb-4"
+        >
           Security settings here govern rate limiting, analytics, and logging privacy. <strong>Excluded IPs</strong> and
           <strong>IP anonymization</strong> now apply to query logging. Feature flags like caching and routing are managed in
           their respective settings pages.
         </v-alert>
-        <v-alert v-if="error" type="error" variant="tonal" class="ma-6 mb-4">
+        <v-alert
+          v-if="error"
+          type="error"
+          variant="tonal"
+          class="ma-6 mb-4"
+        >
           {{ error }}
         </v-alert>
         
@@ -30,10 +39,19 @@
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$shield-check</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $shield-check
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">IP Anonymization</div>
-                <div class="setting-description text-medium-emphasis">Anonymize IP addresses in logs for privacy compliance</div>
+                <div class="setting-title text-high-emphasis">
+                  IP Anonymization
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Anonymize IP addresses in logs for privacy compliance
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -50,22 +68,38 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Analytics & Monitoring Section Header -->
         <div class="section-header">
-          <v-icon color="primary" class="section-icon">$chart-line</v-icon>
-          <div class="section-title">Analytics & Monitoring</div>
+          <v-icon
+            color="primary"
+            class="section-icon"
+          >
+            $chart-line
+          </v-icon>
+          <div class="section-title">
+            Analytics & Monitoring
+          </div>
         </div>
 
         <!-- Enable Analytics Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$chart-line</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $chart-line
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Enable Analytics</div>
-                <div class="setting-description text-medium-emphasis">Collect and analyze system usage statistics and performance metrics</div>
+                <div class="setting-title text-high-emphasis">
+                  Enable Analytics
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Collect and analyze system usage statistics and performance metrics
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -82,16 +116,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Query Logging Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$clipboard-list</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $clipboard-list
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Enable Query Logging</div>
-                <div class="setting-description text-medium-emphasis">Log all user queries for analysis and improvement</div>
+                <div class="setting-title text-high-emphasis">
+                  Enable Query Logging
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Log all user queries for analysis and improvement
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -108,16 +151,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Query Log Retention Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$clock-outline</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $clock-outline
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Query Log Retention (Days)</div>
-                <div class="setting-description text-medium-emphasis">Number of days to keep query logs before automatic deletion</div>
+                <div class="setting-title text-high-emphasis">
+                  Query Log Retention (Days)
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Number of days to keep query logs before automatic deletion
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -136,16 +188,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Session Timeout Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$timer</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $timer
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Session Timeout</div>
-                <div class="setting-description text-medium-emphasis">Admin session timeout in minutes (30-1440)</div>
+                <div class="setting-title text-high-emphasis">
+                  Session Timeout
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Admin session timeout in minutes (30-1440)
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -164,16 +225,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Session Fingerprinting Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$fingerprint</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $fingerprint
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Session Fingerprinting</div>
-                <div class="setting-description text-medium-emphasis">Enable session fingerprinting for enhanced security</div>
+                <div class="setting-title text-high-emphasis">
+                  Session Fingerprinting
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Enable session fingerprinting for enhanced security
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -190,16 +260,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Audit Logging Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$book-open</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $book-open
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Audit Logging</div>
-                <div class="setting-description text-medium-emphasis">Log all admin actions for security auditing</div>
+                <div class="setting-title text-high-emphasis">
+                  Audit Logging
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Log all admin actions for security auditing
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -216,22 +295,38 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Rate Limiting & Protection Section Header -->
         <div class="section-header">
-          <v-icon color="primary" class="section-icon">$shield</v-icon>
-          <div class="section-title">Rate Limiting & Protection</div>
+          <v-icon
+            color="primary"
+            class="section-icon"
+          >
+            $shield
+          </v-icon>
+          <div class="section-title">
+            Rate Limiting & Protection
+          </div>
         </div>
 
         <!-- Enable Rate Limiting Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$speedometer</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $speedometer
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Enable Rate Limiting</div>
-                <div class="setting-description text-medium-emphasis">Limit the number of requests to prevent abuse and ensure fair usage</div>
+                <div class="setting-title text-high-emphasis">
+                  Enable Rate Limiting
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Limit the number of requests to prevent abuse and ensure fair usage
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -248,16 +343,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Rate Limit Requests Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$numeric</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $numeric
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Rate Limit Requests</div>
-                <div class="setting-description text-medium-emphasis">Maximum number of requests allowed per time window (1-10000)</div>
+                <div class="setting-title text-high-emphasis">
+                  Rate Limit Requests
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Maximum number of requests allowed per time window (1-10000)
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -276,16 +380,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Rate Limit Window Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$clock-outline</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $clock-outline
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Rate Limit Window (seconds)</div>
-                <div class="setting-description text-medium-emphasis">Time window for rate limit counting (1-3600 seconds)</div>
+                <div class="setting-title text-high-emphasis">
+                  Rate Limit Window (seconds)
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Time window for rate limit counting (1-3600 seconds)
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -304,16 +417,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Input Validation Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$check-circle</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $check-circle
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Input Validation</div>
-                <div class="setting-description text-medium-emphasis">Enable strict input validation and sanitization</div>
+                <div class="setting-title text-high-emphasis">
+                  Input Validation
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Enable strict input validation and sanitization
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -330,16 +452,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Low Query Quality Threshold Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$alert-circle</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $alert-circle
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Quality Alert Threshold</div>
-                <div class="setting-description text-medium-emphasis">Flag queries with similarity scores below this threshold for quality monitoring and analysis</div>
+                <div class="setting-title text-high-emphasis">
+                  Quality Alert Threshold
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Flag queries with similarity scores below this threshold for quality monitoring and analysis
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -357,22 +488,33 @@
                   hide-details
                   style="width: 200px;"
                 />
-                <div class="setting-value text-medium-emphasis">{{ similarityThresholdPercent }}%</div>
+                <div class="setting-value text-medium-emphasis">
+                  {{ similarityThresholdPercent }}%
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Excluded IPs Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$ip-network</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $ip-network
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Excluded IP Addresses</div>
-                <div class="setting-description text-medium-emphasis">IP addresses to exclude from logging (one per line)</div>
+                <div class="setting-title text-high-emphasis">
+                  Excluded IP Addresses
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  IP addresses to exclude from logging (one per line)
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -388,7 +530,6 @@
             </div>
           </div>
         </div>
-
       </v-card-text>
     </v-card>
   </div>
@@ -457,7 +598,7 @@ const loadSettings = async () => {
     }
   } catch (err) {
     console.error('Failed to load security settings:', err)
-    error.value = 'Failed to load security settings: ' + (err.response?.data?.detail || err.message)
+    error.value = `Failed to load security settings: ${  err.response?.data?.detail || err.message}`
   } finally {
     loading.value = false
   }
@@ -475,7 +616,7 @@ const saveSettings = async () => {
     }
   } catch (err) {
     console.error('Failed to save security settings:', err)
-    error.value = 'Failed to save security settings: ' + (err.response?.data?.detail || err.message)
+    error.value = `Failed to save security settings: ${  err.response?.data?.detail || err.message}`
     showError('Failed to save security settings')
   } finally {
     loading.value = false

@@ -30,9 +30,9 @@ export const ExportFormats = {
 // Helper functions for data formatting
 export const formatNumber = (num) => {
   if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M'
+    return `${(num / 1000000).toFixed(1)  }M`
   } else if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'K'
+    return `${(num / 1000).toFixed(1)  }K`
   } else {
     return num.toString()
   }
@@ -64,10 +64,10 @@ export const formatDate = (date) => {
     // Parse the date - if it's a string without timezone info, assume it's UTC
     let dateObj
     if (typeof date === 'string') {
-      const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(date)
+      const hasTZ = /[zZ]|[+-]\d{2}:?\d{2}$/.test(date)
       const hasT = date.includes('T')
       const normalized = hasT ? date : date.replace(' ', 'T')
-      dateObj = new Date(hasTZ ? normalized : normalized + 'Z')
+      dateObj = new Date(hasTZ ? normalized : `${normalized  }Z`)
     } else {
       dateObj = new Date(date)
     }

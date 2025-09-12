@@ -3,7 +3,9 @@
     <!-- Page Header -->
     <div class="d-flex justify-space-between align-center mb-6">
       <div>
-        <h1 class="text-h5 font-weight-bold">API Keys Management</h1>
+        <h1 class="text-h5 font-weight-bold">
+          API Keys Management
+        </h1>
         <p class="text-body-2 text-medium-emphasis mt-1">
           Securely manage API keys for external services
         </p>
@@ -13,10 +15,10 @@
           v-if="hasEnvironmentKeys"
           color="info"
           prepend-icon="$import"
-          @click="migrateFromEnvironment"
           :loading="migrating"
           variant="outlined"
           class="mr-2"
+          @click="migrateFromEnvironment"
         >
           Migrate from Environment
         </v-btn>
@@ -74,9 +76,9 @@
           <v-btn
             icon="$refresh"
             size="small"
-            @click="fetchKeys"
             :loading="loading"
             class="ml-2"
+            @click="fetchKeys"
           />
         </div>
       </v-card-title>
@@ -90,7 +92,7 @@
         class="elevation-0"
       >
         <!-- Key Name -->
-        <template v-slot:item.key_name="{ item }">
+        <template #[`item.key_name`]="{ item }">
           <div class="d-flex align-center">
             <v-chip
               :color="getKeyTypeColor(item.key_type)"
@@ -104,12 +106,12 @@
         </template>
 
         <!-- Last Four -->
-        <template v-slot:item.last_four="{ item }">
+        <template #[`item.last_four`]="{ item }">
           <span class="font-mono">****{{ item.last_four }}</span>
         </template>
 
         <!-- Status -->
-        <template v-slot:item.is_active="{ item }">
+        <template #[`item.is_active`]="{ item }">
           <v-chip
             :color="item.is_active ? 'success' : 'error'"
             :text="item.is_active ? 'Active' : 'Inactive'"
@@ -118,32 +120,38 @@
         </template>
 
         <!-- Last Used -->
-        <template v-slot:item.last_used_at="{ item }">
-          <span v-if="item.last_used_at" class="text-body-2">
+        <template #[`item.last_used_at`]="{ item }">
+          <span
+            v-if="item.last_used_at"
+            class="text-body-2"
+          >
             {{ formatDateTime(item.last_used_at) }}
           </span>
-          <span v-else class="text-medium-emphasis">Never</span>
+          <span
+            v-else
+            class="text-medium-emphasis"
+          >Never</span>
         </template>
 
         <!-- Actions -->
-        <template v-slot:item.actions="{ item }">
+        <template #[`item.actions`]="{ item }">
           <div class="action-buttons">
             <v-tooltip text="Test Connection">
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
                   icon="$check-circle"
                   size="small"
                   color="info"
                   variant="text"
-                  @click="validateKey(item)"
                   :loading="validating === item.key_name"
+                  @click="validateKey(item)"
                 />
               </template>
             </v-tooltip>
 
             <v-tooltip text="Edit Key">
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
                   icon="$pencil"
@@ -156,21 +164,21 @@
             </v-tooltip>
 
             <v-tooltip :text="item.is_active ? 'Disable' : 'Enable'">
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
                   :icon="item.is_active ? '$eye-off' : '$eye'"
                   size="small"
                   :color="item.is_active ? 'warning' : 'success'"
                   variant="text"
-                  @click="toggleKey(item)"
                   :loading="toggling === item.key_name"
+                  @click="toggleKey(item)"
                 />
               </template>
             </v-tooltip>
 
             <v-tooltip text="Delete Key">
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
                   icon="$delete"
@@ -187,14 +195,21 @@
     </v-card>
 
     <!-- Create/Edit Dialog -->
-    <v-dialog v-model="showCreateDialog" max-width="600px" persistent>
+    <v-dialog
+      v-model="showCreateDialog"
+      max-width="600px"
+      persistent
+    >
       <v-card>
         <v-card-title>
           <span class="text-h6">{{ editingKey ? 'Edit' : 'Add' }} API Key</span>
         </v-card-title>
 
         <v-card-text>
-          <v-form v-model="formValid" ref="keyFormRef">
+          <v-form
+            ref="keyFormRef"
+            v-model="formValid"
+          >
             <v-text-field
               v-model="keyForm.key_name"
               label="Key Name"
@@ -225,13 +240,13 @@
               :rules="keyRules"
               :type="showKey ? 'text' : 'password'"
               :append-inner-icon="showKey ? '$eye-off' : '$eye'"
-              @click:append-inner="showKey = !showKey"
               rows="3"
               auto-grow
               :hint="editingKey ? 'Enter new API key to replace current key, or leave unchanged to keep existing key' : 'The actual API key from your provider'"
               persistent-hint
               required
               class="mt-4"
+              @click:append-inner="showKey = !showKey"
             />
 
             <v-alert
@@ -249,12 +264,17 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="closeDialog" :disabled="saving">Cancel</v-btn>
+          <v-btn
+            :disabled="saving"
+            @click="closeDialog"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="primary"
-            @click="saveKey"
             :loading="saving"
             :disabled="!formValid"
+            @click="saveKey"
           >
             {{ editingKey ? 'Update' : 'Create' }}
           </v-btn>
@@ -263,14 +283,21 @@
     </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="showDeleteDialog" max-width="500px">
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="500px"
+    >
       <v-card>
         <v-card-title>
           <span class="text-h6">Confirm Deletion</span>
         </v-card-title>
 
         <v-card-text>
-          <v-alert type="error" variant="tonal" class="mb-4">
+          <v-alert
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
             <v-alert-title>Permanent Action</v-alert-title>
             This action cannot be undone.
           </v-alert>
@@ -281,11 +308,16 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="showDeleteDialog = false" :disabled="deleting">Cancel</v-btn>
+          <v-btn
+            :disabled="deleting"
+            @click="showDeleteDialog = false"
+          >
+            Cancel
+          </v-btn>
           <v-btn
             color="error"
-            @click="deleteKey"
             :loading="deleting"
+            @click="deleteKey"
           >
             Delete
           </v-btn>
@@ -363,18 +395,18 @@ const keyTypeOptions = [
 
 // Form validation rules
 const nameRules = [
-  v => !!v || 'Key name is required',
+  v => Boolean(v) || 'Key name is required',
   v => (v && v.length >= 3) || 'Key name must be at least 3 characters',
   v => (v && /^[a-z0-9_]+$/.test(v)) || 'Key name must contain only lowercase letters, numbers, and underscores',
   v => !keys.value.some(k => k.key_name === v && k.id !== editingKey.value?.id) || 'Key name already exists'
 ]
 
 const typeRules = [
-  v => !!v || 'Key type is required'
+  v => Boolean(v) || 'Key type is required'
 ]
 
 const keyRules = [
-  v => !!v || 'API key is required',
+  v => Boolean(v) || 'API key is required',
   v => {
     if (!v) return 'API key is required'
     // Allow masked format for editing (***...***last4) with variable asterisk count
@@ -455,7 +487,7 @@ const saveKey = async () => {
   if (!formValid.value) return
 
   saving.value = true
-  const isEditing = !!editingKey.value
+  const isEditing = Boolean(editingKey.value)
   
   try {
     if (isEditing) {
@@ -564,7 +596,7 @@ const migrateFromEnvironment = async () => {
     console.error('Error migrating API keys:', error)
     migrationResults.value = {
       success: false,
-      message: 'Migration failed: ' + (error.response?.data?.detail || error.message)
+      message: `Migration failed: ${  error.response?.data?.detail || error.message}`
     }
   } finally {
     migrating.value = false

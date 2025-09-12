@@ -1,5 +1,9 @@
 <template>
-  <v-dialog v-model="dialog" max-width="500px" persistent>
+  <v-dialog
+    v-model="dialog"
+    max-width="500px"
+    persistent
+  >
     <v-card>
       <v-card-title>
         Test Dialog
@@ -11,9 +15,21 @@
       </v-card-text>
       
       <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn color="grey" variant="text" @click="cancel">Cancel</v-btn>
-        <v-btn color="primary" variant="text" @click="save">Save</v-btn>
+        <v-spacer />
+        <v-btn
+          color="grey"
+          variant="text"
+          @click="cancel"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="text"
+          @click="save"
+        >
+          Save
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
