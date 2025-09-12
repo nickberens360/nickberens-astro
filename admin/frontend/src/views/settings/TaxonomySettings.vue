@@ -191,68 +191,7 @@
           </v-card-text>
         </v-card>
 
-        <!-- Taxonomy JSON Editor Section -->
-        <v-card variant="flat" class="mb-6">
-          <v-card-title class="text-subtitle-1 font-weight-bold pa-4 d-flex align-center">
-            <v-icon color="primary" class="mr-2">$code</v-icon>
-            Taxonomy JSON Editor
-            <v-spacer />
-            <v-switch
-              v-model="autoPublishDeletes"
-              color="primary"
-              inset
-              hide-details
-              class="mr-2"
-              :label="`Auto-publish deletes`"
-            />
-          </v-card-title>
-          <v-card-text class="pa-4">
-            <!-- Monaco Editor Container -->
-            <v-card
-              variant="outlined"
-              class="editor-container rounded-lg overflow-hidden mb-4"
-            >
-              <div
-                ref="editorContainer"
-                style="height: 450px; width: 100%;"
-              />
-            </v-card>
-
-            <!-- Secondary actions under editor -->
-            <div class="mt-2 d-flex align-center" style="gap: 8px;">
-              <v-btn variant="text" @click="openSnapshotDialog">Save Snapshot</v-btn>
-              <v-btn variant="text" @click="openAutoGenerate">
-                <v-icon size="18" class="mr-1">$auto-generate</v-icon>
-                Auto-Generate
-              </v-btn>
-              <v-btn variant="text" @click="insertTemplate" :disabled="!!taxonomyJson">Insert Template</v-btn>
-              <v-btn variant="text" @click="validateJson">Validate</v-btn>
-              <v-btn variant="text" @click="formatJson">Format</v-btn>
-            </div>
-
-            <div class="mt-4 d-flex align-center" style="gap: 8px;">
-              <v-text-field
-                v-model="testQuery"
-                label="Test Query"
-                variant="outlined"
-                density="comfortable"
-                prepend-inner-icon="$search"
-                class="flex-1"
-                hide-details
-              />
-              <v-btn color="primary" variant="elevated" class="ml-6" @click="runTest">Test Detection</v-btn>
-            </div>
-
-            <div
-              v-if="testResult"
-              class="mt-3 text-medium-emphasis"
-            >
-              Detected categories: <strong>{{
-                testResult.join(', ') || 'None'
-              }}</strong>
-            </div>
-          </v-card-text>
-        </v-card>
+        
 
         <!-- Live Preview Section -->
         <v-card
@@ -315,10 +254,21 @@
                       @click="deleteCategoryFromList(c.name)"
                     />
                   </div>
-                  <div class="item-line">
-                    <span class="label">Synonyms:</span>
-                    {{ (c.synonyms || []).join(', ') || '—' }}
-                  </div>
+                <div class="item-line">
+                  <span class="label">Synonyms:</span>
+                  <template v-if="(c.synonyms || []).length">
+                    <span class="chips">
+                      <v-chip
+                        v-for="s in c.synonyms"
+                        :key="`syn-${c.name}-${s}`"
+                        size="small"
+                        variant="tonal"
+                        class="mr-1 mb-1"
+                      >{{ s }}</v-chip>
+                    </span>
+                  </template>
+                  <span v-else>—</span>
+                </div>
                   <div class="item-line">
                     <span class="label">Regex:</span>
                     {{ (c.regex || []).join(' | ') || '—' }}
@@ -335,6 +285,98 @@
               class="text-medium-emphasis"
             >
               No categories parsed yet.
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <!-- Taxonomy JSON Editor Section -->
+        <v-card variant="flat" class="mb-6">
+          <v-card-title class="text-subtitle-1 font-weight-bold pa-4 d-flex align-center">
+            <v-icon color="primary" class="mr-2">$code</v-icon>
+            Taxonomy JSON Editor
+          </v-card-title>
+          <v-card-text class="pa-4">
+            <!-- Switch Rows -->
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon color="primary" class="setting-icon">$save</v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">Auto-publish Deletes</div>
+                    <div class="setting-description text-medium-emphasis">
+                      Immediately publish taxonomy changes after deleting a category. Turn off to stage deletes and publish later.
+                    </div>
+                  </div>
+                </div>
+                <div class="setting-right">
+                  <v-switch v-model="autoPublishDeletes" color="primary" inset hide-details />
+                  <div class="setting-status text-medium-emphasis">{{ autoPublishDeletes ? 'Enabled' : 'Disabled' }}</div>
+                </div>
+              </div>
+            </div>
+
+            <v-divider class="my-1" />
+
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon color="primary" class="setting-icon">$code</v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">Advanced JSON Editor</div>
+                    <div class="setting-description text-medium-emphasis">
+                      Show the raw JSON editor for power users. The UI above covers common edits without dealing with JSON.
+                    </div>
+                  </div>
+                </div>
+                <div class="setting-right">
+                  <v-switch v-model="showAdvancedJsonEditor" color="primary" inset hide-details />
+                  <div class="setting-status text-medium-emphasis">{{ showAdvancedJsonEditor ? 'Shown' : 'Hidden' }}</div>
+                </div>
+              </div>
+            </div>
+
+            <v-divider class="my-4" />
+
+            <!-- Monaco Editor Container -->
+            <v-card v-if="showAdvancedJsonEditor"
+              variant="outlined"
+              class="editor-container rounded-lg overflow-hidden mb-4"
+            >
+              <div
+                ref="editorContainer"
+                style="height: 450px; width: 100%;"
+              />
+            </v-card>
+
+            <!-- Editor tools & actions toolbar -->
+            <div class="mt-2 d-flex align-center" style="gap: 8px; flex-wrap: wrap;">
+              <v-btn variant="text" @click="openSnapshotDialog">Save Snapshot</v-btn>
+              <v-btn variant="text" @click="openAutoGenerate">
+                <v-icon size="18" class="mr-1">$auto-generate</v-icon>
+                Auto-Generate
+              </v-btn>
+              <v-btn variant="text" @click="insertTemplate" :disabled="!!taxonomyJson">Insert Template</v-btn>
+              <v-btn variant="text" @click="openImportDialog">Import JSON</v-btn>
+              <v-btn variant="text" @click="exportJson">Export JSON</v-btn>
+              <v-btn variant="text" @click="validateJson">Validate</v-btn>
+              <v-btn variant="text" @click="formatJson">Format</v-btn>
+            </div>
+
+            <div class="mt-4 d-flex align-center" style="gap: 8px;">
+              <v-text-field
+                v-model="testQuery"
+                label="Test Query"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="$search"
+                class="flex-1"
+                hide-details
+              />
+              <v-btn color="primary" variant="elevated" class="ml-6" @click="runTest">Test Detection</v-btn>
+            </div>
+
+            <div v-if="testResult" class="mt-3 text-medium-emphasis">
+              Detected categories: <strong>{{ testResult.join(', ') || 'None' }}</strong>
             </div>
           </v-card-text>
         </v-card>
@@ -557,6 +599,24 @@
       <v-card-actions class="justify-end">
         <v-btn variant="text" @click="discard.open = false">Cancel</v-btn>
         <v-btn color="error" variant="elevated" @click="confirmDiscard">Discard</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Import JSON Dialog -->
+  <v-dialog v-model="importJson.open" max-width="720">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="primary" class="mr-2">$import</v-icon>
+        Import Taxonomy JSON
+      </v-card-title>
+      <v-card-text>
+        <div class="text-medium-emphasis mb-3">Paste a valid taxonomy JSON. This replaces the current draft.</div>
+        <v-textarea v-model="importJson.text" rows="12" auto-grow variant="outlined" density="comfortable" />
+      </v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="importJson.open = false">Cancel</v-btn>
+        <v-btn color="primary" variant="elevated" @click="confirmImportJson">Import</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -792,6 +852,7 @@ const editorContainer = ref(null);
 const loading = ref(false);
 const baselineJson = ref('');
 const autoPublishDeletes = ref(true);
+const showAdvancedJsonEditor = ref(false);
 // Undo deletion state
 const undoSnack = reactive({ open: false, name: '', data: null });
 // Delete confirmation state
@@ -811,6 +872,7 @@ const restore = reactive({ open: false, versionId: null, note: '' })
 const snapshot = reactive({ open: false, note: '' })
 const discard = reactive({ open: false })
 const fallbackView = reactive({ open: false, text: '' })
+const importJson = reactive({ open: false, text: '' })
 
 // Category edit dialog state
 const categoryDialog = reactive({
@@ -845,6 +907,29 @@ watch(monacoTheme, (newTheme) => {
 watch(taxonomyJson, () => {
   if (editor && editor.getValue() !== taxonomyJson.value) {
     editor.setValue(taxonomyJson.value || '');
+  }
+});
+
+// When advanced editor is toggled on, create Monaco instance; dispose when off
+watch(showAdvancedJsonEditor, async (enabled) => {
+  try {
+    if (enabled) {
+      await nextTick();
+      setTimeout(() => {
+        if (editorContainer.value) {
+          createEditor();
+          // Ensure editor content is in sync on first open
+          if (editor && editor.getValue() !== (taxonomyJson.value || '')) {
+            editor.setValue(taxonomyJson.value || '');
+          }
+        }
+      }, 0);
+    } else {
+      // Hide editor: dispose to free resources
+      cleanup();
+    }
+  } catch (e) {
+    // non-fatal
   }
 });
 
@@ -996,6 +1081,37 @@ function insertTemplate() {
     showSuccess('Inserted template');
   } catch {
     // no-op
+  }
+}
+
+function openImportDialog() {
+  importJson.text = '';
+  importJson.open = true;
+}
+
+function exportJson() {
+  const text = taxonomyJson.value || '';
+  try {
+    // validate pretty
+    const parsed = JSON.parse(text || '{}');
+    const content = JSON.stringify(parsed, null, 2);
+    triggerDownload(content, 'taxonomy_draft.json');
+  } catch {
+    // export raw if it can't parse (unlikely)
+    triggerDownload(text, 'taxonomy_draft.json');
+  }
+}
+
+function confirmImportJson() {
+  try {
+    const parsed = JSON.parse(importJson.text || '{}');
+    const content = JSON.stringify(parsed, null, 2);
+    taxonomyJson.value = content;
+    if (editor) editor.setValue(content);
+    showSuccess('Imported draft JSON');
+    importJson.open = false;
+  } catch (e) {
+    showError('Invalid JSON — please fix and try again');
   }
 }
 
@@ -1653,6 +1769,7 @@ async function saveSnapshot() {
 
 .item-title {
   font-weight: 600;
+  font-size: 1.1rem;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -1670,6 +1787,36 @@ async function saveSnapshot() {
   margin-right: 8px;
   font-weight: 500;
 }
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+/* Settings row layout (mirrors other settings views) */
+.setting-row {
+  padding: 16px 0;
+}
+.setting-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.setting-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.setting-icon { margin-right: 12px; }
+.setting-info { flex: 1; min-width: 0; }
+.setting-title { font-size: 16px; font-weight: 500; margin-bottom: 2px; }
+.setting-description { font-size: 14px; }
+.setting-right { display: flex; align-items: center; gap: 10px; margin-left: 24px; }
+.setting-actions { flex-wrap: wrap; gap: 8px; }
+.setting-status { font-size: 13px; }
 
 /* Monaco Editor Styles */
 .editor-container {
