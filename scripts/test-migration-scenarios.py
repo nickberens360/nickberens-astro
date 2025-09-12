@@ -12,9 +12,7 @@ Tests various edge cases for settings migration including:
 
 import json
 import logging
-import os
 import sys
-import tempfile
 from pathlib import Path
 
 # Add project root to path
@@ -160,7 +158,7 @@ class MigrationTestRunner:
         migrator = SettingsMigrator()
 
         # Override a method to simulate failure
-        original_method = migrator._save_migrated_settings_atomic
+        migrator._save_migrated_settings_atomic
 
         def failing_save(*args, **kwargs):
             raise Exception("Simulated database failure")

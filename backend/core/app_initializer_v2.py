@@ -18,6 +18,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
+from .constants import ANTHROPIC_COMMON_PARAMS, GOOGLE_COMMON_PARAMS
 from .settings_manager import get_settings_manager
 from .smart_illustration_service import SmartIllustrationService
 from .taxonomy_loader import get_topic_taxonomy
@@ -70,7 +71,7 @@ def create_processing_llm() -> BaseLanguageModel:
             if google_api_key:
                 logger.info(f"Creating Gemini processing LLM: {processing_model_name}")
                 return ChatGoogleGenerativeAI(
-                    model=processing_model_name, temperature=0.1, timeout=60.0, google_api_key=google_api_key
+                    model=processing_model_name, google_api_key=google_api_key, **GOOGLE_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Google API key found for processing LLM, falling back to Claude")
@@ -82,7 +83,7 @@ def create_processing_llm() -> BaseLanguageModel:
             if anthropic_api_key:
                 logger.info(f"Creating Claude processing LLM: {processing_model_name}")
                 return ChatAnthropic(
-                    model_name=processing_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                    model_name=processing_model_name, api_key=anthropic_api_key, **ANTHROPIC_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Anthropic API key found for processing LLM, trying environment fallback")
@@ -95,12 +96,10 @@ def create_processing_llm() -> BaseLanguageModel:
     logger.info("Creating fast Claude processing LLM from environment: claude-3-haiku-20240307")
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
-        return ChatAnthropic(
-            model_name="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
-        )
+        return ChatAnthropic(model_name="claude-3-haiku-20240307", api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
+        return ChatAnthropic(model_name="claude-3-haiku-20240307", **ANTHROPIC_COMMON_PARAMS)
 
 
 def create_response_llm() -> BaseLanguageModel:
@@ -147,7 +146,7 @@ def create_response_llm() -> BaseLanguageModel:
             if google_api_key:
                 logger.info(f"Creating Gemini response LLM: {response_model_name}")
                 return ChatGoogleGenerativeAI(
-                    model=response_model_name, temperature=0.1, timeout=60.0, google_api_key=google_api_key
+                    model=response_model_name, google_api_key=google_api_key, **GOOGLE_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Google API key found, falling back to Claude")
@@ -158,7 +157,7 @@ def create_response_llm() -> BaseLanguageModel:
             if anthropic_api_key:
                 logger.info(f"Creating Claude response LLM: {response_model_name}")
                 return ChatAnthropic(
-                    model_name=response_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                    model_name=response_model_name, api_key=anthropic_api_key, **ANTHROPIC_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Anthropic API key found, trying environment fallback")
@@ -171,12 +170,10 @@ def create_response_llm() -> BaseLanguageModel:
     logger.info(f"Creating Claude LLM from environment config: {AppConfig.CLAUDE_MODEL}")
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
-        return ChatAnthropic(
-            model_name=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
-        )
+        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
+        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, **ANTHROPIC_COMMON_PARAMS)
 
 
 def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
