@@ -2882,7 +2882,15 @@ async def update_taxonomy_settings(
     try:
         _validate_taxonomy_payload(settings_data)
 
-        # Persist to DB
+        # Snapshot previous version to history (best-effort)
+        try:
+            prev = admin_db_manager.get_admin_setting("taxonomy_settings")
+            if prev:
+                admin_db_manager.add_taxonomy_history(prev, session["user_id"], note="auto-snapshot before publish")
+        except Exception:
+            logger.debug("Could not snapshot previous taxonomy settings to history")
+
+        # Persist to DB (current)
         saved = admin_db_manager.set_admin_setting("taxonomy_settings", json.dumps(settings_data), session["user_id"])
         if not saved:
             raise HTTPException(status_code=500, detail="Failed to update taxonomy settings")
@@ -2930,6 +2938,182 @@ async def update_taxonomy_settings(
     except Exception as e:
         logger.error(f"Error updating taxonomy settings: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating taxonomy settings")
+
+
+# === Taxonomy Versioning Endpoints ===
+@router.get("/settings/taxonomy/versions")
+async def list_taxonomy_versions(
+    limit: int = 20, offset: int = 0, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    try:
+        limit = max(1, min(100, int(limit)))
+        offset = max(0, int(offset))
+        items = admin_db_manager.list_taxonomy_history(limit=limit, offset=offset)
+        return {"versions": items, "limit": limit, "offset": offset}
+    except Exception as e:
+        logger.error(f"Error listing taxonomy versions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error listing taxonomy versions")
+
+
+@router.get("/settings/taxonomy/versions/{version_id}")
+async def get_taxonomy_version(
+    version_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    try:
+        item = admin_db_manager.get_taxonomy_history(int(version_id))
+        if not item:
+            raise HTTPException(status_code=404, detail="Version not found")
+        try:
+            data = json.loads(item["settings_json"]) if item.get("settings_json") else None
+        except json.JSONDecodeError:
+            data = None
+        return {"version": {k: v for k, v in item.items() if k != "settings_json"}, "settings": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting taxonomy version {version_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error getting taxonomy version")
+
+
+@router.post("/settings/taxonomy/versions/{version_id}/restore")
+async def restore_taxonomy_version(
+    request: Request, version_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    try:
+        item = admin_db_manager.get_taxonomy_history(int(version_id))
+        if not item:
+            raise HTTPException(status_code=404, detail="Version not found")
+        raw = item.get("settings_json")
+        if not raw:
+            raise HTTPException(status_code=400, detail="Version payload missing")
+        data = json.loads(raw)
+        _validate_taxonomy_payload(data)
+
+        # Snapshot current before overwriting (best-effort)
+        try:
+            prev = admin_db_manager.get_admin_setting("taxonomy_settings")
+            if prev:
+                admin_db_manager.add_taxonomy_history(prev, session["user_id"], note="auto-snapshot before restore")
+        except Exception:
+            pass
+
+        # Persist restored version
+        saved = admin_db_manager.set_admin_setting("taxonomy_settings", raw, session["user_id"])
+        if not saved:
+            raise HTTPException(status_code=500, detail="Failed to restore taxonomy version")
+
+        # Invalidate and warm
+        try:
+            taxonomy_loader.invalidate_cache()
+            taxonomy_loader.get_topic_taxonomy(force_reload=True)
+        except Exception:
+            logger.debug("Could not warm taxonomy cache after restore")
+
+        # Parse optional note from body
+        note: str | None = None
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                note = body.get("note")
+        except Exception:
+            note = None
+
+        # Audit
+        try:
+            cats = list((data.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_settings_restore",
+                "restored_version_id": int(version_id),
+                "category_count": len(cats),
+                "note": note,
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        return {"success": True, "message": "Restored taxonomy version", "version_id": int(version_id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error restoring taxonomy version {version_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error restoring taxonomy version")
+
+
+@router.post("/settings/taxonomy/versions")
+async def create_taxonomy_version(
+    request: Request,
+    payload: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a manual snapshot of taxonomy settings for history (without publishing).
+
+    Body:
+      - settings: object (taxonomy JSON); if omitted, snapshot current DB value
+      - note: optional string
+    """
+    try:
+        note = None
+        settings_obj = None
+        if isinstance(payload, dict):
+            note = payload.get("note")
+            settings_obj = payload.get("settings")
+
+        if settings_obj is None:
+            # Use current DB value
+            current = admin_db_manager.get_admin_setting("taxonomy_settings")
+            if not current:
+                raise HTTPException(status_code=400, detail="No current taxonomy to snapshot")
+            raw = current
+            try:
+                settings_obj = json.loads(current)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Current taxonomy is corrupt; cannot snapshot")
+        else:
+            # Validate provided settings
+            if not isinstance(settings_obj, dict):
+                raise HTTPException(status_code=400, detail="settings must be an object")
+            _validate_taxonomy_payload(settings_obj)
+            raw = json.dumps(settings_obj)
+
+        version_id = admin_db_manager.add_taxonomy_history(raw, session["user_id"], note=note)
+        if not version_id:
+            raise HTTPException(status_code=500, detail="Failed to create snapshot")
+
+        # Audit
+        try:
+            cats = list((settings_obj.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_settings_snapshot",
+                "category_count": len(cats),
+                "note": note,
+                "version_id": int(version_id),
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        return {"success": True, "version_id": int(version_id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating taxonomy snapshot: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating taxonomy snapshot")
 
 
 @router.post("/settings/taxonomy/auto-generate")

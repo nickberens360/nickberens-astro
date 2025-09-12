@@ -145,6 +145,30 @@ class AdminDatabaseManager:
                 """
                 )
 
+                # Taxonomy settings history table
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS taxonomy_settings_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        settings_json TEXT NOT NULL,
+                        category_count INTEGER DEFAULT 0,
+                        note TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_by INTEGER,
+                        FOREIGN KEY (updated_by) REFERENCES admin_users (id)
+                    )
+                """
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_taxonomy_hist_created ON taxonomy_settings_history(created_at DESC)"
+                )
+
+                # Migration: ensure 'note' column exists (SQLite adds harmlessly if already present)
+                try:
+                    cursor.execute("ALTER TABLE taxonomy_settings_history ADD COLUMN note TEXT")
+                except Exception:
+                    pass
+
                 # Rate limiting table for persistent storage
                 cursor.execute(
                     """
@@ -1321,74 +1345,30 @@ class AdminDatabaseManager:
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> bool:
-        """Persist a security/audit event to the database."""
-        # TEMPORARY: Disable security event recording to prevent database locks
-        logger.info(f"TEMP DISABLED - Security event: {event_type} for {identifier}")
-        return True
-        import time
+        """Persist a security/audit event to the dedicated security events database."""
+        try:
+            from .security_events_database import security_events_db_manager
 
-        max_attempts = 5
-        backoff = 0.15
-        for attempt in range(1, max_attempts + 1):
-            try:
-                # Serialize writes within this process to minimize SQLite write lock conflicts
-                with self._write_lock:
-                    with self.get_connection() as conn:
-                        cursor = conn.cursor()
-                        cursor.execute(
-                            """
-                            INSERT INTO security_events (event_type, identifier, details, severity, ip_address, user_agent, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                            """,
-                            (
-                                event_type,
-                                identifier,
-                                details,
-                                severity,
-                                ip_address,
-                                (user_agent[:500] if user_agent else None),
-                                datetime.now(),
-                            ),
-                        )
-                        return True
-            except sqlite3.OperationalError as e:
-                # Retry on database locked
-                if "database is locked" in str(e).lower() and attempt < max_attempts:
-                    sleep_for = backoff * attempt
-                    logger.warning(
-                        f"SQLite locked while recording security event; retry {attempt}/{max_attempts} after {sleep_for:.2f}s"
-                    )
-                    time.sleep(sleep_for)
-                    continue
-                logger.error(f"OperationalError recording security event: {str(e)}", exc_info=True)
-                return False
-            except Exception as e:
-                logger.error(f"Error recording security event: {str(e)}", exc_info=True)
-                return False
-        return False
+            return security_events_db_manager.record_security_event(
+                event_type,
+                identifier,
+                severity,
+                details,
+                ip_address,
+                user_agent,
+            )
+        except Exception as e:
+            logger.error(f"Error delegating security event record: {e}", exc_info=True)
+            return False
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
-        """Return security events within the last N hours."""
+        """Return security events within the last N hours from the dedicated DB."""
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    SELECT id, event_type, identifier, details, severity, ip_address, user_agent, created_at
-                    FROM security_events
-                    WHERE created_at >= datetime('now', ?)
-                    ORDER BY created_at DESC
-                    """,
-                    (f"-{int(hours)} hours",),
-                )
-                rows = cursor.fetchall()
-                result = []
-                for row in rows:
-                    d = dict(row)
-                    result.append(d)
-                return result
+            from .security_events_database import security_events_db_manager
+
+            return security_events_db_manager.get_security_alerts(hours)
         except Exception as e:
-            logger.error(f"Error fetching security alerts: {str(e)}", exc_info=True)
+            logger.error(f"Error delegating get_security_alerts: {str(e)}", exc_info=True)
             return []
 
     def create_admin_user(self, username: str, email: Optional[str], password_hash: str, role: str = "viewer") -> int:
@@ -1571,6 +1551,66 @@ class AdminDatabaseManager:
             logger.error(f"Error setting admin setting {setting_key}: {str(e)}", exc_info=True)
             return False
 
+    # === Taxonomy history helpers ===
+    def add_taxonomy_history(self, settings_json: str, updated_by: int, note: Optional[str] = None) -> Optional[int]:
+        """Persist a snapshot of taxonomy settings for history/rollback."""
+        try:
+            try:
+                import json as _json
+
+                data = _json.loads(settings_json)
+                cats = data.get("categories") if isinstance(data, dict) else None
+                category_count = len(cats.keys()) if isinstance(cats, dict) else 0
+            except Exception:
+                category_count = 0
+
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO taxonomy_settings_history (settings_json, category_count, note, created_at, updated_by)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (settings_json, int(category_count), note, datetime.now(), updated_by),
+                )
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Error adding taxonomy history: {e}", exc_info=True)
+            return None
+
+    def list_taxonomy_history(self, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, category_count, note, created_at, updated_by
+                    FROM taxonomy_settings_history
+                    ORDER BY created_at DESC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (limit, offset),
+                )
+                rows = cursor.fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            logger.error(f"Error listing taxonomy history: {e}", exc_info=True)
+            return []
+
+    def get_taxonomy_history(self, version_id: int) -> Optional[Dict[str, Any]]:
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id, settings_json, category_count, note, created_at, updated_by FROM taxonomy_settings_history WHERE id = ?",
+                    (version_id,),
+                )
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting taxonomy history {version_id}: {e}", exc_info=True)
+            return None
+
     def cleanup_expired_sessions(self) -> int:
         """Clean up expired sessions and return count of cleaned sessions."""
         try:
@@ -1614,60 +1654,60 @@ class AdminDatabaseManager:
         try:
             # Serialize writes to reduce lock contention
             with self._write_lock:
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
+                # Compute timestamps and jitter before DB operations
                 now = datetime.now()
-                # SECURITY FIX: Add randomization to prevent timing attacks
-                # Add 0-60 seconds of random jitter to lockout duration
                 jitter_seconds = random.randint(0, 60)
                 lockout_until = now + timedelta(minutes=lockout_duration_minutes, seconds=jitter_seconds)
 
-                # Check if identifier already exists
-                cursor.execute(
-                    "SELECT attempt_count, lockout_until FROM rate_limiting WHERE identifier = ? AND identifier_type = ?",
-                    (identifier, identifier_type),
-                )
-                row = cursor.fetchone()
+                with self.get_connection() as conn:
+                    cursor = conn.cursor()
 
-                if row:
-                    attempt_count, current_lockout = row
-
-                    # Check if still in lockout period
-                    if current_lockout and datetime.fromisoformat(current_lockout) > now:
-                        return True  # Still locked out
-
-                    # Reset if it's been more than 1 hour since lockout expired
-                    if current_lockout and datetime.fromisoformat(current_lockout) < (now - timedelta(hours=1)):
-                        attempt_count = 0
-
-                    new_attempt_count = attempt_count + 1
-                    should_lockout = new_attempt_count >= 5
-
+                    # Check if identifier already exists
                     cursor.execute(
-                        """
-                        UPDATE rate_limiting
-                        SET attempt_count = ?, last_attempt_at = ?, lockout_until = ?
-                        WHERE identifier = ? AND identifier_type = ?
-                        """,
-                        (
-                            new_attempt_count,
-                            now,
-                            lockout_until if should_lockout else None,
-                            identifier,
-                            identifier_type,
-                        ),
+                        "SELECT attempt_count, lockout_until FROM rate_limiting WHERE identifier = ? AND identifier_type = ?",
+                        (identifier, identifier_type),
                     )
-                    return should_lockout
-                else:
-                    # First attempt for this identifier
-                    cursor.execute(
-                        """
-                        INSERT INTO rate_limiting (identifier, identifier_type, attempt_count, first_attempt_at, last_attempt_at)
-                        VALUES (?, ?, 1, ?, ?)
-                        """,
-                        (identifier, identifier_type, now, now),
-                    )
-                    return False
+                    row = cursor.fetchone()
+
+                    if row:
+                        attempt_count, current_lockout = row
+
+                        # Check if still in lockout period
+                        if current_lockout and datetime.fromisoformat(current_lockout) > now:
+                            return True  # Still locked out
+
+                        # Reset if it's been more than 1 hour since lockout expired
+                        if current_lockout and datetime.fromisoformat(current_lockout) < (now - timedelta(hours=1)):
+                            attempt_count = 0
+
+                        new_attempt_count = attempt_count + 1
+                        should_lockout = new_attempt_count >= 5
+
+                        cursor.execute(
+                            """
+                            UPDATE rate_limiting
+                            SET attempt_count = ?, last_attempt_at = ?, lockout_until = ?
+                            WHERE identifier = ? AND identifier_type = ?
+                            """,
+                            (
+                                new_attempt_count,
+                                now,
+                                lockout_until if should_lockout else None,
+                                identifier,
+                                identifier_type,
+                            ),
+                        )
+                        return should_lockout
+                    else:
+                        # First attempt for this identifier
+                        cursor.execute(
+                            """
+                            INSERT INTO rate_limiting (identifier, identifier_type, attempt_count, first_attempt_at, last_attempt_at)
+                            VALUES (?, ?, 1, ?, ?)
+                            """,
+                            (identifier, identifier_type, now, now),
+                        )
+                        return False
         except Exception as e:
             logger.error(f"Error recording rate limit attempt: {str(e)}", exc_info=True)
             return False

@@ -916,6 +916,47 @@ class AdminAPI {
     }
   }
 
+  async listTaxonomyVersions(limit = 20, offset = 0) {
+    try {
+      const response = await this.client.get(`/settings/taxonomy/versions?limit=${limit}&offset=${offset}`)
+      return response
+    } catch (error) {
+      console.error('Failed to list taxonomy versions:', error)
+      throw error
+    }
+  }
+
+  async getTaxonomyVersion(versionId) {
+    try {
+      const response = await this.client.get(`/settings/taxonomy/versions/${versionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get taxonomy version:', error)
+      throw error
+    }
+  }
+
+  async restoreTaxonomyVersion(versionId, note) {
+    try {
+      const response = await this.client.post(`/settings/taxonomy/versions/${versionId}/restore`, note ? { note } : {})
+      return response
+    } catch (error) {
+      console.error('Failed to restore taxonomy version:', error)
+      throw error
+    }
+  }
+
+  async createTaxonomyVersion(settings, note) {
+    try {
+      const body = { settings, note }
+      const response = await this.client.post('/settings/taxonomy/versions', body)
+      return response
+    } catch (error) {
+      console.error('Failed to create taxonomy snapshot:', error)
+      throw error
+    }
+  }
+
   // User Management endpoints
   async getUsers() {
     return await this.client.get('/users')

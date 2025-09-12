@@ -38,6 +38,12 @@
                 </template>
                 <v-list-item-title>Format JSON</v-list-item-title>
               </v-list-item>
+              <v-list-item @click="openVersionHistory">
+                <template #prepend>
+                  <v-icon>$clock-outline</v-icon>
+                </template>
+                <v-list-item-title>Version History</v-list-item-title>
+              </v-list-item>
               <v-list-item
                 :disabled="!hasUnsavedChanges"
                 @click="discardChanges"
@@ -75,6 +81,13 @@
             @click="publish"
           >
             Publish
+          </v-btn>
+          <v-btn
+            variant="text"
+            color="secondary"
+            @click="saveSnapshot"
+          >
+            Save Snapshot
           </v-btn>
         </div>
       </v-card-title>
@@ -179,18 +192,19 @@
         </v-card>
 
         <!-- Taxonomy JSON Editor Section -->
-        <v-card
-          variant="flat"
-          class="mb-6"
-        >
-          <v-card-title class="text-subtitle-1 font-weight-bold pa-4">
-            <v-icon
-              color="primary"
-              class="mr-2"
-            >
-              $code
-            </v-icon>
+        <v-card variant="flat" class="mb-6">
+          <v-card-title class="text-subtitle-1 font-weight-bold pa-4 d-flex align-center">
+            <v-icon color="primary" class="mr-2">$code</v-icon>
             Taxonomy JSON Editor
+            <v-spacer />
+            <v-switch
+              v-model="autoPublishDeletes"
+              color="primary"
+              inset
+              hide-details
+              class="mr-2"
+              :label="`Auto-publish deletes`"
+            />
           </v-card-title>
           <v-card-text class="pa-4">
             <!-- Monaco Editor Container -->
@@ -204,10 +218,19 @@
               />
             </v-card>
 
-            <div
-              class="mt-4 d-flex align-center"
-              style="gap: 8px;"
-            >
+            <!-- Secondary actions under editor -->
+            <div class="mt-2 d-flex align-center" style="gap: 8px;">
+              <v-btn variant="text" @click="openSnapshotDialog">Save Snapshot</v-btn>
+              <v-btn variant="text" @click="openAutoGenerate">
+                <v-icon size="18" class="mr-1">$auto-generate</v-icon>
+                Auto-Generate
+              </v-btn>
+              <v-btn variant="text" @click="insertTemplate" :disabled="!!taxonomyJson">Insert Template</v-btn>
+              <v-btn variant="text" @click="validateJson">Validate</v-btn>
+              <v-btn variant="text" @click="formatJson">Format</v-btn>
+            </div>
+
+            <div class="mt-4 d-flex align-center" style="gap: 8px;">
               <v-text-field
                 v-model="testQuery"
                 label="Test Query"
@@ -217,14 +240,7 @@
                 class="flex-1"
                 hide-details
               />
-              <v-btn
-                color="primary"
-                variant="elevated"
-                class="ml-6"
-                @click="runTest"
-              >
-                Test Detection
-              </v-btn>
+              <v-btn color="primary" variant="elevated" class="ml-6" @click="runTest">Test Detection</v-btn>
             </div>
 
             <div
@@ -512,6 +528,174 @@
     </v-card>
   </v-dialog>
 
+  <!-- Snapshot Dialog -->
+  <v-dialog v-model="snapshot.open" max-width="520">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="primary" class="mr-2">$save</v-icon>
+        Save Snapshot
+      </v-card-title>
+      <v-card-text>
+        <div class="mb-3">Add an optional note to this version.</div>
+        <v-text-field v-model="snapshot.note" label="Note (optional)" variant="outlined" density="comfortable" />
+      </v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="snapshot.open = false">Cancel</v-btn>
+        <v-btn color="primary" variant="elevated" @click="confirmSnapshot">Save</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Discard Changes Dialog -->
+  <v-dialog v-model="discard.open" max-width="520">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="error" class="mr-2">$undo</v-icon>
+        Discard Changes
+      </v-card-title>
+      <v-card-text>Revert the editor to the last loaded/published version?</v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="discard.open = false">Cancel</v-btn>
+        <v-btn color="error" variant="elevated" @click="confirmDiscard">Discard</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- View Fallback Dialog -->
+  <v-dialog v-model="fallbackView.open" max-width="860">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="primary" class="mr-2">$view</v-icon>
+        Fallback JSON
+      </v-card-title>
+      <v-card-text style="max-height: 60vh; overflow:auto;">
+        <pre style="white-space: pre-wrap; word-break: break-word;">{{ fallbackView.text }}</pre>
+      </v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="fallbackView.open = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Version History Dialog -->
+  <v-dialog v-model="versions.open" max-width="860">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="primary" class="mr-2">$clock-outline</v-icon>
+        Taxonomy Versions
+      </v-card-title>
+      <v-card-text>
+        <v-alert v-if="versions.error" type="error" variant="tonal" class="mb-3">{{ versions.error }}</v-alert>
+        <v-table density="comfortable">
+          <thead>
+            <tr>
+              <th class="text-left">ID</th>
+              <th class="text-left">Categories</th>
+              <th class="text-left">Note</th>
+              <th class="text-left">Saved At</th>
+              <th class="text-left">User</th>
+              <th class="text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="v in versions.items" :key="v.id">
+              <td>{{ v.id }}</td>
+              <td>{{ v.category_count }}</td>
+              <td>{{ v.note || '—' }}</td>
+              <td>{{ formatTs(v.created_at) }}</td>
+              <td>{{ v.updated_by ?? '—' }}</td>
+              <td>
+                <v-btn size="small" variant="text" @click="previewVersion(v.id)">Preview</v-btn>
+                <v-btn size="small" variant="text" @click="downloadVersion(v.id)">Download</v-btn>
+                <v-btn size="small" variant="text" @click="openDiffDialog(v.id)">Diff</v-btn>
+                <v-btn size="small" color="primary" variant="text" @click="openRestoreDialog(v.id)">Restore</v-btn>
+              </td>
+            </tr>
+            <tr v-if="!versions.items.length">
+              <td colspan="6" class="text-medium-emphasis">No versions yet.</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="versions.open = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Diff Dialog -->
+  <v-dialog v-model="diff.open" max-width="960">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="primary" class="mr-2">$code</v-icon>
+        Differences vs Current Draft
+      </v-card-title>
+      <v-card-text>
+        <div class="mb-3">Comparing current draft with version <strong>{{ diff.versionId }}</strong></div>
+        <div class="d-flex" style="gap: 24px; align-items: flex-start;">
+          <div style="flex:1;">
+            <div class="text-subtitle-2 mb-1">Added</div>
+            <div class="text-medium-emphasis" v-if="!diff.data.added.length">—</div>
+            <ul v-else>
+              <li v-for="k in diff.data.added" :key="k">{{ k }}</li>
+            </ul>
+          </div>
+          <div style="flex:1;">
+            <div class="text-subtitle-2 mb-1">Removed</div>
+            <div class="text-medium-emphasis" v-if="!diff.data.removed.length">—</div>
+            <ul v-else>
+              <li v-for="k in diff.data.removed" :key="k">{{ k }}</li>
+            </ul>
+          </div>
+          <div style="flex:1;">
+            <div class="text-subtitle-2 mb-1">Changed</div>
+            <div class="text-medium-emphasis" v-if="!diff.data.changed.length">—</div>
+            <ul v-else>
+              <li v-for="k in diff.data.changed" :key="k">{{ k }}</li>
+            </ul>
+          </div>
+        </div>
+        <v-divider class="my-4" />
+        <v-switch v-model="diff.showJson" color="primary" inset hide-details label="Show JSON" />
+        <div v-if="diff.showJson" class="d-flex mt-2" style="gap: 16px;">
+          <v-card variant="outlined" style="flex:1;">
+            <v-card-title class="text-subtitle-2">Current Draft</v-card-title>
+            <v-card-text style="max-height: 300px; overflow:auto;">
+              <pre style="white-space: pre-wrap; word-break: break-word;">{{ diff.left }}</pre>
+            </v-card-text>
+          </v-card>
+          <v-card variant="outlined" style="flex:1;">
+            <v-card-title class="text-subtitle-2">Version {{ diff.versionId }}</v-card-title>
+            <v-card-text style="max-height: 300px; overflow:auto;">
+              <pre style="white-space: pre-wrap; word-break: break-word;">{{ diff.right }}</pre>
+            </v-card-text>
+          </v-card>
+        </div>
+      </v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="diff.open = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Restore Dialog with Note -->
+  <v-dialog v-model="restore.open" max-width="520">
+    <v-card>
+      <v-card-title class="d-flex align-center">
+        <v-icon color="primary" class="mr-2">$undo</v-icon>
+        Restore Version {{ restore.versionId }}
+      </v-card-title>
+      <v-card-text>
+        <div class="mb-3">Optionally add a note for audit logs.</div>
+        <v-text-field v-model="restore.note" label="Note (optional)" variant="outlined" density="comfortable" />
+      </v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="restore.open = false">Cancel</v-btn>
+        <v-btn color="primary" variant="elevated" @click="confirmRestore">Restore</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <!-- Auto-Generate Taxonomy Dialog -->
   <v-dialog
     v-model="autoGen.open"
@@ -607,6 +791,7 @@ const testResult = ref(null);
 const editorContainer = ref(null);
 const loading = ref(false);
 const baselineJson = ref('');
+const autoPublishDeletes = ref(true);
 // Undo deletion state
 const undoSnack = reactive({ open: false, name: '', data: null });
 // Delete confirmation state
@@ -619,6 +804,13 @@ const autoGen = reactive({
   open: false,
   options: { max_categories: 10, max_synonyms: 12, include_filenames: true }
 });
+// Versions state
+const versions = reactive({ open: false, items: [], error: '' });
+const diff = reactive({ open: false, versionId: null, data: { added: [], removed: [], changed: [] }, showJson: false, left: '', right: '' })
+const restore = reactive({ open: false, versionId: null, note: '' })
+const snapshot = reactive({ open: false, note: '' })
+const discard = reactive({ open: false })
+const fallbackView = reactive({ open: false, text: '' })
 
 // Category edit dialog state
 const categoryDialog = reactive({
@@ -656,6 +848,10 @@ watch(taxonomyJson, () => {
   }
 });
 
+function formatTs(ts) {
+  try { return new Date(ts).toLocaleString(); } catch { return ts; }
+}
+
 const hasUnsavedChanges = computed(() => {
   function normalize(s) {
     try { return JSON.stringify(JSON.parse(s || '{}')); } catch { return (s || '').trim(); }
@@ -675,6 +871,86 @@ onMounted(async () => {
     }
   }, 100);
 });
+
+function openSnapshotDialog() {
+  snapshot.note = '';
+  snapshot.open = true;
+}
+
+async function confirmSnapshot() {
+  try {
+    let parsed;
+    try {
+      parsed = JSON.parse(taxonomyJson.value || '{}');
+    } catch {
+      showError('Invalid JSON');
+      return;
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      showError('Invalid JSON');
+      return;
+    }
+    const resp = await adminAPI.createTaxonomyVersion(parsed, snapshot.note || undefined);
+    if (resp?.success) {
+      showSuccess('Snapshot saved');
+      snapshot.open = false;
+    } else {
+      showError('Failed to save snapshot');
+    }
+  } catch (e) {
+    const detail = e?.response?.data?.detail || 'Error saving snapshot';
+    showError(detail);
+  }
+}
+
+function openVersionHistory() {
+  versions.open = true;
+  versions.error = '';
+  loadVersions();
+}
+
+async function loadVersions() {
+  try {
+    const resp = await adminAPI.listTaxonomyVersions(50, 0);
+    versions.items = Array.isArray(resp?.versions) ? resp.versions : [];
+  } catch (e) {
+    versions.error = 'Failed to load versions';
+  }
+}
+
+async function previewVersion(id) {
+  try {
+    const resp = await adminAPI.getTaxonomyVersion(id);
+    const settings = resp?.settings || null;
+    if (settings && typeof settings === 'object') {
+      const content = JSON.stringify(settings, null, 2);
+      taxonomyJson.value = content;
+      if (editor) editor.setValue(content);
+      showSuccess(`Loaded version ${id} into editor (not published)`);
+    } else {
+      showError('Version payload not found');
+    }
+  } catch (e) {
+    showError('Failed to load version');
+  }
+}
+
+async function restoreVersion(id) {
+  try {
+    const ok = window.confirm(`Restore version ${id}? This will overwrite the current taxonomy and publish.`);
+    if (!ok) return;
+    const resp = await adminAPI.restoreTaxonomyVersion(id);
+    if (resp?.success) {
+      showSuccess('Restored version');
+      await reloadFromServer();
+    } else {
+      showError('Restore failed');
+    }
+  } catch (e) {
+    const detail = e?.response?.data?.detail || 'Failed to restore version';
+    showError(detail);
+  }
+}
 
 const categoryList = computed(() => {
   try {
@@ -703,6 +979,23 @@ function setTaxonomyObject(obj) {
   taxonomyJson.value = content;
   if (editor) {
     editor.setValue(content);
+  }
+}
+
+function insertTemplate() {
+  try {
+    const current = (taxonomyJson.value || '').trim();
+    if (current) return; // only insert when empty
+    const template = {
+      version: '1',
+      categories: {
+        example: { synonyms: ['sample', 'demo'], regex: [], metadata: { is_illustration_data: false } }
+      }
+    };
+    setTaxonomyObject(template);
+    showSuccess('Inserted template');
+  } catch {
+    // no-op
   }
 }
 
@@ -821,7 +1114,7 @@ async function performDelete(name, { closeDialog = false, autoPublish = true } =
     if (closeDialog) categoryDialog.open = false;
     showUndo(name, prev);
     showSuccess(`Deleted '${name}' from taxonomy`);
-    if (autoPublish) await publish();
+    if (autoPublishDeletes.value && autoPublish) await publish();
   } else {
     showError(`Category '${name}' not found`);
   }
@@ -855,6 +1148,62 @@ const createEditor = () => {
       formatOnPaste: true,
       formatOnType: true
     });
+
+    // Attach basic JSON schema for inline validation
+    try {
+      monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        allowComments: false,
+        schemas: [
+          {
+            uri: 'inmemory://model/taxonomy-schema.json',
+            fileMatch: ['*'],
+            schema: {
+              type: 'object',
+              required: ['categories'],
+              properties: {
+                version: { type: 'string' },
+                categories: {
+                  type: 'object',
+                  additionalProperties: {
+                    type: 'object',
+                    properties: {
+                      synonyms: { type: 'array', items: { type: 'string' } },
+                      regex: { type: 'array', items: { type: 'string' } },
+                      metadata: {
+                        type: 'object',
+                        properties: { is_illustration_data: { type: 'boolean' } },
+                        additionalProperties: true
+                      },
+                      routing: {
+                        type: 'object',
+                        properties: {
+                          k: { type: 'number' },
+                          score_threshold: { type: 'number' }
+                        },
+                        additionalProperties: true
+                      }
+                    },
+                    additionalProperties: true
+                  }
+                },
+                router: {
+                  type: 'object',
+                  properties: {
+                    ignore_words: { type: 'array', items: { type: 'string' } }
+                  },
+                  additionalProperties: true
+                }
+              },
+              // Allow future extensions at the top-level to avoid false errors in editor
+              additionalProperties: true
+            }
+          }
+        ]
+      });
+    } catch (e) {
+      // non-fatal schema init
+    }
 
     // Listen for content changes
     editor.onDidChangeModelContent(() => {
@@ -1096,22 +1445,8 @@ async function uploadFallback() {
 }
 
 function discardChanges() {
-  try {
-    if (!hasUnsavedChanges.value) return;
-    const ok = window.confirm('Discard all unsaved changes and revert to last loaded/published version?');
-    if (!ok) return;
-    let content = '';
-    try {
-      content = JSON.stringify(JSON.parse(baselineJson.value || '{}'), null, 2);
-    } catch {
-      content = baselineJson.value || '';
-    }
-    taxonomyJson.value = content;
-    if (editor) editor.setValue(content);
-    showSuccess('Reverted to last saved version');
-  } catch (e) {
-    // best-effort
-  }
+  if (!hasUnsavedChanges.value) return;
+  discard.open = true;
 }
 
 async function downloadFallback() {
@@ -1127,6 +1462,22 @@ async function downloadFallback() {
     }
   } catch (e) {
     showError('Failed to download fallback');
+  }
+}
+
+async function viewFallback() {
+  try {
+    const resp = await adminAPI.getTaxonomyFallback();
+    if (resp?.exists && resp?.settings) {
+      fallbackView.text = JSON.stringify(resp.settings, null, 2);
+      fallbackView.open = true;
+    } else if (resp?.exists && resp?.invalid) {
+      showError('Fallback exists but is invalid JSON');
+    } else {
+      showError('No fallback file found');
+    }
+  } catch (e) {
+    showError('Failed to view fallback');
   }
 }
 
@@ -1166,6 +1517,129 @@ function triggerDownload(text, filename) {
 onUnmounted(() => {
   cleanup();
 });
+
+function confirmDiscard() {
+  let content = '';
+  try { content = JSON.stringify(JSON.parse(baselineJson.value || '{}'), null, 2); } catch { content = baselineJson.value || ''; }
+  taxonomyJson.value = content;
+  if (editor) editor.setValue(content);
+  showSuccess('Reverted to last saved version');
+  discard.open = false;
+}
+
+async function downloadVersion(id) {
+  try {
+    const resp = await adminAPI.getTaxonomyVersion(id);
+    const settings = resp?.settings || null;
+    if (settings && typeof settings === 'object') {
+      const content = JSON.stringify(settings, null, 2);
+      triggerDownload(content, `taxonomy_version_${id}.json`);
+    } else {
+      showError('Version payload not found');
+    }
+  } catch (e) {
+    showError('Failed to download version');
+  }
+}
+
+function computeDiff(left, right) {
+  const a = (left && typeof left === 'object') ? left : { categories: {} }
+  const b = (right && typeof right === 'object') ? right : { categories: {} }
+  const ac = a.categories || {}
+  const bc = b.categories || {}
+  const added = []
+  const removed = []
+  const changed = []
+  const aKeys = new Set(Object.keys(ac))
+  const bKeys = new Set(Object.keys(bc))
+  for (const k of bKeys) if (!aKeys.has(k)) added.push(k)
+  for (const k of aKeys) if (!bKeys.has(k)) removed.push(k)
+  for (const k of aKeys) {
+    if (bKeys.has(k)) {
+      const av = ac[k] || {}
+      const bv = bc[k] || {}
+      const synA = JSON.stringify((av.synonyms || []).slice().sort())
+      const synB = JSON.stringify((bv.synonyms || []).slice().sort())
+      const rxA = JSON.stringify((av.regex || []).slice().sort())
+      const rxB = JSON.stringify((bv.regex || []).slice().sort())
+      if (synA !== synB || rxA !== rxB) changed.push(k)
+    }
+  }
+  return { added, removed, changed }
+}
+
+async function diffVersion(id) {
+  try {
+    const resp = await adminAPI.getTaxonomyVersion(id)
+    const ver = resp?.settings || null
+    if (!ver) { showError('Version not found'); return }
+    let cur
+    try { cur = JSON.parse(taxonomyJson.value || '{}') } catch { cur = { categories: {} } }
+    const d = computeDiff(cur, ver)
+    diff.versionId = id
+    diff.data = d
+    diff.left = JSON.stringify(cur, null, 2)
+    diff.right = JSON.stringify(ver, null, 2)
+    diff.showJson = false
+    diff.open = true
+  } catch (e) {
+    showError('Failed to diff version')
+  }
+}
+
+function openDiffDialog(id) {
+  diffVersion(id)
+}
+
+function openRestoreDialog(id) {
+  restore.versionId = id
+  restore.note = ''
+  restore.open = true
+}
+
+async function confirmRestore() {
+  try {
+    const id = restore.versionId
+    const resp = await adminAPI.restoreTaxonomyVersion(id, restore.note || undefined)
+    if (resp?.success) {
+      showSuccess('Restored version')
+      restore.open = false
+      versions.open = false
+      await reloadFromServer()
+    } else {
+      showError('Restore failed')
+    }
+  } catch (e) {
+    const detail = e?.response?.data?.detail || 'Failed to restore version'
+    showError(detail)
+  }
+}
+
+async function saveSnapshot() {
+  try {
+    let parsed
+    try {
+      parsed = JSON.parse(taxonomyJson.value || '{}')
+    } catch (e) {
+      showError('Invalid JSON');
+      return;
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      showError('Invalid JSON');
+      return;
+    }
+    const note = window.prompt('Add an optional note for this snapshot:', '') || undefined
+    const resp = await adminAPI.createTaxonomyVersion(parsed, note)
+    if (resp?.success) {
+      showSuccess('Snapshot saved')
+    } else {
+      showError('Failed to save snapshot')
+    }
+  } catch (e) {
+    const detail = e?.response?.data?.detail || 'Error saving snapshot'
+    showError(detail)
+  }
+}
 </script>
 
 <style scoped>
