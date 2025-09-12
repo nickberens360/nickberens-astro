@@ -243,28 +243,13 @@
       <v-progress-circular indeterminate />
     </v-overlay>
 
-    <!-- Snackbar for notifications -->
-    <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="4000"
-      location="top right"
-    >
-      {{ snackbar.message }}
-      <template v-slot:actions>
-        <v-btn
-          variant="text"
-          @click="snackbar.show = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Toasts are handled globally via NotificationMessage -->
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch, reactive } from 'vue'
+import { useNotifications } from '@/composables/useNotifications'
 import api from '@/services/api'
 
 // Define emits
@@ -283,19 +268,19 @@ const notesDialog = ref({
   saving: false
 })
 
-const snackbar = ref({
-  show: false,
-  message: '',
-  color: 'success'
-})
+// Notifications
+const { showSuccess, showError, showInfo, showWarning } = useNotifications()
 
 // Methods
 const showSnackbar = (message, color = 'success') => {
-  snackbar.value = {
-    show: true,
-    message,
-    color
+  const map = {
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+    warning: showWarning,
   }
+  const fn = map[color] || showInfo
+  fn(message)
 }
 
 const fetchGaps = async () => {

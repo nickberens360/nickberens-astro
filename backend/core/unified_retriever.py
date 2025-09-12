@@ -223,22 +223,22 @@ class UnifiedRetriever:
 
                 # Update the index metadata to mark as processed
                 index_metadata_path = Path(self.persist_dir) / "index_metadata.json"
-                indexed_files: Dict[str, Any] = {}
+                metadata_index: Dict[str, Any] = {}
                 if index_metadata_path.exists():
                     with open(index_metadata_path, "r", encoding="utf-8") as f:
-                        indexed_files = json.load(f)
+                        metadata_index = json.load(f)
 
                 # Update hash
                 file_hash = self.content_indexer.compute_file_hash(file_path_obj)
                 record: Dict[str, Any] = {"hash": file_hash}
                 if precomputed is not None:
                     record["classification"] = precomputed
-                indexed_files[str(file_path_obj)] = record
+                metadata_index[str(file_path_obj)] = record
 
                 # Save updated metadata
                 Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
                 with open(index_metadata_path, "w", encoding="utf-8") as f:
-                    json.dump(indexed_files, f)
+                    json.dump(metadata_index, f)
 
                 return True
             else:

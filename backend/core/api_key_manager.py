@@ -6,7 +6,7 @@ Handles encryption, decryption, and validation of API keys.
 import base64
 import logging
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
@@ -80,7 +80,7 @@ class ApiKeyManager:
             logger.error(f"Error decrypting API key: {e}")
             raise
 
-    def create_api_key(self, key_name: str, key_type: str, api_key: str, updated_by: int) -> Dict[str, any]:
+    def create_api_key(self, key_name: str, key_type: str, api_key: str, updated_by: int) -> Dict[str, Any]:
         """
         Create a new API key entry with encryption.
 

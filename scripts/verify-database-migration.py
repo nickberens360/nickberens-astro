@@ -19,7 +19,6 @@ Features:
 
 import argparse
 import logging
-import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -298,11 +297,11 @@ def trigger_database_initialization():
 
     try:
         # Initialize admin database
-        admin_db = AdminDatabaseManager()
+        AdminDatabaseManager()
         logger.info("✅ Admin database initialized")
 
         # Initialize RAG database
-        query_db = QueryDataManager()
+        QueryDataManager()
         logger.info("✅ RAG database initialized")
 
         return True

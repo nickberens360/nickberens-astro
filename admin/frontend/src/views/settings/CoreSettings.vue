@@ -32,9 +32,7 @@
             {{ modelError }}
           </v-alert>
           
-          <v-alert v-if="modelSuccess" type="success" variant="tonal" class="ma-6 mb-4">
-            {{ modelSuccess }}
-          </v-alert>
+          <!-- Success notifications are shown via global toasts -->
           
           <!-- Response LLM Selection Row -->
           <div class="setting-row">
@@ -257,9 +255,7 @@
             {{ systemError }}
           </v-alert>
           
-          <v-alert v-if="systemSuccess" type="success" variant="tonal" class="ma-6 mb-4">
-            {{ systemSuccess }}
-          </v-alert>
+          <!-- Success notifications are shown via global toasts -->
 
           <!-- Debug Mode temporarily hidden -->
 
@@ -375,6 +371,7 @@ import { useAdminStore } from '@/stores/admin'
 import { useCoreSettingsStore } from '@/stores/coreSettings'
 import { useFeatureSettingsStore } from '@/stores/featureSettings'
 import { adminAPI as apiService } from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 
 const adminStore = useAdminStore()
 const coreStore = useCoreSettingsStore()
@@ -398,9 +395,8 @@ const systemSettings = ref({
 const loading = ref(false)
 const saving = ref(false)
 const modelError = ref('')
-const modelSuccess = ref('')
 const systemError = ref('')
-const systemSuccess = ref('')
+const { showSuccess, showError } = useNotifications()
 
 // API Keys state
 const keys = ref([])
@@ -512,8 +508,6 @@ const saveAllSettings = async () => {
     saving.value = true
     modelError.value = ''
     systemError.value = ''
-    modelSuccess.value = ''
-    systemSuccess.value = ''
     
     // Save response settings
     await apiService.updateResponseSettings(responseSettings.value)
@@ -524,19 +518,15 @@ const saveAllSettings = async () => {
     // Save feature flags via store
     await featureStore.updateFeatureFlags()
     
-    modelSuccess.value = 'Core settings saved successfully!'
-    systemSuccess.value = 'System mode updated successfully!'
-    
-    setTimeout(() => {
-      modelSuccess.value = ''
-      systemSuccess.value = ''
-    }, 3000)
+    showSuccess('Core settings saved successfully!')
+    showSuccess('System mode updated successfully!')
     
   } catch (err) {
     console.error('Failed to save settings:', err)
     const errorMsg = 'Failed to save settings: ' + (err.response?.data?.detail || err.message)
     modelError.value = errorMsg
     systemError.value = errorMsg
+    showError(errorMsg)
   } finally {
     saving.value = false
   }

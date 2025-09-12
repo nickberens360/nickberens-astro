@@ -8,7 +8,6 @@ codes plus presence of Deprecation headers on legacy paths.
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 from typing import List, Tuple

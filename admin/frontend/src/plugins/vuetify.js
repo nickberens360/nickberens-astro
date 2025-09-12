@@ -45,7 +45,9 @@ import {
   mdiLightbulbOutline, mdiLightbulb, mdiTableLarge, mdiTestTube,
   
   // New RAG Settings Icons
-  mdiCog as mdiConstructionIcon, mdiDeveloperBoard
+  mdiCog as mdiConstructionIcon, mdiDeveloperBoard,
+  // Auto-generate
+  mdiAutoFix
 } from '@mdi/js'
 
 // Import Vuetify styles
@@ -269,6 +271,9 @@ const iconAliases = {
   'shield': mdiShield,
   'preview': mdiEyeOutline,
   'code': mdiCodeTags
+  ,
+  // Auto-generate taxonomy
+  'auto-generate': mdiAutoFix
 }
 
 export default createVuetify({

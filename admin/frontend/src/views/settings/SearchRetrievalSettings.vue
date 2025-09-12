@@ -37,9 +37,7 @@
             {{ routingError }}
           </v-alert>
           
-          <v-alert v-if="routingSuccess" type="success" variant="tonal" class="ma-6 mb-4">
-            {{ routingSuccess }}
-          </v-alert>
+          <!-- Success notifications are shown via global toasts -->
           
           <!-- Enable Smart Routing Row -->
           <div class="setting-row">
@@ -218,9 +216,7 @@
             {{ ragError }}
           </v-alert>
           
-          <v-alert v-if="ragSuccess" type="success" variant="tonal" class="ma-6 mb-4">
-            {{ ragSuccess }}
-          </v-alert>
+          <!-- Success notifications are shown via global toasts -->
 
           <div v-if="ragSettings && Object.keys(ragSettings).length > 0">
             <!-- Retrieval Settings Section -->
@@ -468,6 +464,7 @@ import { useAdminStore } from '@/stores/admin'
 import { useSearchRetrievalSettingsStore } from '@/stores/searchRetrievalSettings'
 import { adminAPI as apiService } from '@/services/api'
 import ragConfigService from '@/services/settings/ragConfigSettingsService'
+import { useNotifications } from '@/composables/useNotifications'
 
 const adminStore = useAdminStore()
 const searchRetrievalStore = useSearchRetrievalSettingsStore()
@@ -494,9 +491,10 @@ const ragSettings = ref({
 // Loading and error states
 const saving = ref(false)
 const routingError = ref('')
-const routingSuccess = ref('')
 const ragError = ref('')
-const ragSuccess = ref('')
+
+// Notifications
+const { showSuccess, showError } = useNotifications()
 
 // Get blog URL based on environment
 const getBlogUrl = (article = 'understanding-rag-score-thresholds') => {
@@ -539,8 +537,6 @@ const saveAllSettings = async () => {
     saving.value = true
     routingError.value = ''
     ragError.value = ''
-    routingSuccess.value = ''
-    ragSuccess.value = ''
     
     // Save routing settings
     await apiService.updateRoutingSettings(routingSettings.value)
@@ -548,19 +544,16 @@ const saveAllSettings = async () => {
     // Save RAG settings via dedicated service
     await ragConfigService.updateRagConfig(ragSettings.value)
     
-    routingSuccess.value = 'Query routing settings saved successfully!'
-    ragSuccess.value = 'RAG configuration saved successfully!'
-    
-    setTimeout(() => {
-      routingSuccess.value = ''
-      ragSuccess.value = ''
-    }, 3000)
+    // Toast success
+    showSuccess('Search & Retrieval: routing settings saved')
+    showSuccess('Search & Retrieval: RAG configuration saved')
     
   } catch (err) {
     console.error('Failed to save settings:', err)
     const errorMsg = 'Failed to save settings: ' + (err.response?.data?.detail || err.message)
     routingError.value = errorMsg
     ragError.value = errorMsg
+    showError(errorMsg)
   } finally {
     saving.value = false
   }

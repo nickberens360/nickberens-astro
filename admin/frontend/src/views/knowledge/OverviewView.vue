@@ -39,25 +39,7 @@
           </template>
         </v-file-input>
 
-        <v-alert
-          v-if="uploadError"
-          type="error"
-          class="mt-4"
-          closable
-          @click:close="uploadError = null"
-        >
-          {{ uploadError }}
-        </v-alert>
-
-        <v-alert
-          v-if="uploadSuccess"
-          type="success"
-          class="mt-4"
-          closable
-          @click:close="uploadSuccess = null"
-        >
-          {{ uploadSuccess }}
-        </v-alert>
+        <!-- Action notifications are shown via global toasts -->
 
         <div class="mt-4 d-flex gap-2">
           <v-btn
@@ -86,6 +68,16 @@
           >
             Refresh Index
           </v-btn>
+        </div>
+
+        <!-- Inline refresh status (non-intrusive) -->
+        <div v-if="refreshing" class="mt-2 text-caption text-medium-emphasis d-flex align-center">
+          <v-icon size="16" class="mr-1">$refresh</v-icon>
+          <span>
+            Refreshing
+            <template v-if="refreshInfo.current_file">: {{ refreshInfo.current_file }}</template>
+            <template v-if="refreshInfo.files_processed"> — {{ refreshInfo.files_processed }} processed</template>
+          </span>
         </div>
 
         <v-divider class="my-4"></v-divider>
@@ -186,20 +178,21 @@
 import { ref, onMounted } from 'vue'
 import { adminAPI } from '@/services/api'
 import FileEditorModal from '@/components/FileEditorModal.vue'
+import { useNotifications } from '@/composables/useNotifications'
 
 const selectedFiles = ref([])
 const uploading = ref(false)
 const refreshing = ref(false)
 const loadingFiles = ref(false)
 const deleting = ref(false)
-const uploadError = ref(null)
-const uploadSuccess = ref(null)
+const { showSuccess, showError, showInfo } = useNotifications()
 const deleteDialog = ref(false)
 const fileToDelete = ref(null)
 const editorDialog = ref(false)
 const selectedFilename = ref('')
 
 const files = ref([])
+const refreshInfo = ref({ current_file: null, files_processed: 0, total_files: null })
 
 const fileHeaders = [
   { title: 'Name', key: 'name', sortable: true },
@@ -248,8 +241,6 @@ const uploadFiles = async () => {
   if (!selectedFiles.value?.length) return
 
   uploading.value = true
-  uploadError.value = null
-  uploadSuccess.value = null
 
   try {
     const formData = new FormData()
@@ -259,14 +250,14 @@ const uploadFiles = async () => {
 
     await adminAPI.uploadKnowledgeFiles(formData)
 
-    uploadSuccess.value = `Successfully uploaded ${selectedFiles.value.length} file(s)`
+    showSuccess(`Successfully uploaded ${selectedFiles.value.length} file(s)`)
     selectedFiles.value = []
 
     // Refresh data
     await loadFiles()
   } catch (error) {
     console.error('Upload error:', error)
-    uploadError.value = error.response?.data?.detail || 'Failed to upload files'
+    showError(error.response?.data?.detail || 'Failed to upload files')
   } finally {
     uploading.value = false
   }
@@ -274,39 +265,44 @@ const uploadFiles = async () => {
 
 const refreshKnowledgeBase = async () => {
   refreshing.value = true
-  uploadError.value = null
-  uploadSuccess.value = null
 
   try {
     // Start the refresh
     const startResult = await adminAPI.refreshKnowledgeBase(true)
 
     if (startResult.status === 'running') {
-      uploadSuccess.value = 'Knowledge base refresh started...'
+      showInfo('Knowledge base refresh started...')
+      refreshInfo.value = { current_file: null, files_processed: 0, total_files: null }
 
       // Poll for status updates
       const pollInterval = setInterval(async () => {
         try {
           const status = await adminAPI.getRefreshStatus()
 
-          if (status.progress?.current_file) {
-            uploadSuccess.value = `Refreshing: ${status.progress.current_file}`
+          // Update inline status
+          if (status.progress) {
+            refreshInfo.value.current_file = status.progress.current_file || refreshInfo.value.current_file
+            refreshInfo.value.files_processed = status.progress.files_processed ?? refreshInfo.value.files_processed
+            refreshInfo.value.total_files = status.progress.total_files ?? refreshInfo.value.total_files
           }
 
           if (status.status === 'completed') {
             clearInterval(pollInterval)
-            uploadSuccess.value = `Knowledge base refreshed successfully! Processed ${status.progress?.files_processed || 0} files.`
+            showSuccess(`Knowledge base refreshed successfully! Processed ${status.progress?.files_processed || 0} files.`)
             refreshing.value = false
+            refreshInfo.value = { current_file: null, files_processed: 0, total_files: null }
           } else if (status.status === 'failed') {
             clearInterval(pollInterval)
-            uploadError.value = `Refresh failed: ${status.progress?.current_file || 'Unknown error'}`
+            showError(`Refresh failed: ${status.progress?.current_file || 'Unknown error'}`)
             refreshing.value = false
+            refreshInfo.value = { current_file: null, files_processed: 0, total_files: null }
           }
         } catch (pollError) {
           console.error('Status polling error:', pollError)
           clearInterval(pollInterval)
-          uploadError.value = 'Lost connection to refresh process'
+          showError('Lost connection to refresh process')
           refreshing.value = false
+          refreshInfo.value = { current_file: null, files_processed: 0, total_files: null }
         }
       }, 2000) // Poll every 2 seconds
 
@@ -314,16 +310,17 @@ const refreshKnowledgeBase = async () => {
       setTimeout(() => {
         if (refreshing.value) {
           clearInterval(pollInterval)
-          uploadError.value = 'Refresh operation timed out'
+          showError('Refresh operation timed out')
           refreshing.value = false
+          refreshInfo.value = { current_file: null, files_processed: 0, total_files: null }
         }
       }, 300000) // 5 minutes timeout
     } else {
-      uploadSuccess.value = startResult.message || 'Knowledge base refresh completed'
+      showSuccess(startResult.message || 'Knowledge base refresh completed')
     }
   } catch (error) {
     console.error('Refresh error:', error)
-    uploadError.value = error.response?.data?.detail || 'Failed to refresh knowledge base'
+    showError(error.response?.data?.detail || 'Failed to refresh knowledge base')
   } finally {
     if (!refreshing.value) {
       refreshing.value = false
@@ -354,12 +351,12 @@ const deleteFile = async () => {
   deleting.value = true
   try {
     await adminAPI.deleteKnowledgeFile(fileToDelete.value.name)
-    uploadSuccess.value = `File "${fileToDelete.value.name}" deleted successfully`
+    showSuccess(`File "${fileToDelete.value.name}" deleted successfully`)
 
     await loadFiles()
   } catch (error) {
     console.error('Delete error:', error)
-    uploadError.value = 'Failed to delete file'
+    showError('Failed to delete file')
   } finally {
     deleting.value = false
     deleteDialog.value = false
@@ -382,7 +379,7 @@ const openFileEditor = (file) => {
 }
 
 const onFileSaved = (filename) => {
-  uploadSuccess.value = `File "${filename}" saved successfully`
+  showSuccess(`File "${filename}" saved successfully`)
   // Optionally refresh the file list to update modified time
   loadFiles()
 }

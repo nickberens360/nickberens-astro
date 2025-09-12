@@ -40,13 +40,7 @@
               {{ state.error }}
             </v-alert>
             
-            <v-alert
-              v-if="state.success"
-              type="success"
-              class="mb-4"
-            >
-              {{ state.success }}
-            </v-alert>
+            <!-- Success notifications are shown via global toasts -->
           </v-card-text>
           
           <v-card-actions>
@@ -72,6 +66,7 @@
 import { reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { adminAPI } from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 
 export default {
   name: 'LoginView',
@@ -89,6 +84,7 @@ export default {
       error: null,
       success: null
     })
+    const { showSuccess } = useNotifications()
     
     const validation = reactive({
       username: [],
@@ -131,7 +127,7 @@ export default {
         const response = await adminStore.login(formData.username, formData.password)
         
         if (response.success) {
-          state.success = 'Login successful! Redirecting...'
+          showSuccess('Login successful! Redirecting...')
           
           // Determine a safe redirect destination (internal-only)
           const rawRedirect = Array.isArray(route.query.redirect)

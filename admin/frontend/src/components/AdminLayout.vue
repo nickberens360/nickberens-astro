@@ -256,43 +256,7 @@
       </v-container>
     </v-main>
 
-    <!-- Error Snackbar -->
-    <v-snackbar
-      v-model="showError"
-      color="error"
-      multi-line
-      timeout="6000"
-      location="bottom"
-    >
-      {{ error }}
-
-      <template #actions>
-        <v-btn
-          text="Close"
-          variant="text"
-          @click="resetError"
-        />
-      </template>
-    </v-snackbar>
-
-    <!-- Connection Status -->
-    <v-snackbar
-      v-model="showConnectionWarning"
-      color="warning"
-      persistent
-      location="top"
-    >
-      <v-icon start>$alert</v-icon>
-      Connection to admin API lost. Retrying...
-
-      <template #actions>
-        <v-btn
-          text="Retry"
-          variant="text"
-          @click="testConnection"
-        />
-      </template>
-    </v-snackbar>
+    <!-- Toasts are handled globally via NotificationMessage -->
   </v-app>
 </template>
 
@@ -303,6 +267,7 @@ import { useDisplay, useTheme } from 'vuetify'
 import { storeToRefs } from 'pinia'
 import { useAdminStore } from '@/stores/admin'
 import { useFeatureSettingsStore } from '@/stores/featureSettings'
+import { useNotificationsStore } from '@/stores/notifications'
 import { formatDate } from '@/types/admin'
 import TimeRangeSelector from '@/components/TimeRangeSelector.vue'
 
@@ -313,6 +278,7 @@ const theme = useTheme()
 
 const adminStore = useAdminStore()
 const featureStore = useFeatureSettingsStore()
+const notifications = useNotificationsStore()
 
 // Local state
 const drawer = ref(true)
@@ -411,17 +377,31 @@ const showTimeRangeSelector = computed(() => {
   return ['dashboard', 'performance'].includes(route.name);
 });
 
-const showError = ref(false)
-const showConnectionWarning = ref(false)
+const connectionToastId = ref(null)
 
-// Watch for error changes
+// Toast on error changes
 watch(error, (newError) => {
-  showError.value = Boolean(newError)
+  if (newError) {
+    const msg = typeof newError === 'string' ? newError : (newError?.message || 'An error occurred')
+    notifications.error(msg)
+  }
 })
 
-// Watch for connection status changes
+// Connection status toast (persistent)
 watch([isConnected, isLoading], ([connected, loading]) => {
-  showConnectionWarning.value = !connected && !loading
+  if (!connected && !loading) {
+    if (!connectionToastId.value) {
+      connectionToastId.value = notifications.warning('Connection to admin API lost. Retrying...', {
+        persistent: true,
+        actionLabel: 'Retry',
+        onAction: () => testConnection()
+      })
+    }
+  } else if (connected && connectionToastId.value) {
+    notifications.dismiss(connectionToastId.value)
+    connectionToastId.value = null
+    notifications.success('Reconnected to admin API', { timeout: 3000 })
+  }
 })
 
 const formatLastUpdate = computed(() => {
@@ -459,10 +439,7 @@ const setTimeRange = async (newTimeRange) => {
   await adminStore.setTimeRange(newTimeRange)
 }
 
-const resetError = () => {
-  showError.value = false
-  adminStore.resetError()
-}
+// Error reset handled via store events; no local snackbar state
 
 const testConnection = async () => {
   await adminStore.testConnection()

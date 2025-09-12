@@ -160,9 +160,10 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { adminAPI } from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 import { 
   getBasicPasswordRules, 
   getStrongPasswordRules, 
@@ -171,8 +172,8 @@ import {
   getPasswordConfirmationRules 
 } from '@/utils/validation'
 
-// Get notification system from parent
-const notifications = inject('notifications')
+// Global notifications
+const { showSuccess, showError } = useNotifications()
 
 // Store
 const adminStore = useAdminStore()
@@ -232,7 +233,7 @@ const loadUserData = async () => {
     }
   } catch (error) {
     console.error('Error loading user data:', error)
-    notifications.showError('Failed to load user data')
+    showError('Failed to load user data')
   }
 }
 
@@ -248,12 +249,12 @@ const handleDisplayNameChange = async () => {
       originalDisplayName.value = displayName.value
       // Update the store with the new display name
       await adminStore.checkAuth()
-      notifications.showSuccess('Display name updated successfully')
+      showSuccess('Display name updated successfully')
     } else {
       throw new Error(response.message || 'Failed to update display name')
     }
   } catch (error) {
-    notifications.showError(error.response?.data?.detail || 'Failed to update display name. Please try again.')
+    showError(error.response?.data?.detail || 'Failed to update display name. Please try again.')
     console.error('Display name update error:', error)
   } finally {
     displayNameLoading.value = false
@@ -273,12 +274,12 @@ const handleEmailChange = async () => {
       emailPassword.value = ''
       // Update the store with the new email
       await adminStore.checkAuth()
-      notifications.showSuccess('Email address updated successfully')
+      showSuccess('Email address updated successfully')
     } else {
       throw new Error(response.message || 'Failed to update email address')
     }
   } catch (error) {
-    notifications.showError(error.response?.data?.detail || 'Failed to update email address. Please check your password and try again.')
+    showError(error.response?.data?.detail || 'Failed to update email address. Please check your password and try again.')
     console.error('Email update error:', error)
   } finally {
     emailLoading.value = false
@@ -290,7 +291,7 @@ const handlePasswordChange = async () => {
   if (!valid.valid) return
 
   if (newPassword.value !== confirmPassword.value) {
-    notifications.showError('Passwords do not match')
+    showError('Passwords do not match')
     return
   }
 
@@ -307,12 +308,12 @@ const handlePasswordChange = async () => {
       showNewPassword.value = false
       showConfirmPassword.value = false
       
-      notifications.showSuccess('Password changed successfully')
+      showSuccess('Password changed successfully')
     } else {
       throw new Error(response.message || 'Failed to change password')
     }
   } catch (error) {
-    notifications.showError(error.response?.data?.detail || 'Failed to change password. Please check your current password and try again.')
+    showError(error.response?.data?.detail || 'Failed to change password. Please check your current password and try again.')
     console.error('Password change error:', error)
   } finally {
     passwordLoading.value = false

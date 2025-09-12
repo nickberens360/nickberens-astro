@@ -94,28 +94,39 @@ class StartupContentClassifier:
 
         taxonomy = get_topic_taxonomy()
         if taxonomy and isinstance(taxonomy.get("categories"), dict):
-            import re
-
             for topic, cfg in taxonomy["categories"].items():
-                syn = [s.lower() for s in (cfg.get("synonyms") or []) if isinstance(s, str)]
-                regexes = [r for r in (cfg.get("regex") or []) if isinstance(r, str)]
-
-                # File name hints via synonyms
-                if any(h in file_name_lower for h in syn):
-                    detected_topics.add(topic)
-
-                # Content-based synonym match
-                if any(h in content_lower for h in syn):
-                    detected_topics.add(topic)
-
-                # Content-based regex match
-                for pattern in regexes:
+                # Build effective patterns from synonyms and explicit regex overrides
+                patterns: list[re.Pattern] = []
+                synonyms = [s for s in (cfg.get("synonyms") or []) if isinstance(s, str) and s.strip()]
+                if synonyms:
                     try:
-                        if re.search(pattern, content_lower):
-                            detected_topics.add(topic)
-                            break
+                        escaped = [re.escape(s.strip()) for s in synonyms]
+                        syn_pattern = re.compile(r"\\b(?:" + "|".join(escaped) + r")\\b", re.IGNORECASE)
+                        patterns.append(syn_pattern)
+                    except re.error:
+                        for s in synonyms:
+                            try:
+                                patterns.append(re.compile(r"\\b" + re.escape(s.strip()) + r"\\b", re.IGNORECASE))
+                            except re.error:
+                                continue
+
+                for raw in cfg.get("regex") or []:
+                    if not isinstance(raw, str):
+                        continue
+                    try:
+                        patterns.append(re.compile(raw, re.IGNORECASE))
                     except re.error:
                         continue
+
+                # Apply patterns to file name and content
+                try:
+                    if any(pat.search(file_name_lower) for pat in patterns) or any(
+                        pat.search(content_lower) for pat in patterns
+                    ):
+                        detected_topics.add(topic)
+                        continue
+                except re.error:
+                    pass
 
         # Fallback heuristics to preserve behavior
         if not detected_topics:
@@ -206,7 +217,7 @@ class StartupContentClassifier:
 
         # Frequency-based keyword extraction
         words = re.findall(r"\b[a-z]+\b", content_lower)
-        word_freq = {}
+        word_freq: Dict[str, int] = {}
         for word in words:
             if len(word) >= 4:  # Skip short words
                 word_freq[word] = word_freq.get(word, 0) + 1
@@ -327,9 +338,9 @@ class StartupContentClassifier:
         if not self._classification_cache:
             return {"status": "no_classifications"}
 
-        topics_count = {}
+        topics_count: Dict[str, int] = {}
         confidence_scores = []
-        methods_count = {}
+        methods_count: Dict[str, int] = {}
 
         for metadata in self._classification_cache.values():
             # Count topics

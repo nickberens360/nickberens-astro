@@ -34,39 +34,15 @@
         <router-view />
       </main>
     </div>
-    
-    <!-- Global Notifications -->
-    <v-snackbar
-      v-model="showNotification"
-      :color="notificationColor"
-      :timeout="notificationTimeout"
-      location="top"
-      variant="flat"
-    >
-      {{ notificationMessage }}
-      <template #actions>
-        <v-btn
-          text="Close"
-          variant="text"
-          @click="showNotification = false"
-        />
-      </template>
-    </v-snackbar>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, provide } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
-
-// Notification system
-const showNotification = ref(false)
-const notificationMessage = ref('')
-const notificationColor = ref('success')
-const notificationTimeout = ref(3000)
 
 // Navigation tabs - for now just Profile, but structured for future expansion
 const navigationTabs = [
@@ -98,25 +74,7 @@ const navigateToTab = (tabValue) => {
   }
 }
 
-// Provide notification system to child components
-const showSuccessNotification = (message) => {
-  notificationMessage.value = message
-  notificationColor.value = 'success'
-  notificationTimeout.value = 3000
-  showNotification.value = true
-}
-
-const showErrorNotification = (message) => {
-  notificationMessage.value = message
-  notificationColor.value = 'error'
-  notificationTimeout.value = 5000
-  showNotification.value = true
-}
-
-provide('notifications', {
-  showSuccess: showSuccessNotification,
-  showError: showErrorNotification
-})
+// Notifications are now global (Pinia + NotificationMessage)
 </script>
 
 <style scoped>

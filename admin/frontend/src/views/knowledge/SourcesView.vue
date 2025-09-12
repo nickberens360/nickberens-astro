@@ -76,7 +76,7 @@
                     color="info"
                     class="ms-2"
                   >
-                    mdi-help-circle-outline
+                    $help-circle-outline
                   </v-icon>
                 </template>
               </v-tooltip>
@@ -332,22 +332,7 @@
       @file-saved="handleFileSaved"
     />
 
-    <!-- Notification Snackbar -->
-    <v-snackbar
-      v-model="showNotification"
-      :color="notificationType"
-      :timeout="6000"
-      location="top"
-    >
-      {{ notificationMessage }}
-      <template v-slot:actions>
-        <v-btn
-          text="Close"
-          variant="text"
-          @click="showNotification = false"
-        ></v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Toasts are handled globally via NotificationMessage -->
   </div>
 </template>
 
@@ -355,6 +340,7 @@
 import { ref, onMounted } from 'vue'
 import { adminAPI } from '@/services/api'
 import FileEditorModal from '@/components/FileEditorModal.vue'
+import { useNotifications } from '@/composables/useNotifications'
 
 const loading = ref(false)
 const search = ref('')
@@ -369,10 +355,8 @@ const selectedFilename = ref('')
 // Upload dialog state
 const showUploadDialog = ref(false)
 
-// Notification system
-const showNotification = ref(false)
-const notificationMessage = ref('')
-const notificationType = ref('info') // info, success, warning, error
+// Notifications
+const { showSuccess, showError, showInfo, showWarning } = useNotifications()
 const selectedFiles = ref(null)
 const uploadResults = ref([])
 const uploadProgress = ref({
@@ -394,11 +378,16 @@ const fileRules = [
   files => !files || files.every(file => file.size <= 50 * 1024 * 1024) || 'Files must be smaller than 50MB'
 ]
 
-// Notification helper
+// Notification helper (now uses global toasts)
 const showAlert = (message, type = 'info') => {
-  notificationMessage.value = message
-  notificationType.value = type
-  showNotification.value = true
+  const map = {
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+    warning: showWarning,
+  }
+  const fn = map[type] || showInfo
+  fn(message)
 }
 
 // Upload methods
@@ -444,6 +433,7 @@ const uploadFiles = async () => {
       success: false,
       error: error.response?.data?.detail || 'Upload failed'
     }))
+    showError('Upload failed')
   } finally {
     uploadProgress.value.active = false
   }
@@ -511,6 +501,7 @@ const loadSources = async () => {
     sources.value = response.sources || []
   } catch (error) {
     console.error('Failed to load sources:', error)
+    showError('Failed to load sources')
   } finally {
     loading.value = false
   }
@@ -545,6 +536,7 @@ const saveEdit = async () => {
     showEditDialog.value = false
   } catch (error) {
     console.error('Failed to update source:', error)
+    showError('Failed to update source')
   } finally {
     loading.value = false
   }
@@ -563,6 +555,7 @@ const deleteSource = async () => {
     showDeleteDialog.value = false
   } catch (error) {
     console.error('Failed to delete source:', error)
+    showError('Failed to delete source')
   } finally {
     loading.value = false
   }

@@ -6,8 +6,6 @@ Tests that CORS origins are properly configured and validated.
 import os
 from unittest.mock import patch
 
-import pytest
-
 from backend.core.config import AppConfig
 
 

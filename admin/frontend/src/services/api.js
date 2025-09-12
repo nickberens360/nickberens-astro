@@ -2,8 +2,11 @@ import axios from 'axios'
 
 class AdminAPI {
   constructor() {
+    // Resolve base URL from env, falling back to same-origin admin API
+    const DEFAULT_BASE_URL = '/api/admin'
+    const resolvedBaseURL = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL,
+      baseURL: resolvedBaseURL,
       timeout: 10000,
       headers: { 'Content-Type': 'application/json' },
       withCredentials: true  // Enable cookies for session management
@@ -856,6 +859,59 @@ class AdminAPI {
       return response
     } catch (error) {
       console.error('Failed to update search retrieval settings:', error)
+      throw error
+    }
+  }
+
+  // Taxonomy Settings endpoints
+  async getTaxonomySettings() {
+    try {
+      const response = await this.client.get('/settings/taxonomy')
+      return response
+    } catch (error) {
+      console.error('Failed to get taxonomy settings:', error)
+      throw error
+    }
+  }
+
+  async updateTaxonomySettings(settingsData) {
+    try {
+      const response = await this.client.put('/settings/taxonomy', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update taxonomy settings:', error)
+      throw error
+    }
+  }
+
+  async getTaxonomyFallback() {
+    try {
+      const response = await this.client.get('/settings/taxonomy/fallback')
+      return response
+    } catch (error) {
+      console.error('Failed to get taxonomy fallback:', error)
+      throw error
+    }
+  }
+
+  async uploadTaxonomyFallback(file) {
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const response = await this.client.post('/settings/taxonomy/fallback-file', form)
+      return response
+    } catch (error) {
+      console.error('Failed to upload taxonomy fallback file:', error)
+      throw error
+    }
+  }
+
+  async autoGenerateTaxonomy(options = {}) {
+    try {
+      const response = await this.client.post('/settings/taxonomy/auto-generate', options)
+      return response
+    } catch (error) {
+      console.error('Failed to auto-generate taxonomy:', error)
       throw error
     }
   }

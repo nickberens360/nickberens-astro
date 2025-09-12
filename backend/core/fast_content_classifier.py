@@ -76,7 +76,7 @@ class FastContentClassifier:
 
         # Extract words that appear frequently and are likely keywords
         words = re.findall(r"\b[a-z]+\b", content_lower)
-        word_freq = {}
+        word_freq: Dict[str, int] = {}
         for word in words:
             if len(word) >= 4:  # Skip short words
                 word_freq[word] = word_freq.get(word, 0) + 1

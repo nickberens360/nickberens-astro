@@ -358,8 +358,14 @@ class SemanticSearcher:
             return 0
         try:
             if where:
-                # Try to use count with filter if supported
-                return self.vector_store._collection.count(where=where)
+                # ChromaDB count doesn't support where parameter in current version
+                # Fall back to a filtered query to get count
+                results = self.vector_store._collection.get(where=where, limit=1)
+                if hasattr(results, "ids") and results.ids:
+                    # If we got results, do a full query to count
+                    all_results = self.vector_store._collection.get(where=where)
+                    return len(all_results.ids) if hasattr(all_results, "ids") else 0
+                return 0
             else:
                 return self.vector_store._collection.count()
         except AttributeError:

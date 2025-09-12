@@ -1,6 +1,3 @@
-import json
-
-
 def test_response_settings_roundtrip_and_bounds():
     from backend.core.settings_schemas import ResponseSettings
 

@@ -293,33 +293,16 @@
       </v-card>
     </v-dialog>
 
-    <!-- Validation Results Snackbar -->
-    <v-snackbar
-      v-model="showValidationResult"
-      :color="validationResult?.valid ? 'success' : 'error'"
-      timeout="3000"
-      location="top right"
-    >
-      <div class="d-flex align-center">
-        <v-icon
-          :icon="validationResult?.valid ? '$check-circle' : '$alert-circle'"
-          class="mr-2"
-        />
-        <div>
-          <div class="font-weight-medium">
-            {{ validationResult?.key_name }} - 
-            {{ validationResult?.valid ? 'Valid' : 'Invalid' }}
-          </div>
-          <div class="text-caption">{{ validationResult?.message }}</div>
-        </div>
-      </div>
-    </v-snackbar>
+    <!-- Toasts are handled globally via NotificationMessage -->
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { adminAPI as apiService } from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
+
+const { showSuccess, showError, showInfo } = useNotifications()
 
 // Reactive state
 const keys = ref([])
@@ -409,7 +392,7 @@ const fetchKeys = async () => {
     keys.value = response.keys
   } catch (error) {
     console.error('Error fetching API keys:', error)
-    // Show error notification
+    showError('Failed to fetch API keys')
   } finally {
     loading.value = false
   }
@@ -499,12 +482,10 @@ const saveKey = async () => {
 
     closeDialog()
     await fetchKeys()
-    
-    // Show success notification
-    console.log(isEditing ? 'API key updated successfully' : 'API key created successfully')
+    showSuccess(isEditing ? 'API key updated successfully' : 'API key created successfully')
   } catch (error) {
     console.error('Error saving API key:', error)
-    // Show error notification
+    showError('Error saving API key')
   } finally {
     saving.value = false
   }
@@ -517,6 +498,7 @@ const toggleKey = async (key) => {
     await fetchKeys()
   } catch (error) {
     console.error('Error toggling API key:', error)
+    showError('Error toggling API key')
   } finally {
     toggling.value = null
   }
@@ -538,6 +520,7 @@ const deleteKey = async () => {
     await fetchKeys()
   } catch (error) {
     console.error('Error deleting API key:', error)
+    showError('Error deleting API key')
   } finally {
     deleting.value = false
   }
@@ -548,7 +531,11 @@ const validateKey = async (key) => {
   try {
     const response = await apiService.validateApiKey(key.key_name)
     validationResult.value = response
-    showValidationResult.value = true
+    if (response?.valid) {
+      showSuccess(`${response?.key_name || 'API key'} validated successfully`)
+    } else {
+      showError(`${response?.key_name || 'API key'} validation failed${response?.message ? `: ${response.message}` : ''}`)
+    }
   } catch (error) {
     console.error('Error validating API key:', error)
     validationResult.value = {
@@ -556,7 +543,7 @@ const validateKey = async (key) => {
       valid: false,
       message: 'Validation failed'
     }
-    showValidationResult.value = true
+    showError(`${key.key_name} validation failed`)
   } finally {
     validating.value = null
   }

@@ -262,9 +262,7 @@
             {{ featureError }}
           </v-alert>
 
-          <v-alert v-if="featureSuccess" type="success" variant="tonal" class="ma-6 mb-4">
-            {{ featureSuccess }}
-          </v-alert>
+          <!-- Success notifications are shown via global toasts -->
 
           <!-- Enable Illustrations Row hidden for now -->
 
@@ -460,6 +458,7 @@ import { adminAPI as apiService } from '@/services/api'
 import { format, parseISO } from 'date-fns'
 import FollowupAccordion from '@/components/FollowupAccordion.vue'
 import CategoryDialog from '@/components/CategoryDialog.vue'
+import { useNotifications } from '@/composables/useNotifications'
 
 const adminStore = useAdminStore()
 const uxStore = useUXSettingsStore()
@@ -497,7 +496,7 @@ const serviceTypeOptions = [
 // Loading and error states
 const saving = ref(false)
 const featureError = ref('')
-const featureSuccess = ref('')
+const { showSuccess, showError } = useNotifications()
 const followupKey = ref(0)
 const showCategoryDialog = ref(false)
 const editingCategory = ref(null)
@@ -556,20 +555,15 @@ const saveAllSettings = async () => {
   try {
     saving.value = true
     featureError.value = ''
-    featureSuccess.value = ''
 
     // Save feature flags via store
     await featureStore.updateFeatureFlags()
-
-    featureSuccess.value = 'User experience settings saved successfully!'
-
-    setTimeout(() => {
-      featureSuccess.value = ''
-    }, 3000)
+    showSuccess('User experience settings saved successfully!')
 
   } catch (err) {
     console.error('Failed to save settings:', err)
     featureError.value = 'Failed to save settings: ' + (err.response?.data?.detail || err.message)
+    showError('Failed to save settings')
   } finally {
     saving.value = false
   }
@@ -706,13 +700,11 @@ const loadFollowupCategories = async () => {
 const saveFollowupSettings = async () => {
   try {
     await apiService.updateFollowupSettings(followupSettings.value)
-    featureSuccess.value = 'Follow-up settings saved successfully!'
-    setTimeout(() => {
-      featureSuccess.value = ''
-    }, 3000)
+    showSuccess('Follow-up settings saved successfully!')
   } catch (error) {
     console.error('Failed to save followup settings:', error)
     featureError.value = 'Failed to save follow-up settings: ' + (error.response?.data?.detail || error.message)
+    showError('Failed to save follow-up settings')
   }
 }
 
@@ -724,7 +716,7 @@ const showCreateFollowupCategoryDialog = () => {
 const openFullFollowupManager = () => {
   // Open the full followup settings in a new tab/modal or navigate to it
   // For now, we could navigate to a dedicated followup route or show info
-  featureSuccess.value = 'Full followup manager will open the complete FollowupSettings component'
+  showSuccess('Full followup manager will open the complete FollowupSettings component')
 
   // TODO: Implement either:
   // 1. Navigate to a dedicated followup route
@@ -738,13 +730,13 @@ onMounted(() => {
 
 // Handle FollowupAccordion change events to refresh counts
 const onFollowupChanged = async () => {
-  featureSuccess.value = 'Follow-up questions updated'
+  showSuccess('Follow-up questions updated')
   try {
     await loadFollowupCategories()
   } catch (e) {
     // ignore refresh errors
   } finally {
-    setTimeout(() => { featureSuccess.value = '' }, 2000)
+    // no-op
   }
 }
 
@@ -772,8 +764,7 @@ const saveFollowupCategory = async (data) => {
     // Force reload of FollowupAccordion
     followupKey.value++
     await loadFollowupCategories()
-    featureSuccess.value = data && data.id ? 'Category updated' : 'Category created'
-    setTimeout(() => { featureSuccess.value = '' }, 2000)
+    showSuccess(data && data.id ? 'Category updated' : 'Category created')
   } catch (e) {
     console.error('Failed to save follow-up category', e)
     featureError.value = 'Failed to save category: ' + (e.response?.data?.detail || e.message)

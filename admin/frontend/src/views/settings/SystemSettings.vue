@@ -23,9 +23,7 @@
           {{ error }}
         </v-alert>
         
-        <v-alert v-if="successMessage" type="success" variant="tonal" class="ma-6 mb-4">
-          {{ successMessage }}
-        </v-alert>
+        <!-- Success notifications are shown via global toasts -->
         
         <!-- Response LLM Selection Row -->
         <div class="setting-row">
@@ -165,6 +163,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import adminAPI from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 
 const adminStore = useAdminStore()
 
@@ -188,7 +187,7 @@ const settings = ref({
 
 const loading = ref(false)
 const error = ref('')
-const successMessage = ref('')
+const { showSuccess, showError } = useNotifications()
 
 // Model options
 const llmOptions = [
@@ -248,7 +247,6 @@ const saveSettings = async () => {
   try {
     loading.value = true
     error.value = ''
-    successMessage.value = ''
     
     // Ensure legacy primary_llm field is synced with response_llm for backward compatibility
     const settingsToSave = { ...settings.value }
@@ -256,18 +254,16 @@ const saveSettings = async () => {
     
     const response = await adminAPI.updateSystemConfigSettings(settingsToSave)
     if (response && response.success) {
-      successMessage.value = 'System configuration settings saved successfully!'
+      showSuccess('System configuration settings saved successfully!')
       // Update local settings with the response to ensure UI is in sync
       if (response.settings) {
         settings.value = { ...settings.value, ...response.settings }
       }
-      setTimeout(() => {
-        successMessage.value = ''
-      }, 3000)
     }
   } catch (err) {
     console.error('Failed to save system config settings:', err)
     error.value = 'Failed to save system configuration settings: ' + (err.response?.data?.detail || err.message)
+    showError('Failed to save system configuration settings')
   } finally {
     loading.value = false
   }

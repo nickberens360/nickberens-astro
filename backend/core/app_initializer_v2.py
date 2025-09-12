@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseLanguageModel
+from langchain_core.utils import SecretStr
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
@@ -82,7 +83,7 @@ def create_processing_llm() -> BaseLanguageModel:
             if anthropic_api_key:
                 logger.info(f"Creating Claude processing LLM: {processing_model_name}")
                 return ChatAnthropic(
-                    model=processing_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                    model_name=processing_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
                 )
             else:
                 logger.warning("No Anthropic API key found for processing LLM, trying environment fallback")
@@ -96,11 +97,11 @@ def create_processing_llm() -> BaseLanguageModel:
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
         return ChatAnthropic(
-            model="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
+            model_name="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
         )
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
+        return ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
 
 
 def create_response_llm() -> BaseLanguageModel:
@@ -158,7 +159,7 @@ def create_response_llm() -> BaseLanguageModel:
             if anthropic_api_key:
                 logger.info(f"Creating Claude response LLM: {response_model_name}")
                 return ChatAnthropic(
-                    model=response_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                    model_name=response_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
                 )
             else:
                 logger.warning("No Anthropic API key found, trying environment fallback")
@@ -172,11 +173,11 @@ def create_response_llm() -> BaseLanguageModel:
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
         return ChatAnthropic(
-            model=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
+            model_name=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
         )
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
+        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
 
 
 def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:

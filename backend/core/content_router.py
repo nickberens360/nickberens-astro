@@ -9,6 +9,7 @@ This module provides focused functionality for:
 """
 
 import logging
+import re
 from typing import List, Optional
 
 from langchain.docstore.document import Document
@@ -43,27 +44,50 @@ class ContentRouter:
         taxonomy = get_topic_taxonomy()
         if taxonomy and isinstance(taxonomy.get("categories"), dict):
             cats = taxonomy["categories"]
-            import re
 
             for cat_name, cfg in cats.items():
                 matched = False
 
-                # Synonym matching (substring presence)
-                for word in cfg.get("synonyms", []) or []:
-                    if word and word.lower() in query_lower:
-                        matched = True
-                        break
+                # Build effective regex patterns from synonyms and explicit regex overrides
+                patterns: List[re.Pattern] = []
+                synonyms = [s for s in (cfg.get("synonyms") or []) if isinstance(s, str) and s.strip()]
+                if synonyms:
+                    try:
+                        escaped = [re.escape(s.strip()) for s in synonyms]
+                        # Word-boundary group for all synonyms, case-insensitive
+                        syn_pattern = re.compile(r"\\b(?:" + "|".join(escaped) + r")\\b", re.IGNORECASE)
+                        patterns.append(syn_pattern)
+                    except re.error:
+                        # If building the grouped pattern fails, fall back to per-synonym tests
+                        for s in synonyms:
+                            try:
+                                patterns.append(re.compile(r"\\b" + re.escape(s.strip()) + r"\\b", re.IGNORECASE))
+                            except re.error:
+                                continue
 
-                # Regex matching
-                if not matched:
-                    for pattern in cfg.get("regex", []) or []:
-                        try:
-                            if re.search(pattern, query_lower):
-                                matched = True
-                                break
-                        except re.error:
-                            # Skip invalid regex entries
-                            continue
+                for pattern in cfg.get("regex") or []:
+                    if not isinstance(pattern, str):
+                        continue
+                    try:
+                        patterns.append(re.compile(pattern, re.IGNORECASE))
+                    except re.error:
+                        continue
+
+                # Try regex-based matching first
+                for pat in patterns:
+                    try:
+                        if pat.search(query_lower):
+                            matched = True
+                            break
+                    except re.error:
+                        continue
+
+                # Fallback: simple substring search on synonyms (legacy behavior)
+                if not matched and synonyms:
+                    for word in synonyms:
+                        if word and word.lower() in query_lower:
+                            matched = True
+                            break
 
                 if matched:
                     hints.append(cat_name)

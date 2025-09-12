@@ -13,9 +13,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from ..core import taxonomy_loader
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
 from ..core.api_key_manager import api_key_manager
@@ -2809,6 +2810,366 @@ async def update_search_retrieval_settings(
     except Exception as e:
         logger.error(f"Error updating search retrieval settings: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating search retrieval settings")
+
+
+# === Taxonomy Settings Endpoints ===
+@router.get("/settings/taxonomy")
+async def get_taxonomy_settings(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get taxonomy configuration used for search/category detection."""
+    try:
+        # Prefer DB value when present
+        db_value = admin_db_manager.get_admin_setting("taxonomy_settings")
+        if db_value:
+            try:
+                data = json.loads(db_value)
+            except json.JSONDecodeError:
+                logger.warning("Stored taxonomy_settings is invalid JSON; falling back to file")
+                data = taxonomy_loader.get_topic_taxonomy() or {}
+        else:
+            data = taxonomy_loader.get_topic_taxonomy() or {}
+
+        return {"settings": data}
+    except Exception as e:
+        logger.error(f"Error getting taxonomy settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching taxonomy settings")
+
+
+def _validate_taxonomy_payload(payload: Dict[str, Any]) -> None:
+    """Validate taxonomy JSON payload; raise HTTPException 400 on error."""
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Payload must be a JSON object")
+    categories = payload.get("categories")
+    if not isinstance(categories, dict):
+        raise HTTPException(status_code=400, detail="Missing or invalid 'categories' object")
+
+    # Optional size guardrail (approximate)
+    try:
+        size_bytes = len(json.dumps(payload))
+        if size_bytes > 256 * 1024:
+            raise HTTPException(status_code=400, detail="Taxonomy JSON too large (limit ~256KB)")
+    except Exception:
+        pass
+
+    # Validate each category
+    import re
+
+    for name, cfg in categories.items():
+        if not isinstance(name, str) or not name.strip():
+            raise HTTPException(status_code=400, detail="Category names must be non-empty strings")
+        if not isinstance(cfg, dict):
+            raise HTTPException(status_code=400, detail=f"Category '{name}' must be an object")
+        syn = cfg.get("synonyms")
+        if syn is not None and not isinstance(syn, list):
+            raise HTTPException(status_code=400, detail=f"Category '{name}': 'synonyms' must be an array")
+        rx = cfg.get("regex")
+        if rx is not None and not isinstance(rx, list):
+            raise HTTPException(status_code=400, detail=f"Category '{name}': 'regex' must be an array")
+        if isinstance(rx, list):
+            for pat in rx:
+                if not isinstance(pat, str):
+                    raise HTTPException(status_code=400, detail=f"Category '{name}': regex entries must be strings")
+                try:
+                    re.compile(pat)
+                except re.error:
+                    raise HTTPException(status_code=400, detail=f"Category '{name}': invalid regex '{pat}'")
+
+
+@router.put("/settings/taxonomy")
+async def update_taxonomy_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update taxonomy configuration used for search/category detection."""
+    try:
+        _validate_taxonomy_payload(settings_data)
+
+        # Persist to DB
+        saved = admin_db_manager.set_admin_setting("taxonomy_settings", json.dumps(settings_data), session["user_id"])
+        if not saved:
+            raise HTTPException(status_code=500, detail="Failed to update taxonomy settings")
+
+        # Audit log with summary (avoid logging entire payload if large)
+        try:
+            cats = list((settings_data.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_settings",
+                "category_count": len(cats),
+                "version": settings_data.get("version"),
+                "first_categories": cats[:10],
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        # Invalidate taxonomy cache and warm up
+        try:
+            taxonomy_loader.invalidate_cache()
+            taxonomy_loader.get_topic_taxonomy(force_reload=True)
+        except Exception:
+            logger.debug("Could not warm taxonomy cache after update")
+
+        logger.info(
+            f"Taxonomy settings updated by user {session['user_id']}: categories={len((settings_data.get('categories') or {}).keys())}"
+        )
+        return {
+            "success": True,
+            "message": "Taxonomy settings updated successfully",
+            "settings": settings_data,
+            "lastUpdated": datetime.now().isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating taxonomy settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating taxonomy settings")
+
+
+@router.post("/settings/taxonomy/auto-generate")
+async def auto_generate_taxonomy(
+    request: Request,
+    options: Dict[str, Any] | None = None,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Generate a taxonomy proposal from indexed content.
+
+    Options (all optional):
+      - max_categories: int (default 10)
+      - max_synonyms: int (default 12)
+      - min_keyword_len: int (default 4)
+      - include_filenames: bool (default True)
+    """
+    try:
+        opts = options or {}
+        max_categories = int(opts.get("max_categories", 10))
+        max_synonyms = int(opts.get("max_synonyms", 12))
+        min_kw_len = int(opts.get("min_keyword_len", 4))
+        include_filenames = bool(opts.get("include_filenames", True))
+
+        # Load index metadata if present
+        persist_dir = "backend/.unified_chroma"
+        index_metadata_path = Path(persist_dir) / "index_metadata.json"
+
+        cat_counts: Dict[str, int] = {}
+        cat_terms: Dict[str, Dict[str, int]] = {}
+        stop = {
+            "this",
+            "that",
+            "with",
+            "from",
+            "they",
+            "were",
+            "been",
+            "have",
+            "will",
+            "would",
+            "could",
+            "about",
+            "there",
+            "their",
+            "which",
+            "these",
+            "those",
+            "into",
+            "your",
+            "also",
+            "some",
+            "more",
+            "such",
+            "like",
+            "when",
+            "what",
+            "where",
+            "them",
+            "file",
+            "json",
+            "data",
+            "info",
+            "index",
+            "readme",
+        }
+
+        def add_term(category: str, term: str) -> None:
+            term_l = term.strip().lower()
+            if not term_l:
+                return
+            if len(term_l) < min_kw_len:
+                return
+            if term_l in stop:
+                return
+            if not term_l.isascii():
+                return
+            cat_terms.setdefault(category, {})
+            cat_terms[category][term_l] = cat_terms[category].get(term_l, 0) + 1
+
+        source = "index"
+        if index_metadata_path.exists():
+            try:
+                import json as _json
+
+                with index_metadata_path.open("r", encoding="utf-8") as f:
+                    indexed_files = _json.load(f)
+                for file_path, entry in indexed_files.items():
+                    cls = None
+                    if isinstance(entry, dict):
+                        cls = entry.get("classification")
+                    # Parse categories
+                    cats: list[str] = []
+                    keywords: list[str] = []
+                    if isinstance(cls, dict):
+                        # content_type or content_types can be comma-separated
+                        raw_ct = cls.get("content_type") or cls.get("content_types") or ""
+                        cats = [c.strip().lower() for c in str(raw_ct).split(",") if c and c.strip()]
+                        raw_kw = cls.get("content_keywords") or cls.get("file_keywords") or ""
+                        keywords = [k.strip() for k in str(raw_kw).split(",") if k and k.strip()]
+                    # Tally
+                    for c in cats:
+                        if not c:
+                            continue
+                        cat_counts[c] = cat_counts.get(c, 0) + 1
+                        for k in keywords:
+                            add_term(c, k)
+                        if include_filenames:
+                            try:
+                                stem = Path(file_path).stem
+                                # split on non-alnum
+                                import re as _re
+
+                                for t in _re.split(r"[^A-Za-z0-9]+", stem):
+                                    add_term(c, t)
+                            except Exception:
+                                pass
+            except Exception as e:
+                logger.debug(f"Failed to read index metadata for auto-generate: {e}")
+        else:
+            source = "default"
+
+        # If no categories were discovered, fall back to a sane starter set
+        if not cat_counts:
+            source = "default"
+            seed = {
+                "about": ["bio", "background", "introduction"],
+                "skills": ["skill", "stack", "technology", "tools"],
+                "experience": ["work", "job", "role", "career"],
+                "project": ["portfolio", "demo", "case study"],
+                "creative": ["art", "illustration", "design", "inspiration"],
+                "technical": ["code", "software", "engineering", "api"],
+            }
+            for c, syns in seed.items():
+                cat_counts[c] = 1
+                for s in syns:
+                    add_term(c, s)
+
+        # Build taxonomy output
+        def topk_terms(d: Dict[str, int], k: int) -> list[str]:
+            return [w for w, _ in sorted(d.items(), key=lambda x: x[1], reverse=True)[:k]]
+
+        top_cats = [c for c, _ in sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:max_categories]]
+        categories: Dict[str, Any] = {}
+        for c in top_cats:
+            syn = topk_terms(cat_terms.get(c, {}), max_synonyms)
+            categories[c] = {"synonyms": syn, "regex": [], "metadata": {"is_illustration_data": c == "creative"}}
+
+        proposal = {"version": "1", "categories": categories}
+
+        # Do not persist; return proposal only
+        return {"success": True, "settings": proposal, "source": source, "stats": {"categories": len(categories)}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error auto-generating taxonomy: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error auto-generating taxonomy")
+
+
+@router.get("/settings/taxonomy/fallback")
+async def get_taxonomy_fallback(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Return the current fallback taxonomy JSON from file, if present."""
+    try:
+        tl_path = Path(taxonomy_loader.__file__).parent / "topic_taxonomy.json"
+        if not tl_path.exists():
+            return {"exists": False, "settings": None}
+        try:
+            with tl_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            return {"exists": True, "settings": data}
+        except json.JSONDecodeError:
+            return {"exists": True, "settings": None, "invalid": True}
+    except Exception as e:
+        logger.error(f"Error getting taxonomy fallback: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching taxonomy fallback")
+
+
+@router.post("/settings/taxonomy/fallback-file")
+async def upload_taxonomy_fallback_file(
+    request: Request,
+    file: UploadFile = File(...),
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Upload a fallback taxonomy JSON file.
+
+    Overwrites existing fallback file if present; creates it otherwise.
+    """
+    try:
+        if not file.filename or not file.filename.lower().endswith(".json"):
+            raise HTTPException(status_code=400, detail="Please upload a .json file")
+
+        raw = await file.read()
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Uploaded file is not valid JSON")
+
+        _validate_taxonomy_payload(data)
+
+        tl_path = Path(taxonomy_loader.__file__).parent / "topic_taxonomy.json"
+        try:
+            tl_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.error(f"Failed to write taxonomy fallback file: {e}")
+            raise HTTPException(status_code=500, detail="Failed to write fallback file")
+
+        # Audit
+        try:
+            cats = list((data.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_fallback_file",
+                "category_count": len(cats),
+                "version": data.get("version"),
+                "first_categories": cats[:10],
+                "filename": file.filename,
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        # Invalidate and warm cache
+        try:
+            taxonomy_loader.invalidate_cache()
+            taxonomy_loader.get_topic_taxonomy(force_reload=True)
+        except Exception:
+            logger.debug("Could not warm taxonomy cache after fallback upload")
+
+        return {"success": True, "message": "Fallback taxonomy file uploaded"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading taxonomy fallback file: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error uploading taxonomy fallback file")
 
 
 # User Management endpoints

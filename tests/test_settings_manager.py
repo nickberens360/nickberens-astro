@@ -1,6 +1,3 @@
-import json
-
-
 def test_settings_manager_db_fallback_and_cache(monkeypatch):
     from backend.core.settings_manager import SettingKeys, SettingsManager
 
@@ -29,7 +26,7 @@ def test_settings_manager_db_fallback_and_cache(monkeypatch):
 
     # Invalidate and read again (DB called again)
     sm.invalidate_cache(SettingKeys.RESPONSE_SETTINGS)
-    s3 = sm.get_response_settings()
+    sm.get_response_settings()
     assert calls["count"] == 2
 
 

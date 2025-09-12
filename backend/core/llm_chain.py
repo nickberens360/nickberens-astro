@@ -371,7 +371,16 @@ async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriev
             # Use the first available retriever with async invoke
             try:
                 docs = await selected_retrievers[0].ainvoke(query)
-                return docs if isinstance(docs, list) else [docs] if docs else []
+                # Ensure we return a flat list of Document objects
+                if isinstance(docs, list):
+                    flat_docs = []
+                    for item in docs:
+                        if isinstance(item, list):
+                            flat_docs.extend(item)
+                        else:
+                            flat_docs.append(item)
+                    return flat_docs
+                return [docs] if docs else []
             except Exception as e:
                 logger.error(f"Fallback retrieval failed: {e}")
                 return []

@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 
 from backend.core.app_initializer_v2 import create_processing_llm
 from backend.core.content_indexer import ContentIndexer

@@ -172,7 +172,7 @@ class SettingsMigrator:
         Returns:
             dict: Validation results with status and details
         """
-        validation_results = {"status": "success", "issues": [], "warnings": []}
+        validation_results: Dict[str, Any] = {"status": "success", "issues": [], "warnings": []}
 
         try:
             settings_data = self._load_all_current_settings()

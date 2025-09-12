@@ -24,9 +24,7 @@
           {{ error }}
         </v-alert>
         
-        <v-alert v-if="successMessage" type="success" variant="tonal" class="ma-6 mb-4">
-          {{ successMessage }}
-        </v-alert>
+        <!-- Success notifications are shown via global toasts -->
         
         <!-- IP Anonymization Row -->
         <div class="setting-row">
@@ -400,6 +398,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import adminAPI from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 
 const adminStore = useAdminStore()
 
@@ -427,7 +426,7 @@ const settings = ref({
 
 const loading = ref(false)
 const error = ref('')
-const successMessage = ref('')
+const { showSuccess, showError } = useNotifications()
 
 // Convert arrays to text for display
 const excludedIpsText = computed({
@@ -469,18 +468,15 @@ const saveSettings = async () => {
   try {
     loading.value = true
     error.value = ''
-    successMessage.value = ''
     
     const response = await adminAPI.updateSecuritySettings(settings.value)
     if (response && response.success) {
-      successMessage.value = 'Security settings saved successfully!'
-      setTimeout(() => {
-        successMessage.value = ''
-      }, 3000)
+      showSuccess('Security settings saved successfully!')
     }
   } catch (err) {
     console.error('Failed to save security settings:', err)
     error.value = 'Failed to save security settings: ' + (err.response?.data?.detail || err.message)
+    showError('Failed to save security settings')
   } finally {
     loading.value = false
   }
