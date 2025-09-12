@@ -116,7 +116,7 @@ class SemanticSearcher:
             message = str(e).lower()
             force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() in {"1", "true", "yes"}
             is_malformed = "database disk image is malformed" in message or "is malformed" in message
-            if isinstance(e, ChromaInternalError) and is_malformed or (is_malformed and force_rebuild):
+            if (isinstance(e, ChromaInternalError) and is_malformed) or (is_malformed and force_rebuild):
                 logger.error(f"Chroma store appears corrupted: {e}. Force rebuild: {force_rebuild}")
                 if force_rebuild:
                     # Reset the store and retry once
@@ -359,13 +359,10 @@ class SemanticSearcher:
         try:
             if where:
                 # ChromaDB count doesn't support where parameter in current version
-                # Fall back to a filtered query to get count
-                results = self.vector_store._collection.get(where=where, limit=1)
-                if hasattr(results, "ids") and results.ids:
-                    # If we got results, do a full query to count
-                    all_results = self.vector_store._collection.get(where=where)
-                    return len(all_results.ids) if hasattr(all_results, "ids") else 0
-                return 0
+                # Fetch only IDs for efficiency
+                results = self.vector_store._collection.get(where=where, include=["ids"])
+                ids = results.get("ids", []) if isinstance(results, dict) else getattr(results, "ids", [])
+                return len(ids)
             else:
                 return self.vector_store._collection.count()
         except AttributeError:

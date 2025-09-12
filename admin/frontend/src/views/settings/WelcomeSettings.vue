@@ -482,11 +482,14 @@ export default {
       is_active: true
     })
 
+    // Helper function to get trimmed value for validation
+    const getTrimmedValue = (v) => v ? v.trim() : ''
+
     // Form validation rules
     const questionRules = [
-      v => !!(v && v.trim()) || 'Question text is required',
-      v => (v && v.trim().length >= 3) || 'Question must be at least 3 characters',
-      v => (v && v.trim().length <= 500) || 'Question must be less than 500 characters'
+      v => !!getTrimmedValue(v) || 'Question text is required',
+      v => getTrimmedValue(v).length >= 3 || 'Question must be at least 3 characters',
+      v => getTrimmedValue(v).length <= 500 || 'Question must be less than 500 characters'
     ]
 
     const sortOrderRules = [

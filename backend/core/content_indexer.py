@@ -450,38 +450,10 @@ class ContentIndexer:
             return False
 
         def tokenize(text: str) -> List[str]:
+            from .constants import CONTENT_INDEXER_STOP_WORDS
+
             words = re.findall(r"\b[a-z]{4,}\b", text.lower())
-            stop = {
-                "this",
-                "that",
-                "with",
-                "from",
-                "they",
-                "were",
-                "been",
-                "have",
-                "will",
-                "would",
-                "could",
-                "about",
-                "there",
-                "their",
-                "which",
-                "these",
-                "those",
-                "into",
-                "your",
-                "also",
-                "some",
-                "more",
-                "such",
-                "like",
-                "when",
-                "what",
-                "where",
-                "them",
-            }
-            return [w for w in words if w not in stop]
+            return [w for w in words if w not in CONTENT_INDEXER_STOP_WORDS]
 
         def topk(tokens: List[str], k: int = 20) -> List[str]:
             freq: Dict[str, int] = {}

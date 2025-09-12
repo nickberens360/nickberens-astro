@@ -163,12 +163,6 @@ class AdminDatabaseManager:
                     "CREATE INDEX IF NOT EXISTS idx_taxonomy_hist_created ON taxonomy_settings_history(created_at DESC)"
                 )
 
-                # Migration: ensure 'note' column exists (SQLite adds harmlessly if already present)
-                try:
-                    cursor.execute("ALTER TABLE taxonomy_settings_history ADD COLUMN note TEXT")
-                except Exception:
-                    pass
-
                 # Rate limiting table for persistent storage
                 cursor.execute(
                     """

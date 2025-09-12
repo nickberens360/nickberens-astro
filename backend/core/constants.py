@@ -60,3 +60,36 @@ STOP_WORDS = {
     "have",
     "about",
 }
+
+# Extended stopwords for content indexing and tokenization
+# Used by content indexer for text analysis and similarity calculations
+CONTENT_INDEXER_STOP_WORDS = {
+    "this",
+    "that",
+    "with",
+    "from",
+    "they",
+    "were",
+    "been",
+    "have",
+    "will",
+    "would",
+    "could",
+    "about",
+    "there",
+    "their",
+    "which",
+    "these",
+    "those",
+    "into",
+    "your",
+    "also",
+    "some",
+    "more",
+    "such",
+    "like",
+    "when",
+    "what",
+    "where",
+    "them",
+}
