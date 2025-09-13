@@ -159,6 +159,10 @@ class StartupContentClassifier:
             if any(word in content_lower for word in ["project", "built", "developed", "created"]):
                 detected_topics.add("project")
 
+        # Always apply a light content-based skills detection to complement taxonomy matches
+        if any(word in content_lower for word in ["skill", "technology", "programming", "proficient"]):
+            detected_topics.add("skills")
+
         if self._detect_code_content(content):
             detected_topics.add("technical")
 
@@ -177,6 +181,10 @@ class StartupContentClassifier:
         # Ensure we have at least one topic
         if not merged:
             merged = {"general"}
+        else:
+            # If we have specific topics, drop overly-generic label
+            if "general" in merged and len(merged) > 1:
+                merged.discard("general")
 
         # Convert to sorted list for consistency
         return sorted(list(merged))

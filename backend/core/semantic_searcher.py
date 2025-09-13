@@ -13,6 +13,7 @@ import logging
 import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -175,15 +176,55 @@ class SemanticSearcher:
                 raise
 
     def _reset_store(self) -> None:
-        """Safely reset the persistent vector store directory and reinitialize."""
+        """Safely reset the persistent vector store directory with backup and audit logging."""
         try:
             persist_path = Path(self.persist_dir)
+            backup_path = None
+
             # Safety check: ensure we only ever delete within the project tree
-            if persist_path.is_dir() and str(persist_path).startswith("backend/"):
-                shutil.rmtree(persist_path, ignore_errors=True)
-                logger.warning(f"Resetting Chroma vector store due to corruption at {persist_path}")
+            if not (persist_path.is_dir() and str(persist_path).startswith("backend/")):
+                logger.error(f"Invalid persist path for reset: {persist_path}")
+                raise ValueError(f"Refusing to reset invalid path: {persist_path}")
+
+            # Create backup if data exists
+            if persist_path.exists() and any(persist_path.iterdir()):
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = persist_path.parent / f"chroma_backup_{timestamp}"
+                try:
+                    shutil.copytree(persist_path, backup_path)
+                    logger.info(f"Created backup of ChromaDB at: {backup_path}")
+                except Exception as backup_error:
+                    logger.warning(f"Failed to create backup before reset: {backup_error}")
+                    backup_path = None
+
+            # Log audit event for the reset
+            try:
+                from .audit_logger import audit_logger
+
+                audit_logger.log_system_event(
+                    event_type="chromadb_reset",
+                    details={
+                        "persist_dir": str(persist_path),
+                        "backup_created": backup_path is not None,
+                        "backup_path": str(backup_path) if backup_path else None,
+                        "reason": "Configuration error or corruption detected",
+                    },
+                    severity="high",
+                )
+            except Exception as audit_error:
+                logger.warning(f"Failed to log ChromaDB reset audit event: {audit_error}")
+
+            # Perform the reset
+            shutil.rmtree(persist_path, ignore_errors=True)
+            logger.warning(f"Reset ChromaDB vector store at {persist_path}")
+
+            # Recreate directory and reinitialize
             Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
             self._initialize_store()
+
+            # Log successful recovery
+            logger.info(f"Successfully reinitialized ChromaDB after reset")
+
         except Exception as e:
             logger.error(f"Failed to reset vector store: {e}")
             raise

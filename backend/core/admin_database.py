@@ -87,6 +87,9 @@ class AdminDatabaseManager:
     def _initialize_database(self):
         """Initialize database tables if they don't exist."""
         try:
+            # Ensure write lock exists even if __init__ was bypassed in tests
+            if not hasattr(self, "_write_lock") or self._write_lock is None:
+                self._write_lock = threading.RLock()
             with self.get_connection() as conn:
                 # Configure journal/sync for environment
                 # - On Railway/Linux production, prefer WAL for better concurrency
@@ -99,6 +102,14 @@ class AdminDatabaseManager:
                             os.getenv("RAILWAY_ENVIRONMENT_NAME")
                         )
                         desired_mode = "WAL" if is_prod else "DELETE"
+
+                    # Validate journal mode against whitelist to prevent SQL injection
+                    valid_journal_modes = {"WAL", "DELETE", "TRUNCATE", "PERSIST", "MEMORY", "OFF"}
+                    if desired_mode not in valid_journal_modes:
+                        logger.warning(f"Invalid journal mode '{desired_mode}', falling back to DELETE")
+                        desired_mode = "DELETE"
+
+                    # Use parameterized query with validated mode
                     cursor.execute(f"PRAGMA journal_mode={desired_mode};")
                     # NORMAL is a good balance with WAL; safe for DELETE too
                     cursor.execute("PRAGMA synchronous=NORMAL;")
@@ -666,13 +677,15 @@ class AdminDatabaseManager:
                         encoded_key = base64.b64encode(api_key.strip().encode()).decode()
                         last_four = api_key.strip()[-4:] if len(api_key.strip()) >= 4 else "****"
 
+                        # updated_by references admin_users.id; during first-run migrations
+                        # the admin_users table may be empty, so avoid setting a FK value
                         cursor.execute(
                             """
                             INSERT INTO api_keys 
-                            (key_name, key_type, encrypted_value, last_four, updated_by)
-                            VALUES (?, ?, ?, ?, 1)
+                            (key_name, key_type, encrypted_value, last_four, updated_at)
+                            VALUES (?, ?, ?, ?, ?)
                             """,
-                            (key_name, key_type, encoded_key, last_four),
+                            (key_name, key_type, encoded_key, last_four, datetime.now()),
                         )
 
                         migrated_count += 1
@@ -1347,20 +1360,33 @@ class AdminDatabaseManager:
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> bool:
-        """Persist a security/audit event to the dedicated security events database."""
-        try:
-            from .security_events_database import security_events_db_manager
+        """Persist a security/audit event into this manager's database.
 
-            return security_events_db_manager.record_security_event(
-                event_type,
-                identifier,
-                severity,
-                details,
-                ip_address,
-                user_agent,
-            )
+        Tests patch this manager and expect writes to go to its own connection,
+        so avoid delegating to external/global managers here.
+        """
+        try:
+            with self._write_lock:
+                with self.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        INSERT INTO security_events (event_type, identifier, details, severity, ip_address, user_agent, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            event_type,
+                            identifier,
+                            details,
+                            severity,
+                            ip_address,
+                            (user_agent[:500] if user_agent else None),
+                            datetime.now(),
+                        ),
+                    )
+                    return True
         except Exception as e:
-            logger.error(f"Error delegating security event record: {e}", exc_info=True)
+            logger.error(f"Error recording security event: {str(e)}", exc_info=True)
             return False
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:

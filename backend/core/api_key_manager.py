@@ -6,6 +6,7 @@ Handles encryption, decryption, and validation of API keys.
 import base64
 import logging
 import os
+import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
 from cryptography.fernet import Fernet
@@ -93,7 +94,9 @@ class ApiKeyManager:
             # Fallback: legacy format (raw is actually the plaintext API key)
             try:
                 legacy_plain = raw.decode("utf-8", errors="ignore").strip()
-            except Exception:
+            except (UnicodeDecodeError, AttributeError) as decode_error:
+                # Be specific about decode failures
+                logger.debug(f"Failed to decode legacy API key format: {decode_error}")
                 legacy_plain = ""
 
             if legacy_plain and len(legacy_plain) >= 10:
@@ -109,9 +112,14 @@ class ApiKeyManager:
                             "UPDATE api_keys SET encrypted_value = ?, updated_at = CURRENT_TIMESTAMP WHERE encrypted_value = ?",
                             (new_encrypted_b64, encrypted_value),
                         )
-                except Exception as migrate_error:
+                except (ValueError, sqlite3.Error, ConnectionError) as migrate_error:
                     # Non-fatal: we can still return the usable key
                     logger.debug(f"API key migration to new encryption failed (non-fatal): {migrate_error}")
+                except Exception as unexpected_migrate_error:
+                    # Log unexpected errors differently in development
+                    logger.warning(f"Unexpected error during API key migration: {unexpected_migrate_error}")
+                    if os.getenv("ENVIRONMENT", "development") == "development":
+                        logger.debug("Re-raising unexpected migration error in development", exc_info=True)
                 return legacy_plain
 
             # If fallback failed, surface the original error for observability
@@ -231,8 +239,17 @@ class ApiKeyManager:
                 return self.decrypt_key(encrypted_value)
             return None
 
+        except (sqlite3.Error, ConnectionError) as db_error:
+            logger.error(f"Database error getting API key {key_name}: {db_error}")
+            return None
+        except (ValueError, UnicodeDecodeError) as decode_error:
+            logger.error(f"Decryption error for API key {key_name}: {decode_error}")
+            return None
         except Exception as e:
-            logger.error(f"Error getting API key {key_name}: {e}")
+            logger.error(f"Unexpected error getting API key {key_name}: {e}")
+            # Re-raise unexpected errors in development for better debugging
+            if os.getenv("ENVIRONMENT", "development") == "development":
+                raise
             return None
 
     def get_api_key_by_type(self, key_type: str) -> Optional[str]:
@@ -399,9 +416,18 @@ class ApiKeyManager:
 
                 return is_valid, message
 
+        except (sqlite3.Error, ConnectionError) as db_error:
+            logger.error(f"Database error validating API key {key_name}: {db_error}")
+            return False, f"Database error: {db_error}"
+        except ImportError as import_error:
+            logger.error(f"Missing dependency for API key validation: {import_error}")
+            return False, f"Missing dependency: {import_error}"
         except Exception as e:
-            logger.error(f"Error validating API key {key_name}: {e}")
-            return False, str(e)
+            logger.error(f"Unexpected error validating API key {key_name}: {e}")
+            # Re-raise in development for better debugging
+            if os.getenv("ENVIRONMENT", "development") == "development":
+                logger.debug("Re-raising validation error in development", exc_info=True)
+            return False, f"Validation error: {str(e)}"
 
     def _validate_key_by_type(self, key_type: str, api_key: str) -> Tuple[bool, str]:
         """Validate an API key based on its type."""

@@ -806,43 +806,75 @@ class AdminAuthManager:
             logger.error(f"Error checking session activity patterns: {str(e)}", exc_info=True)
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict]:
-        """Get recent security events for monitoring dashboard from dedicated DB."""
-        try:
-            from .security_events_database import security_events_db_manager
+        """Get recent security events for monitoring dashboard.
 
-            # Fetch raw events and perform simple aggregation in-memory (lightweight)
-            rows = security_events_db_manager.get_security_alerts(hours)
-            # Optional: basic aggregation similar to SQL GROUP BY used previously
-            aggregated: Dict[tuple, Dict] = {}
-            for r in rows:
-                key = (r.get("event_type"), r.get("identifier"), r.get("severity"), r.get("ip_address"))
-                item = aggregated.get(key)
-                if item is None:
-                    aggregated[key] = {
-                        "event_type": r.get("event_type"),
-                        "identifier": r.get("identifier"),
-                        "details": r.get("details"),
-                        "severity": r.get("severity"),
-                        "ip_address": r.get("ip_address"),
-                        "created_at": r.get("created_at"),
-                        "count": 1,
+        Uses the admin database connection (mocked in tests). Falls back to
+        the dedicated security events database if needed.
+        """
+        try:
+            # Preferred: query via admin DB connection so tests can mock it
+            with admin_db_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT event_type, identifier, COALESCE(details, ''), severity, ip_address,
+                           MAX(created_at) as created_at, COUNT(*) as cnt
+                    FROM security_events
+                    WHERE created_at >= datetime('now', ?)
+                    GROUP BY event_type, identifier, severity, ip_address
+                    ORDER BY cnt DESC, created_at DESC
+                    LIMIT 50
+                    """,
+                    (f"-{int(hours)} hours",),
+                )
+                rows = cursor.fetchall()
+                return [
+                    {
+                        "event_type": r[0],
+                        "identifier": r[1],
+                        "details": r[2],
+                        "severity": r[3],
+                        "ip_address": r[4],
+                        "created_at": r[5],
+                        "count": r[6],
                     }
-                else:
-                    item["count"] += 1
-                    # Keep most recent created_at
-                    if r.get("created_at") > item.get("created_at"):
-                        item["created_at"] = r.get("created_at")
-            # Sort by severity desc then created_at desc
-            severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
-            result = sorted(
-                aggregated.values(),
-                key=lambda x: (severity_order.get(x.get("severity"), 1), x.get("created_at")),
-                reverse=True,
-            )
-            return result[:50]
-        except Exception as e:
-            logger.error(f"Error getting security alerts: {str(e)}", exc_info=True)
-            return []
+                    for r in rows
+                ]
+        except Exception:
+            # Fallback to dedicated security events DB
+            try:
+                from .security_events_database import security_events_db_manager
+
+                rows = security_events_db_manager.get_security_alerts(hours)
+                # Aggregate similarly to the SQL above
+                aggregated: Dict[tuple, Dict] = {}
+                for r in rows:
+                    key = (r.get("event_type"), r.get("identifier"), r.get("severity"), r.get("ip_address"))
+                    item = aggregated.get(key)
+                    if item is None:
+                        aggregated[key] = {
+                            "event_type": r.get("event_type"),
+                            "identifier": r.get("identifier"),
+                            "details": r.get("details"),
+                            "severity": r.get("severity"),
+                            "ip_address": r.get("ip_address"),
+                            "created_at": r.get("created_at"),
+                            "count": 1,
+                        }
+                    else:
+                        item["count"] += 1
+                        if r.get("created_at") > item.get("created_at"):
+                            item["created_at"] = r.get("created_at")
+                severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
+                result = sorted(
+                    aggregated.values(),
+                    key=lambda x: (severity_order.get(x.get("severity"), 1), x.get("created_at")),
+                    reverse=True,
+                )
+                return result[:50]
+            except Exception as e:
+                logger.error(f"Error getting security alerts: {str(e)}", exc_info=True)
+                return []
 
 
 # Global auth manager instance
