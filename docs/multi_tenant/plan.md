@@ -8,6 +8,20 @@ This plan breaks the migration into small, verifiable milestones with rollbacks 
 
 ## Milestones
 
+### M0 — SQLite → Postgres Bootstrap & Data Migration
+- Provision Postgres (version >= 14) and create target database and role(s).
+- Run Alembic R1–R2 to create global tables (`tenants`, `tenant_memberships`, `invitations`).
+- Export data from current SQLite DBs (admin, analytics, security) and import into Postgres staging tables.
+- Transform and load into final tables, adding `tenant_id` (default tenant) where needed.
+- Verify row counts, key integrity, and sample data parity; plan cutover window.
+
+Acceptance
+- Postgres contains equivalent data for all existing SQLite tables.
+- Checksums/counts match per table; application can read from Postgres in read-only test mode.
+
+Rollback
+- Keep SQLite as canonical; if validation fails, discard PG data and fix scripts before retrying.
+
 ### M1 — Schema & Policies (foundation)
 - Create core tables: `tenants`, `tenant_memberships`, `invitations`.
 - Add `tenant_id` to tenant‑scoped domain tables; backfill to a seeded `DEFAULT_TENANT`.
@@ -88,4 +102,3 @@ Acceptance
 - Breaking uniques: audit all uniques and convert to composite in M1.
 - Leaky queries: rely on RLS + ORM criteria and add linters/checks where possible.
 - Connection pooling: ensure per‑request session context sets `SET LOCAL` for each transaction.
-
