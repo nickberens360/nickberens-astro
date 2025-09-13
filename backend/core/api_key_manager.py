@@ -70,14 +70,52 @@ class ApiKeyManager:
             raise
 
     def decrypt_key(self, encrypted_value: str) -> str:
-        """Decrypt an API key."""
+        """Decrypt an API key.
+
+        Supports both new (Fernet-encrypted, base64-encoded) values and
+        legacy values that were stored as base64-encoded plaintext during
+        environment migration. If a legacy format is detected, we transparently
+        return the decoded value and attempt a best-effort in-place migration
+        to the new encryption format.
+        """
+        # First, base64-decode the stored string
         try:
-            # Decode from base64 and decrypt
-            encrypted = base64.b64decode(encrypted_value.encode("utf-8"))
-            decrypted = self.cipher.decrypt(encrypted)
-            return decrypted.decode("utf-8")
+            raw = base64.b64decode(encrypted_value.encode("utf-8"))
         except Exception as e:
-            logger.error(f"Error decrypting API key: {e}")
+            logger.error(f"Error base64-decoding stored API key value: {e}")
+            raise
+
+        # Attempt Fernet decryption (new format)
+        try:
+            decrypted = self.cipher.decrypt(raw)
+            return decrypted.decode("utf-8")
+        except Exception as fernet_error:
+            # Fallback: legacy format (raw is actually the plaintext API key)
+            try:
+                legacy_plain = raw.decode("utf-8", errors="ignore").strip()
+            except Exception:
+                legacy_plain = ""
+
+            if legacy_plain and len(legacy_plain) >= 10:
+                logger.warning("Detected legacy base64-only API key format; using decoded value and migrating")
+                # Attempt one-shot in-place migration to new encrypted format
+                try:
+                    new_encrypted_b64, _last_four = self.encrypt_key(legacy_plain)
+                    from .admin_database import admin_db_manager  # local import to avoid cycles at module import
+
+                    with admin_db_manager.get_connection() as conn:
+                        cur = conn.cursor()
+                        cur.execute(
+                            "UPDATE api_keys SET encrypted_value = ?, updated_at = CURRENT_TIMESTAMP WHERE encrypted_value = ?",
+                            (new_encrypted_b64, encrypted_value),
+                        )
+                except Exception as migrate_error:
+                    # Non-fatal: we can still return the usable key
+                    logger.debug(f"API key migration to new encryption failed (non-fatal): {migrate_error}")
+                return legacy_plain
+
+            # If fallback failed, surface the original error for observability
+            logger.error(f"Error decrypting API key with Fernet: {fernet_error}")
             raise
 
     def create_api_key(self, key_name: str, key_type: str, api_key: str, updated_by: int) -> Dict[str, Any]:
