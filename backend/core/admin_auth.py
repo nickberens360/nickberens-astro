@@ -4,6 +4,7 @@ Migrated from admin/backend/auth.py with improvements.
 """
 
 import logging
+import sqlite3
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -840,8 +841,9 @@ class AdminAuthManager:
                     }
                     for r in rows
                 ]
-        except Exception:
-            # Fallback to dedicated security events DB
+        except (sqlite3.Error, ConnectionError) as db_error:
+            # Fallback to dedicated security events DB on database connection issues
+            logger.debug(f"Admin DB connection failed for security alerts, using fallback: {db_error}")
             try:
                 from .security_events_database import security_events_db_manager
 

@@ -120,6 +120,7 @@ class ApiKeyManager:
                     logger.warning(f"Unexpected error during API key migration: {unexpected_migrate_error}")
                     if os.getenv("ENVIRONMENT", "development") == "development":
                         logger.debug("Re-raising unexpected migration error in development", exc_info=True)
+                        raise
                 return legacy_plain
 
             # If fallback failed, surface the original error for observability
@@ -427,6 +428,7 @@ class ApiKeyManager:
             # Re-raise in development for better debugging
             if os.getenv("ENVIRONMENT", "development") == "development":
                 logger.debug("Re-raising validation error in development", exc_info=True)
+                raise
             return False, f"Validation error: {str(e)}"
 
     def _validate_key_by_type(self, key_type: str, api_key: str) -> Tuple[bool, str]:

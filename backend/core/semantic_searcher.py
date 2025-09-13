@@ -218,12 +218,11 @@ class SemanticSearcher:
             shutil.rmtree(persist_path, ignore_errors=True)
             logger.warning(f"Reset ChromaDB vector store at {persist_path}")
 
-            # Recreate directory and reinitialize
+            # Recreate directory (reinitialize will be handled by caller)
             Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-            self._initialize_store()
 
-            # Log successful recovery
-            logger.info(f"Successfully reinitialized ChromaDB after reset")
+            # Log successful reset
+            logger.info(f"Successfully reset ChromaDB directory")
 
         except Exception as e:
             logger.error(f"Failed to reset vector store: {e}")
