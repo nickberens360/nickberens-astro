@@ -8,6 +8,7 @@ This module provides focused functionality for:
 - LangChain retriever interface compatibility
 """
 
+import json
 import logging
 import os
 import shutil
@@ -109,7 +110,36 @@ class SemanticSearcher:
         if not documents or self.vector_store is None:
             return
         try:
-            self.vector_store.add_documents(documents)
+            # Chroma only accepts primitive metadata types. Sanitize before upsert.
+            sanitized_docs: List[Document] = []
+
+            def _sanitize_metadata(meta: Dict[str, Any]) -> Dict[str, Union[str, int, float, bool, None]]:
+                compatible: Dict[str, Union[str, int, float, bool, None]] = {}
+                for k, v in (meta or {}).items():
+                    # Allow primitives as-is
+                    if isinstance(v, (str, int, float, bool)) or v is None:
+                        compatible[k] = v
+                        continue
+                    # Convert lists to comma-separated strings when simple, else JSON
+                    if isinstance(v, list):
+                        if all(isinstance(x, (str, int, float, bool)) or x is None for x in v):
+                            compatible[k] = ",".join(str(x) for x in v if x is not None)
+                        else:
+                            compatible[k] = json.dumps(v, ensure_ascii=False)
+                        continue
+                    # Convert dicts and other complex types to JSON or string
+                    if isinstance(v, dict):
+                        compatible[k] = json.dumps(v, ensure_ascii=False)
+                    else:
+                        compatible[k] = str(v)
+                return compatible
+
+            for doc in documents:
+                sanitized_meta = _sanitize_metadata(doc.metadata)
+                # Reuse the same content, replace metadata with sanitized version
+                sanitized_docs.append(Document(page_content=doc.page_content, metadata=sanitized_meta))
+
+            self.vector_store.add_documents(sanitized_docs)
             logger.info(f"Added {len(documents)} documents to vector store")
         except Exception as e:
             # Detect malformed underlying DB and auto-recover when allowed
