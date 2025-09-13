@@ -54,6 +54,33 @@ class SemanticSearcher:
         self.vector_store: Optional[Chroma] = None
         self._initialize_store()
 
+    @staticmethod
+    def _sanitize_metadata(meta: Dict[str, Any]) -> Dict[str, Union[str, int, float, bool, None]]:
+        """Sanitize metadata to ensure compatibility with ChromaDB's primitive type requirements.
+
+        ChromaDB only accepts str, int, float, bool, or None as metadata values.
+        This method converts complex types (lists, dicts) to JSON strings for robust storage.
+
+        Args:
+            meta: Raw metadata dictionary that may contain complex types
+
+        Returns:
+            Sanitized metadata dictionary with only primitive types
+        """
+        compatible: Dict[str, Union[str, int, float, bool, None]] = {}
+        for k, v in (meta or {}).items():
+            # Allow primitives as-is
+            if isinstance(v, (str, int, float, bool)) or v is None:
+                compatible[k] = v
+                continue
+            # Convert lists and dicts to JSON strings for robust storage
+            if isinstance(v, (list, dict)):
+                compatible[k] = json.dumps(v, ensure_ascii=False)
+                continue
+            # Fallback for other non-primitive types
+            compatible[k] = str(v)
+        return compatible
+
     def _get_rag_config_settings(self):
         """Get RAG configuration settings dynamically from the settings manager."""
         if not SETTINGS_MANAGER_AVAILABLE:
@@ -112,30 +139,8 @@ class SemanticSearcher:
         try:
             # Chroma only accepts primitive metadata types. Sanitize before upsert.
             sanitized_docs: List[Document] = []
-
-            def _sanitize_metadata(meta: Dict[str, Any]) -> Dict[str, Union[str, int, float, bool, None]]:
-                compatible: Dict[str, Union[str, int, float, bool, None]] = {}
-                for k, v in (meta or {}).items():
-                    # Allow primitives as-is
-                    if isinstance(v, (str, int, float, bool)) or v is None:
-                        compatible[k] = v
-                        continue
-                    # Convert lists to comma-separated strings when simple, else JSON
-                    if isinstance(v, list):
-                        if all(isinstance(x, (str, int, float, bool)) or x is None for x in v):
-                            compatible[k] = ",".join(str(x) for x in v if x is not None)
-                        else:
-                            compatible[k] = json.dumps(v, ensure_ascii=False)
-                        continue
-                    # Convert dicts and other complex types to JSON or string
-                    if isinstance(v, dict):
-                        compatible[k] = json.dumps(v, ensure_ascii=False)
-                    else:
-                        compatible[k] = str(v)
-                return compatible
-
             for doc in documents:
-                sanitized_meta = _sanitize_metadata(doc.metadata)
+                sanitized_meta = self._sanitize_metadata(doc.metadata)
                 # Reuse the same content, replace metadata with sanitized version
                 sanitized_docs.append(Document(page_content=doc.page_content, metadata=sanitized_meta))
 
@@ -308,7 +313,8 @@ class SemanticSearcher:
             filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
         logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
 
-        # Apply additional post-filter by semantic similarity threshold if provided (convert distance to pseudo-similarity)
+        # Apply additional post-filter by semantic similarity threshold if provided
+        # (convert distance to pseudo-similarity)
         # We map distance d to similarity s = 1 / (1 + d), ensuring s in (0,1].
         try:
             if sr_settings and getattr(sr_settings, "semantic_similarity_threshold", None) is not None:
@@ -507,8 +513,9 @@ class SemanticSearcher:
             return False
 
         try:
-            # Use the public update method
-            self.vector_store._collection.update(ids=[document_id], metadatas=[metadata])
+            # Use the standardized sanitization for consistent metadata handling
+            sanitized_metadata = self._sanitize_metadata(metadata)
+            self.vector_store._collection.update(ids=[document_id], metadatas=[sanitized_metadata])
             return True
         except Exception as e:
             logger.error(f"Error updating document metadata for {document_id}: {e}")
@@ -561,19 +568,8 @@ class SemanticSearcher:
             return False
 
         try:
-            # Convert metadata to compatible format for ChromaDB
-            compatible_metadatas: List[Dict[str, Union[str, int, float, bool, None]]] = []
-            for metadata in metadatas:
-                compatible_metadata: Dict[str, Union[str, int, float, bool, None]] = {}
-                for key, value in metadata.items():
-                    # ChromaDB only accepts str, int, float, bool, or None values
-                    if isinstance(value, (str, int, float, bool)) or value is None:
-                        compatible_metadata[key] = value
-                    else:
-                        # Convert other types to string
-                        compatible_metadata[key] = str(value)
-                compatible_metadatas.append(compatible_metadata)
-
+            # Use the standardized sanitization for consistent metadata handling
+            compatible_metadatas = [self._sanitize_metadata(metadata) for metadata in metadatas]
             self.vector_store._collection.update(ids=document_ids, metadatas=compatible_metadatas)  # type: ignore
             return True
         except Exception as e:
