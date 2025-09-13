@@ -90,21 +90,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Permissions-Policy - Disable unnecessary browser features
         response.headers["Permissions-Policy"] = (
-            "geolocation=(), "
-            "microphone=(), "
-            "camera=(), "
-            "payment=(), "
-            "usb=(), "
-            "magnetometer=(), "
-            "accelerometer=(), "
-            "gyroscope=()"
+            "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()"
         )
 
         # Server header removal/modification
         response.headers["Server"] = "Admin-Backend/1.0"
 
-        # Cache control for sensitive endpoints
-        if request.url.path.startswith("/admin/api/"):
+        # Cache control for sensitive endpoints (admin API)
+        if request.url.path.startswith("/api/admin/"):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"

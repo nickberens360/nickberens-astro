@@ -4,9 +4,9 @@
       <v-btn
         color="primary"
         prepend-icon="$refresh"
-        @click="loadDocuments"
         :loading="loadingDocuments"
         variant="outlined"
+        @click="loadDocuments"
       >
         Refresh
       </v-btn>
@@ -15,9 +15,11 @@
     <!-- Indexed Documents Section -->
     <v-card>
       <v-card-title class="text-h6 d-flex align-center">
-        <v-icon class="me-2">$search</v-icon>
+        <v-icon class="me-2">
+          $search
+        </v-icon>
         Indexed Documents
-        <v-spacer></v-spacer>
+        <v-spacer />
         <v-text-field
           v-model="documentSearch"
           density="compact"
@@ -26,14 +28,14 @@
           hide-details
           class="me-2"
           style="max-width: 300px"
-        ></v-text-field>
+        />
         <v-btn
           icon="$refresh"
           variant="text"
           size="small"
-          @click="loadDocuments"
           :loading="loadingDocuments"
-        ></v-btn>
+          @click="loadDocuments"
+        />
       </v-card-title>
       <v-card-text class="pa-0">
         <v-data-table
@@ -43,20 +45,28 @@
           :search="documentSearch"
           item-key="id"
           :items-per-page="15"
-          @click:row="openDocumentDialog"
           hover
+          @click:row="openDocumentDialog"
         >
-          <template v-slot:item.source="{ item }">
-            <div class="text-truncate" style="max-width: 300px" :title="item.source">
+          <template #[`item.source`]="{ item }">
+            <div
+              class="text-truncate"
+              style="max-width: 300px"
+              :title="item.source"
+            >
               {{ item.source }}
             </div>
           </template>
-          <template v-slot:item.content_preview="{ item }">
-            <div class="text-truncate text-body-2" style="max-width: 400px" :title="item.content_preview">
+          <template #[`item.content_preview`]="{ item }">
+            <div
+              class="text-truncate text-body-2"
+              style="max-width: 400px"
+              :title="item.content_preview"
+            >
               {{ item.content_preview }}
             </div>
           </template>
-          <template v-slot:item.metadata="{ item }">
+          <template #[`item.metadata`]="{ item }">
             <v-chip
               v-for="type in getContentTypes(item.metadata)"
               :key="type"
@@ -67,7 +77,7 @@
               {{ type }}
             </v-chip>
           </template>
-          <template v-slot:item.word_count="{ item }">
+          <template #[`item.word_count`]="{ item }">
             <span class="text-body-2">{{ item.word_count }} words</span>
           </template>
         </v-data-table>
@@ -80,16 +90,29 @@
       max-width="900px"
       scrollable
     >
-      <v-card v-if="selectedDocument" class="dialog-card" elevation="8">
+      <v-card
+        v-if="selectedDocument"
+        class="dialog-card"
+        elevation="8"
+      >
         <v-card-title class="dialog-header pa-6">
           <div class="d-flex align-center">
-            <v-icon class="me-3" color="primary">$document</v-icon>
+            <v-icon
+              class="me-3"
+              color="primary"
+            >
+              $document
+            </v-icon>
             <div>
-              <h2 class="text-h6 font-weight-bold">Document Details</h2>
-              <p class="text-body-2 text-medium-emphasis ma-0">View indexed document information</p>
+              <h2 class="text-h6 font-weight-bold">
+                Document Details
+              </h2>
+              <p class="text-body-2 text-medium-emphasis ma-0">
+                View indexed document information
+              </p>
             </div>
           </div>
-          <v-spacer/>
+          <v-spacer />
           <v-btn
             icon="$close"
             variant="text"
@@ -98,134 +121,223 @@
           />
         </v-card-title>
 
-        <v-divider class="border-opacity-25"/>
+        <v-divider class="border-opacity-25" />
 
-        <v-card-text class="pa-6" style="max-height: 70vh;">
-            <!-- Basic Information -->
-            <div class="mb-6">
-              <h3 class="text-h7 font-weight-bold mb-4 text-primary">Basic Information</h3>
-              <v-card variant="outlined" class="pa-4 rounded-lg">
-                <v-row no-gutters>
-                  <v-col cols="12" sm="6" class="pa-2">
-                    <div class="metric-item">
-                      <v-label class="text-caption text-medium-emphasis mb-1">Document ID</v-label>
-                      <div class="text-body-2 font-mono">{{ selectedDocument.id }}</div>
+        <v-card-text
+          class="pa-6"
+          style="max-height: 70vh;"
+        >
+          <!-- Basic Information -->
+          <div class="mb-6">
+            <h3 class="text-h7 font-weight-bold mb-4 text-primary">
+              Basic Information
+            </h3>
+            <v-card
+              variant="outlined"
+              class="pa-4 rounded-lg"
+            >
+              <v-row no-gutters>
+                <v-col
+                  cols="12"
+                  sm="6"
+                  class="pa-2"
+                >
+                  <div class="metric-item">
+                    <v-label class="text-caption text-medium-emphasis mb-1">
+                      Document ID
+                    </v-label>
+                    <div class="text-body-2 font-mono">
+                      {{ selectedDocument.id }}
                     </div>
-                  </v-col>
-                  <v-col cols="12" sm="6" class="pa-2">
-                    <div class="metric-item">
-                      <v-label class="text-caption text-medium-emphasis mb-1">Word Count</v-label>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDocument.word_count }} words</div>
+                  </div>
+                </v-col>
+                <v-col
+                  cols="12"
+                  sm="6"
+                  class="pa-2"
+                >
+                  <div class="metric-item">
+                    <v-label class="text-caption text-medium-emphasis mb-1">
+                      Word Count
+                    </v-label>
+                    <div class="text-body-2 font-weight-medium">
+                      {{ selectedDocument.word_count }} words
                     </div>
-                  </v-col>
-                  <v-col cols="12" class="pa-2">
-                    <div class="metric-item">
-                      <v-label class="text-caption text-medium-emphasis mb-1">Source</v-label>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDocument.source }}</div>
+                  </div>
+                </v-col>
+                <v-col
+                  cols="12"
+                  class="pa-2"
+                >
+                  <div class="metric-item">
+                    <v-label class="text-caption text-medium-emphasis mb-1">
+                      Source
+                    </v-label>
+                    <div class="text-body-2 font-weight-medium">
+                      {{ selectedDocument.source }}
                     </div>
-                  </v-col>
-                </v-row>
-              </v-card>
-            </div>
+                  </div>
+                </v-col>
+              </v-row>
+            </v-card>
+          </div>
 
-            <!-- Content Types -->
-            <div class="mb-6" v-if="selectedDocument.metadata && selectedDocument.metadata.content_types">
-              <h3 class="text-h7 font-weight-bold mb-4 text-primary">Content Types</h3>
-              <v-card variant="outlined" class="pa-4 rounded-lg">
-                <div class="d-flex flex-wrap gap-2">
-                  <v-chip
-                    v-for="type in getContentTypes(selectedDocument.metadata)"
-                    :key="type"
-                    :color="getContentTypeColor(type)"
-                    size="small"
-                    variant="tonal"
-                  >
-                    {{ type }}
-                  </v-chip>
-                </div>
-              </v-card>
-            </div>
+          <!-- Content Types -->
+          <div
+            v-if="selectedDocument.metadata && selectedDocument.metadata.content_types"
+            class="mb-6"
+          >
+            <h3 class="text-h7 font-weight-bold mb-4 text-primary">
+              Content Types
+            </h3>
+            <v-card
+              variant="outlined"
+              class="pa-4 rounded-lg"
+            >
+              <div class="d-flex flex-wrap gap-2">
+                <v-chip
+                  v-for="type in getContentTypes(selectedDocument.metadata)"
+                  :key="type"
+                  :color="getContentTypeColor(type)"
+                  size="small"
+                  variant="tonal"
+                >
+                  {{ type }}
+                </v-chip>
+              </div>
+            </v-card>
+          </div>
 
-            <!-- Metadata -->
-            <div class="mb-6" v-if="selectedDocument.metadata">
-              <h3 class="text-h7 font-weight-bold mb-4 text-primary">Metadata</h3>
-              <v-card variant="outlined" class="pa-4 rounded-lg">
-                <v-row no-gutters>
-                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.file_name">
-                    <div class="metric-item">
-                      <v-label class="text-caption text-medium-emphasis mb-1">File Name</v-label>
-                      <div class="text-body-2">{{ selectedDocument.metadata.file_name }}</div>
+          <!-- Metadata -->
+          <div
+            v-if="selectedDocument.metadata"
+            class="mb-6"
+          >
+            <h3 class="text-h7 font-weight-bold mb-4 text-primary">
+              Metadata
+            </h3>
+            <v-card
+              variant="outlined"
+              class="pa-4 rounded-lg"
+            >
+              <v-row no-gutters>
+                <v-col
+                  v-if="selectedDocument.metadata.file_name"
+                  cols="12"
+                  sm="6"
+                  class="pa-2"
+                >
+                  <div class="metric-item">
+                    <v-label class="text-caption text-medium-emphasis mb-1">
+                      File Name
+                    </v-label>
+                    <div class="text-body-2">
+                      {{ selectedDocument.metadata.file_name }}
                     </div>
-                  </v-col>
-                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.file_type">
-                    <div class="metric-item">
-                      <v-label class="text-caption text-medium-emphasis mb-1">File Type</v-label>
-                      <div class="text-body-2">{{ selectedDocument.metadata.file_type }}</div>
+                  </div>
+                </v-col>
+                <v-col
+                  v-if="selectedDocument.metadata.file_type"
+                  cols="12"
+                  sm="6"
+                  class="pa-2"
+                >
+                  <div class="metric-item">
+                    <v-label class="text-caption text-medium-emphasis mb-1">
+                      File Type
+                    </v-label>
+                    <div class="text-body-2">
+                      {{ selectedDocument.metadata.file_type }}
                     </div>
-                  </v-col>
-                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.content_length">
-                    <div class="metric-item">
-                      <v-label class="text-caption text-medium-emphasis mb-1">Content Length</v-label>
-                      <div class="text-body-2">{{ selectedDocument.metadata.content_length }} characters</div>
+                  </div>
+                </v-col>
+                <v-col
+                  v-if="selectedDocument.metadata.content_length"
+                  cols="12"
+                  sm="6"
+                  class="pa-2"
+                >
+                  <div class="metric-item">
+                    <v-label class="text-caption text-medium-emphasis mb-1">
+                      Content Length
+                    </v-label>
+                    <div class="text-body-2">
+                      {{ selectedDocument.metadata.content_length }} characters
                     </div>
-                  </v-col>
-                  <v-col cols="12" sm="6" class="pa-2" v-if="selectedDocument.metadata.hasOwnProperty('has_code')">
-                    <div class="metric-item">
-                      <v-label class="text-caption text-medium-emphasis mb-1">Contains Code</v-label>
-                      <div class="text-body-2">
-                        <v-chip
-                          :color="selectedDocument.metadata.has_code ? 'success' : 'default'"
-                          size="x-small"
-                          variant="flat"
-                        >
-                          {{ selectedDocument.metadata.has_code ? 'Yes' : 'No' }}
-                        </v-chip>
-                      </div>
+                  </div>
+                </v-col>
+                <v-col
+                  v-if="selectedDocument.metadata.hasOwnProperty('has_code')"
+                  cols="12"
+                  sm="6"
+                  class="pa-2"
+                >
+                  <div class="metric-item">
+                    <v-label class="text-caption text-medium-emphasis mb-1">
+                      Contains Code
+                    </v-label>
+                    <div class="text-body-2">
+                      <v-chip
+                        :color="selectedDocument.metadata.has_code ? 'success' : 'default'"
+                        size="x-small"
+                        variant="flat"
+                      >
+                        {{ selectedDocument.metadata.has_code ? 'Yes' : 'No' }}
+                      </v-chip>
                     </div>
-                  </v-col>
-                </v-row>
-              </v-card>
-            </div>
+                  </div>
+                </v-col>
+              </v-row>
+            </v-card>
+          </div>
 
-            <!-- Full Content -->
-            <div class="mb-6">
-              <h3 class="text-h7 font-weight-bold mb-4 text-primary d-flex align-center">
-                <v-icon class="me-2" color="primary">$text</v-icon>
-                Full Content
-                <v-progress-circular
-                  v-if="loadingFullContent"
-                  indeterminate
-                  size="20"
-                  width="2"
-                  class="ml-3"
-                  color="primary"
-                />
-              </h3>
-              <v-card variant="outlined" class="rounded-lg overflow-hidden">
-                <v-textarea
-                  :model-value="loadingFullContent ? 'Loading full content...' : fullDocumentContent"
-                  readonly
-                  variant="plain"
-                  rows="15"
-                  auto-grow
-                  no-resize
-                  :loading="loadingFullContent"
-                  :class="{'monospace-content': selectedDocument?.metadata?.has_code}"
-                  class="pa-4"
-                />
-              </v-card>
-            </div>
+          <!-- Full Content -->
+          <div class="mb-6">
+            <h3 class="text-h7 font-weight-bold mb-4 text-primary d-flex align-center">
+              <v-icon
+                class="me-2"
+                color="primary"
+              >
+                $text
+              </v-icon>
+              Full Content
+              <v-progress-circular
+                v-if="loadingFullContent"
+                indeterminate
+                size="20"
+                width="2"
+                class="ml-3"
+                color="primary"
+              />
+            </h3>
+            <v-card
+              variant="outlined"
+              class="rounded-lg overflow-hidden"
+            >
+              <v-textarea
+                :model-value="loadingFullContent ? 'Loading full content...' : fullDocumentContent"
+                readonly
+                variant="plain"
+                rows="15"
+                auto-grow
+                no-resize
+                :loading="loadingFullContent"
+                :class="{'monospace-content': selectedDocument?.metadata?.has_code}"
+                class="pa-4"
+              />
+            </v-card>
+          </div>
         </v-card-text>
 
-        <v-divider class="border-opacity-25"/>
+        <v-divider class="border-opacity-25" />
 
         <v-card-actions class="pa-6">
-          <v-spacer/>
+          <v-spacer />
           <v-btn
             prepend-icon="$close"
             variant="outlined"
-            @click="closeDocumentDialog"
             class="rounded-lg"
+            @click="closeDocumentDialog"
           >
             Close
           </v-btn>

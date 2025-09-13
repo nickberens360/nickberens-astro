@@ -46,7 +46,7 @@ Here's where the browser design analogy really shines. After I've found a direct
 
 ### From Rough to Refined
 
-Just as I'd take a promising browser sketch and rebuild it properly—with clean code, proper architecture, and attention to detail—I do the same with AI-generated content:
+Just as I'd take a promising browser sketch and rebuild it properly with clean code, proper architecture, and attention to detail, I do the same with AI-generated content:
 
 - **Structure and organize**: Take the scattered ideas and arrange them logically
 - **Add my voice**: Inject my perspective, experience, and unique insights

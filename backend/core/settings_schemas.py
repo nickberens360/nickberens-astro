@@ -18,6 +18,7 @@ class FollowUpSettings:
     enabled: bool = True
     service_type: str = "static"  # static, dynamic, contextual
     max_questions: int = 1
+    # New: threshold (0.1..1.0) to bias follow-up generation relevance
     relevance_threshold: float = 0.7
     include_technical: bool = True
     include_personal: bool = True
@@ -55,14 +56,14 @@ class FollowUpSettings:
         # Ensure max_questions is within reasonable bounds
         validated_data["max_questions"] = max(1, min(5, validated_data["max_questions"]))
 
-        if not isinstance(validated_data["relevance_threshold"], float):
+        # Validate relevance_threshold
+        if not isinstance(validated_data.get("relevance_threshold"), (int, float)):
             try:
-                validated_data["relevance_threshold"] = float(validated_data["relevance_threshold"])
+                validated_data["relevance_threshold"] = float(validated_data.get("relevance_threshold"))
             except (ValueError, TypeError):
                 validated_data["relevance_threshold"] = defaults.relevance_threshold
-
-        # Ensure relevance_threshold is within bounds
-        validated_data["relevance_threshold"] = max(0.1, min(1.0, validated_data["relevance_threshold"]))
+        # Bound to 0.1..1.0
+        validated_data["relevance_threshold"] = max(0.1, min(1.0, float(validated_data["relevance_threshold"])))
 
         # Validate service_type
         valid_service_types = ["static", "dynamic", "contextual"]
@@ -115,16 +116,20 @@ class FollowUpSettings:
 
 @dataclass
 class ResponseSettings:
-    """Configuration for response generation behavior."""
+    """Configuration for response generation and caching behavior."""
 
-    # Context and caching settings (existing)
+    # Context settings
     max_context_length: int = 2000
     max_context_documents: int = 3
     context_fill_ratio: float = 0.7
-    enable_caching: bool = True
-    cache_ttl_seconds: int = 3600
 
-    # Response generation settings (new)
+    # Caching settings (consolidated from multiple schemas)
+    enable_caching: bool = True  # General caching toggle
+    enable_response_caching: bool = True  # Specific response caching
+    cache_ttl_seconds: int = 3600  # Unified cache TTL
+    response_cache_ttl_seconds: int = 3600  # Legacy field for backward compatibility
+
+    # Response generation settings
     preferred_response_length: str = "medium"  # brief, medium, detailed, comprehensive
     response_style: str = "conversational"  # professional, conversational, technical, casual
     include_sources: bool = True
@@ -133,9 +138,11 @@ class ResponseSettings:
     enable_markdown: bool = True
     enable_code_highlighting: bool = True
 
-    # Smart model selection settings (new)
+    # Response model selection (moved from system settings)
     response_llm: str = "claude"  # claude, gemini
-    enable_smart_selection: bool = True  # Enable smart model selection within family
+    response_claude_model: str = "claude-3-5-sonnet-20241022"
+    response_gemini_model: str = "gemini-1.5-flash"
+    enable_smart_selection: bool = True  # Allow complexity-based model switching
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -184,6 +191,7 @@ class ResponseSettings:
         # Validate boolean fields
         for bool_field in [
             "enable_caching",
+            "enable_response_caching",
             "include_sources",
             "enable_markdown",
             "enable_code_highlighting",
@@ -192,14 +200,28 @@ class ResponseSettings:
             if not isinstance(validated_data[bool_field], bool):
                 validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
 
-        # Validate cache_ttl_seconds
-        if not isinstance(validated_data["cache_ttl_seconds"], int):
-            try:
-                validated_data["cache_ttl_seconds"] = int(validated_data["cache_ttl_seconds"])
-            except (ValueError, TypeError):
-                validated_data["cache_ttl_seconds"] = defaults.cache_ttl_seconds
+        # Validate cache TTL seconds (unified and legacy fields)
+        for ttl_field in ["cache_ttl_seconds", "response_cache_ttl_seconds"]:
+            if not isinstance(validated_data[ttl_field], int):
+                try:
+                    validated_data[ttl_field] = int(validated_data[ttl_field])
+                except (ValueError, TypeError):
+                    validated_data[ttl_field] = getattr(defaults, ttl_field)
+            validated_data[ttl_field] = max(60, min(86400, validated_data[ttl_field]))
 
-        validated_data["cache_ttl_seconds"] = max(60, min(86400, validated_data["cache_ttl_seconds"]))
+        # Validate response LLM settings
+        valid_llms = ["claude", "gemini"]
+        if validated_data["response_llm"] not in valid_llms:
+            validated_data["response_llm"] = "claude"
+
+        # Validate model selections
+        valid_claude_models = ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]
+        if validated_data["response_claude_model"] not in valid_claude_models:
+            validated_data["response_claude_model"] = defaults.response_claude_model
+
+        valid_gemini_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+        if validated_data["response_gemini_model"] not in valid_gemini_models:
+            validated_data["response_gemini_model"] = defaults.response_gemini_model
 
         # Validate response length preference
         valid_lengths = ["brief", "medium", "detailed", "comprehensive"]
@@ -224,11 +246,6 @@ class ResponseSettings:
                 validated_data["max_sources"] = defaults.max_sources
 
         validated_data["max_sources"] = max(0, min(20, validated_data["max_sources"]))
-
-        # Validate response_llm preference
-        valid_llms = ["claude", "gemini"]
-        if validated_data["response_llm"] not in valid_llms:
-            validated_data["response_llm"] = "claude"
 
         return cls(**validated_data)
 
@@ -259,18 +276,20 @@ class QueryRoutingSettings:
     )
 
     # Caching configuration
-    enable_caching: bool = True
-    cache_ttl_seconds: int = 300  # 5 minutes
+    enable_query_caching: bool = True
+    query_cache_ttl_seconds: int = 300  # 5 minutes
+    enable_caching: bool = True  # Legacy alias for enable_query_caching
+    cache_ttl_seconds: int = 300  # Legacy alias for query_cache_ttl_seconds
 
     # Processing configuration
     enable_parallel_processing: bool = True
     max_retries: int = 3
 
-    # Search configuration (existing)
-    similarity_threshold: float = 0.3
-    max_search_results: int = 15
+    # Search configuration
     enable_fuzzy_matching: bool = True
-    fuzzy_threshold: float = 0.7
+    similarity_threshold: float = 0.5
+    fuzzy_threshold: float = 0.6
+    max_search_results: int = 10
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -292,60 +311,56 @@ class QueryRoutingSettings:
         for bool_field in [
             "enable_smart_routing",
             "enable_fuzzy_matching",
-            "enable_caching",
+            "enable_query_caching",
             "enable_parallel_processing",
+            "enable_caching",
         ]:
             if not isinstance(validated_data[bool_field], bool):
                 validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
-
-        # Validate similarity_threshold
-        if not isinstance(validated_data["similarity_threshold"], float):
-            try:
-                validated_data["similarity_threshold"] = float(validated_data["similarity_threshold"])
-            except (ValueError, TypeError):
-                validated_data["similarity_threshold"] = defaults.similarity_threshold
-
-        validated_data["similarity_threshold"] = max(0.0, min(1.0, validated_data["similarity_threshold"]))
-
-        # Validate max_search_results
-        if not isinstance(validated_data["max_search_results"], int):
-            try:
-                validated_data["max_search_results"] = int(validated_data["max_search_results"])
-            except (ValueError, TypeError):
-                validated_data["max_search_results"] = defaults.max_search_results
-
-        validated_data["max_search_results"] = max(1, min(100, validated_data["max_search_results"]))
-
-        # Validate fuzzy_threshold
-        if not isinstance(validated_data["fuzzy_threshold"], float):
-            try:
-                validated_data["fuzzy_threshold"] = float(validated_data["fuzzy_threshold"])
-            except (ValueError, TypeError):
-                validated_data["fuzzy_threshold"] = defaults.fuzzy_threshold
-
-        validated_data["fuzzy_threshold"] = max(0.0, min(1.0, validated_data["fuzzy_threshold"]))
-
-        # Validate confidence_threshold
-        if not isinstance(validated_data["confidence_threshold"], float):
-            try:
-                validated_data["confidence_threshold"] = float(validated_data["confidence_threshold"])
-            except (ValueError, TypeError):
-                validated_data["confidence_threshold"] = defaults.confidence_threshold
-
-        validated_data["confidence_threshold"] = max(0.0, min(1.0, validated_data["confidence_threshold"]))
 
         # Validate fallback_strategy
         valid_strategies = ["comprehensive_search", "semantic_similarity", "keyword_matching", "default_response"]
         if validated_data["fallback_strategy"] not in valid_strategies:
             validated_data["fallback_strategy"] = "comprehensive_search"
 
-        # Validate cache_ttl_seconds
+        # Validate confidence_threshold
+        if not isinstance(validated_data["confidence_threshold"], (int, float)):
+            try:
+                validated_data["confidence_threshold"] = float(validated_data["confidence_threshold"])
+            except (ValueError, TypeError):
+                validated_data["confidence_threshold"] = defaults.confidence_threshold
+        validated_data["confidence_threshold"] = max(0.0, min(1.0, validated_data["confidence_threshold"]))
+
+        # Validate similarity_threshold
+        if not isinstance(validated_data["similarity_threshold"], (int, float)):
+            try:
+                validated_data["similarity_threshold"] = float(validated_data["similarity_threshold"])
+            except (ValueError, TypeError):
+                validated_data["similarity_threshold"] = defaults.similarity_threshold
+        validated_data["similarity_threshold"] = max(0.0, min(1.0, validated_data["similarity_threshold"]))
+
+        # Validate fuzzy_threshold
+        if not isinstance(validated_data["fuzzy_threshold"], (int, float)):
+            try:
+                validated_data["fuzzy_threshold"] = float(validated_data["fuzzy_threshold"])
+            except (ValueError, TypeError):
+                validated_data["fuzzy_threshold"] = defaults.fuzzy_threshold
+        validated_data["fuzzy_threshold"] = max(0.0, min(1.0, validated_data["fuzzy_threshold"]))
+
+        # Validate query_cache_ttl_seconds
+        if not isinstance(validated_data["query_cache_ttl_seconds"], int):
+            try:
+                validated_data["query_cache_ttl_seconds"] = int(validated_data["query_cache_ttl_seconds"])
+            except (ValueError, TypeError):
+                validated_data["query_cache_ttl_seconds"] = defaults.query_cache_ttl_seconds
+        validated_data["query_cache_ttl_seconds"] = max(60, min(3600, validated_data["query_cache_ttl_seconds"]))
+
+        # Validate cache_ttl_seconds (legacy alias)
         if not isinstance(validated_data["cache_ttl_seconds"], int):
             try:
                 validated_data["cache_ttl_seconds"] = int(validated_data["cache_ttl_seconds"])
             except (ValueError, TypeError):
                 validated_data["cache_ttl_seconds"] = defaults.cache_ttl_seconds
-
         validated_data["cache_ttl_seconds"] = max(60, min(3600, validated_data["cache_ttl_seconds"]))
 
         # Validate max_retries
@@ -354,8 +369,15 @@ class QueryRoutingSettings:
                 validated_data["max_retries"] = int(validated_data["max_retries"])
             except (ValueError, TypeError):
                 validated_data["max_retries"] = defaults.max_retries
-
         validated_data["max_retries"] = max(0, min(10, validated_data["max_retries"]))
+
+        # Validate max_search_results
+        if not isinstance(validated_data["max_search_results"], int):
+            try:
+                validated_data["max_search_results"] = int(validated_data["max_search_results"])
+            except (ValueError, TypeError):
+                validated_data["max_search_results"] = defaults.max_search_results
+        validated_data["max_search_results"] = max(1, min(100, validated_data["max_search_results"]))
 
         return cls(**validated_data)
 
@@ -378,19 +400,29 @@ class QueryRoutingSettings:
 class FeatureFlags:
     """Feature flags for enabling/disabling system features."""
 
+    # System-wide feature flags (duplicates removed)
+    enable_debug_mode: bool = False
+    enable_maintenance_mode: bool = False
+    enable_api_versioning: bool = False
+
+    # Back-compat flags expected by tests/legacy callers (mapped elsewhere at runtime)
     enable_followup_questions: bool = True
     enable_smart_routing: bool = True
     enable_caching: bool = True
+    enable_response_caching: bool = True
     enable_analytics: bool = True
-    enable_debug_mode: bool = False
-    enable_maintenance_mode: bool = False
     enable_rate_limiting: bool = True
-    enable_api_versioning: bool = False
-    # Legacy flags (for backward compatibility)
+
+    # User Experience flags
     enable_illustrations: bool = True
     enable_geolocation: bool = True
-    enable_response_caching: bool = True
     enable_query_preprocessing: bool = True
+
+    # Note: The following have been moved to their appropriate schemas:
+    # - enable_analytics -> SecuritySettings (monitoring)
+    # - enable_rate_limiting -> SecuritySettings (security)
+    # - enable_smart_routing -> QueryRoutingSettings (routing)
+    # - enable_caching/enable_response_caching -> ResponseSettings (caching)
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -408,10 +440,38 @@ class FeatureFlags:
             else:
                 validated_data[key] = default_value
 
-        # Validate all boolean fields
-        for field_name in asdict(defaults).keys():
-            if not isinstance(validated_data[field_name], bool):
-                validated_data[field_name] = str(validated_data[field_name]).lower() == "true"
+        # Identify field types from defaults
+        defaults_dict = asdict(defaults)
+
+        for field_name, default_value in defaults_dict.items():
+            current_value = validated_data[field_name]
+
+            if isinstance(default_value, bool):
+                # Validate boolean fields
+                if not isinstance(current_value, bool):
+                    validated_data[field_name] = str(current_value).lower() == "true"
+            elif isinstance(default_value, int):
+                # Validate integer fields
+                if not isinstance(current_value, int):
+                    try:
+                        validated_data[field_name] = int(current_value)
+                    except (ValueError, TypeError):
+                        validated_data[field_name] = default_value
+
+            elif isinstance(default_value, float):
+                # Validate float fields
+                if not isinstance(current_value, (int, float)):
+                    try:
+                        validated_data[field_name] = float(current_value)
+                    except (ValueError, TypeError):
+                        validated_data[field_name] = default_value
+                else:
+                    validated_data[field_name] = float(current_value)
+
+            elif isinstance(default_value, str):
+                # Validate string fields
+                if not isinstance(current_value, str):
+                    validated_data[field_name] = str(current_value)
 
         return cls(**validated_data)
 
@@ -454,19 +514,12 @@ class SystemConfigurationSettings:
     enable_response_smart_selection: bool = True  # Allow complexity-based switching within response model family
 
     # Performance Settings
-    cache_ttl_seconds: int = 3600
+    system_cache_ttl_seconds: int = 3600
     max_cache_size: int = 1000
     rate_limit: str = "100/minute"
 
-    # Search Configuration
-    search_similarity_threshold: float = 0.55  # Percentage converted to 0-100 scale in UI
-    max_search_results: int = 15
-    retrieval_score_threshold: float = 0.3
-
     # Cache & Performance
     enable_smart_model_selection: bool = True
-    default_search_k: int = 8
-    expanded_search_k: int = 12
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -613,28 +666,14 @@ class SystemConfigurationSettings:
 
         # Validate numeric fields with bounds
         numeric_validations = {
-            "cache_ttl_seconds": (60, 86400),  # 1 minute to 1 day
+            "system_cache_ttl_seconds": (60, 86400),  # 1 minute to 1 day
             "max_cache_size": (10, 10000),  # 10 to 10k entries
-            "max_search_results": (1, 100),
-            "default_search_k": (1, 50),
-            "expanded_search_k": (1, 50),
         }
 
         for field, (min_val, max_val) in numeric_validations.items():
             if not isinstance(validated_data[field], int):
                 try:
                     validated_data[field] = int(validated_data[field])
-                except (ValueError, TypeError):
-                    validated_data[field] = getattr(defaults, field)
-            validated_data[field] = max(min_val, min(max_val, validated_data[field]))
-
-        # Validate float fields with bounds
-        float_validations = {"search_similarity_threshold": (0.0, 1.0), "retrieval_score_threshold": (0.0, 1.0)}
-
-        for field, (min_val, max_val) in float_validations.items():
-            if not isinstance(validated_data[field], float):
-                try:
-                    validated_data[field] = float(validated_data[field])
                 except (ValueError, TypeError):
                     validated_data[field] = getattr(defaults, field)
             validated_data[field] = max(min_val, min(max_val, validated_data[field]))
@@ -672,23 +711,26 @@ class SystemConfigurationSettings:
 
 @dataclass
 class SecuritySettings:
-    """Configuration for security and privacy settings."""
+    """Configuration for security, privacy, and monitoring settings."""
 
     # IP Management
     excluded_ips: List[str] = field(default_factory=list)
     anonymize_ips: bool = True
 
-    # Query Logging
+    # Analytics & Monitoring (consolidated from FeatureFlags)
+    enable_analytics: bool = True
     enable_query_logging: bool = True
-    low_similarity_threshold: float = 0.7
     query_log_retention_days: int = 30
+    enable_audit_logging: bool = True
+
+    # Quality Monitoring
+    low_similarity_threshold: float = 0.7  # Quality alert threshold for monitoring
 
     # Authentication & Sessions
     session_timeout_minutes: int = 480  # 8 hours
     enable_session_fingerprinting: bool = True
-    enable_audit_logging: bool = True
 
-    # Rate Limiting & Protection
+    # Rate Limiting & Protection (consolidated from FeatureFlags)
     enable_rate_limiting: bool = True
     rate_limit_requests: int = 100
     rate_limit_window: int = 60  # seconds
@@ -754,7 +796,7 @@ class SecuritySettings:
                     validated_data[field] = getattr(defaults, field)
             validated_data[field] = max(min_val, min(max_val, validated_data[field]))
 
-        # Validate float fields
+        # Validate low_similarity_threshold
         if not isinstance(validated_data["low_similarity_threshold"], float):
             try:
                 validated_data["low_similarity_threshold"] = float(validated_data["low_similarity_threshold"])
@@ -765,6 +807,7 @@ class SecuritySettings:
         # Validate boolean fields
         bool_fields = [
             "anonymize_ips",
+            "enable_analytics",
             "enable_query_logging",
             "enable_session_fingerprinting",
             "enable_audit_logging",
@@ -854,6 +897,370 @@ class SystemSettings:
 
 
 # Setting key constants
+@dataclass
+class RagConfigurationSettings:
+    """Configuration settings for RAG (Retrieval Augmented Generation) system."""
+
+    # Feature Toggles (Boolean)
+    rag_use_mmr: bool = False
+    rag_use_heading_splitter: bool = True
+    rag_enable_delete: bool = False
+    rag_safe_delete: bool = True
+
+    # Numeric Settings
+    rag_score_threshold: float = 0.2
+    rag_low_similarity_threshold: float = 0.7
+    rag_fuzzy_threshold: float = 0.7
+    rag_confidence_threshold: float = 0.75
+    rag_relevance_threshold: float = 0.7
+    rag_mmr_k: int = 4
+    rag_mmr_fetch_k: int = 20
+    rag_mmr_lambda_mult: float = 0.5
+
+    # String Settings
+    rag_index_dirs: str = "backend/knowledge,public"
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RagConfigurationSettings":
+        """Create from dictionary with validation."""
+        # Validate and set defaults for missing keys
+        defaults = cls()
+        validated_data = {}
+
+        for key, default_value in asdict(defaults).items():
+            if key in data:
+                validated_data[key] = data[key]
+            else:
+                validated_data[key] = default_value
+
+        # Boolean validation
+        for bool_field in ["rag_use_mmr", "rag_use_heading_splitter", "rag_enable_delete", "rag_safe_delete"]:
+            if bool_field in validated_data and not isinstance(validated_data[bool_field], bool):
+                validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
+
+        # Float validation with range checking
+        if "rag_score_threshold" in validated_data:
+            try:
+                val = float(validated_data["rag_score_threshold"])
+                validated_data["rag_score_threshold"] = max(0.0, min(1.0, val))
+            except (ValueError, TypeError):
+                validated_data["rag_score_threshold"] = defaults.rag_score_threshold
+
+        if "rag_mmr_lambda_mult" in validated_data:
+            try:
+                val = float(validated_data["rag_mmr_lambda_mult"])
+                validated_data["rag_mmr_lambda_mult"] = max(0.0, min(1.0, val))
+            except (ValueError, TypeError):
+                validated_data["rag_mmr_lambda_mult"] = defaults.rag_mmr_lambda_mult
+
+        if "rag_low_similarity_threshold" in validated_data:
+            try:
+                val = float(validated_data["rag_low_similarity_threshold"])
+                validated_data["rag_low_similarity_threshold"] = max(0.0, min(1.0, val))
+            except (ValueError, TypeError):
+                validated_data["rag_low_similarity_threshold"] = defaults.rag_low_similarity_threshold
+
+        if "rag_fuzzy_threshold" in validated_data:
+            try:
+                val = float(validated_data["rag_fuzzy_threshold"])
+                validated_data["rag_fuzzy_threshold"] = max(0.0, min(1.0, val))
+            except (ValueError, TypeError):
+                validated_data["rag_fuzzy_threshold"] = defaults.rag_fuzzy_threshold
+
+        if "rag_confidence_threshold" in validated_data:
+            try:
+                val = float(validated_data["rag_confidence_threshold"])
+                validated_data["rag_confidence_threshold"] = max(0.0, min(1.0, val))
+            except (ValueError, TypeError):
+                validated_data["rag_confidence_threshold"] = defaults.rag_confidence_threshold
+
+        if "rag_relevance_threshold" in validated_data:
+            try:
+                val = float(validated_data["rag_relevance_threshold"])
+                validated_data["rag_relevance_threshold"] = max(0.0, min(1.0, val))
+            except (ValueError, TypeError):
+                validated_data["rag_relevance_threshold"] = defaults.rag_relevance_threshold
+
+        # Integer validation with range checking
+        if "rag_mmr_k" in validated_data:
+            try:
+                val = int(validated_data["rag_mmr_k"])
+                validated_data["rag_mmr_k"] = max(1, min(20, val))
+            except (ValueError, TypeError):
+                validated_data["rag_mmr_k"] = defaults.rag_mmr_k
+
+        if "rag_mmr_fetch_k" in validated_data:
+            try:
+                val = int(validated_data["rag_mmr_fetch_k"])
+                validated_data["rag_mmr_fetch_k"] = max(10, min(100, val))
+            except (ValueError, TypeError):
+                validated_data["rag_mmr_fetch_k"] = defaults.rag_mmr_fetch_k
+
+        # String validation
+        if "rag_index_dirs" in validated_data:
+            if not validated_data["rag_index_dirs"] or not isinstance(validated_data["rag_index_dirs"], str):
+                validated_data["rag_index_dirs"] = defaults.rag_index_dirs
+            else:
+                # Clean up the directory string
+                validated_data["rag_index_dirs"] = validated_data["rag_index_dirs"].strip()
+
+        return cls(**validated_data)
+
+    def to_json(self) -> str:
+        """Convert to JSON string."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "RagConfigurationSettings":
+        """Create from JSON string with error handling."""
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse RAG configuration JSON: {e}")
+            return cls()  # Return defaults on parse error
+
+    def validate(self) -> tuple[bool, list[str]]:
+        """Validate all settings and return (is_valid, error_messages)."""
+        errors = []
+
+        # Range validations
+        if not (0.0 <= self.rag_score_threshold <= 1.0):
+            errors.append("Score threshold must be between 0.0 and 1.0")
+
+        if not (0.0 <= self.rag_low_similarity_threshold <= 1.0):
+            errors.append("Low similarity threshold must be between 0.0 and 1.0")
+
+        if not (0.0 <= self.rag_fuzzy_threshold <= 1.0):
+            errors.append("Fuzzy threshold must be between 0.0 and 1.0")
+
+        if not (0.0 <= self.rag_confidence_threshold <= 1.0):
+            errors.append("Confidence threshold must be between 0.0 and 1.0")
+
+        if not (0.0 <= self.rag_relevance_threshold <= 1.0):
+            errors.append("Relevance threshold must be between 0.0 and 1.0")
+
+        if not (1 <= self.rag_mmr_k <= 20):
+            errors.append("MMR K must be between 1 and 20")
+
+        if not (10 <= self.rag_mmr_fetch_k <= 100):
+            errors.append("MMR Fetch K must be between 10 and 100")
+
+        if not (0.0 <= self.rag_mmr_lambda_mult <= 1.0):
+            errors.append("MMR Lambda multiplier must be between 0.0 and 1.0")
+
+        # String validation
+        if not self.rag_index_dirs or not self.rag_index_dirs.strip():
+            errors.append("Index directories cannot be empty")
+
+        # Logical validation
+        if self.rag_mmr_k > self.rag_mmr_fetch_k:
+            errors.append("MMR K cannot be greater than MMR Fetch K")
+
+        return len(errors) == 0, errors
+
+
+@dataclass
+class CoreSettings:
+    """Core system configuration and LLM model settings."""
+
+    # System identification
+    system_name: str = "Nick Berens AI Assistant"
+    version: str = "2.0"
+
+    # LLM Configuration
+    default_model: str = "claude-3-sonnet"
+    anthropic_api_key_configured: bool = False  # Read-only status
+    google_api_key_configured: bool = False  # Read-only status
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "CoreSettings":
+        """Create from dictionary with validation."""
+        defaults = cls()
+        validated_data = {}
+
+        for key, default_value in asdict(defaults).items():
+            if key in data:
+                validated_data[key] = data[key]
+            else:
+                validated_data[key] = default_value
+
+        # Validate strings
+        for str_field in ["system_name", "version", "default_model"]:
+            if not isinstance(validated_data[str_field], str):
+                validated_data[str_field] = str(validated_data[str_field])
+            validated_data[str_field] = validated_data[str_field].strip()
+            if not validated_data[str_field]:
+                validated_data[str_field] = getattr(defaults, str_field)
+
+        # Validate boolean fields (read-only status fields)
+        for bool_field in ["anthropic_api_key_configured", "google_api_key_configured"]:
+            if not isinstance(validated_data[bool_field], bool):
+                validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
+
+        # Validate default_model is in acceptable list
+        valid_models = ["claude-3-sonnet", "claude-3-opus", "claude-3-haiku", "gemini-pro", "gemini-1.5-pro"]
+        if validated_data["default_model"] not in valid_models:
+            validated_data["default_model"] = "claude-3-sonnet"
+
+        return cls(**validated_data)
+
+    def to_json(self) -> str:
+        """Convert to JSON string."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "CoreSettings":
+        """Create from JSON string with error handling."""
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse core settings JSON: {e}")
+            return cls()
+
+
+@dataclass
+class UXSettings:
+    """User experience and interface customization settings."""
+
+    # UI Preferences
+    enable_animations: bool = True
+    theme_preference: str = "auto"  # auto, light, dark
+    compact_mode: bool = False
+
+    # Response Behavior
+    response_streaming: bool = True
+    show_typing_indicators: bool = True
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "UXSettings":
+        """Create from dictionary with validation."""
+        defaults = cls()
+        validated_data = {}
+
+        for key, default_value in asdict(defaults).items():
+            if key in data:
+                validated_data[key] = data[key]
+            else:
+                validated_data[key] = default_value
+
+        # Validate boolean fields
+        for bool_field in ["enable_animations", "compact_mode", "response_streaming", "show_typing_indicators"]:
+            if not isinstance(validated_data[bool_field], bool):
+                validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
+
+        # Validate theme_preference
+        valid_themes = ["auto", "light", "dark"]
+        if validated_data["theme_preference"] not in valid_themes:
+            validated_data["theme_preference"] = "auto"
+
+        return cls(**validated_data)
+
+    def to_json(self) -> str:
+        """Convert to JSON string."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "UXSettings":
+        """Create from JSON string with error handling."""
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse UX settings JSON: {e}")
+            return cls()
+
+
+@dataclass
+class SearchRetrievalSettings:
+    """Search and document retrieval configuration settings."""
+
+    # Search Configuration
+    semantic_similarity_threshold: float = 0.7
+    max_search_results: int = 10
+    search_timeout_seconds: int = 30
+
+    # Advanced Features
+    enable_fuzzy_matching: bool = True
+    enable_metadata_boosting: bool = True
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SearchRetrievalSettings":
+        """Create from dictionary with validation."""
+        defaults = cls()
+        validated_data = {}
+
+        for key, default_value in asdict(defaults).items():
+            if key in data:
+                validated_data[key] = data[key]
+            else:
+                validated_data[key] = default_value
+
+        # Validate boolean fields
+        for bool_field in ["enable_fuzzy_matching", "enable_metadata_boosting"]:
+            if not isinstance(validated_data[bool_field], bool):
+                validated_data[bool_field] = str(validated_data[bool_field]).lower() == "true"
+
+        # Validate semantic_similarity_threshold
+        if not isinstance(validated_data["semantic_similarity_threshold"], (int, float)):
+            try:
+                validated_data["semantic_similarity_threshold"] = float(validated_data["semantic_similarity_threshold"])
+            except (ValueError, TypeError):
+                validated_data["semantic_similarity_threshold"] = defaults.semantic_similarity_threshold
+        validated_data["semantic_similarity_threshold"] = max(
+            0.0, min(1.0, validated_data["semantic_similarity_threshold"])
+        )
+
+        # Validate max_search_results
+        if not isinstance(validated_data["max_search_results"], int):
+            try:
+                validated_data["max_search_results"] = int(validated_data["max_search_results"])
+            except (ValueError, TypeError):
+                validated_data["max_search_results"] = defaults.max_search_results
+        validated_data["max_search_results"] = max(1, min(100, validated_data["max_search_results"]))
+
+        # Validate search_timeout_seconds
+        if not isinstance(validated_data["search_timeout_seconds"], int):
+            try:
+                validated_data["search_timeout_seconds"] = int(validated_data["search_timeout_seconds"])
+            except (ValueError, TypeError):
+                validated_data["search_timeout_seconds"] = defaults.search_timeout_seconds
+        validated_data["search_timeout_seconds"] = max(5, min(120, validated_data["search_timeout_seconds"]))
+
+        return cls(**validated_data)
+
+    def to_json(self) -> str:
+        """Convert to JSON string."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "SearchRetrievalSettings":
+        """Create from JSON string with error handling."""
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse search retrieval settings JSON: {e}")
+            return cls()
+
+
 class SettingKeys:
     """Constants for setting keys used in database."""
 
@@ -863,4 +1270,8 @@ class SettingKeys:
     FEATURE_FLAGS = "feature_flags"
     SYSTEM_CONFIG_SETTINGS = "system_config_settings"
     SECURITY_SETTINGS = "security_settings"
+    RAG_CONFIG_SETTINGS = "rag_config_settings"
+    CORE_SETTINGS = "core_settings"
+    UX_SETTINGS = "ux_settings"
+    SEARCH_RETRIEVAL_SETTINGS = "search_retrieval_settings"
     SYSTEM_SETTINGS = "system_settings"  # For unified storage (future use)

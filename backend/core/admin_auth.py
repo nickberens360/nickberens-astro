@@ -192,17 +192,21 @@ class AdminAuthManager:
         now = datetime.now()
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
+            # Serialize session writes to avoid DB lock contention
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
 
-                # Limit concurrent sessions per user (max 5)
-                cursor.execute("SELECT COUNT(*) FROM admin_sessions WHERE user_id = ? AND is_active = 1", (user_id,))
-                active_sessions = cursor.fetchone()[0]
-
-                if active_sessions >= 5:
-                    # Expire oldest session - SQLite doesn't support ORDER BY in UPDATE, so use subquery
+                    # Limit concurrent sessions per user (max 5)
                     cursor.execute(
-                        """
+                        "SELECT COUNT(*) FROM admin_sessions WHERE user_id = ? AND is_active = 1", (user_id,)
+                    )
+                    active_sessions = cursor.fetchone()[0]
+
+                    if active_sessions >= 5:
+                        # Expire oldest session - SQLite doesn't support ORDER BY in UPDATE, so use subquery
+                        cursor.execute(
+                            """
                         UPDATE admin_sessions
                         SET is_active = 0
                         WHERE id = (
@@ -212,24 +216,24 @@ class AdminAuthManager:
                             LIMIT 1
                         )
                         """,
-                        (user_id,),
-                    )
+                            (user_id,),
+                        )
 
-                cursor.execute(
-                    """
+                    cursor.execute(
+                        """
                     INSERT INTO admin_sessions 
                     (id, user_id, started_at, last_active_at, ip_address, user_agent, is_active)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),
-                )
+                        (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),
+                    )
 
-                # Create and store session fingerprint
-                fingerprint = session_fingerprinter.create_fingerprint(ip_address or "unknown", user_agent or "")
-                session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
+                    # Create and store session fingerprint
+                    fingerprint = session_fingerprinter.create_fingerprint(ip_address or "unknown", user_agent or "")
+                    session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
 
-                logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
-                return session_id
+                    logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
+                    return session_id
 
         except Exception as e:
             logger.error(f"Error creating session for user {user_id}: {str(e)}", exc_info=True)
@@ -314,12 +318,13 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
-                    (datetime.now(), session_id),
-                )
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
+                        (datetime.now(), session_id),
+                    )
         except Exception as e:
             logger.error(f"Error updating session activity {session_id[:8]}...: {str(e)}", exc_info=True)
 
@@ -329,10 +334,11 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
-                logger.info(f"Expired session {session_id[:8]}...")
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
+                    logger.info(f"Expired session {session_id[:8]}...")
         except Exception as e:
             logger.error(f"Error expiring session {session_id[:8]}...: {str(e)}", exc_info=True)
 
@@ -342,10 +348,11 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
-                logger.info(f"Expired all sessions for user {user_id}")
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
+                    logger.info(f"Expired all sessions for user {user_id}")
         except Exception as e:
             logger.error(f"Error expiring sessions for user {user_id}: {str(e)}", exc_info=True)
 
@@ -454,9 +461,12 @@ class AdminAuthManager:
 
         try:
             # Update last login time
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"]))
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"])
+                    )
 
             # Create session
             session_id = self.create_session(user["id"], ip_address, user_agent)
@@ -505,9 +515,12 @@ class AdminAuthManager:
             )
 
             # Update last login time
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"]))
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"])
+                    )
 
             # Create session
             session_id = self.create_session(user["id"], ip_address, user_agent)
@@ -561,12 +574,13 @@ class AdminAuthManager:
             session_timeout_hours = self.get_dynamic_session_timeout_hours()
             expiry_cutoff = datetime.now() - timedelta(hours=session_timeout_hours)
 
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE admin_sessions SET is_active = 0 WHERE last_active_at < ? AND is_active = 1",
-                    (expiry_cutoff,),
-                )
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_sessions SET is_active = 0 WHERE last_active_at < ? AND is_active = 1",
+                        (expiry_cutoff,),
+                    )
                 expired_count = cursor.rowcount
                 if expired_count > 0:
                     logger.info(f"Cleaned up {expired_count} expired sessions")
@@ -792,38 +806,40 @@ class AdminAuthManager:
             logger.error(f"Error checking session activity patterns: {str(e)}", exc_info=True)
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict]:
-        """Get recent security events for monitoring dashboard."""
+        """Get recent security events for monitoring dashboard from dedicated DB."""
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    SELECT event_type, identifier, details, severity, ip_address, created_at, COUNT(*) as count
-                    FROM security_events
-                    WHERE created_at > datetime('now', '-' || ? || ' hours')
-                    GROUP BY event_type, identifier, severity, ip_address
-                    ORDER BY severity DESC, created_at DESC
-                    LIMIT 50
-                    """,
-                    (hours,),
-                )
+            from .security_events_database import security_events_db_manager
 
-                events = []
-                for row in cursor.fetchall():
-                    events.append(
-                        {
-                            "event_type": row[0],
-                            "identifier": row[1],
-                            "details": row[2],
-                            "severity": row[3],
-                            "ip_address": row[4],
-                            "created_at": row[5],
-                            "count": row[6],
-                        }
-                    )
-
-                return events
-
+            # Fetch raw events and perform simple aggregation in-memory (lightweight)
+            rows = security_events_db_manager.get_security_alerts(hours)
+            # Optional: basic aggregation similar to SQL GROUP BY used previously
+            aggregated: Dict[tuple, Dict] = {}
+            for r in rows:
+                key = (r.get("event_type"), r.get("identifier"), r.get("severity"), r.get("ip_address"))
+                item = aggregated.get(key)
+                if item is None:
+                    aggregated[key] = {
+                        "event_type": r.get("event_type"),
+                        "identifier": r.get("identifier"),
+                        "details": r.get("details"),
+                        "severity": r.get("severity"),
+                        "ip_address": r.get("ip_address"),
+                        "created_at": r.get("created_at"),
+                        "count": 1,
+                    }
+                else:
+                    item["count"] += 1
+                    # Keep most recent created_at
+                    if r.get("created_at") > item.get("created_at"):
+                        item["created_at"] = r.get("created_at")
+            # Sort by severity desc then created_at desc
+            severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
+            result = sorted(
+                aggregated.values(),
+                key=lambda x: (severity_order.get(x.get("severity"), 1), x.get("created_at")),
+                reverse=True,
+            )
+            return result[:50]
         except Exception as e:
             logger.error(f"Error getting security alerts: {str(e)}", exc_info=True)
             return []

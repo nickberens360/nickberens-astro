@@ -9,7 +9,7 @@
  */
 export function getBasicPasswordRules(requiredMessage = 'Password is required') {
   return [
-    v => !!v || requiredMessage,
+    v => Boolean(v) || requiredMessage,
     v => v.length >= 8 || 'Password must be at least 8 characters'
   ]
 }
@@ -21,7 +21,7 @@ export function getBasicPasswordRules(requiredMessage = 'Password is required') 
  */
 export function getStrongPasswordRules(requiredMessage = 'New password is required') {
   return [
-    v => !!v || requiredMessage,
+    v => Boolean(v) || requiredMessage,
     v => v.length >= 8 || 'Password must be at least 8 characters',
     v => /[A-Z]/.test(v) || 'Password must contain at least one uppercase letter',
     v => /[a-z]/.test(v) || 'Password must contain at least one lowercase letter',
@@ -36,7 +36,7 @@ export function getStrongPasswordRules(requiredMessage = 'New password is requir
  */
 export function getDisplayNameRules() {
   return [
-    v => !!v || 'Display name is required',
+    v => Boolean(v) || 'Display name is required',
     v => v.length >= 2 || 'Display name must be at least 2 characters',
     v => v.length <= 50 || 'Display name must be less than 50 characters'
   ]
@@ -48,7 +48,7 @@ export function getDisplayNameRules() {
  */
 export function getEmailRules() {
   return [
-    v => !!v || 'Email is required',
+    v => Boolean(v) || 'Email is required',
     v => /.+@.+\..+/.test(v) || 'Email must be valid'
   ]
 }
@@ -60,7 +60,7 @@ export function getEmailRules() {
  */
 export function getPasswordConfirmationRules(passwordValue) {
   return [
-    v => !!v || 'Please confirm your password',
+    v => Boolean(v) || 'Please confirm your password',
     v => v === passwordValue || 'Passwords do not match'
   ]
 }

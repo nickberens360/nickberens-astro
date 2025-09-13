@@ -117,10 +117,104 @@ class UnifiedRetriever:
             splitter = splitter_for_ext(file_path_obj.suffix)
             chunks = splitter.split_documents(docs)
 
-            # Add rich metadata to each chunk
-            for chunk in chunks:
-                base_metadata = self.content_indexer.extract_content_metadata(chunk, file_path_obj)
+            # Phase 1: compute once-per-file classification and reuse if enabled
+            precomputed: Dict[str, Any] | None = None
+            if (
+                getattr(self.content_indexer, "use_per_file_classification", False)
+                and (self.classification_mode in ("startup_llm", "hybrid"))
+                and getattr(self.content_indexer, "startup_classifier", None) is not None
+            ):
+                file_hash = self.content_indexer.compute_file_hash(file_path_obj)
+                cached = self.content_indexer._file_classification_cache.get(file_hash)
+                # Phase 3: try persisted classification if available
+                try:
+                    index_metadata_path = Path(self.persist_dir) / "index_metadata.json"
+                    if index_metadata_path.exists():
+                        with open(index_metadata_path, "r", encoding="utf-8") as f:
+                            indexed_files = json.load(f)
+                        entry = indexed_files.get(str(file_path_obj))
+                        if isinstance(entry, dict) and entry.get("hash") == file_hash:
+                            persisted_class = entry.get("classification")
+                            if isinstance(persisted_class, dict) and persisted_class:
+                                cached = persisted_class
+                                logger.info(
+                                    f"Using persisted file-level classification for {file_path_obj.name} (hash match)."
+                                )
+                except Exception as e:
+                    logger.debug(f"Failed to use persisted classification: {e}")
+                if cached is None:
+                    representative_doc = self.content_indexer._build_representative_document(docs, file_path_obj)
+                    try:
+                        cached = self.content_indexer.startup_classifier.classify_content_with_llm(
+                            representative_doc, file_path_obj
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"File-level classification failed for {file_path_obj.name}: {e}. Proceeding without precompute."
+                        )
+                        cached = None
+                    if cached is not None:
+                        self.content_indexer._file_classification_cache[file_hash] = cached
+                        # Telemetry: count one LLM classification per file
+                        if hasattr(self.content_indexer, "_metrics"):
+                            self.content_indexer._metrics["llm_classifications_performed"] = (
+                                self.content_indexer._metrics.get("llm_classifications_performed", 0) + 1
+                            )
+                precomputed = cached
+
+            # Phase 2: heterogeneity detection and optional per-chunk fallback
+            use_per_chunk_fallback = False
+            # Forced include by glob patterns
+            try:
+                if self.content_indexer._path_in_include(file_path_obj):
+                    use_per_chunk_fallback = True
+                    logger.info(f"Per-chunk LLM classification forced by include list for {file_path_obj.name}.")
+            except Exception:
+                pass
+            # Heuristic detection (when enabled)
+            if (
+                not use_per_chunk_fallback
+                and getattr(self.content_indexer, "enable_heterogeneity_fallback", False)
+                and precomputed is not None
+                and len(chunks) >= 2
+            ):
+                try:
+                    use_per_chunk_fallback = self.content_indexer._is_file_heterogeneous(chunks)
+                    if use_per_chunk_fallback:
+                        logger.info(
+                            f"Heterogeneity detected for {file_path_obj.name}; using per-chunk LLM classification."
+                        )
+                except Exception as e:
+                    logger.debug(f"Heterogeneity detection failed for {file_path_obj.name}: {e}")
+
+            # Add rich metadata to each chunk (aligned with ContentIndexer.process_directory)
+            file_hash = self.content_indexer.compute_file_hash(file_path_obj)
+            for chunk_index, chunk in enumerate(chunks):
+                if use_per_chunk_fallback:
+                    base_metadata = self.content_indexer.extract_content_metadata(
+                        chunk, file_path_obj, precomputed=None
+                    )
+                    if hasattr(self.content_indexer, "_metrics"):
+                        self.content_indexer._metrics["llm_classifications_fallback_chunk"] = (
+                            self.content_indexer._metrics.get("llm_classifications_fallback_chunk", 0) + 1
+                        )
+                else:
+                    base_metadata = self.content_indexer.extract_content_metadata(
+                        chunk, file_path_obj, precomputed=precomputed
+                    )
+
+                enhanced_metadata = {
+                    "chunk_index": chunk_index,
+                    "chunk_size": len(chunk.page_content),
+                    "file_hash": file_hash,
+                    "total_chunks": len(chunks),
+                }
+                file_hash_short = file_hash[:8]
+                chunk_id = f"{file_hash_short}-c{chunk_index}"
+                enhanced_metadata["chunk_id"] = chunk_id
+
                 chunk.metadata.update(base_metadata)
+                chunk.metadata.update(enhanced_metadata)
 
             # Add to vector store
             if chunks:
@@ -129,19 +223,22 @@ class UnifiedRetriever:
 
                 # Update the index metadata to mark as processed
                 index_metadata_path = Path(self.persist_dir) / "index_metadata.json"
-                indexed_files = {}
+                metadata_index: Dict[str, Any] = {}
                 if index_metadata_path.exists():
                     with open(index_metadata_path, "r", encoding="utf-8") as f:
-                        indexed_files = json.load(f)
+                        metadata_index = json.load(f)
 
                 # Update hash
                 file_hash = self.content_indexer.compute_file_hash(file_path_obj)
-                indexed_files[str(file_path_obj)] = file_hash
+                record: Dict[str, Any] = {"hash": file_hash}
+                if precomputed is not None:
+                    record["classification"] = precomputed
+                metadata_index[str(file_path_obj)] = record
 
                 # Save updated metadata
                 Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
                 with open(index_metadata_path, "w", encoding="utf-8") as f:
-                    json.dump(indexed_files, f)
+                    json.dump(metadata_index, f)
 
                 return True
             else:
@@ -172,7 +269,7 @@ class UnifiedRetriever:
 
         This method provides compatibility with LangChain's retriever interface.
         """
-        return self.semantic_search(query, k, filter_content_types)
+        return self.semantic_search(query=query, k=k, filter_content_types=filter_content_types)
 
     def semantic_search(
         self,

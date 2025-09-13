@@ -25,7 +25,9 @@
             </span>
             <span v-else>{{ value }}{{ unit }}</span>
           </div>
-          <div class="text-body-2 text-medium-emphasis">{{ title }}</div>
+          <div class="text-body-2 text-medium-emphasis">
+            {{ title }}
+          </div>
         </div>
       </div>
     </v-card-text>

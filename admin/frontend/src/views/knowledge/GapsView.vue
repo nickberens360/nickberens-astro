@@ -3,15 +3,27 @@
     <!-- Analytics Cards -->
     <div class="mb-6">
       <v-row>
-        <v-col cols="12" md="3">
+        <v-col
+          cols="12"
+          md="3"
+        >
           <v-card class="metric-style-card">
             <v-card-text class="pa-6">
               <div class="d-flex align-center justify-space-between mb-4">
                 <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                   Total Gaps
                 </div>
-                <v-avatar size="40" color="rgba(245, 158, 11, 0.1)" variant="flat">
-                  <v-icon color="warning" size="20">$alert</v-icon>
+                <v-avatar
+                  size="40"
+                  color="rgba(245, 158, 11, 0.1)"
+                  variant="flat"
+                >
+                  <v-icon
+                    color="warning"
+                    size="20"
+                  >
+                    $alert
+                  </v-icon>
                 </v-avatar>
               </div>
               <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -21,15 +33,27 @@
           </v-card>
         </v-col>
         
-        <v-col cols="12" md="3">
+        <v-col
+          cols="12"
+          md="3"
+        >
           <v-card class="metric-style-card">
             <v-card-text class="pa-6">
               <div class="d-flex align-center justify-space-between mb-4">
                 <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                   Unresolved
                 </div>
-                <v-avatar size="40" color="rgba(239, 68, 68, 0.1)" variant="flat">
-                  <v-icon color="error" size="20">$close</v-icon>
+                <v-avatar
+                  size="40"
+                  color="rgba(239, 68, 68, 0.1)"
+                  variant="flat"
+                >
+                  <v-icon
+                    color="error"
+                    size="20"
+                  >
+                    $close
+                  </v-icon>
                 </v-avatar>
               </div>
               <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -39,15 +63,27 @@
           </v-card>
         </v-col>
         
-        <v-col cols="12" md="3">
+        <v-col
+          cols="12"
+          md="3"
+        >
           <v-card class="metric-style-card">
             <v-card-text class="pa-6">
               <div class="d-flex align-center justify-space-between mb-4">
                 <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                   Resolved
                 </div>
-                <v-avatar size="40" color="rgba(16, 185, 129, 0.1)" variant="flat">
-                  <v-icon color="success" size="20">$check-circle</v-icon>
+                <v-avatar
+                  size="40"
+                  color="rgba(16, 185, 129, 0.1)"
+                  variant="flat"
+                >
+                  <v-icon
+                    color="success"
+                    size="20"
+                  >
+                    $check-circle
+                  </v-icon>
                 </v-avatar>
               </div>
               <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -57,15 +93,27 @@
           </v-card>
         </v-col>
         
-        <v-col cols="12" md="3">
+        <v-col
+          cols="12"
+          md="3"
+        >
           <v-card class="metric-style-card">
             <v-card-text class="pa-6">
               <div class="d-flex align-center justify-space-between mb-4">
                 <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">
                   Avg Score
                 </div>
-                <v-avatar size="40" color="rgba(59, 130, 246, 0.1)" variant="flat">
-                  <v-icon color="info" size="20">$chart</v-icon>
+                <v-avatar
+                  size="40"
+                  color="rgba(59, 130, 246, 0.1)"
+                  variant="flat"
+                >
+                  <v-icon
+                    color="info"
+                    size="20"
+                  >
+                    $chart
+                  </v-icon>
                 </v-avatar>
               </div>
               <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
@@ -84,11 +132,15 @@
     <v-card class="mt-6">
       <v-card-text>
         <div class="d-flex align-start gap-3">
-          <v-icon color="info">$info</v-icon>
+          <v-icon color="info">
+            $info
+          </v-icon>
           <div>
-            <h3 class="text-body-1 font-weight-bold mb-2">About Content Gaps</h3>
+            <h3 class="text-body-1 font-weight-bold mb-2">
+              About Content Gaps
+            </h3>
             <p class="text-body-2 mb-2">
-              Content gaps are automatically detected when queries have low similarity scores (< 0.7) 
+              Content gaps are automatically detected when queries have low similarity scores (&lt; 0.7) 
               or result in errors. These indicate areas where your knowledge base might need improvement.
             </p>
             <ul class="text-body-2">

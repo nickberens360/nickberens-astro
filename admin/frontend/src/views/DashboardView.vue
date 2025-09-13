@@ -1,6 +1,5 @@
 <template>
   <div class="dashboard">
-    
     <!-- Metric Cards Grid -->
     <v-row class="ds-mb-6">
       <v-col
@@ -26,7 +25,10 @@
     <!-- Charts Row -->
     <v-row class="ds-mb-6">
       <!-- Left Side: Response Time Chart -->
-      <v-col cols="12" lg="8">
+      <v-col
+        cols="12"
+        lg="8"
+      >
         <PerformanceChart
           title="Response Time Timeline"
           :data="responseTimeChartData"
@@ -36,7 +38,10 @@
       </v-col>
       
       <!-- Right Side: Donut Chart -->
-      <v-col cols="12" lg="4">
+      <v-col
+        cols="12"
+        lg="4"
+      >
         <PerformanceChart
           title="Query Status Distribution"
           :data="statusChartData"

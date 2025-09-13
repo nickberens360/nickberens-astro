@@ -1,10 +1,15 @@
 <template>
   <v-container>
     <v-row justify="center">
-      <v-col cols="12" md="6">
+      <v-col
+        cols="12"
+        md="6"
+      >
         <v-card>
           <v-card-title>
-            <v-icon left>$lock</v-icon>
+            <v-icon left>
+              $lock
+            </v-icon>
             Change Password
           </v-card-title>
           
@@ -17,7 +22,7 @@
                 type="password"
                 prepend-icon="$lock-outline"
                 required
-              ></v-text-field>
+              />
               
               <v-text-field
                 v-model="newPassword"
@@ -27,7 +32,7 @@
                 prepend-icon="$lock"
                 required
                 hint="At least 8 characters with uppercase, lowercase, digit, and special character"
-              ></v-text-field>
+              />
               
               <v-text-field
                 v-model="confirmPassword"
@@ -36,14 +41,14 @@
                 type="password"
                 prepend-icon="$lock-check"
                 required
-              ></v-text-field>
+              />
               
               <v-alert
                 v-if="error"
                 type="error"
                 dismissible
-                @click="error = ''"
                 class="mt-3"
+                @click="error = ''"
               >
                 {{ error }}
               </v-alert>
@@ -52,8 +57,8 @@
                 v-if="success"
                 type="success"
                 dismissible
-                @click="success = ''"
                 class="mt-3"
+                @click="success = ''"
               >
                 {{ success }}
               </v-alert>
@@ -61,7 +66,7 @@
           </v-card-text>
           
           <v-card-actions>
-            <v-spacer></v-spacer>
+            <v-spacer />
             <v-btn
               color="grey"
               text
@@ -102,7 +107,7 @@ export default {
     const error = ref('')
     const success = ref('')
     
-    const requiredRule = (v) => !!v || 'Required'
+    const requiredRule = (v) => Boolean(v) || 'Required'
     const minLengthRule = (v) => {
       if (!v) return 'Password is required'
       if (v.length < 8) return 'Password must be at least 8 characters'

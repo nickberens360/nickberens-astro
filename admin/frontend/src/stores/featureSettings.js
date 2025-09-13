@@ -4,11 +4,12 @@ import { featureSettingsService } from '@/services/settings/featureSettingsServi
 
 export const useFeatureSettingsStore = defineStore('featureSettings', () => {
   const featureFlags = ref({
+    // Supported feature flags (FeatureFlags schema)
+    enable_debug_mode: false,
+    enable_maintenance_mode: false,
+    enable_api_versioning: false,
     enable_illustrations: true,
     enable_geolocation: true,
-    enable_analytics: true,
-    enable_debug_logging: false,
-    enable_response_caching: true,
     enable_query_preprocessing: true
   })
 

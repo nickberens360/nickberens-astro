@@ -11,7 +11,9 @@
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <template #prepend-inner>
-      <v-icon size="small">$clock</v-icon>
+      <v-icon size="small">
+        $clock
+      </v-icon>
     </template>
   </v-select>
 </template>

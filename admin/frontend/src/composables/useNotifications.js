@@ -1,90 +1,18 @@
-import { ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useNotificationsStore } from '@/stores/notifications'
 
-const notifications = ref([])
-
+// Backward-compatible composable that delegates to the global Pinia store
 export function useNotifications() {
-  const showSuccess = (message, duration = 4000) => {
-    const id = Date.now() + Math.random()
-    notifications.value.push({
-      id,
-      type: 'success',
-      message,
-      duration,
-      show: true
-    })
-    
-    // Auto-remove after duration
-    setTimeout(() => {
-      dismiss(id)
-    }, duration)
-  }
+  const store = useNotificationsStore()
+  const { notifications } = storeToRefs(store)
 
-  const showError = (message, duration = 6000) => {
-    const id = Date.now() + Math.random()
-    notifications.value.push({
-      id,
-      type: 'error',
-      message,
-      duration,
-      show: true
-    })
-    
-    // Auto-remove after duration
-    setTimeout(() => {
-      dismiss(id)
-    }, duration)
-  }
+  const showSuccess = (message, duration = 4000) => store.success(message, { timeout: duration })
+  const showError = (message, duration = 6000) => store.error(message, { timeout: duration })
+  const showInfo = (message, duration = 4000) => store.info(message, { timeout: duration })
+  const showWarning = (message, duration = 5000) => store.warning(message, { timeout: duration })
 
-  const showInfo = (message, duration = 4000) => {
-    const id = Date.now() + Math.random()
-    notifications.value.push({
-      id,
-      type: 'info',
-      message,
-      duration,
-      show: true
-    })
-    
-    // Auto-remove after duration
-    setTimeout(() => {
-      dismiss(id)
-    }, duration)
-  }
+  const dismiss = (id) => store.dismiss(id)
+  const clear = () => store.clear()
 
-  const showWarning = (message, duration = 5000) => {
-    const id = Date.now() + Math.random()
-    notifications.value.push({
-      id,
-      type: 'warning',
-      message,
-      duration,
-      show: true
-    })
-    
-    // Auto-remove after duration
-    setTimeout(() => {
-      dismiss(id)
-    }, duration)
-  }
-
-  const dismiss = (notificationId) => {
-    const index = notifications.value.findIndex(n => n.id === notificationId)
-    if (index > -1) {
-      notifications.value.splice(index, 1)
-    }
-  }
-
-  const clear = () => {
-    notifications.value = []
-  }
-
-  return {
-    notifications,
-    showSuccess,
-    showError,
-    showInfo,
-    showWarning,
-    dismiss,
-    clear
-  }
+  return { notifications, showSuccess, showError, showInfo, showWarning, dismiss, clear }
 }

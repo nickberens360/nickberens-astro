@@ -1,9 +1,12 @@
 <template>
   <div class="knowledge-view">
-
     <!-- Navigation Metric Cards - Always Visible -->
     <v-row class="mb-6">
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card
           elevation="1"
           class="cursor-pointer"
@@ -12,16 +15,30 @@
         >
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="green" size="large" class="me-3">$folder</v-icon>
+              <v-icon
+                color="green"
+                size="large"
+                class="me-3"
+              >
+                $folder
+              </v-icon>
               <div>
-                <div class="text-h6">{{ knowledgeStats.unique_sources || 0 }}</div>
-                <div class="text-body-2 text-medium-emphasis">Source Files</div>
+                <div class="text-h6">
+                  {{ knowledgeStats.unique_sources || 0 }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Source Files
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card
           elevation="1"
           class="cursor-pointer"
@@ -30,16 +47,30 @@
         >
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="blue" size="large" class="me-3">$description</v-icon>
+              <v-icon
+                color="blue"
+                size="large"
+                class="me-3"
+              >
+                $description
+              </v-icon>
               <div>
-                <div class="text-h6">{{ knowledgeStats.total_documents || 0 }}</div>
-                <div class="text-body-2 text-medium-emphasis">Indexed Documents</div>
+                <div class="text-h6">
+                  {{ knowledgeStats.total_documents || 0 }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Indexed Documents
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card
           elevation="1"
           class="cursor-pointer"
@@ -48,16 +79,30 @@
         >
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="warning" size="large" class="me-3">$warning</v-icon>
+              <v-icon
+                color="warning"
+                size="large"
+                class="me-3"
+              >
+                $warning
+              </v-icon>
               <div>
-                <div class="text-h6">{{ contentGaps || 0 }}</div>
-                <div class="text-body-2 text-medium-emphasis">Content Gaps</div>
+                <div class="text-h6">
+                  {{ contentGaps || 0 }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Content Gaps
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" sm="6" md="3">
+      <v-col
+        cols="12"
+        sm="6"
+        md="3"
+      >
         <v-card
           elevation="1"
           class="cursor-pointer"
@@ -66,10 +111,20 @@
         >
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="purple" size="large" class="me-3">$chart</v-icon>
+              <v-icon
+                color="purple"
+                size="large"
+                class="me-3"
+              >
+                $chart
+              </v-icon>
               <div>
-                <div class="text-h6">Analytics</div>
-                <div class="text-body-2 text-medium-emphasis">Knowledge Stats</div>
+                <div class="text-h6">
+                  Analytics
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Knowledge Stats
+                </div>
               </div>
             </div>
           </v-card-text>
@@ -79,7 +134,10 @@
 
     <!-- Router View for child components -->
     <router-view v-slot="{ Component }">
-      <Transition name="fade" mode="out-in">
+      <Transition
+        name="fade"
+        mode="out-in"
+      >
         <component :is="Component" />
       </Transition>
     </router-view>

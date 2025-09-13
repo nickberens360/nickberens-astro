@@ -67,6 +67,48 @@ class AppConfig:
         logger.error("Invalid MAX_RESULTS value. Using default value of 15.")
         MAX_RESULTS = 15
 
+    # RAG Best Practices Configuration - Feature Flags
+    RAG_USE_MMR = os.getenv("RAG_USE_MMR", "false").lower() == "true"
+    RAG_USE_HEADING_SPLITTER = os.getenv("RAG_USE_HEADING_SPLITTER", "false").lower() == "true"
+    RAG_ENABLE_DELETE = os.getenv("RAG_ENABLE_DELETE", "false").lower() == "true"
+    RAG_SAFE_DELETE = os.getenv("RAG_SAFE_DELETE", "true").lower() == "true"
+
+    # RAG Score Threshold (distance - lower is better)
+    try:
+        RAG_SCORE_THRESHOLD = float(os.getenv("RAG_SCORE_THRESHOLD", "0.2"))
+        if RAG_SCORE_THRESHOLD < 0.0 or RAG_SCORE_THRESHOLD > 1.0:
+            logger.error("Invalid RAG_SCORE_THRESHOLD value. Using default value of 0.2.")
+            RAG_SCORE_THRESHOLD = 0.2
+    except ValueError:
+        logger.error("Invalid RAG_SCORE_THRESHOLD value. Using default value of 0.2.")
+        RAG_SCORE_THRESHOLD = 0.2
+
+    # RAG Index Directories
+    RAG_INDEX_DIRS = os.getenv("RAG_INDEX_DIRS", "backend/knowledge,public").split(",")
+    RAG_INDEX_DIRS = [dir.strip() for dir in RAG_INDEX_DIRS if dir.strip()]
+
+    # MMR Configuration
+    try:
+        RAG_MMR_K = int(os.getenv("RAG_MMR_K", "4"))
+        if RAG_MMR_K < 1:
+            RAG_MMR_K = 4
+    except ValueError:
+        RAG_MMR_K = 4
+
+    try:
+        RAG_MMR_FETCH_K = int(os.getenv("RAG_MMR_FETCH_K", "20"))
+        if RAG_MMR_FETCH_K < RAG_MMR_K:
+            RAG_MMR_FETCH_K = max(20, RAG_MMR_K * 2)
+    except ValueError:
+        RAG_MMR_FETCH_K = 20
+
+    try:
+        RAG_MMR_LAMBDA_MULT = float(os.getenv("RAG_MMR_LAMBDA_MULT", "0.5"))
+        if RAG_MMR_LAMBDA_MULT < 0.0 or RAG_MMR_LAMBDA_MULT > 1.0:
+            RAG_MMR_LAMBDA_MULT = 0.5
+    except ValueError:
+        RAG_MMR_LAMBDA_MULT = 0.5
+
     ILLUSTRATIONS_PATH = os.getenv("ILLUSTRATIONS_PATH", "backend/knowledge/illustrations.json")
 
     # Default Statistics Configuration
@@ -219,15 +261,20 @@ class AppConfig:
         if not origin or not isinstance(origin, str):
             return False
 
-        # Allow wildcard only in development
+        # Allow wildcard only when not in production
         if origin == "*":
-            env = os.getenv("ENVIRONMENT", "development").lower()
-            if env in ["development", "dev", "local"]:
+            # Determine production dynamically: prefer ENVIRONMENT override for tests, fallback to AppConfig
+            env = os.getenv("ENVIRONMENT")
+            if env is not None:
+                is_prod = env.lower() in ["production", "prod"]
+            else:
+                is_prod = AppConfig.is_production()
+
+            if not is_prod:
                 logger.warning("Wildcard CORS origin allowed in development mode")
                 return True
-            else:
-                logger.error("Wildcard CORS origin not allowed in production")
-                return False
+            logger.error("Wildcard CORS origin not allowed in production")
+            return False
 
         # Basic URL validation
         try:
@@ -243,11 +290,21 @@ class AppConfig:
                 logger.warning(f"Invalid CORS origin scheme: {origin}")
                 return False
 
-            # Enforce HTTPS for production domains (not localhost)
+            # Enforce HTTPS for public domains (allow HTTP for local/private networks)
             netloc_lower = parsed.netloc.lower()
-            if not netloc_lower.startswith("localhost") and not netloc_lower.startswith("127.0.0.1"):
+            host = parsed.hostname or ""
+            is_private_ip = False
+            try:
+                ip_obj = ipaddress.ip_address(host)
+                is_private_ip = ip_obj.is_private or ip_obj.is_loopback
+            except ValueError:
+                # Not an IP address
+                is_private_ip = False
+
+            is_localhost = host.startswith("localhost") or host.startswith("127.0.0.1")
+            if not is_localhost and not is_private_ip:
                 if parsed.scheme != "https":
-                    logger.warning(f"Non-HTTPS origin for production domain: {origin}")
+                    logger.warning(f"Non-HTTPS origin for production/public domain: {origin}")
                     return False
 
             # Check domain format - basic validation
@@ -331,6 +388,11 @@ class AppConfig:
 
     # Query Logging Configuration
     @classmethod
+    def is_production(cls) -> bool:
+        """Convenience method for tests to patch production mode."""
+        return cls.IS_PRODUCTION
+
+    @classmethod
     def get_excluded_ips(cls) -> List[str]:
         """Get and validate excluded IPs from environment."""
         excluded_ips_str = os.getenv("EXCLUDED_IPS", "")
@@ -355,12 +417,14 @@ class AppConfig:
 
     @classmethod
     def get_ip_hash_salt(cls) -> str:
-        """Get IP hash salt with secure default generation."""
+        """Get IP hash salt with secure default generation.
+
+        Uses AppConfig production detection for consistency across the codebase.
+        """
         salt = os.getenv("IP_HASH_SALT", "")
-        environment = os.getenv("ENV", "development").lower()
 
         if not salt:
-            if environment in ["production", "prod"]:
+            if cls.IS_PRODUCTION:
                 raise ValueError(
                     "IP_HASH_SALT must be explicitly set in production environments. "
                     "Generate a secure salt using: python -c 'import secrets; print(secrets.token_urlsafe(32))'"

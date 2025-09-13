@@ -1,6 +1,5 @@
 <template>
   <div class="sessions-view">
-    
     <v-alert
       type="info"
       variant="tonal"

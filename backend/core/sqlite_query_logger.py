@@ -10,7 +10,6 @@ This module provides functionality to:
 
 import json
 import logging
-import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -68,6 +67,33 @@ class SQLiteQueryLogger:
             # In production, this will raise if not set
             self.logger.error("Failed to get IP hash salt: %s", e)
             raise
+
+        # Try to override from database-backed SecuritySettings
+        self._security_settings_last_refresh: float = 0.0
+        self._refresh_security_settings_if_needed(force=True)
+
+    def _refresh_security_settings_if_needed(self, force: bool = False, ttl_seconds: int = 60) -> None:
+        """Refresh anonymization and excluded IPs from SecuritySettings with a small TTL."""
+        try:
+            import time
+
+            now = time.time()
+            if not force and (now - self._security_settings_last_refresh) < ttl_seconds:
+                return
+            from .settings_manager import get_settings_manager
+
+            security = get_settings_manager().get_security_settings()
+            self.anonymize_ips = bool(getattr(security, "anonymize_ips", self.anonymize_ips))
+            raw_excluded = set(getattr(security, "excluded_ips", []) or [])
+            # Store excluded IPs respecting anonymization setting
+            if self.anonymize_ips:
+                self.excluded_ips = {self.anonymize_ip(ip) for ip in raw_excluded}
+            else:
+                self.excluded_ips = raw_excluded
+            self._security_settings_last_refresh = now
+        except Exception as e:
+            # Non-fatal; keep existing values
+            self.logger.debug("Security settings refresh skipped: %s", e)
 
     def _init_sqlite_database(self):
         """Initialize the SQLite database with required tables."""
@@ -435,6 +461,8 @@ class SQLiteQueryLogger:
 
     def _process_ip_for_logging(self, ip_address: str) -> Optional[str]:
         """Process IP address for logging, handling exclusion and anonymization."""
+        # Periodically refresh security settings from DB
+        self._refresh_security_settings_if_needed()
         if ip_address in self.excluded_ips:
             return None
 
@@ -514,6 +542,8 @@ class SQLiteQueryLogger:
         Retrieve logs from SQLite database with optional filtering.
         """
         try:
+            # Periodically refresh security settings
+            self._refresh_security_settings_if_needed()
             # Prepare excluded IPs set
             excluded_set = set()
             if exclude_ips:
@@ -587,6 +617,8 @@ class SQLiteQueryLogger:
     def get_log_stats(self, exclude_ips: Optional[str] = None) -> Dict[str, Any]:
         """Get statistics about the query logs from SQLite database."""
         try:
+            # Periodically refresh security settings
+            self._refresh_security_settings_if_needed()
             excluded_set = set()
             if exclude_ips:
                 raw_excluded = set(ip.strip() for ip in exclude_ips.split(","))

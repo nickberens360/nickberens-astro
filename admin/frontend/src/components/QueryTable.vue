@@ -2,9 +2,12 @@
   <v-card class="query-table-card pt-4">
     <v-card-title class="d-flex align-center justify-space-between">
       <span>{{ title }}</span>
-      <v-spacer/>
-      <v-row justify="end" class="align-center">
-        <v-spacer/>
+      <v-spacer />
+      <v-row
+        justify="end"
+        class="align-center"
+      >
+        <v-spacer />
         <v-col>
           <v-text-field
             v-model="searchQuery"
@@ -43,7 +46,9 @@
 
               <v-card-text>
                 <div class="mb-4">
-                  <v-label class="mb-2">Date Range</v-label>
+                  <v-label class="mb-2">
+                    Date Range
+                  </v-label>
                   <div class="d-flex gap-2">
                     <v-text-field
                       v-model="filters.startDate"
@@ -73,7 +78,9 @@
                 />
 
                 <div class="mb-4">
-                  <v-label class="mb-2">Min Relevance Score</v-label>
+                  <v-label class="mb-2">
+                    Min Relevance Score
+                  </v-label>
                   <v-slider
                     v-model="filters.minRelevance"
                     :min="0"
@@ -92,7 +99,7 @@
                   variant="text"
                   @click="resetFilters"
                 />
-                <v-spacer/>
+                <v-spacer />
                 <v-btn
                   text="Apply"
                   color="primary"
@@ -139,19 +146,19 @@
       fixed-header
       @click:row="handleRowClick"
     >
-      <template #item.user_query="{ item }">
+      <template #[`item.user_query`]="{ item }">
         <div class="query-text">
           {{ truncateText(item.user_query, 60) }}
         </div>
       </template>
 
-      <template #item.response="{ item }">
+      <template #[`item.response`]="{ item }">
         <div class="response-preview">
           {{ truncateText(item.response, 80) }}
         </div>
       </template>
 
-      <template #item.error_occurred="{ item }">
+      <template #[`item.error_occurred`]="{ item }">
         <v-chip
           :color="getStatusColor(item.error_occurred ? 'error' : 'success')"
           size="small"
@@ -161,13 +168,13 @@
         </v-chip>
       </template>
 
-      <template #item.response_time_ms="{ item }">
+      <template #[`item.response_time_ms`]="{ item }">
         <span :class="getResponseTimeColor(item.response_time_ms)">
           {{ formatDuration(item.response_time_ms) }}
         </span>
       </template>
 
-      <template #item.vector_search_score="{ item }">
+      <template #[`item.vector_search_score`]="{ item }">
         <div class="d-flex align-center">
           <v-progress-linear
             :model-value="item.vector_search_score ? item.vector_search_score * 100 : 0"
@@ -177,12 +184,12 @@
             style="width: 60px;"
           />
           <span class="text-caption">{{
-              item.vector_search_score ? Math.round(item.vector_search_score * 100) + '%' : 'N/A'
-            }}</span>
+            item.vector_search_score ? Math.round(item.vector_search_score * 100) + '%' : 'N/A'
+          }}</span>
         </div>
       </template>
 
-      <template #item.llm_model="{ item }">
+      <template #[`item.llm_model`]="{ item }">
         <v-chip
           :color="getModelColor(item.llm_model)"
           size="small"
@@ -192,7 +199,7 @@
         </v-chip>
       </template>
 
-      <template #item.location="{ item }">
+      <template #[`item.location`]="{ item }">
         <div class="text-no-wrap">
           <div class="text-caption">
             {{ item.location_city || 'N/A' }}
@@ -203,13 +210,13 @@
         </div>
       </template>
 
-      <template #item.timestamp="{ item }">
+      <template #[`item.timestamp`]="{ item }">
         <span class="text-no-wrap">
           {{ formatDate(item.timestamp) }}
         </span>
       </template>
 
-      <template #item.actions="{ item }">
+      <template #[`item.actions`]="{ item }">
         <div class="d-flex gap-1">
           <v-btn
             icon="$view"
@@ -245,7 +252,8 @@
                   <v-icon
                     start
                     color="success"
-                  >$thumb-up
+                  >
+                    $thumb-up
                   </v-icon>
                   Helpful
                 </v-list-item-title>
@@ -255,7 +263,8 @@
                   <v-icon
                     start
                     color="error"
-                  >$thumb-down
+                  >
+                    $thumb-down
                   </v-icon>
                   Not Helpful
                 </v-list-item-title>
@@ -272,20 +281,30 @@
         >
           <v-card-text>
             <div class="mb-4">
-              <v-label class="mb-2 font-weight-bold">Query:</v-label>
-              <div class="text-body-2">{{ item.user_query }}</div>
+              <v-label class="mb-2 font-weight-bold">
+                Query:
+              </v-label>
+              <div class="text-body-2">
+                {{ item.user_query }}
+              </div>
             </div>
 
             <div class="mb-4">
-              <v-label class="mb-2 font-weight-bold">Response:</v-label>
-              <div class="text-body-2">{{ item.response }}</div>
+              <v-label class="mb-2 font-weight-bold">
+                Response:
+              </v-label>
+              <div class="text-body-2">
+                {{ item.response }}
+              </div>
             </div>
 
             <div
               v-if="item.sources_used && item.sources_used.length"
               class="mb-4"
             >
-              <v-label class="mb-2 font-weight-bold">Sources:</v-label>
+              <v-label class="mb-2 font-weight-bold">
+                Sources:
+              </v-label>
               <div class="d-flex flex-wrap gap-2">
                 <v-chip
                   v-for="source in item.sources_used"
@@ -306,7 +325,6 @@
           </v-card-text>
         </v-card>
       </template>
-
     </v-data-table>
 
     <!-- Query Details Dialog -->
@@ -315,16 +333,29 @@
       max-width="900px"
       scrollable
     >
-      <v-card v-if="selectedQuery" class="dialog-card" elevation="8">
+      <v-card
+        v-if="selectedQuery"
+        class="dialog-card"
+        elevation="8"
+      >
         <v-card-title class="dialog-header pa-6 d-flex align-center">
           <div class="d-flex align-center">
-            <v-icon class="me-3" color="primary">$search</v-icon>
+            <v-icon
+              class="me-3"
+              color="primary"
+            >
+              $search
+            </v-icon>
             <div>
-              <h2 class="text-h6 font-weight-bold">Query Details</h2>
-              <p class="text-body-2 text-medium-emphasis ma-0">View comprehensive query information</p>
+              <h2 class="text-h6 font-weight-bold">
+                Query Details
+              </h2>
+              <p class="text-body-2 text-medium-emphasis ma-0">
+                View comprehensive query information
+              </p>
             </div>
           </div>
-          <v-spacer/>
+          <v-spacer />
           <v-btn
             icon="$close"
             variant="text"
@@ -333,27 +364,35 @@
           />
         </v-card-title>
 
-        <v-divider class="border-opacity-25"/>
+        <v-divider class="border-opacity-25" />
 
         <v-card-text class="pa-6">
           <!-- Query details content here -->
           <div class="mb-4">
-            <v-label class="mb-2 font-weight-bold">Query:</v-label>
+            <v-label class="mb-2 font-weight-bold">
+              Query:
+            </v-label>
             <v-card
               variant="outlined"
               class="pa-3"
             >
-              <div class="text-body-2">{{ selectedQuery.user_query }}</div>
+              <div class="text-body-2">
+                {{ selectedQuery.user_query }}
+              </div>
             </v-card>
           </div>
 
           <div class="mb-4">
-            <v-label class="mb-2 font-weight-bold">Response:</v-label>
+            <v-label class="mb-2 font-weight-bold">
+              Response:
+            </v-label>
             <v-card
               variant="outlined"
               class="pa-3"
             >
-              <div class="text-body-2">{{ selectedQuery.response }}</div>
+              <div class="text-body-2">
+                {{ selectedQuery.response }}
+              </div>
             </v-card>
           </div>
 
@@ -361,7 +400,9 @@
           <v-row>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">Status:</v-label>
+                <v-label class="font-weight-bold">
+                  Status:
+                </v-label>
                 <v-chip
                   :color="getStatusColor(selectedQuery.error_occurred ? 'error' : 'success')"
                   size="small"
@@ -374,7 +415,9 @@
             </v-col>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">Response Time:</v-label>
+                <v-label class="font-weight-bold">
+                  Response Time:
+                </v-label>
                 <span class="ml-2">{{ formatDuration(selectedQuery.response_time_ms) }}</span>
               </div>
             </v-col>
@@ -383,7 +426,9 @@
           <v-row>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">LLM Model:</v-label>
+                <v-label class="font-weight-bold">
+                  LLM Model:
+                </v-label>
                 <v-chip
                   :color="getModelColor(selectedQuery.llm_model)"
                   size="small"
@@ -399,7 +444,9 @@
           <v-row>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">Cache Hit:</v-label>
+                <v-label class="font-weight-bold">
+                  Cache Hit:
+                </v-label>
                 <v-chip
                   :color="selectedQuery.cache_hit ? 'success' : 'default'"
                   size="small"
@@ -410,26 +457,35 @@
                 </v-chip>
               </div>
             </v-col>
-            <v-col cols="6" v-if="selectedQuery.vector_search_score !== null">
+            <v-col
+              v-if="selectedQuery.vector_search_score !== null"
+              cols="6"
+            >
               <div class="mb-2">
-                <v-label class="font-weight-bold">Relevance Score:</v-label>
+                <v-label class="font-weight-bold">
+                  Relevance Score:
+                </v-label>
                 <span class="ml-2">{{ Math.round(selectedQuery.vector_search_score * 100) }}%</span>
               </div>
             </v-col>
           </v-row>
 
           <!-- Session & Identity -->
-          <v-divider class="my-4"/>
+          <v-divider class="my-4" />
           <v-row>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">Session ID:</v-label>
+                <v-label class="font-weight-bold">
+                  Session ID:
+                </v-label>
                 <span class="ml-2 text-caption font-mono">{{ selectedQuery.session_id || 'N/A' }}</span>
               </div>
             </v-col>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">Query ID:</v-label>
+                <v-label class="font-weight-bold">
+                  Query ID:
+                </v-label>
                 <span class="ml-2 text-caption font-mono">{{ selectedQuery.id }}</span>
               </div>
             </v-col>
@@ -438,34 +494,51 @@
           <v-row>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">Client IP:</v-label>
+                <v-label class="font-weight-bold">
+                  Client IP:
+                </v-label>
                 <span class="ml-2 text-caption font-mono">{{ selectedQuery.client_ip || 'N/A' }}</span>
               </div>
             </v-col>
             <v-col cols="6">
               <div class="mb-2">
-                <v-label class="font-weight-bold">Timestamp:</v-label>
+                <v-label class="font-weight-bold">
+                  Timestamp:
+                </v-label>
                 <span class="ml-2 text-caption">{{ formatDate(selectedQuery.timestamp) }}</span>
               </div>
             </v-col>
           </v-row>
 
           <!-- Location Data -->
-          <div v-if="selectedQuery.location_city || selectedQuery.location_country" class="mb-4">
-            <v-label class="mb-2 font-weight-bold">Location:</v-label>
+          <div
+            v-if="selectedQuery.location_city || selectedQuery.location_country"
+            class="mb-4"
+          >
+            <v-label class="mb-2 font-weight-bold">
+              Location:
+            </v-label>
             <div class="ml-2">
               <span v-if="selectedQuery.location_city">{{ selectedQuery.location_city }}</span>
               <span v-if="selectedQuery.location_city && selectedQuery.location_region">, </span>
               <span v-if="selectedQuery.location_region">{{ selectedQuery.location_region }}</span>
               <span v-if="(selectedQuery.location_city || selectedQuery.location_region) && selectedQuery.location_country">, </span>
               <span v-if="selectedQuery.location_country">{{ selectedQuery.location_country }}</span>
-              <span v-if="selectedQuery.location_country_code" class="text-caption"> ({{ selectedQuery.location_country_code }})</span>
+              <span
+                v-if="selectedQuery.location_country_code"
+                class="text-caption"
+              > ({{ selectedQuery.location_country_code }})</span>
             </div>
           </div>
 
           <!-- Sources Used -->
-          <div v-if="selectedQuery.sources_used" class="mb-4">
-            <v-label class="mb-2 font-weight-bold">Sources Used:</v-label>
+          <div
+            v-if="selectedQuery.sources_used"
+            class="mb-4"
+          >
+            <v-label class="mb-2 font-weight-bold">
+              Sources Used:
+            </v-label>
             <div class="d-flex flex-wrap gap-2">
               <v-chip
                 v-for="source in parseSourcesUsed(selectedQuery.sources_used)"
@@ -479,16 +552,26 @@
           </div>
 
           <!-- Follow-up Questions -->
-          <div v-if="selectedQuery.follow_up_questions" class="mb-4">
-            <v-label class="mb-2 font-weight-bold">Follow-up Questions:</v-label>
-            <v-list density="compact" class="ml-2">
+          <div
+            v-if="selectedQuery.follow_up_questions"
+            class="mb-4"
+          >
+            <v-label class="mb-2 font-weight-bold">
+              Follow-up Questions:
+            </v-label>
+            <v-list
+              density="compact"
+              class="ml-2"
+            >
               <v-list-item
                 v-for="(question, index) in parseFollowUpQuestions(selectedQuery.follow_up_questions)"
                 :key="index"
                 class="text-body-2"
               >
                 <template #prepend>
-                  <v-icon size="small">$help</v-icon>
+                  <v-icon size="small">
+                    $help
+                  </v-icon>
                 </template>
                 {{ question }}
               </v-list-item>
@@ -496,8 +579,13 @@
           </div>
 
           <!-- User Feedback -->
-          <div v-if="selectedQuery.user_feedback" class="mb-4">
-            <v-label class="mb-2 font-weight-bold">User Feedback:</v-label>
+          <div
+            v-if="selectedQuery.user_feedback"
+            class="mb-4"
+          >
+            <v-label class="mb-2 font-weight-bold">
+              User Feedback:
+            </v-label>
             <v-chip
               :color="selectedQuery.user_feedback === 'helpful' ? 'success' : 'error'"
               size="small"
@@ -509,27 +597,34 @@
           </div>
 
           <!-- Error Details -->
-          <div v-if="selectedQuery.error_occurred && selectedQuery.error_message" class="mb-4">
-            <v-label class="mb-2 font-weight-bold">Error Details:</v-label>
+          <div
+            v-if="selectedQuery.error_occurred && selectedQuery.error_message"
+            class="mb-4"
+          >
+            <v-label class="mb-2 font-weight-bold">
+              Error Details:
+            </v-label>
             <v-card
               variant="outlined"
               color="error"
               class="pa-3"
             >
-              <div class="text-body-2">{{ selectedQuery.error_message }}</div>
+              <div class="text-body-2">
+                {{ selectedQuery.error_message }}
+              </div>
             </v-card>
           </div>
         </v-card-text>
 
-        <v-divider class="border-opacity-25"/>
+        <v-divider class="border-opacity-25" />
 
         <v-card-actions class="pa-6">
-          <v-spacer/>
+          <v-spacer />
           <v-btn
             variant="outlined"
             prepend-icon="$close"
-            @click="showDetailsDialog = false"
             class="rounded-lg"
+            @click="showDetailsDialog = false"
           >
             Close
           </v-btn>
@@ -648,7 +743,7 @@ const activeFiltersCount = computed(() => {
 // Methods
 const truncateText = (text, maxLength) => {
   if (!text || text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  return `${text.substring(0, maxLength)}...`;
 };
 
 const getResponseTimeColor = (responseTime) => {

@@ -5,18 +5,18 @@
         <v-btn
           color="success"
           prepend-icon="$upload"
-          @click="showUploadDialog = true"
           variant="outlined"
           class="mr-4"
+          @click="showUploadDialog = true"
         >
           Upload Files
         </v-btn>
         <v-btn
           color="primary"
           prepend-icon="$refresh"
-          @click="loadSources"
           :loading="loading"
           variant="outlined"
+          @click="loadSources"
         >
           Refresh
         </v-btn>
@@ -25,9 +25,11 @@
 
     <v-card>
       <v-card-title class="text-h6 d-flex align-center">
-        <v-icon class="me-2">$folder</v-icon>
+        <v-icon class="me-2">
+          $folder
+        </v-icon>
         Source Files and Usage
-        <v-spacer></v-spacer>
+        <v-spacer />
         <v-text-field
           v-model="search"
           density="compact"
@@ -36,14 +38,14 @@
           hide-details
           class="me-2"
           style="max-width: 300px"
-        ></v-text-field>
+        />
         <v-btn
           icon="$refresh"
           variant="text"
           size="small"
-          @click="loadSources"
           :loading="loading"
-        ></v-btn>
+          @click="loadSources"
+        />
       </v-card-title>
       <v-card-text class="pa-0">
         <v-data-table
@@ -53,17 +55,43 @@
           :search="search"
           item-key="path"
         >
-          <template v-slot:item.path="{ item }">
+          <template #[`item.path`]="{ item }">
             <div class="d-flex align-center">
-              <v-icon :color="getFileIcon(item.path).color" class="me-2">
+              <v-icon
+                :color="getFileIcon(item.path).color"
+                class="me-2"
+              >
                 {{ getFileIcon(item.path).icon }}
               </v-icon>
-              <div class="text-truncate" style="max-width: 400px" :title="item.path">
+              <div
+                class="text-truncate"
+                style="max-width: 400px"
+                :title="item.path"
+              >
                 {{ item.path }}
               </div>
+              <!-- Non-editable indicator at end of path with tooltip -->
+              <v-tooltip
+                v-if="isNonEditableFile(item.path)"
+                :text="getNonEditableTooltip(item.path)"
+                location="top"
+                :max-width="300"
+                content-class="kb-tooltip"
+              >
+                <template #activator="{ props }">
+                  <v-icon
+                    v-bind="props"
+                    size="18"
+                    color="info"
+                    class="ms-2"
+                  >
+                    $help-circle-outline
+                  </v-icon>
+                </template>
+              </v-tooltip>
             </div>
           </template>
-          <template v-slot:item.content_type="{ item }">
+          <template #[`item.content_type`]="{ item }">
             <div class="d-flex flex-wrap gap-1">
               <v-chip
                 v-for="type in getContentTypes(item.content_type)"
@@ -75,29 +103,55 @@
               </v-chip>
             </div>
           </template>
-          <template v-slot:item.chunk_count="{ item }">
+          <template #[`item.chunk_count`]="{ item }">
             <span class="text-body-2">{{ item.chunk_count }} chunks</span>
           </template>
-          <template v-slot:item.actions="{ item }">
+          <template #[`item.actions`]="{ item }">
             <div class="d-flex align-center gap-1">
-              <v-btn
-                icon="$edit"
-                size="small"
-                variant="text"
-                color="green"
-                @click="viewFileContent(item)"
-                :disabled="loading"
-                title="View/Edit File Content"
-              ></v-btn>
+              <!-- Edit button with conditional tooltip/disable for non-editable types -->
+              <v-tooltip
+                v-if="isNonEditableFile(item.path)"
+                :text="getNonEditableTooltip(item.path)"
+                location="top"
+                :max-width="300"
+                content-class="kb-tooltip"
+              >
+                <template #activator="{ props }">
+                  <!-- Wrap disabled button in span so tooltip still works -->
+                  <span v-bind="props">
+                    <v-btn
+                      icon="$edit"
+                      size="small"
+                      variant="text"
+                      color="grey"
+                      :disabled="true"
+                      title="View/Edit File Content"
+                    />
+                  </span>
+                </template>
+              </v-tooltip>
+              <template v-else>
+                <v-btn
+                  icon="$edit"
+                  size="small"
+                  variant="text"
+                  color="green"
+                  :disabled="loading"
+                  title="View/Edit File Content"
+                  @click="viewFileContent(item)"
+                />
+              </template>
+
+              <!-- Delete button -->
               <v-btn
                 icon="$delete"
                 size="small"
                 variant="text"
                 color="red"
-                @click="confirmDelete(item)"
                 :disabled="loading"
                 title="Delete Source"
-              ></v-btn>
+                @click="confirmDelete(item)"
+              />
             </div>
           </template>
         </v-data-table>
@@ -120,28 +174,28 @@
             readonly
             variant="outlined"
             class="mb-4"
-          ></v-text-field>
+          />
           <v-text-field
             v-model="editedContentType"
             label="Content Type"
             variant="outlined"
             placeholder="e.g., technical, experience, skills, about"
-          ></v-text-field>
+          />
         </v-card-text>
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             text="Cancel"
             variant="text"
             @click="cancelEdit"
-          ></v-btn>
+          />
           <v-btn
             text="Save"
             color="primary"
             variant="elevated"
-            @click="saveEdit"
             :loading="loading"
-          ></v-btn>
+            @click="saveEdit"
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -165,28 +219,33 @@
           </p>
         </v-card-text>
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             text="Cancel"
             variant="text"
             @click="cancelDelete"
-          ></v-btn>
+          />
           <v-btn
             text="Delete"
             color="red"
             variant="elevated"
-            @click="deleteSource"
             :loading="loading"
-          ></v-btn>
+            @click="deleteSource"
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Upload Dialog -->
-    <v-dialog v-model="showUploadDialog" max-width="600px">
+    <v-dialog
+      v-model="showUploadDialog"
+      max-width="600px"
+    >
       <v-card>
         <v-card-title class="text-h5 d-flex align-center">
-          <v-icon class="me-2">$upload</v-icon>
+          <v-icon class="me-2">
+            $upload
+          </v-icon>
           Upload Knowledge Files
         </v-card-title>
 
@@ -211,7 +270,10 @@
           </div>
 
           <!-- Upload Progress -->
-          <div v-if="uploadProgress.active" class="mb-4">
+          <div
+            v-if="uploadProgress.active"
+            class="mb-4"
+          >
             <v-card variant="outlined">
               <v-card-text>
                 <div class="d-flex align-center justify-space-between mb-2">
@@ -229,16 +291,21 @@
           </div>
 
           <!-- Upload Results -->
-          <div v-if="uploadResults.length > 0" class="mb-4">
+          <div
+            v-if="uploadResults.length > 0"
+            class="mb-4"
+          >
             <v-card variant="outlined">
-              <v-card-title class="text-subtitle-1">Upload Results</v-card-title>
+              <v-card-title class="text-subtitle-1">
+                Upload Results
+              </v-card-title>
               <v-card-text>
                 <v-list density="compact">
                   <v-list-item
                     v-for="result in uploadResults"
                     :key="result.filename"
                   >
-                    <template v-slot:prepend>
+                    <template #prepend>
                       <v-icon
                         :color="result.success ? 'success' : 'error'"
                         :icon="result.success ? '$check' : '$alert'"
@@ -248,7 +315,10 @@
                     <v-list-item-subtitle v-if="result.success">
                       {{ formatFileSize(result.size) }}
                     </v-list-item-subtitle>
-                    <v-list-item-subtitle v-else class="text-error">
+                    <v-list-item-subtitle
+                      v-else
+                      class="text-error"
+                    >
                       {{ result.error }}
                     </v-list-item-subtitle>
                   </v-list-item>
@@ -261,18 +331,18 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            @click="cancelUpload"
             :disabled="uploadProgress.active"
             variant="text"
+            @click="cancelUpload"
           >
             Cancel
           </v-btn>
           <v-btn
-            @click="uploadFiles"
             color="success"
             :loading="uploadProgress.active"
             :disabled="!selectedFiles || selectedFiles.length === 0"
             variant="elevated"
+            @click="uploadFiles"
           >
             Upload {{ selectedFiles ? selectedFiles.length : 0 }} File{{ selectedFiles && selectedFiles.length !== 1 ? 's' : '' }}
           </v-btn>
@@ -287,22 +357,7 @@
       @file-saved="handleFileSaved"
     />
 
-    <!-- Notification Snackbar -->
-    <v-snackbar
-      v-model="showNotification"
-      :color="notificationType"
-      :timeout="6000"
-      location="top"
-    >
-      {{ notificationMessage }}
-      <template v-slot:actions>
-        <v-btn
-          text="Close"
-          variant="text"
-          @click="showNotification = false"
-        ></v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Toasts are handled globally via NotificationMessage -->
   </div>
 </template>
 
@@ -310,6 +365,7 @@
 import { ref, onMounted } from 'vue'
 import { adminAPI } from '@/services/api'
 import FileEditorModal from '@/components/FileEditorModal.vue'
+import { useNotifications } from '@/composables/useNotifications'
 
 const loading = ref(false)
 const search = ref('')
@@ -324,10 +380,8 @@ const selectedFilename = ref('')
 // Upload dialog state
 const showUploadDialog = ref(false)
 
-// Notification system
-const showNotification = ref(false)
-const notificationMessage = ref('')
-const notificationType = ref('info') // info, success, warning, error
+// Notifications
+const { showSuccess, showError, showInfo, showWarning } = useNotifications()
 const selectedFiles = ref(null)
 const uploadResults = ref([])
 const uploadProgress = ref({
@@ -349,11 +403,16 @@ const fileRules = [
   files => !files || files.every(file => file.size <= 50 * 1024 * 1024) || 'Files must be smaller than 50MB'
 ]
 
-// Notification helper
+// Notification helper (now uses global toasts)
 const showAlert = (message, type = 'info') => {
-  notificationMessage.value = message
-  notificationType.value = type
-  showNotification.value = true
+  const map = {
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+    warning: showWarning,
+  }
+  const fn = map[type] || showInfo
+  fn(message)
 }
 
 // Upload methods
@@ -399,6 +458,7 @@ const uploadFiles = async () => {
       success: false,
       error: error.response?.data?.detail || 'Upload failed'
     }))
+    showError('Upload failed')
   } finally {
     uploadProgress.value.active = false
   }
@@ -420,7 +480,7 @@ const formatFileSize = (bytes) => {
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
 const getFileIcon = (filename) => {
@@ -466,6 +526,7 @@ const loadSources = async () => {
     sources.value = response.sources || []
   } catch (error) {
     console.error('Failed to load sources:', error)
+    showError('Failed to load sources')
   } finally {
     loading.value = false
   }
@@ -500,6 +561,7 @@ const saveEdit = async () => {
     showEditDialog.value = false
   } catch (error) {
     console.error('Failed to update source:', error)
+    showError('Failed to update source')
   } finally {
     loading.value = false
   }
@@ -518,6 +580,7 @@ const deleteSource = async () => {
     showDeleteDialog.value = false
   } catch (error) {
     console.error('Failed to delete source:', error)
+    showError('Failed to delete source')
   } finally {
     loading.value = false
   }
@@ -539,7 +602,7 @@ const viewFileContent = (source) => {
 
   // Check if this is a binary file type that can't be edited
   const ext = source.path.split('.').pop()?.toLowerCase()
-  const binaryTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
+  const binaryTypes = ['pdf', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
 
   if (binaryTypes.includes(ext)) {
     showAlert(`Cannot edit binary file: ${source.path}. File type: ${ext.toUpperCase()}. This file contains binary data that cannot be edited as text.`, 'warning')
@@ -556,10 +619,28 @@ const handleFileSaved = () => {
   loadSources()
 }
 
+// Helpers to control edit availability and tooltip messaging
+const isNonEditableFile = (filePath) => {
+  if (!filePath) return false
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  return ['pdf', 'docx'].includes(ext)
+}
+
+const getNonEditableTooltip = (filePath) => {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  if (ext === 'pdf') {
+    return 'PDF files cannot be edited here. Download or replace the file instead.'
+  }
+  if (ext === 'docx') {
+    return 'DOCX files are binary and not editable in-browser. Upload a new version or convert to Markdown/HTML to edit.'
+  }
+  return 'This file type is not editable.'
+}
+
 const isBinaryFile = (filePath) => {
   if (!filePath) return false
   const ext = filePath.split('.').pop()?.toLowerCase()
-  const binaryTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
+  const binaryTypes = ['pdf', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'woff', 'woff2', 'ttf', 'otf']
   return binaryTypes.includes(ext)
 }
 
@@ -577,5 +658,10 @@ onMounted(() => {
 /* Ensure proper spacing for content type chips */
 .gap-1 > .v-chip {
   margin: 2px;
+}
+
+/* Ensure tooltip text wraps nicely at ~300px */
+:deep(.kb-tooltip) {
+  white-space: normal;
 }
 </style>

@@ -3,7 +3,9 @@
     <!-- Header with filters -->
     <div class="d-flex justify-space-between align-center mb-4">
       <div class="d-flex align-center gap-4">
-        <h2 class="text-h6 font-weight-bold">Content Gaps</h2>
+        <h2 class="text-h6 font-weight-bold">
+          Content Gaps
+        </h2>
         <v-chip
           :color="showResolved ? 'success' : 'warning'"
           variant="tonal"
@@ -28,8 +30,8 @@
           color="primary"
           variant="outlined"
           prepend-icon="$refresh"
-          @click="fetchGaps"
           :loading="loading"
+          @click="fetchGaps"
         >
           Refresh
         </v-btn>
@@ -37,16 +39,32 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading && gaps.length === 0" class="text-center py-8">
-      <v-progress-circular indeterminate color="primary" />
-      <p class="text-body-2 mt-2 text-medium-emphasis">Loading content gaps...</p>
+    <div
+      v-if="loading && gaps.length === 0"
+      class="text-center py-8"
+    >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+      />
+      <p class="text-body-2 mt-2 text-medium-emphasis">
+        Loading content gaps...
+      </p>
     </div>
 
     <!-- Empty State -->
     <v-card v-else-if="!loading && gaps.length === 0">
       <v-card-text class="text-center py-8">
-        <v-icon size="64" color="success" class="mb-4">$check-circle</v-icon>
-        <h3 class="text-h6 mb-2">No Content Gaps Found</h3>
+        <v-icon
+          size="64"
+          color="success"
+          class="mb-4"
+        >
+          $check-circle
+        </v-icon>
+        <h3 class="text-h6 mb-2">
+          No Content Gaps Found
+        </h3>
         <p class="text-body-2 text-medium-emphasis">
           {{ showResolved ? 'No content gaps have been detected.' : 'All content gaps have been resolved!' }}
         </p>
@@ -58,17 +76,34 @@
       <v-table hover>
         <thead>
           <tr>
-            <th class="text-left font-weight-bold">Pattern</th>
-            <th class="text-center font-weight-bold">Count</th>
-            <th class="text-center font-weight-bold">Avg Score</th>
-            <th class="text-center font-weight-bold">First Seen</th>
-            <th class="text-center font-weight-bold">Last Seen</th>
-            <th class="text-center font-weight-bold">Status</th>
-            <th class="text-center font-weight-bold">Actions</th>
+            <th class="text-left font-weight-bold">
+              Pattern
+            </th>
+            <th class="text-center font-weight-bold">
+              Count
+            </th>
+            <th class="text-center font-weight-bold">
+              Avg Score
+            </th>
+            <th class="text-center font-weight-bold">
+              First Seen
+            </th>
+            <th class="text-center font-weight-bold">
+              Last Seen
+            </th>
+            <th class="text-center font-weight-bold">
+              Status
+            </th>
+            <th class="text-center font-weight-bold">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="gap in gaps" :key="gap.id">
+          <tr
+            v-for="gap in gaps"
+            :key="gap.id"
+          >
             <!-- Pattern -->
             <td class="py-4">
               <div class="d-flex flex-column">
@@ -138,11 +173,13 @@
                   variant="text"
                   size="small"
                   icon="$check"
-                  @click="markResolved(gap)"
                   :loading="resolvingIds.has(gap.id)"
+                  @click="markResolved(gap)"
                 >
                   <v-icon>$check</v-icon>
-                  <v-tooltip activator="parent">Mark as Resolved</v-tooltip>
+                  <v-tooltip activator="parent">
+                    Mark as Resolved
+                  </v-tooltip>
                 </v-btn>
 
                 <v-btn
@@ -151,11 +188,13 @@
                   variant="text"
                   size="small"
                   icon="$undo"
-                  @click="markUnresolved(gap)"
                   :loading="resolvingIds.has(gap.id)"
+                  @click="markUnresolved(gap)"
                 >
                   <v-icon>$undo</v-icon>
-                  <v-tooltip activator="parent">Mark as Unresolved</v-tooltip>
+                  <v-tooltip activator="parent">
+                    Mark as Unresolved
+                  </v-tooltip>
                 </v-btn>
 
                 <v-btn
@@ -166,7 +205,9 @@
                   @click="openNotesDialog(gap)"
                 >
                   <v-icon>$note-edit</v-icon>
-                  <v-tooltip activator="parent">Edit Notes</v-tooltip>
+                  <v-tooltip activator="parent">
+                    Edit Notes
+                  </v-tooltip>
                 </v-btn>
               </div>
             </td>
@@ -176,30 +217,55 @@
     </v-card>
 
     <!-- Notes Dialog -->
-    <v-dialog v-model="notesDialog.show" max-width="700px">
-      <v-card class="dialog-card" elevation="8">
+    <v-dialog
+      v-model="notesDialog.show"
+      max-width="700px"
+    >
+      <v-card
+        class="dialog-card"
+        elevation="8"
+      >
         <v-card-title class="dialog-header pa-6">
           <div class="d-flex align-center">
-            <v-icon class="me-3" color="primary">$note-edit</v-icon>
+            <v-icon
+              class="me-3"
+              color="primary"
+            >
+              $note-edit
+            </v-icon>
             <div>
-              <h2 class="text-h6 font-weight-bold">Edit Notes</h2>
-              <p class="text-body-2 text-medium-emphasis ma-0">Add notes for this content gap</p>
+              <h2 class="text-h6 font-weight-bold">
+                Edit Notes
+              </h2>
+              <p class="text-body-2 text-medium-emphasis ma-0">
+                Add notes for this content gap
+              </p>
             </div>
           </div>
         </v-card-title>
 
-        <v-divider class="border-opacity-25"/>
+        <v-divider class="border-opacity-25" />
 
         <v-card-text class="pa-6">
           <div class="mb-6">
-            <h3 class="text-h7 font-weight-bold mb-3 text-primary">Content Gap Pattern</h3>
-            <v-card variant="tonal" color="warning" class="pa-4 rounded-lg">
-              <div class="text-body-2 font-mono">{{ notesDialog.gap?.pattern }}</div>
+            <h3 class="text-h7 font-weight-bold mb-3 text-primary">
+              Content Gap Pattern
+            </h3>
+            <v-card
+              variant="tonal"
+              color="warning"
+              class="pa-4 rounded-lg"
+            >
+              <div class="text-body-2 font-mono">
+                {{ notesDialog.gap?.pattern }}
+              </div>
             </v-card>
           </div>
 
           <div>
-            <h3 class="text-h7 font-weight-bold mb-3 text-primary">Notes</h3>
+            <h3 class="text-h7 font-weight-bold mb-3 text-primary">
+              Notes
+            </h3>
             <v-textarea
               v-model="notesDialog.notes"
               placeholder="Add notes about this content gap, potential solutions, or action items..."
@@ -213,24 +279,24 @@
           </div>
         </v-card-text>
 
-        <v-divider class="border-opacity-25"/>
+        <v-divider class="border-opacity-25" />
 
         <v-card-actions class="pa-6">
-          <v-spacer/>
+          <v-spacer />
           <v-btn 
-            @click="closeNotesDialog" 
-            variant="outlined"
+            variant="outlined" 
             prepend-icon="$close"
             class="rounded-lg"
+            @click="closeNotesDialog"
           >
             Cancel
           </v-btn>
           <v-btn
-            @click="saveNotes"
             color="primary"
             prepend-icon="$save"
             :loading="notesDialog.saving"
             class="rounded-lg"
+            @click="saveNotes"
           >
             Save Notes
           </v-btn>
@@ -239,32 +305,20 @@
     </v-dialog>
 
     <!-- Loading overlay for actions -->
-    <v-overlay :model-value="loading && gaps.length > 0" contained>
+    <v-overlay
+      :model-value="loading && gaps.length > 0"
+      contained
+    >
       <v-progress-circular indeterminate />
     </v-overlay>
 
-    <!-- Snackbar for notifications -->
-    <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="4000"
-      location="top right"
-    >
-      {{ snackbar.message }}
-      <template v-slot:actions>
-        <v-btn
-          variant="text"
-          @click="snackbar.show = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Toasts are handled globally via NotificationMessage -->
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch, reactive } from 'vue'
+import { useNotifications } from '@/composables/useNotifications'
 import api from '@/services/api'
 
 // Define emits
@@ -283,19 +337,19 @@ const notesDialog = ref({
   saving: false
 })
 
-const snackbar = ref({
-  show: false,
-  message: '',
-  color: 'success'
-})
+// Notifications
+const { showSuccess, showError, showInfo, showWarning } = useNotifications()
 
 // Methods
 const showSnackbar = (message, color = 'success') => {
-  snackbar.value = {
-    show: true,
-    message,
-    color
+  const map = {
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+    warning: showWarning,
   }
+  const fn = map[color] || showInfo
+  fn(message)
 }
 
 const fetchGaps = async () => {
@@ -374,7 +428,7 @@ const saveNotes = async () => {
 // Utility functions
 const truncateText = (text, maxLength) => {
   if (!text) return ''
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+  return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text
 }
 
 const formatDate = (dateString) => {

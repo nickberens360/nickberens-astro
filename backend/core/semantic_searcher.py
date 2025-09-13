@@ -9,6 +9,9 @@ This module provides focused functionality for:
 """
 
 import logging
+import os
+import shutil
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -22,9 +25,23 @@ except ImportError:
     # Fallback to community version if new package not available
     from langchain_community.vectorstores import Chroma  # type: ignore
 
+# Chroma error type (optional import, we will fall back to string-matching)
+try:
+    from chromadb.errors import InternalError as ChromaInternalError  # type: ignore
+except Exception:  # pragma: no cover - not present in all environments
+    ChromaInternalError = Exception  # type: ignore
+
 from .config import AppConfig
 
 logger = logging.getLogger(__name__)
+
+# Import settings manager for dynamic RAG configuration
+try:
+    from .settings_manager import get_settings_manager
+
+    SETTINGS_MANAGER_AVAILABLE = True
+except ImportError:
+    SETTINGS_MANAGER_AVAILABLE = False
 
 
 class SemanticSearcher:
@@ -36,6 +53,34 @@ class SemanticSearcher:
         self.vector_store: Optional[Chroma] = None
         self._initialize_store()
 
+    def _get_rag_config_settings(self):
+        """Get RAG configuration settings dynamically from the settings manager."""
+        if not SETTINGS_MANAGER_AVAILABLE:
+            logger.debug("Settings manager not available, using static config")
+            return None
+
+        try:
+            settings_manager = get_settings_manager()
+            rag_settings = settings_manager.get_rag_config_settings()
+            logger.debug(f"Retrieved RAG settings: score_threshold={rag_settings.rag_score_threshold}")
+            return rag_settings
+        except Exception as e:
+            logger.warning(f"Failed to get RAG settings, falling back to static config: {e}")
+            return None
+
+    def _get_search_retrieval_settings(self):
+        """Get SearchRetrievalSettings dynamically (max results, timeout, fuzzy toggles, etc.)."""
+        if not SETTINGS_MANAGER_AVAILABLE:
+            return None
+        try:
+            from .settings_manager import get_settings_manager
+
+            settings_manager = get_settings_manager()
+            return settings_manager.get_search_retrieval_settings()
+        except Exception as e:
+            logger.debug(f"Failed to get search retrieval settings: {e}")
+            return None
+
     def _initialize_store(self):
         """Initialize or load the unified vector store."""
         Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
@@ -45,11 +90,42 @@ class SemanticSearcher:
             embedding_function=self.embeddings,
         )
 
+    def _reset_store(self) -> None:
+        """Safely reset the persistent vector store directory and reinitialize."""
+        try:
+            persist_path = Path(self.persist_dir)
+            # Safety check: ensure we only ever delete within the project tree
+            if persist_path.is_dir() and str(persist_path).startswith("backend/"):
+                shutil.rmtree(persist_path, ignore_errors=True)
+                logger.warning(f"Resetting Chroma vector store due to corruption at {persist_path}")
+            Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
+            self._initialize_store()
+        except Exception as e:
+            logger.error(f"Failed to reset vector store: {e}")
+            raise
+
     def add_documents(self, documents: List[Document]) -> None:
         """Add documents to the vector store."""
-        if documents and self.vector_store is not None:
+        if not documents or self.vector_store is None:
+            return
+        try:
             self.vector_store.add_documents(documents)
             logger.info(f"Added {len(documents)} documents to vector store")
+        except Exception as e:
+            # Detect malformed underlying DB and auto-recover when allowed
+            message = str(e).lower()
+            force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() in {"1", "true", "yes"}
+            is_malformed = "database disk image is malformed" in message or "is malformed" in message
+            if (isinstance(e, ChromaInternalError) and is_malformed) or (is_malformed and force_rebuild):
+                logger.error(f"Chroma store appears corrupted: {e}. Force rebuild: {force_rebuild}")
+                if force_rebuild:
+                    # Reset the store and retry once
+                    self._reset_store()
+                    self.vector_store.add_documents(documents)
+                    logger.info(f"Recovered vector store and added {len(documents)} documents after reset")
+                    return
+            # If not recoverable, re-raise
+            raise
 
     def get_retriever(
         self, search_kwargs: Optional[Dict] = None, filter_content_types: Optional[List[str]] = None
@@ -79,10 +155,15 @@ class SemanticSearcher:
 
         This method provides compatibility with LangChain's retriever interface.
         """
-        return self.semantic_search(query, k, filter_content_types)
+        return self.semantic_search(query=query, k=k, filter_content_types=filter_content_types)
 
     def semantic_search(
-        self, query: str, k: int = None, filter_content_types: Optional[List[str]] = None, score_threshold: float = None
+        self,
+        query: str,
+        k: int = None,
+        filter_content_types: Optional[List[str]] = None,
+        score_threshold: float = None,
+        use_mmr: bool = None,
     ) -> List[Document]:
         """
         Perform semantic search with optional filtering and scoring.
@@ -92,6 +173,7 @@ class SemanticSearcher:
             k: Number of results to return (defaults to AppConfig.DEFAULT_SEARCH_K)
             filter_content_types: Optional list of content types to filter by
             score_threshold: Distance threshold for filtering results (defaults to AppConfig.DEFAULT_DISTANCE_THRESHOLD)
+            use_mmr: Whether to use MMR (Maximum Marginal Relevance) for diversity (defaults to AppConfig.RAG_USE_MMR)
                            - ChromaDB returns DISTANCE scores (lower = better similarity)
                            - Typical range: 0.0-2.0 with L2 distance
                            - Use 0.0 for no filtering, 0.5-1.0 for good matches, 1.0+ for broader results
@@ -99,11 +181,28 @@ class SemanticSearcher:
         Returns:
             List of Document objects ranked by similarity (best matches first)
         """
-        # Apply defaults from config
+        # Apply defaults from config (with dynamic RAG settings support)
+        rag_settings = self._get_rag_config_settings()
+        sr_settings = self._get_search_retrieval_settings()
+
+        # Derive desired number of results from SearchRetrievalSettings.max_search_results when available
         if k is None:
-            k = AppConfig.DEFAULT_SEARCH_K
+            if sr_settings and getattr(sr_settings, "max_search_results", None):
+                k = int(sr_settings.max_search_results)
+            else:
+                k = AppConfig.DEFAULT_SEARCH_K
         if score_threshold is None:
-            score_threshold = AppConfig.DEFAULT_DISTANCE_THRESHOLD
+            if rag_settings:
+                score_threshold = rag_settings.rag_score_threshold
+                logger.debug(f"Using dynamic score threshold: {score_threshold}")
+            else:
+                score_threshold = AppConfig.DEFAULT_DISTANCE_THRESHOLD
+        if use_mmr is None:
+            if rag_settings:
+                use_mmr = rag_settings.rag_use_mmr
+                logger.debug(f"Using dynamic MMR setting: {use_mmr}")
+            else:
+                use_mmr = AppConfig.RAG_USE_MMR
 
         # Get more results than needed for filtering and reranking
         search_k = k * AppConfig.SEARCH_EXPANSION_MULTIPLIER
@@ -111,7 +210,51 @@ class SemanticSearcher:
         # Get documents with scores
         if self.vector_store is None:
             raise ValueError("Vector store not initialized")
-        docs_and_scores = self.vector_store.similarity_search_with_score(query, k=search_k)
+
+        def _run_retrieval() -> List[tuple[Document, float]]:
+            # Perform search with MMR or standard similarity search
+            if use_mmr:
+                try:
+                    # Use MMR search for diversity (with dynamic settings support)
+                    if rag_settings:
+                        fetch_k = max(search_k, rag_settings.rag_mmr_fetch_k)
+                        lambda_mult = rag_settings.rag_mmr_lambda_mult
+                        logger.debug(f"Using dynamic MMR params: fetch_k={fetch_k}, lambda_mult={lambda_mult}")
+                    else:
+                        fetch_k = max(search_k, AppConfig.RAG_MMR_FETCH_K)
+                        lambda_mult = AppConfig.RAG_MMR_LAMBDA_MULT
+
+                    docs = self.vector_store.max_marginal_relevance_search(
+                        query, k=search_k, fetch_k=fetch_k, lambda_mult=lambda_mult
+                    )
+                    # Convert to docs_and_scores format for consistent processing
+                    return [(doc, 0.0) for doc in docs]  # MMR doesn't return scores
+                except Exception as e:
+                    logger.warning(f"MMR search failed, falling back to similarity search: {e}")
+                    return self.vector_store.similarity_search_with_score(query, k=search_k)
+            else:
+                # Standard similarity search
+                return self.vector_store.similarity_search_with_score(query, k=search_k)
+
+        # Enforce retrieval timeout if configured
+        docs_and_scores: List[tuple[Document, float]] = []
+        timeout_seconds: Optional[int] = None
+        if sr_settings and getattr(sr_settings, "search_timeout_seconds", None):
+            timeout_seconds = int(sr_settings.search_timeout_seconds)
+
+        if timeout_seconds and timeout_seconds > 0:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_run_retrieval)
+                try:
+                    docs_and_scores = future.result(timeout=timeout_seconds)
+                except TimeoutError:
+                    logger.warning(f"Semantic search timed out after {timeout_seconds}s; returning empty results")
+                    docs_and_scores = []
+                except Exception as e:
+                    logger.error(f"Semantic search failed: {e}")
+                    docs_and_scores = []
+        else:
+            docs_and_scores = _run_retrieval()
 
         logger.debug(f"Raw search returned {len(docs_and_scores)} documents")
         if docs_and_scores:
@@ -134,6 +277,32 @@ class SemanticSearcher:
             # Normal case: filter by distance threshold (keep documents with distance <= threshold)
             filtered_docs = [doc for doc, score in docs_and_scores if score <= score_threshold]
         logger.debug(f"After score threshold ({score_threshold}): {len(filtered_docs)} documents")
+
+        # Apply additional post-filter by semantic similarity threshold if provided (convert distance to pseudo-similarity)
+        # We map distance d to similarity s = 1 / (1 + d), ensuring s in (0,1].
+        try:
+            if sr_settings and getattr(sr_settings, "semantic_similarity_threshold", None) is not None:
+                sim_thr = float(sr_settings.semantic_similarity_threshold)
+                if sim_thr > 0.0:
+
+                    def _sim_from_distance(d: float) -> float:
+                        try:
+                            return 1.0 / (1.0 + float(d))
+                        except Exception:
+                            return 0.0
+
+                    # Recompute docs_and_scores to include distance for filtering
+                    if score_threshold == 0.0:
+                        # We didn't keep scores when MMR path used; rebuild with similarity_search_with_score if needed
+                        # Only if we have no scores at all
+                        if use_mmr and self.vector_store is not None and filtered_docs:
+                            # Skip re-query to avoid extra cost; approximate by keeping filtered_docs
+                            pass
+                        else:
+                            pass
+                    filtered_docs = [doc for (doc, dist) in docs_and_scores if _sim_from_distance(dist) >= sim_thr]
+        except Exception as e:
+            logger.debug(f"Similarity post-filter skipped: {e}")
 
         # Apply content type filtering if specified
         if filter_content_types:
@@ -189,8 +358,11 @@ class SemanticSearcher:
             return 0
         try:
             if where:
-                # Try to use count with filter if supported
-                return self.vector_store._collection.count(where=where)
+                # ChromaDB count doesn't support where parameter in current version
+                # Fetch only IDs for efficiency
+                results = self.vector_store._collection.get(where=where, include=["ids"])
+                ids = results.get("ids", []) if isinstance(results, dict) else getattr(results, "ids", [])
+                return len(ids)
             else:
                 return self.vector_store._collection.count()
         except AttributeError:

@@ -14,7 +14,7 @@ class TestResponseSettingsIntegration:
 
     def test_response_settings_schema_validation(self):
         """Test that response settings schema validates correctly."""
-        # Test valid settings
+        # Test valid settings including new consolidated caching fields
         settings = ResponseSettings(
             preferred_response_length="detailed",
             response_style="technical",
@@ -25,6 +25,9 @@ class TestResponseSettingsIntegration:
             enable_code_highlighting=False,
             response_llm="gemini",
             enable_smart_selection=True,
+            enable_caching=True,
+            enable_response_caching=True,
+            cache_ttl_seconds=1800,
         )
 
         assert settings.preferred_response_length == "detailed"
@@ -36,6 +39,9 @@ class TestResponseSettingsIntegration:
         assert settings.enable_code_highlighting is False
         assert settings.response_llm == "gemini"
         assert settings.enable_smart_selection is True
+        assert settings.enable_caching is True
+        assert settings.enable_response_caching is True
+        assert settings.cache_ttl_seconds == 1800
 
     def test_response_settings_validation_from_dict(self):
         """Test response settings validation from dictionary."""
@@ -318,6 +324,33 @@ def example():
         assert loaded_settings.enable_code_highlighting is True
         assert loaded_settings.response_llm == "gemini"
         assert loaded_settings.enable_smart_selection is False
+
+    def test_caching_settings_consolidation(self):
+        """Test that caching settings are properly consolidated in ResponseSettings."""
+        # Test that all caching-related settings work together
+        data = {
+            "enable_caching": True,
+            "enable_response_caching": True,
+            "cache_ttl_seconds": 1800,
+            "response_cache_ttl_seconds": 3600,
+        }
+
+        settings = ResponseSettings.from_dict(data)
+
+        assert settings.enable_caching is True
+        assert settings.enable_response_caching is True
+        assert settings.cache_ttl_seconds == 1800  # Unified cache TTL
+        assert settings.response_cache_ttl_seconds == 3600  # Legacy field maintained
+
+        # Test TTL validation bounds
+        data_invalid_ttl = {
+            "cache_ttl_seconds": 30,  # Below minimum (60)
+            "response_cache_ttl_seconds": 100000,  # Above maximum (86400)
+        }
+
+        settings_bounded = ResponseSettings.from_dict(data_invalid_ttl)
+        assert settings_bounded.cache_ttl_seconds == 60  # Clamped to minimum
+        assert settings_bounded.response_cache_ttl_seconds == 86400  # Clamped to maximum
 
     def test_settings_manager_response_llm_integration(self):
         """Test that settings manager properly uses response settings for LLM selection."""

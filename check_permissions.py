@@ -3,7 +3,6 @@
 Check Railway volume permissions and directory structure
 """
 import os
-import stat
 from pathlib import Path
 
 

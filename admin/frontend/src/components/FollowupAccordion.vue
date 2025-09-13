@@ -1,43 +1,77 @@
 <template>
-  <div>
-    <v-alert v-if="error" type="error" variant="tonal" class="ds-mb-4">{{ error }}</v-alert>
+  <div class="followup-container ds-card">
+    <v-alert
+      v-if="error"
+      type="error"
+      variant="tonal"
+      class="ds-mb-4"
+    >
+      {{ error }}
+    </v-alert>
 
     <!-- Subtle control bar -->
-    <div class="ds-mb-4 d-flex align-center justify-space-between" v-if="categories.length > 0">
-      <div class="d-flex align-center">
+    <div
+      v-if="categories.length > 0"
+      class="ds-mb-4 d-flex align-center justify-space-between"
+    >
+      <div
+        class="d-flex align-center"
+        style="gap: 8px;"
+      >
         <v-btn
-          variant="text"
+          variant="tonal"
           size="small"
+          prepend-icon="$chevron-down"
+          :disabled="!categories.length || loading"
           @click="openAll"
-          :disabled="!categories.length"
-          class="text-caption mr-2"
         >
-          Expand All
+          Expand
         </v-btn>
         <v-btn
-          variant="text"
+          variant="tonal"
           size="small"
+          prepend-icon="$chevron-up"
+          :disabled="!categories.length || loading"
           @click="closeAll"
-          :disabled="!categories.length"
-          class="text-caption"
         >
-          Collapse All
+          Collapse
         </v-btn>
       </div>
 
-      <v-progress-circular v-if="loading" indeterminate color="primary" size="16" />
+      <v-progress-circular
+        v-if="loading"
+        indeterminate
+        color="primary"
+        size="16"
+      />
     </div>
 
-    <v-expansion-panels v-model="model" multiple variant="accordion">
+    <v-expansion-panels
+      v-model="model"
+      multiple
+      variant="accordion"
+      class="followup-panels"
+    >
       <v-expansion-panel
         v-for="cat in categories"
         :key="cat.id"
         :value="cat.id"
       >
-        <v-expansion-panel-title class="category-title-clean">
+        <v-expansion-panel-title class="category-title-clean category-title-row">
           <div class="d-flex align-center w-100">
             <div class="d-flex align-center flex-grow-1">
-              <v-checkbox
+              <v-avatar
+                size="28"
+                color="primary"
+                variant="tonal"
+                class="mr-3"
+              >
+                <v-icon size="16">
+                  $tag
+                </v-icon>
+              </v-avatar>
+              <!-- TODO: enable  once integrated
+             <v-checkbox
                 v-model="selectedCategories"
                 :value="cat.id"
                 hide-details
@@ -45,12 +79,28 @@
                 class="mr-3 category-checkbox"
                 @click.stop
                 @update:model-value="emitSelectedCategories"
-              />
+              />-->
               <div class="category-info">
-                <div class="category-name font-weight-medium">{{ cat.display_name }}</div>
+                <div class="category-name font-weight-medium">
+                  {{ cat.display_name }}
+                </div>
                 <div class="category-meta text-caption text-medium-emphasis mt-1">
-                  {{ (questionsByCat[cat.id] || []).length }} questions
-                  <span v-if="!cat.is_active" class="inactive-indicator"> • Inactive</span>
+                  <v-chip
+                    size="x-small"
+                    label
+                    variant="tonal"
+                    class="mr-2"
+                  >
+                    {{ (questionsByCat[cat.id] || []).length }} questions
+                  </v-chip>
+                  <v-chip
+                    size="x-small"
+                    :color="cat.is_active ? 'success' : 'grey'"
+                    variant="tonal"
+                    label
+                  >
+                    {{ cat.is_active ? 'Active' : 'Inactive' }}
+                  </v-chip>
                 </div>
               </div>
             </div>
@@ -63,8 +113,18 @@
                 variant="text"
                 color="primary"
                 :disabled="saving || loading"
-                @click.stop="openEditCategoryDialog(cat)"
                 class="category-action-btn"
+                @click.stop="openEditCategoryDialog(cat)"
+              />
+              <v-btn
+                :icon="cat.is_active ? '$eye-off' : '$eye'"
+                size="small"
+                variant="text"
+                :color="cat.is_active ? 'warning' : 'success'"
+                :title="cat.is_active ? 'Deactivate' : 'Activate'"
+                :disabled="saving || loading"
+                class="category-action-btn"
+                @click.stop="toggleCategoryActive(cat)"
               />
               <v-btn
                 icon="$delete"
@@ -72,27 +132,57 @@
                 variant="text"
                 color="error"
                 :disabled="saving || loading"
-                @click.stop="openDeleteCategoryDialog(cat)"
                 class="category-action-btn"
+                @click.stop="openDeleteCategoryDialog(cat)"
               />
             </div>
           </div>
         </v-expansion-panel-title>
         <v-expansion-panel-text class="question-panel-content">
-          <div v-if="(questionsByCat[cat.id] || []).length === 0" class="empty-questions text-center py-8">
-            <div class="text-body-2 text-medium-emphasis mb-3">No questions in this category</div>
-            <v-btn variant="text" size="small" prepend-icon="$plus" @click.stop="openAddDialog(cat)">
+          <div
+            v-if="(questionsByCat[cat.id] || []).length === 0"
+            class="empty-questions text-center py-8"
+          >
+            <v-icon
+              size="36"
+              class="mb-2"
+              color="primary"
+            >
+              $help-circle
+            </v-icon>
+            <div class="text-body-2 text-medium-emphasis mb-3">
+              No questions in this category
+            </div>
+            <v-btn
+              variant="tonal"
+              color="primary"
+              size="small"
+              prepend-icon="$plus"
+              @click.stop="openAddDialog(cat)"
+            >
               Add Question
             </v-btn>
           </div>
-          <div v-else class="questions-list">
-            <div v-for="(q, idx) in questionsByCat[cat.id]" :key="q.id" class="question-item">
+          <div
+            v-else
+            class="questions-list"
+          >
+            <div
+              v-for="(q, idx) in questionsByCat[cat.id]"
+              :key="q.id"
+              class="question-item"
+            >
               <div class="d-flex align-center">
                 <div class="question-content flex-grow-1">
-                  <div class="question-text text-body-2">{{ q.question_text }}</div>
+                  <div class="question-text text-body-2">
+                    {{ q.question_text }}
+                  </div>
                   <div class="question-meta text-caption text-medium-emphasis mt-1">
                     Order {{ q.sort_order }}
-                    <span v-if="!q.is_active" class="inactive-question"> • Inactive</span>
+                    <span
+                      v-if="!q.is_active"
+                      class="inactive-question"
+                    > • Inactive</span>
                   </div>
                 </div>
                 <div class="question-actions">
@@ -116,6 +206,8 @@
                     :icon="q.is_active ? '$eye-off' : '$eye'"
                     size="x-small"
                     variant="text"
+                    :color="q.is_active ? 'warning' : 'success'"
+                    :title="q.is_active ? 'Deactivate' : 'Activate'"
                     :disabled="saving"
                     class="question-action-btn"
                     @click.stop="toggleActive(cat, q)"
@@ -124,6 +216,8 @@
                     icon="$edit"
                     size="x-small"
                     variant="text"
+                    color="primary"
+                    :title="'Edit'"
                     :disabled="saving"
                     class="question-action-btn"
                     @click.stop="openEditDialog(cat, q)"
@@ -144,12 +238,12 @@
             <!-- Add Question Button -->
             <div class="add-question-section mt-4 pt-3 border-t-thin">
               <v-btn
-                variant="text"
+                variant="tonal"
                 prepend-icon="$plus"
                 size="small"
                 :disabled="saving || !cat.is_active"
-                @click="openAddDialog(cat)"
                 class="text-primary"
+                @click="openAddDialog(cat)"
               >
                 Add Question
               </v-btn>
@@ -159,13 +253,16 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <div class="ds-mt-4 ds-text-xs text-medium-emphasis">Model: {{ model }}</div>
-
     <!-- Add/Edit Dialog -->
-    <v-dialog v-model="showDialog" max-width="580px">
+    <v-dialog
+      v-model="showDialog"
+      max-width="580px"
+    >
       <v-card class="ds-card">
         <v-card-title class="d-flex align-center ds-text-xl ds-font-semibold">
-          <v-icon class="mr-2">$help-circle</v-icon>
+          <v-icon class="mr-2">
+            $help-circle
+          </v-icon>
           {{ editingQuestion ? 'Edit Question' : 'Add Question' }}
         </v-card-title>
         <v-card-text>
@@ -189,42 +286,100 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn class="ds-btn" variant="text" @click="closeDialog" :disabled="saving">Cancel</v-btn>
-          <v-btn class="ds-btn" color="primary" @click="save" :loading="saving">{{ editingQuestion ? 'Update' : 'Add' }}</v-btn>
+          <v-btn
+            class="ds-btn"
+            variant="text"
+            :disabled="saving"
+            @click="closeDialog"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            class="ds-btn"
+            color="primary"
+            :loading="saving"
+            @click="save"
+          >
+            {{ editingQuestion ? 'Update' : 'Add' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="showDeleteDialog" max-width="520px">
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="520px"
+    >
       <v-card class="ds-card">
         <v-card-title class="d-flex align-center ds-text-xl ds-font-semibold">
-          <v-icon class="mr-2" color="error">$delete</v-icon>
+          <v-icon
+            class="mr-2"
+            color="error"
+          >
+            $delete
+          </v-icon>
           Delete Question
         </v-card-title>
         <v-card-text>
-          <div class="ds-mb-3">Are you sure you want to delete this question?</div>
-          <v-alert type="warning" variant="tonal" class="ds-mb-3" :icon="false">
+          <div class="ds-mb-3">
+            Are you sure you want to delete this question?
+          </div>
+          <v-alert
+            type="warning"
+            variant="tonal"
+            class="ds-mb-3"
+            :icon="false"
+          >
             This action cannot be undone.
           </v-alert>
-          <v-card variant="outlined" class="ds-p-3">
-            <div class="ds-text-xs text-medium-emphasis ds-mb-1">Question</div>
-            <div class="ds-text-sm">{{ deleteTargetQuestion?.question_text }}</div>
+          <v-card
+            variant="outlined"
+            class="ds-p-3"
+          >
+            <div class="ds-text-xs text-medium-emphasis ds-mb-1">
+              Question
+            </div>
+            <div class="ds-text-sm">
+              {{ deleteTargetQuestion?.question_text }}
+            </div>
           </v-card>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn class="ds-btn" variant="text" @click="cancelDelete" :disabled="saving">Cancel</v-btn>
-          <v-btn class="ds-btn" color="error" @click="confirmDelete" :loading="saving">Delete</v-btn>
+          <v-btn
+            class="ds-btn"
+            variant="text"
+            :disabled="saving"
+            @click="cancelDelete"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            class="ds-btn"
+            color="error"
+            :loading="saving"
+            @click="confirmDelete"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Category Delete Confirmation Dialog -->
-    <v-dialog v-model="showCategoryDeleteDialog" max-width="560px">
+    <v-dialog
+      v-model="showCategoryDeleteDialog"
+      max-width="560px"
+    >
       <v-card class="ds-card">
         <v-card-title class="d-flex align-center ds-text-xl ds-font-semibold">
-          <v-icon class="mr-2" color="error">$delete</v-icon>
+          <v-icon
+            class="mr-2"
+            color="error"
+          >
+            $delete
+          </v-icon>
           Delete Category
         </v-card-title>
         <v-card-text>
@@ -233,11 +388,21 @@
             <strong>{{ deleteCategoryTarget?.display_name }}</strong>
             and all of its questions?
           </div>
-          <v-alert type="warning" variant="tonal" class="ds-mb-3" :icon="false">
+          <v-alert
+            type="warning"
+            variant="tonal"
+            class="ds-mb-3"
+            :icon="false"
+          >
             This action cannot be undone. All questions in this category will be permanently deleted.
           </v-alert>
-          <v-card variant="outlined" class="ds-p-3">
-            <div class="ds-text-xs text-medium-emphasis ds-mb-1">Summary</div>
+          <v-card
+            variant="outlined"
+            class="ds-p-3"
+          >
+            <div class="ds-text-xs text-medium-emphasis ds-mb-1">
+              Summary
+            </div>
             <div class="ds-text-sm">
               {{ (questionsByCat[deleteCategoryTarget?.id] || []).length }} questions will be deleted
             </div>
@@ -245,8 +410,22 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn class="ds-btn" variant="text" @click="cancelDeleteCategory" :disabled="saving">Cancel</v-btn>
-          <v-btn class="ds-btn" color="error" @click="confirmDeleteCategory" :loading="saving">Delete</v-btn>
+          <v-btn
+            class="ds-btn"
+            variant="text"
+            :disabled="saving"
+            @click="cancelDeleteCategory"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            class="ds-btn"
+            color="error"
+            :loading="saving"
+            @click="confirmDeleteCategory"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -437,6 +616,20 @@ const confirmDeleteCategory = async () => {
   }
 }
 
+// toggle category active/inactive
+const toggleCategoryActive = async (cat) => {
+  try {
+    saving.value = true
+    await api.updateFollowupCategory(cat.id, { is_active: !cat.is_active })
+    cat.is_active = !cat.is_active
+    emit('changed')
+  } catch (e) {
+    console.error('Failed to toggle category active state', e)
+  } finally {
+    saving.value = false
+  }
+}
+
 // reordering helpers (swap adjacent sort_order values)
 const moveUp = async (cat, idx) => {
   if (idx <= 0) return
@@ -540,6 +733,115 @@ defineExpose({
 </script>
 
 <style scoped>
+.followup-container {
+  padding: 16px;
+}
+
+.followup-panels :deep(.v-expansion-panel-title) {
+  padding: 10px 12px;
+}
+
+.category-title-row {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+  background-color: rgb(var(--v-theme-surface));
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-title-row:hover {
+  background-color: rgba(var(--v-theme-primary), 0.04);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* Category actions are always visible */
+.category-actions {
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+.inactive-indicator {
+  color: rgb(var(--v-theme-warning));
+}
+
+.question-panel-content {
+  background: rgba(var(--v-theme-surface-variant), 0.02);
+  border-left: 2px solid rgba(var(--v-theme-primary), 0.18);
+}
+
+/* Increase inner X-padding of panel content to match Welcome styling */
+.question-panel-content :deep(.v-expansion-panel-text__wrapper) {
+  padding-left: 22px !important;
+  padding-right: 22px !important;
+}
+
+.questions-list {
+  margin-top: 8px;
+}
+
+.question-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Increase horizontal padding for better readability */
+  padding: 14px 22px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+  background-color: rgba(var(--v-theme-surface));
+  transition: background-color 0.2s ease;
+}
+
+.question-item:hover {
+  background-color: rgba(var(--v-theme-primary), 0.04);
+}
+
+.question-content {
+  display: flex;
+  flex-direction: column; /* stack text and meta on separate lines */
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.question-text {
+  white-space: normal;
+}
+
+/* Emphasize inactive state on the question meta line */
+.inactive-question {
+  color: rgb(var(--v-theme-warning));
+  font-weight: 600;
+}
+
+.question-action-btn {
+  opacity: 0.8;
+}
+
+/* Ensure action cluster is aligned to the far right */
+.question-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* Ensure the row wrapper distributes content to the ends */
+.question-item > .d-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.empty-questions {
+  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+}
+
+.add-question-section {
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
 /* Clean category title */
 .category-title-clean {
   padding: 16px 20px;
@@ -556,23 +858,20 @@ defineExpose({
 
 .category-meta {
   line-height: 1.2;
+  font-size: 0.85rem;
+  color: rgba(var(--v-theme-on-surface), 0.70);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.inactive-indicator {
-  color: rgb(var(--v-theme-warning));
-  font-weight: 500;
-}
-
-/* Hover-revealed category actions */
+/* Category actions are always visible */
 .category-actions {
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.2s ease;
   display: flex;
   gap: 4px;
-}
-
-.v-expansion-panel-title:hover .category-actions {
-  opacity: 1;
 }
 
 .category-action-btn {
@@ -585,71 +884,27 @@ defineExpose({
   margin-right: 12px !important;
 }
 
-/* Question panel content */
-.question-panel-content {
-  padding: 20px !important;
-  /*background: rgba(var(--v-theme-surface), 0.2) !important;*/
+/* Enhanced inactive indicator styling */
+.inactive-indicator {
+  color: rgb(var(--v-theme-warning));
+  font-weight: 600;
+  background: rgba(var(--v-theme-warning), 0.12);
+  padding: 1px 8px;
+  border-radius: 6px;
 }
 
+/* Question panel content - consolidated styling */
+.question-panel-content {
+  background: rgba(var(--v-theme-surface-variant), 0.02);
+  border-left: 2px solid rgba(var(--v-theme-primary), 0.18);
+  padding: 20px !important;
+}
+
+/* Enhanced empty questions styling */
 .empty-questions {
   padding: 24px 0;
-}
-
-.questions-list {
-  space-y: 8px;
-}
-
-.question-item {
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.08);
-}
-
-.question-item:last-child {
-  border-bottom: none;
-}
-
-.question-content {
-  min-width: 0;
-}
-
-.question-text {
-  line-height: 1.4;
-  font-weight: 400;
-}
-
-.question-meta {
-  line-height: 1.2;
-}
-
-.inactive-question {
-  color: rgb(var(--v-theme-warning));
-  font-weight: 500;
-}
-
-/* Hover-revealed question actions */
-.question-actions {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  display: flex;
-  gap: 2px;
-  margin-left: 8px;
-}
-
-.question-item:hover .question-actions {
-  opacity: 1;
-}
-
-.question-action-btn {
-  min-width: 24px !important;
-  width: 24px;
-  height: 24px;
-}
-
-/* Add question section */
-.add-question-section {
-  border-top: 1px solid rgba(var(--v-theme-outline), 0.08);
-  margin-top: 16px;
-  padding-top: 12px;
+  border: 1px dashed rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
 }
 
 /* Visual hierarchy improvements */

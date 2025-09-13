@@ -1,20 +1,34 @@
 <template>
   <nav class="settings-nav">
-    <v-list class="settings-nav-list" nav density="comfortable" rounded="lg">
+    <v-list
+      class="settings-nav-list"
+      nav
+      density="comfortable"
+      lines="two"
+      rounded="lg"
+    >
       <v-list-item
         v-for="tab in navigationTabs"
         :key="tab.value"
         :value="tab.value"
         :active="currentTab === tab.value"
-        @click="navigateToTab(tab.value)"
         class="settings-nav-item"
         :class="{ 'settings-nav-item--active': currentTab === tab.value }"
         rounded="lg"
+        @click="navigateToTab(tab.value)"
       >
-        <template v-slot:prepend>
-          <v-icon :icon="tab.icon" size="20" />
+        <template #prepend>
+          <v-icon
+            :icon="tab.icon"
+            size="20"
+          />
         </template>
-        <v-list-item-title class="settings-nav-title">{{ tab.title }}</v-list-item-title>
+        <v-list-item-title class="settings-nav-title">
+          {{ tab.title }}
+        </v-list-item-title>
+        <v-list-item-subtitle class="settings-nav-description">
+          {{ tab.description }}
+        </v-list-item-subtitle>
       </v-list-item>
     </v-list>
   </nav>
@@ -27,72 +41,65 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
+// Phase 2: New 5-Section Organization
 const navigationTabs = [
   {
-    value: 'followup',
-    title: 'Follow-up Questions',
-    icon: '$help-circle'
+    value: 'core',
+    title: 'Core Settings',
+    icon: '$cog-box',
+    description: 'LLM models, API keys, and system mode'
   },
   {
-    value: 'welcome',
-    title: 'Welcome Questions',
-    icon: '$message-text'
+    value: 'search-retrieval',
+    title: 'Search & Retrieval',
+    icon: '$magnify-scan',
+    description: 'Query routing and RAG configuration'
   },
   {
-    value: 'api-keys',
-    title: 'API Keys',
-    icon: '$key'
+    value: 'search-taxonomy',
+    title: 'Search & Taxonomy',
+    icon: '$tag',
+    description: 'Categories, synonyms, and regex patterns'
   },
   {
     value: 'response',
     title: 'Response Settings',
-    icon: '$message-reply'
-  },
-  {
-    value: 'routing',
-    title: 'Query Routing',
-    icon: '$route'
-  },
-  {
-    value: 'features',
-    title: 'Feature Flags',
-    icon: '$feature-flag'
-  },
-  {
-    value: 'system',
-    title: 'System Config',
-    icon: '$settings'
+    icon: '$message-reply',
+    description: 'Response formatting and caching'
   },
   {
     value: 'security',
-    title: 'Security & Privacy',
-    icon: '$shield-check'
+    title: 'Security & Monitoring',
+    icon: '$shield-check',
+    description: 'Security settings and analytics'
+  },
+  {
+    value: 'ux',
+    title: 'User Experience',
+    icon: '$account-heart',
+    description: 'Welcome messages and user-facing features'
   }
 ]
 
 const currentTab = computed(() => {
   const routeName = route.name
-  if (routeName === 'settings-followup') return 'followup'
-  if (routeName === 'settings-welcome') return 'welcome'
-  if (routeName === 'settings-api-keys') return 'api-keys'
+  if (routeName === 'settings-core') return 'core'
+  if (routeName === 'settings-search-retrieval') return 'search-retrieval'
+  if (routeName === 'settings-taxonomy') return 'search-taxonomy'
   if (routeName === 'settings-response') return 'response'
-  if (routeName === 'settings-routing') return 'routing'
-  if (routeName === 'settings-features') return 'features'
-  if (routeName === 'settings-system') return 'system'
   if (routeName === 'settings-security') return 'security'
-  return 'followup' // default
+  if (routeName === 'settings-ux') return 'ux'
+  return 'core' // default to core settings
 })
 
 const navigateToTab = (tabValue) => {
   const routeMap = {
-    'followup': 'settings-followup',
-    'welcome': 'settings-welcome',
-    'api-keys': 'settings-api-keys',
+    'core': 'settings-core',
+    'search-retrieval': 'settings-search-retrieval',
+    'search-taxonomy': 'settings-taxonomy',
     'response': 'settings-response',
-    'routing': 'settings-routing',
-    'features': 'settings-features',
-    'system': 'settings-system',
-    'security': 'settings-security'
+    'security': 'settings-security',
+    'ux': 'settings-ux'
   }
 
   const routeName = routeMap[tabValue]
@@ -135,6 +142,12 @@ const navigateToTab = (tabValue) => {
   font-size: 0.95rem;
 }
 
+.settings-nav-description {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 1024px) {
   .settings-nav {
@@ -159,6 +172,10 @@ const navigateToTab = (tabValue) => {
 
   .settings-nav-title {
     font-size: 0.85rem;
+  }
+
+  .settings-nav-description {
+    display: none; /* Hide descriptions on tablets for space */
   }
 }
 

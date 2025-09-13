@@ -16,6 +16,7 @@ from langchain.docstore.document import Document
 from langchain_core.language_models import BaseLanguageModel
 
 from .llm_utils import extract_topics_with_llm
+from .taxonomy_loader import get_topic_taxonomy
 
 logger = logging.getLogger(__name__)
 
@@ -86,39 +87,77 @@ class StartupContentClassifier:
         return metadata
 
     def _extract_heuristic_topics(self, content: str, file_path: Path) -> List[str]:
-        """Extract topics using heuristic patterns as a complement to LLM analysis."""
+        """Extract topics using taxonomy-driven heuristics (fallback to hardcoded)."""
         content_lower = content.lower()
         file_name_lower = file_path.name.lower()
         detected_topics = set()
 
-        # File name based hints
-        file_hints = {
-            "about": ["about", "bio", "personal", "profile", "readme"],
-            "experience": ["resume", "cv", "work", "career", "employment", "experience"],
-            "skills": ["skills", "technologies", "expertise", "competencies", "stack"],
-            "creative": ["illustration", "art", "design", "gallery", "portfolio", "creative"],
-            "project": ["project", "projects", "development", "portfolio", "work"],
-        }
+        taxonomy = get_topic_taxonomy()
+        if taxonomy and isinstance(taxonomy.get("categories"), dict):
+            for topic, cfg in taxonomy["categories"].items():
+                # Build effective patterns from synonyms and explicit regex overrides
+                patterns: list[re.Pattern] = []
+                synonyms = [s for s in (cfg.get("synonyms") or []) if isinstance(s, str) and s.strip()]
+                if synonyms:
+                    try:
+                        escaped = [re.escape(s.strip()) for s in synonyms]
+                        syn_pattern = re.compile(r"\\b(?:" + "|".join(escaped) + r")\\b", re.IGNORECASE)
+                        patterns.append(syn_pattern)
+                    except re.error:
+                        for s in synonyms:
+                            try:
+                                patterns.append(re.compile(r"\\b" + re.escape(s.strip()) + r"\\b", re.IGNORECASE))
+                            except re.error:
+                                continue
 
-        for topic, hints in file_hints.items():
-            if any(hint in file_name_lower for hint in hints):
-                detected_topics.add(topic)
+                for raw in cfg.get("regex") or []:
+                    if not isinstance(raw, str):
+                        continue
+                    try:
+                        patterns.append(re.compile(raw, re.IGNORECASE))
+                    except re.error:
+                        continue
 
-        # Content-based detection (more conservative than fast classifier)
-        if any(word in content_lower for word in ["experience", "worked", "employment", "company", "role"]):
-            detected_topics.add("experience")
+                # Apply patterns to file name and content
+                try:
+                    if any(pat.search(file_name_lower) for pat in patterns) or any(
+                        pat.search(content_lower) for pat in patterns
+                    ):
+                        detected_topics.add(topic)
+                        continue
+                except re.error:
+                    pass
 
-        if any(word in content_lower for word in ["skill", "technology", "programming", "proficient"]):
-            detected_topics.add("skills")
+        # Fallback heuristics to preserve behavior
+        if not detected_topics:
+            # File name based hints
+            file_hints = {
+                "about": ["about", "bio", "personal", "profile", "readme"],
+                "experience": ["resume", "cv", "work", "career", "employment", "experience"],
+                "skills": ["skills", "technologies", "expertise", "competencies", "stack"],
+                "creative": ["illustration", "art", "design", "gallery", "portfolio", "creative"],
+                "project": ["project", "projects", "development", "portfolio", "work"],
+            }
 
-        if any(word in content_lower for word in ["about", "background", "philosophy", "passion"]):
-            detected_topics.add("about")
+            for topic, hints in file_hints.items():
+                if any(hint in file_name_lower for hint in hints):
+                    detected_topics.add(topic)
 
-        if any(word in content_lower for word in ["illustration", "art", "design", "creative"]):
-            detected_topics.add("creative")
+            # Content-based detection (more conservative than fast classifier)
+            if any(word in content_lower for word in ["experience", "worked", "employment", "company", "role"]):
+                detected_topics.add("experience")
 
-        if any(word in content_lower for word in ["project", "built", "developed", "created"]):
-            detected_topics.add("project")
+            if any(word in content_lower for word in ["skill", "technology", "programming", "proficient"]):
+                detected_topics.add("skills")
+
+            if any(word in content_lower for word in ["about", "background", "philosophy", "passion"]):
+                detected_topics.add("about")
+
+            if any(word in content_lower for word in ["illustration", "art", "design", "creative"]):
+                detected_topics.add("creative")
+
+            if any(word in content_lower for word in ["project", "built", "developed", "created"]):
+                detected_topics.add("project")
 
         if self._detect_code_content(content):
             detected_topics.add("technical")
@@ -153,14 +192,22 @@ class StartupContentClassifier:
         keywords.update(technical_terms)
         keywords.update(acronyms)
 
-        # Topic-specific keyword extraction
-        topic_keywords = {
-            "skills": ["javascript", "python", "react", "vue", "node", "typescript", "css", "html"],
-            "experience": ["company", "role", "position", "manager", "director", "lead"],
-            "creative": ["illustration", "art", "design", "portfolio", "gallery"],
-            "project": ["built", "created", "developed", "github", "repository"],
-            "technical": ["code", "programming", "software", "api", "database"],
-        }
+        # Topic-specific keyword extraction (taxonomy-driven if available)
+        taxonomy = get_topic_taxonomy()
+        if taxonomy and isinstance(taxonomy.get("categories"), dict):
+            topic_keywords: Dict[str, List[str]] = {}
+            for topic, cfg in taxonomy["categories"].items():
+                syn = [s.lower() for s in (cfg.get("synonyms") or []) if isinstance(s, str)]
+                extra = [s.lower() for s in (cfg.get("keywords") or []) if isinstance(s, str)]
+                topic_keywords[topic] = list({*syn, *extra})
+        else:
+            topic_keywords = {
+                "skills": ["javascript", "python", "react", "vue", "node", "typescript", "css", "html"],
+                "experience": ["company", "role", "position", "manager", "director", "lead"],
+                "creative": ["illustration", "art", "design", "portfolio", "gallery"],
+                "project": ["built", "created", "developed", "github", "repository"],
+                "technical": ["code", "programming", "software", "api", "database"],
+            }
 
         for topic in topics:
             if topic in topic_keywords:
@@ -170,7 +217,7 @@ class StartupContentClassifier:
 
         # Frequency-based keyword extraction
         words = re.findall(r"\b[a-z]+\b", content_lower)
-        word_freq = {}
+        word_freq: Dict[str, int] = {}
         for word in words:
             if len(word) >= 4:  # Skip short words
                 word_freq[word] = word_freq.get(word, 0) + 1
@@ -291,9 +338,9 @@ class StartupContentClassifier:
         if not self._classification_cache:
             return {"status": "no_classifications"}
 
-        topics_count = {}
+        topics_count: Dict[str, int] = {}
         confidence_scores = []
-        methods_count = {}
+        methods_count: Dict[str, int] = {}
 
         for metadata in self._classification_cache.values():
             # Count topics
