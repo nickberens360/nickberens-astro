@@ -329,17 +329,33 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
 
 
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
-    """Routes a user query to the unified retriever."""
-    # Check for both possible keys to handle both old and new conventions
-    if "_unified_retriever" in retrievers:
-        logger.debug(f"Using unified retriever for query: '{query}'")
-        return [retrievers["_unified_retriever"]]
-    elif "unified" in retrievers:
-        logger.debug(f"Using unified retriever for query: '{query}'")
+    """
+    Route a query to a LangChain-compatible retriever.
+
+    Prefer the wrapped `unified` retriever (BaseRetriever) for compatibility with
+    LangChain's history-aware utilities and async `.ainvoke`. If only the raw
+    `_unified_retriever` instance is present, adapt it by calling `.get_retriever()`.
+    """
+    # Prefer the LangChain BaseRetriever wrapper when available
+    if "unified" in retrievers:
+        logger.debug(f"Using unified BaseRetriever for query: '{query}'")
         return [retrievers["unified"]]
-    else:
-        logger.error("Unified retriever not found in retrievers dictionary")
-        return []
+
+    # Fallback: adapt the raw UnifiedRetriever instance to a BaseRetriever
+    if "_unified_retriever" in retrievers:
+        try:
+            from .unified_retriever import UnifiedRetriever  # local import to avoid cycles
+
+            unified_raw = retrievers["_unified_retriever"]
+            if isinstance(unified_raw, UnifiedRetriever):
+                adapted = unified_raw.get_retriever()
+                logger.debug(f"Adapted raw UnifiedRetriever to BaseRetriever for query: '{query}'")
+                return [adapted]
+        except Exception as e:
+            logger.warning(f"Failed to adapt UnifiedRetriever to BaseRetriever: {e}")
+
+    logger.error("Unified retriever not found in retrievers dictionary")
+    return []
 
 
 async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriever]) -> List[Document]:
