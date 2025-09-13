@@ -1,0 +1,91 @@
+# Multi‑Tenant MVP Plan
+
+This plan breaks the migration into small, verifiable milestones with rollbacks and acceptance criteria. No app code changes occur until migrations and guardrails are ready.
+
+## Assumptions
+- Database: Postgres. ORM: SQLAlchemy. API: FastAPI. Frontend: Astro + Vue.
+- Tests: pytest for backend, Vitest for UI.
+
+## Milestones
+
+### M1 — Schema & Policies (foundation)
+- Create core tables: `tenants`, `tenant_memberships`, `invitations`.
+- Add `tenant_id` to tenant‑scoped domain tables; backfill to a seeded `DEFAULT_TENANT`.
+- Add indexes and migrate uniques to composite `(tenant_id, ... )`.
+- Enable RLS and add policies on all tenant‑scoped tables.
+
+Acceptance
+- Migrations run cleanly on dev DBs; new constraints enforced.
+- RLS blocks cross‑tenant reads/writes using manual `SET LOCAL app.tenant_id` in psql.
+- Coverage includes tests that prove RLS behavior at the DB level.
+
+Rollback
+- Disable RLS and drop policies; remove `tenant_id` columns if unrecoverable (only in dev).
+
+### M2 — Backend Context & Session wiring
+- Add middleware to resolve tenant from subdomain or `/:tenant` prefix.
+- Add DB session wrapper that sets `SET LOCAL app.tenant_id = '<uuid>'` per request transaction.
+- Add `with_loader_criteria` or equivalents for ORM‑level tenant scoping as defense in depth.
+- Implement CRUD for tenants and memberships; simple invite flow scaffold (no email sending requirements beyond token generation).
+
+Acceptance
+- All existing domain endpoints operate with tenant context without code changes per handler.
+- Cross‑tenant access attempts fail (403 or empty per route semantics).
+- Logs include `tenant_id` for requests and DB queries.
+
+Rollback
+- Feature flag to bypass middleware and set default tenant; RLS remains enabled for safety.
+
+### M3 — Frontend Tenant Awareness
+- Implement `useTenant()` composable: parse subdomain or `/:tenant` prefix, store in state.
+- Add basic org switcher UI; support switching between at least two seeded tenants.
+- Ensure API client does not depend on headers for security; backend resolution is canonical.
+
+Acceptance
+- Navigating between `/:tenant` prefixed routes switches context and data.
+- Org switcher updates current tenant and view.
+
+Rollback
+- Hide switcher and lock UI to default tenant; backend still enforces RLS.
+
+### M4 — Invitations & Membership Management (MVP)
+- Create/accept invitation endpoints with simple token verification.
+- Role checks on membership changes (`owner`/`admin` required to invite/remove).
+
+Acceptance
+- Users can create a tenant, invite another user, accept invite, and switch tenants.
+- Permissions are enforced by role; DB prevents cross‑tenant leakage.
+
+Rollback
+- Disable invite endpoints; membership remains manageable by admins via DB in dev.
+
+### M5 — Observability & Hardening
+- Include `tenant_id` in structured logs and request IDs.
+- Add per‑tenant request and error counters.
+- Load test a few tenant‑heavy endpoints; validate indexes and slow query logs.
+
+Acceptance
+- Dashboards or logs make it easy to filter by `tenant_id`.
+- No cross‑tenant leakage found in tests and manual checks.
+
+## Deployment Strategy
+- Ship migrations behind a maintenance window for schema changes.
+- Deploy middleware behind a feature flag; start with default tenant for a subset of traffic.
+- Incrementally enable multi‑tenant routing in staging before prod.
+
+## Testing Strategy
+- Unit tests for middleware and utilities.
+- Integration tests for DB RLS behavior and endpoint scoping.
+- E2E tests switching tenants and verifying isolated data.
+
+## Out of Scope (for MVP)
+- Billing and metering.
+- Custom domains per tenant.
+- SSO/SCIM.
+- Data export/import per tenant.
+
+## Risks & Mitigations
+- Breaking uniques: audit all uniques and convert to composite in M1.
+- Leaky queries: rely on RLS + ORM criteria and add linters/checks where possible.
+- Connection pooling: ensure per‑request session context sets `SET LOCAL` for each transaction.
+
