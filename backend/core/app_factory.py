@@ -312,16 +312,28 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"
     if admin_static_path.exists():
 
-        # Mount static assets first (more specific route)
+        # Mount static assets in two places to handle both absolute and base-relative URLs
+        # - Vite production build uses base '/admin/' so assets are requested under '/admin/assets/...'
+        # - Some links may still point to '/assets/...'
         app.mount("/assets", StaticFiles(directory=str(admin_static_path / "assets")), name="admin_assets")
+        app.mount(
+            "/admin/assets",
+            StaticFiles(directory=str(admin_static_path / "assets")),
+            name="admin_assets_under_admin",
+        )
 
-        # Custom admin SPA handler that properly serves index.html for all admin routes
+        # Custom admin SPA handler that properly serves index.html for client-side routing
         class SPAStaticFiles(StaticFiles):
             async def get_response(self, path: str, scope):
                 try:
+                    # Serve real files when they exist
                     return await super().get_response(path, scope)
                 except Exception:
-                    # If the path doesn't exist, serve index.html for client-side routing
+                    # Only fallback to index.html for non-asset routes (no file extension)
+                    file_name = path.rsplit("/", 1)[-1]
+                    if "." in file_name:
+                        # Let the original error propagate for missing assets (avoids JS modules getting HTML)
+                        raise
                     return await super().get_response("index.html", scope)
 
         # Mount admin frontend with custom SPA handler
