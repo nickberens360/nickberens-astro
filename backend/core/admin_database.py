@@ -88,14 +88,22 @@ class AdminDatabaseManager:
         """Initialize database tables if they don't exist."""
         try:
             with self.get_connection() as conn:
-                # WAL mode temporarily disabled due to macOS Spotlight indexing conflicts
-                # that cause database locks. Using DELETE mode for stability.
+                # Configure journal/sync for environment
+                # - On Railway/Linux production, prefer WAL for better concurrency
+                # - On macOS/dev, DELETE avoids Spotlight/FS issues
                 try:
                     cursor = conn.cursor()
-                    cursor.execute("PRAGMA journal_mode=DELETE;")
+                    desired_mode = os.getenv("SQLITE_JOURNAL_MODE")
+                    if not desired_mode:
+                        is_prod = os.getenv("ENVIRONMENT", "development").lower() == "production" or bool(
+                            os.getenv("RAILWAY_ENVIRONMENT_NAME")
+                        )
+                        desired_mode = "WAL" if is_prod else "DELETE"
+                    cursor.execute(f"PRAGMA journal_mode={desired_mode};")
+                    # NORMAL is a good balance with WAL; safe for DELETE too
                     cursor.execute("PRAGMA synchronous=NORMAL;")
                 except Exception as e:
-                    logger.warning(f"Could not set DELETE journal mode during init: {e}")
+                    logger.warning(f"Could not set journal mode during init: {e}")
                 cursor = conn.cursor()
 
                 # Admin users table

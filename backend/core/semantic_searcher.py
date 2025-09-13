@@ -110,13 +110,69 @@ class SemanticSearcher:
             return None
 
     def _initialize_store(self):
-        """Initialize or load the unified vector store."""
+        """Initialize or load the unified vector store.
+
+        Handles known migration issues in ChromaDB 0.5 when opening a store
+        created with older versions (KeyError: '_type'). In that case, we
+        safely reset the persist directory if allowed and reinitialize.
+        """
         Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-        self.vector_store = Chroma(
-            collection_name="unified_knowledge",
-            persist_directory=self.persist_dir,
-            embedding_function=self.embeddings,
-        )
+
+        # Try to disable telemetry explicitly via client settings when available
+        client_settings = None
+        try:  # Optional import; not all versions expose Settings in the same place
+            from chromadb.config import Settings  # type: ignore
+
+            try:
+                client_settings = Settings(anonymized_telemetry=False)  # chromadb>=0.5
+            except Exception:
+                client_settings = None
+        except Exception:
+            client_settings = None
+
+        def _create_store():
+            if client_settings is not None:
+                return Chroma(
+                    collection_name="unified_knowledge",
+                    persist_directory=self.persist_dir,
+                    embedding_function=self.embeddings,
+                    client_settings=client_settings,
+                )
+            return Chroma(
+                collection_name="unified_knowledge",
+                persist_directory=self.persist_dir,
+                embedding_function=self.embeddings,
+            )
+
+        auto_reset = os.getenv("CHROMA_AUTO_RESET_ON_CONFIG_ERROR", "true").lower() in {"1", "true", "yes"}
+
+        try:
+            self.vector_store = _create_store()
+        except KeyError as e:
+            # Typical when opening a DB from older Chroma versions: KeyError('_type')
+            if auto_reset and e.args and e.args[0] == "_type":
+                logger.error(
+                    "Chroma collection configuration looks incompatible (missing '_type'). "
+                    "Resetting store at %s and rebuilding.",
+                    self.persist_dir,
+                )
+                self._reset_store()
+                self.vector_store = _create_store()
+            else:
+                raise
+        except Exception as e:
+            # Handle the same signature wrapped in other exceptions
+            msg = str(e)
+            if auto_reset and "_type" in msg and "config" in msg:
+                logger.error(
+                    "Chroma configuration error detected (%s). Resetting store at %s and rebuilding.",
+                    msg,
+                    self.persist_dir,
+                )
+                self._reset_store()
+                self.vector_store = _create_store()
+            else:
+                raise
 
     def _reset_store(self) -> None:
         """Safely reset the persistent vector store directory and reinitialize."""

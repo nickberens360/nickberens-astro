@@ -208,10 +208,10 @@ class ApiKeyManager:
             Decrypted API key value or None if not found/inactive
         """
         try:
+            # Fetch and update usage in a single short-lived transaction
+            encrypted_value: Optional[str] = None
             with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
-
-                # Get the encrypted key
                 cursor.execute(
                     """
                     SELECT encrypted_value, is_active 
@@ -220,18 +220,16 @@ class ApiKeyManager:
                     """,
                     (key_name,),
                 )
-
                 row = cursor.fetchone()
                 if not row:
                     return None
-
                 encrypted_value = row[0]
-
-                # Update last used timestamp
                 cursor.execute("UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_name = ?", (key_name,))
 
-                # Decrypt and return
+            # Perform any heavy/auxiliary work (like optional migration) AFTER the DB connection is closed
+            if encrypted_value is not None:
                 return self.decrypt_key(encrypted_value)
+            return None
 
         except Exception as e:
             logger.error(f"Error getting API key {key_name}: {e}")
@@ -248,10 +246,11 @@ class ApiKeyManager:
             Decrypted API key value or None if not found
         """
         try:
+            key_name: Optional[str] = None
+            encrypted_value: Optional[str] = None
+            # Keep the transaction scope minimal to reduce lock contention
             with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
-
-                # Get the first active key of this type
                 cursor.execute(
                     """
                     SELECT key_name, encrypted_value 
@@ -262,18 +261,15 @@ class ApiKeyManager:
                     """,
                     (key_type,),
                 )
-
                 row = cursor.fetchone()
                 if not row:
                     return None
-
                 key_name, encrypted_value = row
-
-                # Update last used timestamp
                 cursor.execute("UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_name = ?", (key_name,))
 
-                # Decrypt and return
+            if encrypted_value is not None:
                 return self.decrypt_key(encrypted_value)
+            return None
 
         except Exception as e:
             logger.error(f"Error getting API key by type {key_type}: {e}")
