@@ -16,18 +16,17 @@ class TestContextualRetrieval:
     """Test contextual retrieval enhancements."""
 
     @pytest.fixture(autouse=True)
-    def setup_fixtures(self, tmp_path):
+    def setup_fixtures(self, isolated_chroma_dir: str, mock_embeddings, mock_llm):
         """Set up test fixtures."""
-        self.mock_embeddings = Mock()
-        self.mock_llm = Mock()
+        self.mock_embeddings = mock_embeddings
+        self.mock_llm = mock_llm
         self.mock_llm.invoke = Mock(
             return_value="This document contains information about Nick's technical skills and experience."
         )
 
-        # Create unique persist_dir for each test to avoid Chroma conflicts
-        unique_dir = tmp_path / f"chroma_test_{id(self)}"
+        # Use the centralized isolated Chroma directory
         self.retriever = UnifiedRetriever(
-            embeddings=self.mock_embeddings, llm=self.mock_llm, persist_dir=str(unique_dir)
+            embeddings=self.mock_embeddings, llm=self.mock_llm, persist_dir=isolated_chroma_dir
         )
 
         # Mock the vector store to avoid actual Chroma operations

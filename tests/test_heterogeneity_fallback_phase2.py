@@ -11,7 +11,7 @@ def _write_text(path: Path, blocks: list[str]) -> None:
 
 
 @pytest.mark.unit
-def test_heterogeneity_fallback_process_directory(tmp_path: Path, monkeypatch):
+def test_heterogeneity_fallback_process_directory(tmp_path: Path, isolated_chroma_dir: str, mock_llm, monkeypatch):
     # Create a heterogeneous .txt file large enough to split into multiple chunks
     d = tmp_path / "data"
     d.mkdir()
@@ -21,8 +21,7 @@ def test_heterogeneity_fallback_process_directory(tmp_path: Path, monkeypatch):
     fp = d / "mixed.txt"
     _write_text(fp, [art_block, tech_block, resume_block])
 
-    unique_chroma_dir = tmp_path / f"chroma_indexer_{id(tmp_path)}"
-    indexer = ContentIndexer(object(), persist_dir=str(unique_chroma_dir), classification_mode="hybrid")
+    indexer = ContentIndexer(mock_llm, persist_dir=isolated_chroma_dir, classification_mode="hybrid")
     indexer.enable_heterogeneity_fallback = True  # turn on Phase 2
     # Loosen thresholds to ensure detection in test
     indexer._heterogeneity_threshold = 0.6
@@ -65,7 +64,9 @@ def test_heterogeneity_fallback_process_directory(tmp_path: Path, monkeypatch):
 
 
 @pytest.mark.unit
-def test_heterogeneity_fallback_reindex_file(tmp_path: Path, monkeypatch):
+def test_heterogeneity_fallback_reindex_file(
+    tmp_path: Path, isolated_chroma_dir: str, mock_embeddings, mock_llm, monkeypatch
+):
     # Prepare a heterogeneous .txt file
     d = tmp_path / "data"
     d.mkdir()
@@ -74,15 +75,7 @@ def test_heterogeneity_fallback_reindex_file(tmp_path: Path, monkeypatch):
     fp = d / "mixed.txt"
     _write_text(fp, [a, b])
 
-    class EmbeddingsStub:
-        def embed_documents(self, texts):
-            return [[0.0] * 3 for _ in texts]
-
-        def embed_query(self, text):
-            return [0.0] * 3
-
-    unique_chroma_dir = tmp_path / f"chroma_retriever_{id(tmp_path)}"
-    ur = UnifiedRetriever(embeddings=EmbeddingsStub(), llm=object(), persist_dir=str(unique_chroma_dir))
+    ur = UnifiedRetriever(embeddings=mock_embeddings, llm=mock_llm, persist_dir=isolated_chroma_dir)
 
     # Enable Phase 2 and stub vector store
     ur.content_indexer.enable_heterogeneity_fallback = True
