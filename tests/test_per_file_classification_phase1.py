@@ -26,7 +26,8 @@ def test_process_directory_uses_single_llm_call_per_file(tmp_path: Path, monkeyp
 
     # Use a dummy LLM (not used directly because we stub the classifier)
     dummy_llm = object()  # placeholder
-    indexer = ContentIndexer(dummy_llm, persist_dir=str(tmp_path / ".unified_chroma"), classification_mode="hybrid")
+    unique_chroma_dir = tmp_path / f"chroma_per_file_{id(tmp_path)}_1"
+    indexer = ContentIndexer(dummy_llm, persist_dir=str(unique_chroma_dir), classification_mode="hybrid")
 
     calls = {"count": 0}
 
@@ -83,7 +84,8 @@ def test_reindex_file_uses_single_llm_call(tmp_path: Path, monkeypatch):
     fp = d / "example.json"
     _write_json(fp, {"a": "A" * 1200, "b": "B" * 1200})
 
-    ur = UnifiedRetriever(embeddings=EmbeddingsStub(), llm=object(), persist_dir=str(tmp_path / ".unified_chroma"))
+    unique_chroma_dir = tmp_path / f"chroma_per_file_{id(tmp_path)}_2"
+    ur = UnifiedRetriever(embeddings=EmbeddingsStub(), llm=object(), persist_dir=str(unique_chroma_dir))
 
     # Replace semantic_searcher with a no-op to avoid Chroma dependency in test
     class NoOpSemantic:

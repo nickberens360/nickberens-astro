@@ -15,7 +15,8 @@ from backend.core.unified_retriever import UnifiedRetriever
 class TestContextualRetrieval:
     """Test contextual retrieval enhancements."""
 
-    def setup_method(self):
+    @pytest.fixture(autouse=True)
+    def setup_fixtures(self, tmp_path):
         """Set up test fixtures."""
         self.mock_embeddings = Mock()
         self.mock_llm = Mock()
@@ -23,8 +24,11 @@ class TestContextualRetrieval:
             return_value="This document contains information about Nick's technical skills and experience."
         )
 
-        # Create retriever instance
-        self.retriever = UnifiedRetriever(embeddings=self.mock_embeddings, llm=self.mock_llm, persist_dir="test_chroma")
+        # Create unique persist_dir for each test to avoid Chroma conflicts
+        unique_dir = tmp_path / f"chroma_test_{id(self)}"
+        self.retriever = UnifiedRetriever(
+            embeddings=self.mock_embeddings, llm=self.mock_llm, persist_dir=str(unique_dir)
+        )
 
         # Mock the vector store to avoid actual Chroma operations
         # In the new architecture, we need to mock the semantic_searcher's vector_store

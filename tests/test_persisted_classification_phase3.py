@@ -18,7 +18,7 @@ def test_persisted_classification_reused_on_force_reindex_process_directory(tmp_
     fp = d / "example.md"
     _write_md(fp, ("This is a test document about programming and projects. ") * 200)
 
-    persist_dir = tmp_path / ".unified_chroma"
+    persist_dir = tmp_path / f"chroma_persist_{id(tmp_path)}_1"
 
     # First run: classify once and persist
     calls1 = {"count": 0}
@@ -79,7 +79,7 @@ def test_persisted_classification_reused_on_reindex_file(tmp_path: Path, monkeyp
         def embed_query(self, text):
             return [0.0] * 3
 
-    persist_dir = tmp_path / ".unified_chroma"
+    persist_dir = tmp_path / f"chroma_persist_{id(tmp_path)}_2"
 
     # First run: classify once and persist via reindex_file
     ur1 = UnifiedRetriever(embeddings=EmbeddingsStub(), llm=object(), persist_dir=str(persist_dir))
