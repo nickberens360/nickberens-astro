@@ -217,9 +217,16 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
 
+    # Determine persist directory (allow override via environment for tests/CI)
+    persist_dir = os.getenv("UNIFIED_PERSIST_DIR", "backend/.unified_chroma")
+
     # Create unified retriever with Claude Haiku for fast indexing
     unified_retriever = UnifiedRetriever(
-        embeddings, indexing_llm, use_fast_classifier=True, classification_mode="hybrid"
+        embeddings,
+        indexing_llm,
+        persist_dir=persist_dir,
+        use_fast_classifier=True,
+        classification_mode="hybrid",
     )
     # Respect environment flag for heterogeneity fallback (default OFF)
     try:
@@ -229,50 +236,54 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     except Exception:
         logger.debug("Could not configure heterogeneity fallback on content indexer")
 
-    # Auto-index all content directories
-    directories_to_index = [
-        "backend/knowledge",  # Knowledge base documents
-        "public",  # JSON data files
-        # Add more directories as needed
-    ]
-
+    # Optionally skip auto-indexing in tests/CI to speed up imports
+    skip_indexing = os.getenv("SKIP_INDEXING", "false").lower() in ("1", "true", "yes")
     total_files = 0
     total_chunks = 0
+    if not skip_indexing:
+        # Auto-index all content directories
+        directories_to_index = [
+            "backend/knowledge",  # Knowledge base documents
+            "public",  # JSON data files
+            # Add more directories as needed
+        ]
 
-    # Check if we should force rebuild
-    force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
+        # Check if we should force rebuild
+        force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
 
-    # Check for admin-triggered refresh flag
-    refresh_flag_file = backend_dir / ".refresh_required"
-    if refresh_flag_file.exists():
-        logger.info("🔄 Admin refresh flag detected - forcing rebuild")
-        force_rebuild = True
-        # Remove the flag file after processing
+        # Check for admin-triggered refresh flag
+        refresh_flag_file = backend_dir / ".refresh_required"
+        if refresh_flag_file.exists():
+            logger.info("🔄 Admin refresh flag detected - forcing rebuild")
+            force_rebuild = True
+            # Remove the flag file after processing
+            try:
+                refresh_flag_file.unlink()
+                logger.info("✅ Admin refresh flag processed and removed")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not remove refresh flag file: {e}")
+
+        for directory in directories_to_index:
+            if os.path.exists(directory):
+                files, chunks = unified_retriever.index_directory(directory, force_reindex=force_rebuild)
+                total_files += files
+                total_chunks += chunks
+                logger.info(f"📁 Indexed {directory}: {files} files, {chunks} chunks")
+
+        # Log concise metrics after indexing
         try:
-            refresh_flag_file.unlink()
-            logger.info("✅ Admin refresh flag processed and removed")
-        except Exception as e:
-            logger.warning(f"⚠️ Could not remove refresh flag file: {e}")
-
-    for directory in directories_to_index:
-        if os.path.exists(directory):
-            files, chunks = unified_retriever.index_directory(directory, force_reindex=force_rebuild)
-            total_files += files
-            total_chunks += chunks
-            logger.info(f"📁 Indexed {directory}: {files} files, {chunks} chunks")
-
-    # Log concise metrics after indexing
-    try:
-        metrics = unified_retriever.content_indexer.get_metrics()
-        logger.info(
-            "✅ Total indexed: %d files, %d chunks | LLM file classifications: %d | Per-chunk fallbacks: %d",
-            total_files,
-            total_chunks,
-            metrics.get("llm_classifications_performed", 0),
-            metrics.get("llm_classifications_fallback_chunk", 0),
-        )
-    except Exception:
-        logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
+            metrics = unified_retriever.content_indexer.get_metrics()
+            logger.info(
+                "✅ Total indexed: %d files, %d chunks | LLM file classifications: %d | Per-chunk fallbacks: %d",
+                total_files,
+                total_chunks,
+                metrics.get("llm_classifications_performed", 0),
+                metrics.get("llm_classifications_fallback_chunk", 0),
+            )
+        except Exception:
+            logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
+    else:
+        logger.info("⏭️ Skipping auto-indexing due to SKIP_INDEXING=true")
 
     # Follow-up pregeneration removed in simplification - using static questions only
     logger.info("⚡ Using static follow-up questions for instant responses")

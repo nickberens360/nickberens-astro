@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -135,3 +134,27 @@ def reset_chroma_env():
             os.environ.pop(key, None)
         else:
             os.environ[key] = value
+
+
+@pytest.fixture(autouse=True, scope="session")
+def set_unified_persist_dir_env(session_chroma_dir: str):
+    """Ensure the FastAPI app initializer uses a test-scoped persist dir.
+
+    This prevents collisions when tests import backend.main (which initializes Chroma).
+    """
+    original = os.environ.get("UNIFIED_PERSIST_DIR")
+    skip_idx_original = os.environ.get("SKIP_INDEXING")
+    os.environ["UNIFIED_PERSIST_DIR"] = session_chroma_dir
+    # Speed up tests that import backend.main by skipping indexing on startup
+    os.environ["SKIP_INDEXING"] = "1"
+    try:
+        yield
+    finally:
+        if original is None:
+            os.environ.pop("UNIFIED_PERSIST_DIR", None)
+        else:
+            os.environ["UNIFIED_PERSIST_DIR"] = original
+        if skip_idx_original is None:
+            os.environ.pop("SKIP_INDEXING", None)
+        else:
+            os.environ["SKIP_INDEXING"] = skip_idx_original
