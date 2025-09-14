@@ -806,6 +806,47 @@ class AdminAuthManager:
         except Exception as e:
             logger.error(f"Error checking session activity patterns: {str(e)}", exc_info=True)
 
+    def _aggregate_security_alerts(self, raw_alerts: List[Dict]) -> List[Dict]:
+        """Aggregate security alerts by event_type, identifier, severity, and ip_address.
+
+        This helper method encapsulates the Python aggregation logic that mirrors
+        the SQL GROUP BY behavior in the main query.
+
+        Args:
+            raw_alerts: List of raw security alert dictionaries
+
+        Returns:
+            List of aggregated security alerts, sorted by severity and count
+        """
+        aggregated: Dict[tuple, Dict] = {}
+        for alert in raw_alerts:
+            key = (alert.get("event_type"), alert.get("identifier"), alert.get("severity"), alert.get("ip_address"))
+            item = aggregated.get(key)
+            if item is None:
+                aggregated[key] = {
+                    "event_type": alert.get("event_type"),
+                    "identifier": alert.get("identifier"),
+                    "details": alert.get("details"),
+                    "severity": alert.get("severity"),
+                    "ip_address": alert.get("ip_address"),
+                    "created_at": alert.get("created_at"),
+                    "count": 1,
+                }
+            else:
+                item["count"] += 1
+                # Keep the most recent timestamp
+                if alert.get("created_at") > item.get("created_at"):
+                    item["created_at"] = alert.get("created_at")
+
+        # Sort by severity (high to low) and then by created_at (most recent first)
+        severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
+        result = sorted(
+            aggregated.values(),
+            key=lambda x: (severity_order.get(x.get("severity"), 1), x.get("created_at")),
+            reverse=True,
+        )
+        return result[:50]
+
     def get_security_alerts(self, hours: int = 24) -> List[Dict]:
         """Get recent security events for monitoring dashboard.
 
@@ -847,33 +888,8 @@ class AdminAuthManager:
             try:
                 from .security_events_database import security_events_db_manager
 
-                rows = security_events_db_manager.get_security_alerts(hours)
-                # Aggregate similarly to the SQL above
-                aggregated: Dict[tuple, Dict] = {}
-                for r in rows:
-                    key = (r.get("event_type"), r.get("identifier"), r.get("severity"), r.get("ip_address"))
-                    item = aggregated.get(key)
-                    if item is None:
-                        aggregated[key] = {
-                            "event_type": r.get("event_type"),
-                            "identifier": r.get("identifier"),
-                            "details": r.get("details"),
-                            "severity": r.get("severity"),
-                            "ip_address": r.get("ip_address"),
-                            "created_at": r.get("created_at"),
-                            "count": 1,
-                        }
-                    else:
-                        item["count"] += 1
-                        if r.get("created_at") > item.get("created_at"):
-                            item["created_at"] = r.get("created_at")
-                severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
-                result = sorted(
-                    aggregated.values(),
-                    key=lambda x: (severity_order.get(x.get("severity"), 1), x.get("created_at")),
-                    reverse=True,
-                )
-                return result[:50]
+                raw_alerts = security_events_db_manager.get_security_alerts(hours)
+                return self._aggregate_security_alerts(raw_alerts)
             except Exception as e:
                 logger.error(f"Error getting security alerts: {str(e)}", exc_info=True)
                 return []

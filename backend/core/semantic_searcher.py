@@ -120,12 +120,20 @@ class SemanticSearcher:
         Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
 
         # Try to disable telemetry explicitly via client settings when available
+        # and bind the client to our persist directory to avoid "ephemeral" conflicts.
         client_settings = None
         try:  # Optional import; not all versions expose Settings in the same place
             from chromadb.config import Settings  # type: ignore
 
+            # Newer chromadb versions support persist_directory in Settings; prefer it when available.
             try:
-                client_settings = Settings(anonymized_telemetry=False)  # chromadb>=0.5
+                client_settings = Settings(
+                    anonymized_telemetry=False,
+                    persist_directory=str(Path(self.persist_dir).resolve()),  # type: ignore[arg-type]
+                )
+            except TypeError:
+                # Older versions may not accept persist_directory here; fall back to disabling telemetry only.
+                client_settings = Settings(anonymized_telemetry=False)  # type: ignore[call-arg]
             except Exception:
                 client_settings = None
         except Exception:
@@ -139,6 +147,7 @@ class SemanticSearcher:
                     embedding_function=self.embeddings,
                     client_settings=client_settings,
                 )
+            # Fallback path when Settings is unavailable
             return Chroma(
                 collection_name="unified_knowledge",
                 persist_directory=self.persist_dir,
