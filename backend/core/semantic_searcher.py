@@ -13,6 +13,7 @@ import logging
 import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -110,24 +111,128 @@ class SemanticSearcher:
             return None
 
     def _initialize_store(self):
-        """Initialize or load the unified vector store."""
+        """Initialize or load the unified vector store.
+
+        Handles known migration issues in ChromaDB 0.5 when opening a store
+        created with older versions (KeyError: '_type'). In that case, we
+        safely reset the persist directory if allowed and reinitialize.
+        """
         Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-        self.vector_store = Chroma(
-            collection_name="unified_knowledge",
-            persist_directory=self.persist_dir,
-            embedding_function=self.embeddings,
-        )
+
+        # Try to disable telemetry explicitly via client settings when available
+        # and bind the client to our persist directory to avoid "ephemeral" conflicts.
+        client_settings = None
+        try:  # Optional import; not all versions expose Settings in the same place
+            from chromadb.config import Settings  # type: ignore
+
+            # Newer chromadb versions support persist_directory in Settings; prefer it when available.
+            try:
+                client_settings = Settings(
+                    anonymized_telemetry=False,
+                    persist_directory=str(Path(self.persist_dir).resolve()),  # type: ignore[arg-type]
+                )
+            except TypeError:
+                # Older versions may not accept persist_directory here; fall back to disabling telemetry only.
+                client_settings = Settings(anonymized_telemetry=False)  # type: ignore[call-arg]
+            except Exception:
+                client_settings = None
+        except Exception:
+            client_settings = None
+
+        def _create_store():
+            if client_settings is not None:
+                return Chroma(
+                    collection_name="unified_knowledge",
+                    persist_directory=self.persist_dir,
+                    embedding_function=self.embeddings,
+                    client_settings=client_settings,
+                )
+            # Fallback path when Settings is unavailable
+            return Chroma(
+                collection_name="unified_knowledge",
+                persist_directory=self.persist_dir,
+                embedding_function=self.embeddings,
+            )
+
+        auto_reset = os.getenv("CHROMA_AUTO_RESET_ON_CONFIG_ERROR", "true").lower() in {"1", "true", "yes"}
+
+        try:
+            self.vector_store = _create_store()
+        except KeyError as e:
+            # Typical when opening a DB from older Chroma versions: KeyError('_type')
+            if auto_reset and e.args and e.args[0] == "_type":
+                logger.error(
+                    "Chroma collection configuration looks incompatible (missing '_type'). "
+                    "Resetting store at %s and rebuilding.",
+                    self.persist_dir,
+                )
+                self._reset_store()
+                self.vector_store = _create_store()
+            else:
+                raise
+        except Exception as e:
+            # Handle the same signature wrapped in other exceptions
+            msg = str(e)
+            if auto_reset and "_type" in msg and "config" in msg:
+                logger.error(
+                    "Chroma configuration error detected (%s). Resetting store at %s and rebuilding.",
+                    msg,
+                    self.persist_dir,
+                )
+                self._reset_store()
+                self.vector_store = _create_store()
+            else:
+                raise
 
     def _reset_store(self) -> None:
-        """Safely reset the persistent vector store directory and reinitialize."""
+        """Safely reset the persistent vector store directory with backup and audit logging."""
         try:
             persist_path = Path(self.persist_dir)
+            backup_path = None
+
             # Safety check: ensure we only ever delete within the project tree
-            if persist_path.is_dir() and str(persist_path).startswith("backend/"):
-                shutil.rmtree(persist_path, ignore_errors=True)
-                logger.warning(f"Resetting Chroma vector store due to corruption at {persist_path}")
+            if not (persist_path.is_dir() and str(persist_path).startswith("backend/")):
+                logger.error(f"Invalid persist path for reset: {persist_path}")
+                raise ValueError(f"Refusing to reset invalid path: {persist_path}")
+
+            # Create backup if data exists
+            if persist_path.exists() and any(persist_path.iterdir()):
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = persist_path.parent / f"chroma_backup_{timestamp}"
+                try:
+                    shutil.copytree(persist_path, backup_path)
+                    logger.info(f"Created backup of ChromaDB at: {backup_path}")
+                except Exception as backup_error:
+                    logger.warning(f"Failed to create backup before reset: {backup_error}")
+                    backup_path = None
+
+            # Log audit event for the reset
+            try:
+                from .audit_logger import audit_logger
+
+                audit_logger.log_system_event(
+                    event_type="chromadb_reset",
+                    details={
+                        "persist_dir": str(persist_path),
+                        "backup_created": backup_path is not None,
+                        "backup_path": str(backup_path) if backup_path else None,
+                        "reason": "Configuration error or corruption detected",
+                    },
+                    severity="high",
+                )
+            except Exception as audit_error:
+                logger.warning(f"Failed to log ChromaDB reset audit event: {audit_error}")
+
+            # Perform the reset
+            shutil.rmtree(persist_path, ignore_errors=True)
+            logger.warning(f"Reset ChromaDB vector store at {persist_path}")
+
+            # Recreate directory (reinitialize will be handled by caller)
             Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
-            self._initialize_store()
+
+            # Log successful reset
+            logger.info(f"Successfully reset ChromaDB directory")
+
         except Exception as e:
             logger.error(f"Failed to reset vector store: {e}")
             raise

@@ -8,6 +8,7 @@ This module contains health-related endpoints:
 - Rate limits endpoint for LLM status monitoring
 """
 
+import logging
 import time
 
 from fastapi import APIRouter, Depends
@@ -17,6 +18,7 @@ from ..core.config import AppConfig
 from ..dependencies import get_app_state
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _get_current_primary_llm() -> str:
@@ -94,10 +96,10 @@ async def status(state: dict = Depends(get_app_state)):
         from ..core.llm_chain import get_rate_limit_status
 
         rate_limits = get_rate_limit_status()
-    except Exception as e:
+    except Exception:
         # Fallback if rate limit checking fails
         rate_limits = {"claude": False, "gemini": False}
-        print(f"Error getting rate limits: {e}")
+        logger.exception("Error getting rate limits")
 
     return {
         "status": "online",
@@ -221,8 +223,8 @@ async def get_rate_limits():
         rate_limits = get_rate_limit_status()
 
         return JSONResponse(content={"rate_limits": rate_limits})
-    except Exception as e:
-        print(f"Error getting rate limits: {e}")
+    except Exception:
+        logger.exception("Error getting rate limits")
         return JSONResponse(
             content={"error": "Failed to get rate limit status", "rate_limits": {"claude": False, "gemini": False}},
             status_code=500,
@@ -320,9 +322,9 @@ async def get_welcome_questions():
 
         return {"questions": public_questions}
 
-    except Exception as e:
+    except Exception:
         # Fallback to default questions if database is unavailable
-        print(f"Error getting welcome questions: {e}")
+        logger.exception("Error getting welcome questions")
         return {
             "questions": [
                 {"id": 1, "question_text": "Tell me about yourself", "sort_order": 1},

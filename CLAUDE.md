@@ -21,10 +21,10 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `npm run admin:backend` - Start admin backend server
 - `npm run admin:frontend` - Start admin frontend development server
 - `npm run admin:build` - Build admin frontend for production
-- `npm run admin` - Start both admin backend and frontend
+- `npm run admin` - Start admin frontend (backend integrated into main app)
 - `npm run admin:stop` - Stop admin backend processes
 - `npm run admin:sync` - Sync query logs with admin database
-- `npm run logs:download` - Download query logs using configured script
+- `npm run db:verify` - Verify database migration and structure
 
 ### Test Commands
 - `pytest` - Run Python tests with coverage (configured in pyproject.toml)
@@ -43,6 +43,10 @@ Nick Berens' personal website with an intelligent RAG-powered AI assistant. Back
 - `npm run e2e:ui` - Run E2E tests with Playwright UI mode
 - `npm run e2e:report` - Show Playwright test report
 - `npm run e2e:install` - Install Playwright browsers
+
+### Railway Deployment Commands
+- `npm run railway:build` - Build for Railway deployment with admin frontend
+- `npm run railway:deploy` - Deploy to Railway platform
 
 ### Makefile Commands
 - `make lint-fix` - Auto-format code with Black, isort, and autoflake
@@ -321,6 +325,13 @@ backend/
 │   ├── constants.py               # Shared constants and stop words
 │   ├── config.py                  # Centralized configuration with validation
 │   ├── llm_chain.py               # LLM chain with smart routing
+│   ├── fast_content_classifier.py # Fast content classification service
+│   ├── fast_query_classifier.py   # Fast query intent classification
+│   ├── startup_content_classifier.py # Startup content classification
+│   ├── performance_config.py      # Performance optimization configuration
+│   ├── taxonomy_loader.py         # Content taxonomy management
+│   ├── security_events_database.py # Security events tracking
+│   ├── settings_migration.py      # Settings migration utilities
 │   ├── admin_auth.py              # Admin authentication service
 │   ├── admin_database.py          # Admin database operations
 │   ├── query_data_manager.py      # Query data management
@@ -357,12 +368,6 @@ backend/
 └── main.py         # FastAPI app entry point
 
 admin/              # Admin dashboard system
-├── backend/        # Python admin backend services
-│   ├── auth.py     # Authentication and authorization
-│   ├── database.py # Admin database operations
-│   ├── main.py     # Admin FastAPI application
-│   ├── models.py   # Database models
-│   └── routes.py   # Admin API routes
 ├── frontend/       # Vue.js admin frontend
 │   ├── src/
 │   │   ├── components/     # Reusable Vue components
@@ -371,7 +376,10 @@ admin/              # Admin dashboard system
 │   │   ├── services/      # API services
 │   │   └── plugins/       # Vuetify configuration
 │   └── dist/       # Built frontend files
-└── start-admin.py  # Admin server startup script
+├── start-admin.py  # Admin server startup script
+├── sync_logs.py    # Query log synchronization
+├── create_admin.py # Admin user creation utility
+└── change_password.py # Password change utility
 
 public/            # Static data files (also auto-indexed)
 ├── resume.json
@@ -384,10 +392,12 @@ scripts/           # Utility scripts
 └── start-chromadb-visualizer.sh    # ChromaDB visualization
 
 tests/             # Comprehensive test suite
-├── unit/          # Unit tests
-├── integration/   # Integration tests
-├── e2e/           # End-to-end tests with Playwright
-└── *.py           # Test files with markers for organization
+├── unit/          # Unit tests for individual components
+├── integration/   # Integration tests for API endpoints
+├── performance/   # Performance and load testing
+├── security/      # Security and vulnerability testing
+├── e2e/           # End-to-end tests with Playwright MCP
+└── *.py           # Test files with pytest markers for organization
 ```
 
 ## Important Files
@@ -408,6 +418,13 @@ tests/             # Comprehensive test suite
 - `backend/core/constants.py` - Shared constants for consistent processing
 - `backend/core/config.py` - Centralized configuration with enhanced security validation
 
+### Performance & Classification Files
+- `backend/core/fast_content_classifier.py` - High-performance content classification
+- `backend/core/fast_query_classifier.py` - Rapid query intent classification
+- `backend/core/startup_content_classifier.py` - Startup-time content classification
+- `backend/core/performance_config.py` - Performance optimization settings
+- `backend/core/taxonomy_loader.py` - Content taxonomy management and loading
+
 ### Security & Admin Files
 - `backend/core/admin_auth.py` - Admin authentication and security
 - `backend/core/admin_database.py` - Admin database management
@@ -420,8 +437,10 @@ tests/             # Comprehensive test suite
 ### Settings & Management Files
 - `backend/core/settings_manager.py` - Settings management service
 - `backend/core/settings_schemas.py` - Settings validation schemas
+- `backend/core/settings_migration.py` - Settings migration and upgrade utilities
 - `backend/core/query_data_manager.py` - Query data operations and analytics
 - `backend/core/database_utils.py` - Database utility functions
+- `backend/core/security_events_database.py` - Security events tracking and logging
 
 ### Configuration
 - `backend/core/config.py` - **PRIMARY**: Centralized configuration with validation
@@ -530,11 +549,12 @@ The project features a fully integrated admin dashboard system with comprehensiv
 - **Settings Management**: `/admin/api/settings/*` - Centralized configuration management
 
 ### Admin Dashboard Access
-- **Frontend**: http://localhost:3000 (Vue.js + Vuetify interface)
-- **Backend**: http://localhost:8000 (FastAPI admin API - integrated with main backend)
+- **Frontend**: Start with `npm run admin:frontend` - Vue.js + Vuetify interface
+- **Backend**: Integrated with main FastAPI app at http://localhost:8000
 - **Authentication**: Session-based with secure cookies
 - **Security**: Session fingerprinting and secure cookie attributes
-- **Admin Routes**: `/admin/*` endpoints protected with session authentication
+- **Admin Routes**: `/admin/*` and `/api/admin/*` endpoints protected with session authentication
+- **Utilities**: Admin user management scripts in `admin/` directory
 
 #### Admin Dashboard Features
 - **Dashboard**: System overview, query metrics, performance statistics
@@ -626,6 +646,13 @@ cd admin/frontend && npm run build
 - `content_router.py` - Content routing and management
 - `semantic_searcher.py` - Advanced semantic search capabilities
 
+#### Performance & Classification Services  
+- `fast_content_classifier.py` - High-speed content classification for improved startup
+- `fast_query_classifier.py` - Rapid query intent detection and routing
+- `startup_content_classifier.py` - Optimized content classification at application startup
+- `performance_config.py` - Performance tuning and optimization settings
+- `taxonomy_loader.py` - Content taxonomy management and loading utilities
+
 #### Security & Authentication
 - `admin_auth.py` - Admin authentication and security layer
 - `api_key_manager.py` - API key management and rotation service
@@ -640,6 +667,8 @@ cd admin/frontend && npm run build
 - `database_utils.py` - Database utility functions and helpers
 - `settings_manager.py` - Centralized settings management service
 - `settings_schemas.py` - Settings validation schemas and models
+- `settings_migration.py` - Settings migration and database upgrade utilities
+- `security_events_database.py` - Security events tracking and analysis
 
 ### Testing & Coverage
 
@@ -664,6 +693,16 @@ cd admin/frontend && npm run build
 - **Browser Support**: Chromium, Firefox, Safari
 - **Features**: Full admin dashboard testing, API endpoint validation, user workflow testing
 - **Reports**: HTML reports with screenshots and traces for debugging failures
+
+#### Performance Testing
+- **Location**: `tests/performance/` directory
+- **Focus**: Response time analysis, load testing, performance regression detection
+- **Integration**: Works with performance monitoring and metrics collection
+
+#### Security Testing
+- **Location**: `tests/security/` directory
+- **Coverage**: Admin authentication, API security, session management, attack scenarios
+- **Features**: Comprehensive security validation and vulnerability assessment
 
 ## Environment Variables
 
@@ -733,11 +772,11 @@ The system uses an SQLite database for all query logging:
 
 ### Backend Dependencies
 - **Core Framework:** FastAPI, uvicorn[standard]
-- **AI/ML:** LangChain, langchain-anthropic, langchain-google-genai, langchain-community, langchain-chroma
-- **Vector Database:** ChromaDB
-- **Document Processing:** pdfplumber, pypdf, python-docx, unstructured, lxml, beautifulsoup4
-- **Security:** passlib[bcrypt], python-multipart, slowapi (rate limiting)
-- **Utilities:** aiofiles, pyyaml, requests, python-dotenv, thefuzz[speed], watchdog
+- **AI/ML:** LangChain (~0.2.0), langchain-anthropic, langchain-google-genai, langchain-community (~0.2.0), langchain-chroma (~0.1.0)
+- **Vector Database:** ChromaDB (~0.5.0)
+- **Document Processing:** pdfplumber, pypdf, python-docx, docx2txt, unstructured, langchain-unstructured (~0.1.0), lxml, beautifulsoup4
+- **Security:** passlib[bcrypt], python-multipart, slowapi (rate limiting), python-magic
+- **Utilities:** aiofiles, pyyaml (>=6.0), requests, python-dotenv, thefuzz[speed], watchdog, markdown, urllib3 (>=2.0.0,<3.0.0)
 - **Template Engine:** jinja2
 
 ### Frontend Dependencies  
@@ -751,10 +790,11 @@ The system uses an SQLite database for all query logging:
 - **State Management:** Pinia 2.1.0
 - **Charts:** Chart.js 4.5.0, vue-chartjs 5.3.2
 - **Icons:** @mdi/js 7.4.0 (Material Design Icons)
-- **Code Editor:** Monaco Editor 0.52.2
+- **Code Editor:** Monaco Editor 0.52.2, @monaco-editor/loader 1.5.0
 - **HTTP Client:** Axios 1.6.0
 - **Date Utilities:** date-fns 3.6.0
-- **Build Tools:** Vite 5.2.0, TypeScript 5.4.0
+- **UI Interactions:** vuedraggable 4.1.0
+- **Build Tools:** Vite 5.2.0, TypeScript 5.4.0, ESLint 8.57.0, Prettier 3.0.0
 
 ### Development Dependencies
 - **Python:** 3.11+ required
