@@ -174,14 +174,33 @@ async def login(login_data: LoginRequest, request: Request, response: Response) 
         user_data.pop("password_hash", None)  # Remove password hash from response
 
         # Set secure HTTPOnly session cookie
-        is_production = os.getenv("ENVIRONMENT", "development") == "production"
+        # Detect HTTPS even when behind a proxy and choose SameSite based on cross-site usage
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        is_https = request.url.scheme == "https" or forwarded_proto == "https"
+
+        # Determine if this is a cross-site request (frontend on different origin)
+        # If so, use SameSite=None; otherwise use Lax for better protection
+        origin = request.headers.get("origin")
+        try:
+            # Compare hostnames when Origin is present
+            from urllib.parse import urlparse
+
+            origin_host = urlparse(origin).hostname if origin else None
+            request_host = request.url.hostname
+            is_cross_site = bool(origin_host and request_host and origin_host != request_host)
+        except Exception:
+            is_cross_site = False
+
+        cookie_samesite = "none" if is_cross_site else "lax"
+
         response.set_cookie(
             key="admin_session",
             value=auth_result["session_id"],
             max_age=24 * 60 * 60,  # 24 hours
             httponly=True,  # Always HTTPOnly for security
-            secure=is_production,  # Only secure in production (requires HTTPS)
-            samesite="lax",  # Lax for better compatibility with same-domain dev
+            secure=is_https,  # Secure when request is HTTPS or forwarded as HTTPS
+            samesite=cookie_samesite,  # Allow cross-site cookies only when needed
+            path="/",
         )
 
         # Audit log successful login
@@ -208,9 +227,21 @@ async def logout(
         if session_id:
             admin_auth_manager.expire_session(session_id)
 
-        # Clear session cookie with same attributes as when set
-        is_production = os.getenv("ENVIRONMENT", "development") == "production"
-        response.delete_cookie(key="admin_session", secure=is_production, samesite="lax")
+        # Clear session cookie with attributes matching how it was set
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        is_https = request.url.scheme == "https" or forwarded_proto == "https"
+        origin = request.headers.get("origin")
+        try:
+            from urllib.parse import urlparse
+
+            origin_host = urlparse(origin).hostname if origin else None
+            request_host = request.url.hostname
+            is_cross_site = bool(origin_host and request_host and origin_host != request_host)
+        except Exception:
+            is_cross_site = False
+        cookie_samesite = "none" if is_cross_site else "lax"
+
+        response.delete_cookie(key="admin_session", secure=is_https, samesite=cookie_samesite, path="/")
 
         # Audit log logout
         from ..core.audit_logger import audit_logger
@@ -303,7 +334,21 @@ async def change_password(
 
         # Force logout by clearing the current session cookie
         response = JSONResponse({"success": True, "message": "Password changed successfully. Please log in again."})
-        response.delete_cookie("admin_session", path="/", httponly=True, secure=True, samesite="lax")
+        # Match cookie attributes to ensure clients clear it correctly
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        is_https = request.url.scheme == "https" or forwarded_proto == "https"
+        origin = request.headers.get("origin")
+        try:
+            from urllib.parse import urlparse
+
+            origin_host = urlparse(origin).hostname if origin else None
+            request_host = request.url.hostname
+            is_cross_site = bool(origin_host and request_host and origin_host != request_host)
+        except Exception:
+            is_cross_site = False
+        cookie_samesite = "none" if is_cross_site else "lax"
+
+        response.delete_cookie("admin_session", path="/", httponly=True, secure=is_https, samesite=cookie_samesite)
         return response
 
     except HTTPException:
