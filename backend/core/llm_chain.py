@@ -104,6 +104,23 @@ ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
 
 
+def _get_response_caching_settings() -> tuple[bool, int]:
+    """Fetch caching enabled flag and TTL from DB ResponseSettings with env fallback."""
+    try:
+        from .settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        rs = settings_manager.get_response_settings()
+        # Respect module-level ENABLE_CACHING as a master switch for tests/env overrides
+        enabled = bool(ENABLE_CACHING and getattr(rs, "enable_caching", True))
+        ttl = int(getattr(rs, "cache_ttl_seconds", CACHE_TTL))
+        # Bound TTL to sane limits as ResponseSettings does
+        ttl = max(60, min(86400, ttl))
+        return enabled, ttl
+    except Exception:
+        return ENABLE_CACHING, CACHE_TTL
+
+
 def get_max_cache_size() -> int:
     """
     Get the max cache size from admin settings with fallback to environment.
@@ -312,17 +329,33 @@ def select_optimal_model_for_query(query: str, preferred_model: Optional[str] = 
 
 
 def route_query_to_retrievers(query: str, retrievers: Dict[str, BaseRetriever]) -> List[BaseRetriever]:
-    """Routes a user query to the unified retriever."""
-    # Check for both possible keys to handle both old and new conventions
-    if "_unified_retriever" in retrievers:
-        logger.debug(f"Using unified retriever for query: '{query}'")
-        return [retrievers["_unified_retriever"]]
-    elif "unified" in retrievers:
-        logger.debug(f"Using unified retriever for query: '{query}'")
+    """
+    Route a query to a LangChain-compatible retriever.
+
+    Prefer the wrapped `unified` retriever (BaseRetriever) for compatibility with
+    LangChain's history-aware utilities and async `.ainvoke`. If only the raw
+    `_unified_retriever` instance is present, adapt it by calling `.get_retriever()`.
+    """
+    # Prefer the LangChain BaseRetriever wrapper when available
+    if "unified" in retrievers:
+        logger.debug(f"Using unified BaseRetriever for query: '{query}'")
         return [retrievers["unified"]]
-    else:
-        logger.error("Unified retriever not found in retrievers dictionary")
-        return []
+
+    # Fallback: adapt the raw UnifiedRetriever instance to a BaseRetriever
+    if "_unified_retriever" in retrievers:
+        try:
+            from .unified_retriever import UnifiedRetriever  # local import to avoid cycles
+
+            unified_raw = retrievers["_unified_retriever"]
+            if isinstance(unified_raw, UnifiedRetriever):
+                adapted = unified_raw.get_retriever()
+                logger.debug(f"Adapted raw UnifiedRetriever to BaseRetriever for query: '{query}'")
+                return [adapted]
+        except Exception as e:
+            logger.warning(f"Failed to adapt UnifiedRetriever to BaseRetriever: {e}")
+
+    logger.error("Unified retriever not found in retrievers dictionary")
+    return []
 
 
 async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriever]) -> List[Document]:
@@ -354,7 +387,16 @@ async def async_retrieve_documents(query: str, retrievers: Dict[str, BaseRetriev
             # Use the first available retriever with async invoke
             try:
                 docs = await selected_retrievers[0].ainvoke(query)
-                return docs if isinstance(docs, list) else [docs] if docs else []
+                # Ensure we return a flat list of Document objects
+                if isinstance(docs, list):
+                    flat_docs = []
+                    for item in docs:
+                        if isinstance(item, list):
+                            flat_docs.extend(item)
+                        else:
+                            flat_docs.append(item)
+                    return flat_docs
+                return [docs] if docs else []
             except Exception as e:
                 logger.error(f"Fallback retrieval failed: {e}")
                 return []
@@ -586,19 +628,83 @@ class CacheManager:
     """Manages caching operations for responses and retrievals"""
 
     @staticmethod
-    def get_cache_key(user_input: Optional[str]) -> Optional[str]:
-        if not ENABLE_CACHING or not isinstance(user_input, str):
+    def get_cache_key(
+        user_input: Optional[str],
+        chat_history: Optional[List] = None,
+        model: Optional[str] = None,
+        additional_context: Optional[Dict] = None,
+    ) -> Optional[str]:
+        """
+        Generate a comprehensive cache key including user input, chat history, model, and settings.
+
+        Args:
+            user_input: The user's query
+            chat_history: Chat conversation history
+            model: Model being used for generation
+            additional_context: Additional context like settings, thresholds, etc.
+
+        Returns:
+            SHA256 hash of all relevant factors for caching
+        """
+        enabled, _ttl = _get_response_caching_settings()
+        if not enabled or not isinstance(user_input, str):
             return None
+
+        # Normalize user input
         normalized_input = re.sub(r"[^\w\s]", "", user_input.lower()).strip()
-        return hashlib.sha256(normalized_input.encode("utf-8")).hexdigest()
+
+        # Create cache key components
+        cache_components = [normalized_input]
+
+        # Add chat history length and hash of recent messages
+        if chat_history:
+            history_length = len(chat_history)
+            cache_components.append(f"hist_len:{history_length}")
+
+            # Include hash of last few messages for context sensitivity
+            if history_length > 0:
+                recent_messages = chat_history[-3:] if history_length > 3 else chat_history
+                history_text = "".join(
+                    [str(msg.get("content", "")) for msg in recent_messages if isinstance(msg, dict)]
+                )
+                history_hash = hashlib.md5(history_text.encode("utf-8")).hexdigest()[:8]
+                cache_components.append(f"hist_hash:{history_hash}")
+        else:
+            cache_components.append("hist_len:0")
+
+        # Add model information
+        from backend.core.config import AppConfig
+
+        model_name = model or getattr(AppConfig, "CLAUDE_MODEL", "default")
+        cache_components.append(f"model:{model_name}")
+
+        # Add relevant configuration that affects retrieval/generation
+
+        config_hash_parts = [
+            f"threshold:{AppConfig.RAG_SCORE_THRESHOLD}",
+            f"max_results:{AppConfig.MAX_RESULTS}",
+            f"mmr:{AppConfig.RAG_USE_MMR}",
+        ]
+
+        if additional_context:
+            for key, value in sorted(additional_context.items()):
+                config_hash_parts.append(f"{key}:{value}")
+
+        config_hash = hashlib.md5(":".join(config_hash_parts).encode("utf-8")).hexdigest()[:8]
+        cache_components.append(f"config:{config_hash}")
+
+        # Generate final cache key
+        cache_key_string = "|".join(cache_components)
+        return hashlib.sha256(cache_key_string.encode("utf-8")).hexdigest()
 
     @staticmethod
     def get_cached_response(cache_key: str) -> Optional[str]:
-        if not cache_key or not ENABLE_CACHING:
+        enabled, ttl = _get_response_caching_settings()
+        if not cache_key or not enabled:
             return None
         if cache_key in _response_cache:
             cached_data = _response_cache[cache_key]
-            if time.time() - cached_data["timestamp"] < CACHE_TTL:
+            if time.time() - cached_data["timestamp"] < ttl:
                 logger.info(f"Response cache hit for key: {cache_key}")
                 return str(cached_data["response"])
             else:
@@ -608,7 +714,8 @@ class CacheManager:
 
     @staticmethod
     def cache_response(cache_key: str, response_chunks: List[str]):
-        if not cache_key or not ENABLE_CACHING:
+        enabled, _ttl = _get_response_caching_settings()
+        if not cache_key or not enabled:
             return
         if len(_response_cache) >= get_max_cache_size():
             oldest_key = min(_response_cache, key=lambda k: _response_cache[k]["timestamp"])
@@ -620,11 +727,12 @@ class CacheManager:
 
     @staticmethod
     def get_cached_retrieval(cache_key: str) -> Optional[List[Document]]:
-        if not cache_key or not ENABLE_CACHING:
+        enabled, ttl = _get_response_caching_settings()
+        if not cache_key or not enabled:
             return None
         if cache_key in _retrieval_cache:
             cached_data = _retrieval_cache[cache_key]
-            if time.time() - cached_data["timestamp"] < CACHE_TTL:
+            if time.time() - cached_data["timestamp"] < ttl:
                 logger.info(f"Retrieval cache hit for key: {cache_key}")
                 return cast(List[Document], cached_data["documents"])
             else:
@@ -634,7 +742,8 @@ class CacheManager:
 
     @staticmethod
     def cache_retrieval(cache_key: str, documents: List[Document]):
-        if not cache_key or not ENABLE_CACHING:
+        enabled, _ttl = _get_response_caching_settings()
+        if not cache_key or not enabled:
             return
         if len(_retrieval_cache) >= get_max_cache_size():
             oldest_key = min(_retrieval_cache, key=lambda k: _retrieval_cache[k]["timestamp"])
@@ -645,8 +754,13 @@ class CacheManager:
 
 
 # Wrapper functions for backward compatibility (aliases to CacheManager)
-def get_cache_key(user_input: Optional[str]) -> Optional[str]:
-    return CacheManager.get_cache_key(user_input)
+def get_cache_key(
+    user_input: Optional[str],
+    chat_history: Optional[List] = None,
+    model: Optional[str] = None,
+    additional_context: Optional[Dict] = None,
+) -> Optional[str]:
+    return CacheManager.get_cache_key(user_input, chat_history, model, additional_context)
 
 
 def get_cached_response(cache_key: str) -> Optional[str]:
@@ -680,7 +794,7 @@ async def stream_with_fallback(
     Handle user input, perform retrieval (with caching),
     and stream a response from an LLM with fallback capabilities.
     """
-    cache_key = CacheManager.get_cache_key(user_input)
+    cache_key = CacheManager.get_cache_key(user_input, chat_history=chat_history, model=AppConfig.CLAUDE_MODEL)
     metadata = {"rate_limit_status": rate_limit_tracker.get_status()}
 
     # Merge additional metadata from routes

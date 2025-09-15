@@ -8,6 +8,7 @@ This is the main entry point for the FastAPI application that:
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -15,6 +16,13 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from langchain_core.language_models import BaseLanguageModel
+
+# Disable ChromaDB telemetry early to avoid noisy PostHog errors in some environments
+# Set several known flags to be safe across versions
+os.environ.setdefault("CHROMADB_TELEMETRY", "false")
+os.environ.setdefault("CHROMA_TELEMETRY", "false")
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "false")
+os.environ.setdefault("POSTHOG_DISABLED", "1")
 
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state

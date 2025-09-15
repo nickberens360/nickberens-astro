@@ -1,6 +1,7 @@
 <template>
   <div class="dashboard">
-    
+    <!-- Health Status -->
+    <HealthStatusCard />
     <!-- Metric Cards Grid -->
     <v-row class="ds-mb-6">
       <v-col
@@ -26,7 +27,10 @@
     <!-- Charts Row -->
     <v-row class="ds-mb-6">
       <!-- Left Side: Response Time Chart -->
-      <v-col cols="12" lg="8">
+      <v-col
+        cols="12"
+        lg="8"
+      >
         <PerformanceChart
           title="Response Time Timeline"
           :data="responseTimeChartData"
@@ -36,7 +40,10 @@
       </v-col>
       
       <!-- Right Side: Donut Chart -->
-      <v-col cols="12" lg="4">
+      <v-col
+        cols="12"
+        lg="4"
+      >
         <PerformanceChart
           title="Query Status Distribution"
           :data="statusChartData"
@@ -67,6 +74,7 @@ import { useAdminStore } from '@/stores/admin'
 import { useQueriesStore } from '@/stores/queries'
 import { usePerformanceStore } from '@/stores/performance'
 import MetricCard from '@/components/MetricCard.vue'
+import HealthStatusCard from '@/components/HealthStatusCard.vue'
 import PerformanceChart from '@/components/PerformanceChart.vue'
 import QueryTable from '@/components/QueryTable.vue'
 

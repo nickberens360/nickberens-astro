@@ -86,14 +86,14 @@ This document tracks the integration status of all settings in the admin dashboa
 - **Database**: Stored as `routing_settings` setting key
 - **Backend Consumption**: Active in `query_router.py`
   - `enable_smart_routing` - Controls intelligent routing algorithms
-  - `similarity_threshold` - Used in result filtering
+  - `similarity_threshold` - Search result threshold for response inclusion
   - `enable_fuzzy_matching` - Enables approximate string matching
   - `max_search_results` - Limits search result count
 
 **Settings Available:**
 - `enable_smart_routing`: Use intelligent routing algorithms
 - `enable_fuzzy_matching`: Allow approximate string matching
-- `similarity_threshold`: Minimum similarity score for matching results
+- `similarity_threshold`: Search Result Threshold - Minimum similarity score required to include results in responses
 - `max_search_results`: Maximum number of search results to return
 - `fuzzy_threshold`: Threshold for fuzzy string matching accuracy
 
@@ -118,7 +118,7 @@ This document tracks the integration status of all settings in the admin dashboa
 - `cache_ttl_seconds`: Cache time-to-live (60-86400 seconds)
 - `max_cache_size`: Maximum number of cache entries (10-10000)
 - `rate_limit`: Request rate limiting (e.g., "100/minute")
-- `search_similarity_threshold`: Minimum similarity for search results (0-100%)
+- `search_similarity_threshold`: [DEPRECATED] Use similarity_threshold in routing settings instead
 - `max_search_results`: Maximum number of search results (1-100)
 - `enable_smart_model_selection`: Auto-choose between fast/quality models
 
@@ -145,7 +145,7 @@ This document tracks the integration status of all settings in the admin dashboa
 - `enable_rate_limiting`: Enable request rate limiting protection
 - `max_requests_per_minute`: Maximum requests per minute per IP (1-1000)
 - `enable_input_validation`: Enable strict input validation
-- `low_similarity_threshold`: Flag queries with low similarity scores
+- `low_similarity_threshold`: Quality Alert Threshold - Flag queries with low similarity scores for monitoring
 - `excluded_ips`: IP addresses to exclude from logging (array)
 
 ---

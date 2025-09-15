@@ -13,16 +13,12 @@
         <router-view />
       </main>
     </div>
-    
-    <!-- Global Notifications -->
-    <SettingsNotifications />
   </div>
 </template>
 
 <script setup>
 import SettingsNavigation from '@/components/settings/SettingsNavigation.vue'
 import SettingsHeader from '@/components/settings/SettingsHeader.vue'
-import SettingsNotifications from '@/components/settings/SettingsNotifications.vue'
 
 // Minimal parent - only layout and navigation
 // No data loading, no prop drilling, no event bubbling

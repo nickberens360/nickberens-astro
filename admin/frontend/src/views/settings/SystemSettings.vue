@@ -6,56 +6,94 @@
         <v-btn
           color="primary"
           variant="elevated"
-          @click="saveSettings"
           :loading="loading"
           prepend-icon="$check"
+          @click="saveSettings"
         >
           Save Changes
         </v-btn>
       </v-card-title>
       
       <v-card-text class="pa-0">
-        <v-alert v-if="error" type="error" variant="tonal" class="ma-6 mb-4">
+        <v-alert
+          type="info"
+          variant="tonal"
+          class="ma-6 mb-4"
+        >
+          Response model selection for chat is managed in <strong>Core Settings → Response Settings</strong>.
+          This page primarily configures the <em>processing LLM</em> used for background tasks (indexing, reformulation).
+        </v-alert>
+        <v-alert
+          v-if="error"
+          type="error"
+          variant="tonal"
+          class="ma-6 mb-4"
+        >
           {{ error }}
         </v-alert>
         
-        <v-alert v-if="successMessage" type="success" variant="tonal" class="ma-6 mb-4">
-          {{ successMessage }}
-        </v-alert>
+        <!-- Success notifications are shown via global toasts -->
         
         <!-- Response LLM Selection Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$brain</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $brain
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Response LLM</div>
-                <div class="setting-description text-medium-emphasis">Language model used for all user-facing chat responses. Supports smart selection between model variants.</div>
+                <div class="setting-title text-high-emphasis">
+                  Response LLM
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Language model used for all user-facing chat responses. Supports smart selection between model variants.
+                </div>
               </div>
             </div>
             <div class="setting-right">
-              <v-select
-                v-model="settings.response_llm"
-                :items="llmOptions"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="width: 160px;"
-              />
+              <div>
+                <v-select
+                  v-model="settings.response_llm"
+                  :items="llmOptions"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 160px;"
+                  :disabled="true"
+                />
+                <div
+                  class="text-caption text-medium-emphasis mt-1"
+                  style="max-width: 320px;"
+                >
+                  This setting is managed in Core Settings → Response Settings and shown here for reference.
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Processing LLM Selection Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$cog</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $cog
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Processing LLM</div>
-                <div class="setting-description text-medium-emphasis">Language model for background operations like content indexing and query reformulation. Fast models recommended.</div>
+                <div class="setting-title text-high-emphasis">
+                  Processing LLM
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Language model for background operations like content indexing and query reformulation. Fast models recommended.
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -71,16 +109,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Claude Model Selection Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$robot</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $robot
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Claude Model</div>
-                <div class="setting-description text-medium-emphasis">Specific Claude model to use for Anthropic queries</div>
+                <div class="setting-title text-high-emphasis">
+                  Claude Model
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Specific Claude model to use for Anthropic queries
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -96,16 +143,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Gemini Model Selection Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$google</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $google
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Gemini Model</div>
-                <div class="setting-description text-medium-emphasis">Specific Gemini model to use for Google queries</div>
+                <div class="setting-title text-high-emphasis">
+                  Gemini Model
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Specific Gemini model to use for Google queries
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -121,155 +177,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
-
-        <!-- Cache TTL Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$cached</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Cache TTL</div>
-                <div class="setting-description text-medium-emphasis">Cache time-to-live in seconds (60-86400)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model.number="settings.cache_ttl_seconds"
-                type="number"
-                variant="outlined"
-                density="compact"
-                :min="60"
-                :max="86400"
-                hide-details
-                style="width: 120px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Max Cache Size Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$database</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Max Cache Size</div>
-                <div class="setting-description text-medium-emphasis">Maximum number of cache entries (10-10000)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model.number="settings.max_cache_size"
-                type="number"
-                variant="outlined"
-                density="compact"
-                :min="10"
-                :max="10000"
-                hide-details
-                style="width: 120px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Rate Limit Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$timer</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Rate Limit</div>
-                <div class="setting-description text-medium-emphasis">Request rate limiting (e.g., "100/minute")</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model="settings.rate_limit"
-                variant="outlined"
-                density="compact"
-                placeholder="100/minute"
-                hide-details
-                style="width: 140px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Search Similarity Threshold Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$search</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Search Similarity Threshold</div>
-                <div class="setting-description text-medium-emphasis">Minimum similarity for search results (0-100%)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <div class="setting-slider">
-                <v-slider
-                  v-model="searchThresholdPercent"
-                  :min="0"
-                  :max="100"
-                  :step="1"
-                  thumb-label="always"
-                  show-ticks="always"
-                  color="primary"
-                  track-color="grey-lighten-3"
-                  thumb-color="primary"
-                  hide-details
-                  style="width: 200px;"
-                />
-                <div class="setting-value text-medium-emphasis">{{ searchThresholdPercent }}%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
-
-        <!-- Max Search Results Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$format-list-bulleted</v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Max Search Results</div>
-                <div class="setting-description text-medium-emphasis">Maximum number of search results (1-100)</div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-text-field
-                v-model.number="settings.max_search_results"
-                type="number"
-                variant="outlined"
-                density="compact"
-                :min="1"
-                :max="100"
-                hide-details
-                style="width: 120px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Smart Model Selection Row -->
         <div class="setting-row">
           <div class="setting-content">
             <div class="setting-left">
-              <v-icon color="primary" class="setting-icon">$tune</v-icon>
+              <v-icon
+                color="primary"
+                class="setting-icon"
+              >
+                $tune
+              </v-icon>
               <div class="setting-info">
-                <div class="setting-title text-high-emphasis">Smart Model Selection</div>
-                <div class="setting-description text-medium-emphasis">Automatically choose between fast (Haiku) and quality (Sonnet) models within the selected Response LLM family based on query complexity</div>
+                <div class="setting-title text-high-emphasis">
+                  Smart Model Selection
+                </div>
+                <div class="setting-description text-medium-emphasis">
+                  Automatically choose between fast (Haiku) and quality (Sonnet) models within the selected Response LLM family based on query complexity
+                </div>
               </div>
             </div>
             <div class="setting-right">
@@ -294,6 +220,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import adminAPI from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 
 const adminStore = useAdminStore()
 
@@ -309,12 +236,6 @@ const settings = ref({
   processing_claude_model: 'claude-3-haiku-20240307',
   processing_gemini_model: 'gemini-1.5-flash',
   embedding_model: 'models/embedding-001',
-  cache_ttl_seconds: 3600,
-  max_cache_size: 1000,
-  rate_limit: '100/minute',
-  search_similarity_threshold: 0.55,
-  max_search_results: 15,
-  retrieval_score_threshold: 0.3,
   enable_smart_model_selection: true,
   enable_response_smart_selection: true,
   default_search_k: 8,
@@ -323,7 +244,7 @@ const settings = ref({
 
 const loading = ref(false)
 const error = ref('')
-const successMessage = ref('')
+const { showSuccess, showError } = useNotifications()
 
 // Model options
 const llmOptions = [
@@ -349,14 +270,6 @@ const geminiModelOptions = [
   { title: 'Gemini Pro', value: 'gemini-pro' }
 ]
 
-// Convert search threshold to percentage for display
-const searchThresholdPercent = computed({
-  get: () => Math.round(settings.value.search_similarity_threshold * 100),
-  set: (value) => {
-    settings.value.search_similarity_threshold = value / 100
-  }
-})
-
 // Load settings on mount
 const loadSettings = async () => {
   try {
@@ -380,7 +293,7 @@ const loadSettings = async () => {
     }
   } catch (err) {
     console.error('Failed to load system config settings:', err)
-    error.value = 'Failed to load system configuration settings: ' + (err.response?.data?.detail || err.message)
+    error.value = `Failed to load system configuration settings: ${  err.response?.data?.detail || err.message}`
   } finally {
     loading.value = false
   }
@@ -391,7 +304,6 @@ const saveSettings = async () => {
   try {
     loading.value = true
     error.value = ''
-    successMessage.value = ''
     
     // Ensure legacy primary_llm field is synced with response_llm for backward compatibility
     const settingsToSave = { ...settings.value }
@@ -399,18 +311,16 @@ const saveSettings = async () => {
     
     const response = await adminAPI.updateSystemConfigSettings(settingsToSave)
     if (response && response.success) {
-      successMessage.value = 'System configuration settings saved successfully!'
+      showSuccess('System configuration settings saved successfully!')
       // Update local settings with the response to ensure UI is in sync
       if (response.settings) {
         settings.value = { ...settings.value, ...response.settings }
       }
-      setTimeout(() => {
-        successMessage.value = ''
-      }, 3000)
     }
   } catch (err) {
     console.error('Failed to save system config settings:', err)
-    error.value = 'Failed to save system configuration settings: ' + (err.response?.data?.detail || err.message)
+    error.value = `Failed to save system configuration settings: ${  err.response?.data?.detail || err.message}`
+    showError('Failed to save system configuration settings')
   } finally {
     loading.value = false
   }

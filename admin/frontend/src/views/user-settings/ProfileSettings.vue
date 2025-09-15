@@ -1,13 +1,22 @@
 <template>
   <div class="profile-settings">
     <!-- Display Name Section -->
-    <v-card class="mb-6" rounded="lg" elevation="1">
+    <v-card
+      class="mb-6"
+      rounded="lg"
+      elevation="1"
+    >
       <v-card-title class="d-flex align-center">
-        <v-icon start>$account</v-icon>
+        <v-icon start>
+          $account
+        </v-icon>
         Display Name
       </v-card-title>
       <v-card-text>
-        <v-form ref="displayNameForm" @submit.prevent="handleDisplayNameChange">
+        <v-form
+          ref="displayNameForm"
+          @submit.prevent="handleDisplayNameChange"
+        >
           <v-text-field
             v-model="displayName"
             label="Display Name"
@@ -33,13 +42,22 @@
     </v-card>
 
     <!-- Email Section -->
-    <v-card class="mb-6" rounded="lg" elevation="1">
+    <v-card
+      class="mb-6"
+      rounded="lg"
+      elevation="1"
+    >
       <v-card-title class="d-flex align-center">
-        <v-icon start>$email</v-icon>
+        <v-icon start>
+          $email
+        </v-icon>
         Email Address
       </v-card-title>
       <v-card-text>
-        <v-form ref="emailForm" @submit.prevent="handleEmailChange">
+        <v-form
+          ref="emailForm"
+          @submit.prevent="handleEmailChange"
+        >
           <v-text-field
             v-model="email"
             label="Email Address"
@@ -78,13 +96,21 @@
     </v-card>
 
     <!-- Password Section -->
-    <v-card rounded="lg" elevation="1">
+    <v-card
+      rounded="lg"
+      elevation="1"
+    >
       <v-card-title class="d-flex align-center">
-        <v-icon start>$lock</v-icon>
+        <v-icon start>
+          $lock
+        </v-icon>
         Change Password
       </v-card-title>
       <v-card-text>
-        <v-form ref="passwordForm" @submit.prevent="handlePasswordChange">
+        <v-form
+          ref="passwordForm"
+          @submit.prevent="handlePasswordChange"
+        >
           <v-text-field
             v-model="currentPassword"
             label="Current Password"
@@ -94,8 +120,8 @@
             density="comfortable"
             :rules="passwordRules"
             :append-inner-icon="showCurrentPassword ? '$eye-off' : '$eye'"
-            @click:append-inner="showCurrentPassword = !showCurrentPassword"
             class="mb-4"
+            @click:append-inner="showCurrentPassword = !showCurrentPassword"
           />
           <v-text-field
             v-model="newPassword"
@@ -106,8 +132,8 @@
             density="comfortable"
             :rules="newPasswordRules"
             :append-inner-icon="showNewPassword ? '$eye-off' : '$eye'"
-            @click:append-inner="showNewPassword = !showNewPassword"
             class="mb-4"
+            @click:append-inner="showNewPassword = !showNewPassword"
           />
           <v-text-field
             v-model="confirmPassword"
@@ -118,9 +144,9 @@
             density="comfortable"
             :rules="confirmPasswordRules"
             :append-inner-icon="showConfirmPassword ? '$eye-off' : '$eye'"
-            @click:append-inner="showConfirmPassword = !showConfirmPassword"
             :error-messages="passwordMatchError"
             class="mb-4"
+            @click:append-inner="showConfirmPassword = !showConfirmPassword"
           />
           
           <!-- Password Requirements -->
@@ -160,9 +186,10 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { adminAPI } from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 import { 
   getBasicPasswordRules, 
   getStrongPasswordRules, 
@@ -171,8 +198,8 @@ import {
   getPasswordConfirmationRules 
 } from '@/utils/validation'
 
-// Get notification system from parent
-const notifications = inject('notifications')
+// Global notifications
+const { showSuccess, showError } = useNotifications()
 
 // Store
 const adminStore = useAdminStore()
@@ -232,7 +259,7 @@ const loadUserData = async () => {
     }
   } catch (error) {
     console.error('Error loading user data:', error)
-    notifications.showError('Failed to load user data')
+    showError('Failed to load user data')
   }
 }
 
@@ -248,12 +275,12 @@ const handleDisplayNameChange = async () => {
       originalDisplayName.value = displayName.value
       // Update the store with the new display name
       await adminStore.checkAuth()
-      notifications.showSuccess('Display name updated successfully')
+      showSuccess('Display name updated successfully')
     } else {
       throw new Error(response.message || 'Failed to update display name')
     }
   } catch (error) {
-    notifications.showError(error.response?.data?.detail || 'Failed to update display name. Please try again.')
+    showError(error.response?.data?.detail || 'Failed to update display name. Please try again.')
     console.error('Display name update error:', error)
   } finally {
     displayNameLoading.value = false
@@ -273,12 +300,12 @@ const handleEmailChange = async () => {
       emailPassword.value = ''
       // Update the store with the new email
       await adminStore.checkAuth()
-      notifications.showSuccess('Email address updated successfully')
+      showSuccess('Email address updated successfully')
     } else {
       throw new Error(response.message || 'Failed to update email address')
     }
   } catch (error) {
-    notifications.showError(error.response?.data?.detail || 'Failed to update email address. Please check your password and try again.')
+    showError(error.response?.data?.detail || 'Failed to update email address. Please check your password and try again.')
     console.error('Email update error:', error)
   } finally {
     emailLoading.value = false
@@ -290,7 +317,7 @@ const handlePasswordChange = async () => {
   if (!valid.valid) return
 
   if (newPassword.value !== confirmPassword.value) {
-    notifications.showError('Passwords do not match')
+    showError('Passwords do not match')
     return
   }
 
@@ -307,12 +334,12 @@ const handlePasswordChange = async () => {
       showNewPassword.value = false
       showConfirmPassword.value = false
       
-      notifications.showSuccess('Password changed successfully')
+      showSuccess('Password changed successfully')
     } else {
       throw new Error(response.message || 'Failed to change password')
     }
   } catch (error) {
-    notifications.showError(error.response?.data?.detail || 'Failed to change password. Please check your current password and try again.')
+    showError(error.response?.data?.detail || 'Failed to change password. Please check your current password and try again.')
     console.error('Password change error:', error)
   } finally {
     passwordLoading.value = false

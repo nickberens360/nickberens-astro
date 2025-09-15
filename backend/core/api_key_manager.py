@@ -6,7 +6,8 @@ Handles encryption, decryption, and validation of API keys.
 import base64
 import logging
 import os
-from typing import Dict, List, Optional, Tuple
+import sqlite3
+from typing import Any, Dict, List, Optional, Tuple
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
@@ -70,17 +71,63 @@ class ApiKeyManager:
             raise
 
     def decrypt_key(self, encrypted_value: str) -> str:
-        """Decrypt an API key."""
+        """Decrypt an API key.
+
+        Supports both new (Fernet-encrypted, base64-encoded) values and
+        legacy values that were stored as base64-encoded plaintext during
+        environment migration. If a legacy format is detected, we transparently
+        return the decoded value and attempt a best-effort in-place migration
+        to the new encryption format.
+        """
+        # First, base64-decode the stored string
         try:
-            # Decode from base64 and decrypt
-            encrypted = base64.b64decode(encrypted_value.encode("utf-8"))
-            decrypted = self.cipher.decrypt(encrypted)
-            return decrypted.decode("utf-8")
+            raw = base64.b64decode(encrypted_value.encode("utf-8"))
         except Exception as e:
-            logger.error(f"Error decrypting API key: {e}")
+            logger.error(f"Error base64-decoding stored API key value: {e}")
             raise
 
-    def create_api_key(self, key_name: str, key_type: str, api_key: str, updated_by: int) -> Dict[str, any]:
+        # Attempt Fernet decryption (new format)
+        try:
+            decrypted = self.cipher.decrypt(raw)
+            return decrypted.decode("utf-8")
+        except Exception as fernet_error:
+            # Fallback: legacy format (raw is actually the plaintext API key)
+            try:
+                legacy_plain = raw.decode("utf-8", errors="ignore").strip()
+            except (UnicodeDecodeError, AttributeError) as decode_error:
+                # Be specific about decode failures
+                logger.debug(f"Failed to decode legacy API key format: {decode_error}")
+                legacy_plain = ""
+
+            if legacy_plain and len(legacy_plain) >= 10:
+                logger.warning("Detected legacy base64-only API key format; using decoded value and migrating")
+                # Attempt one-shot in-place migration to new encrypted format
+                try:
+                    new_encrypted_b64, _last_four = self.encrypt_key(legacy_plain)
+                    from .admin_database import admin_db_manager  # local import to avoid cycles at module import
+
+                    with admin_db_manager.get_connection() as conn:
+                        cur = conn.cursor()
+                        cur.execute(
+                            "UPDATE api_keys SET encrypted_value = ?, updated_at = CURRENT_TIMESTAMP WHERE encrypted_value = ?",
+                            (new_encrypted_b64, encrypted_value),
+                        )
+                except (ValueError, sqlite3.Error, ConnectionError) as migrate_error:
+                    # Non-fatal: we can still return the usable key
+                    logger.debug(f"API key migration to new encryption failed (non-fatal): {migrate_error}")
+                except Exception as unexpected_migrate_error:
+                    # Log unexpected errors differently in development
+                    logger.warning(f"Unexpected error during API key migration: {unexpected_migrate_error}")
+                    if os.getenv("ENVIRONMENT", "development") == "development":
+                        logger.debug("Re-raising unexpected migration error in development", exc_info=True)
+                        raise
+                return legacy_plain
+
+            # If fallback failed, surface the original error for observability
+            logger.error(f"Error decrypting API key with Fernet: {fernet_error}")
+            raise
+
+    def create_api_key(self, key_name: str, key_type: str, api_key: str, updated_by: int) -> Dict[str, Any]:
         """
         Create a new API key entry with encryption.
 
@@ -170,10 +217,10 @@ class ApiKeyManager:
             Decrypted API key value or None if not found/inactive
         """
         try:
+            # Fetch and update usage in a single short-lived transaction
+            encrypted_value: Optional[str] = None
             with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
-
-                # Get the encrypted key
                 cursor.execute(
                     """
                     SELECT encrypted_value, is_active 
@@ -182,21 +229,28 @@ class ApiKeyManager:
                     """,
                     (key_name,),
                 )
-
                 row = cursor.fetchone()
                 if not row:
                     return None
-
                 encrypted_value = row[0]
-
-                # Update last used timestamp
                 cursor.execute("UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_name = ?", (key_name,))
 
-                # Decrypt and return
+            # Perform any heavy/auxiliary work (like optional migration) AFTER the DB connection is closed
+            if encrypted_value is not None:
                 return self.decrypt_key(encrypted_value)
+            return None
 
+        except (sqlite3.Error, ConnectionError) as db_error:
+            logger.error(f"Database error getting API key {key_name}: {db_error}")
+            return None
+        except (ValueError, UnicodeDecodeError) as decode_error:
+            logger.error(f"Decryption error for API key {key_name}: {decode_error}")
+            return None
         except Exception as e:
-            logger.error(f"Error getting API key {key_name}: {e}")
+            logger.error(f"Unexpected error getting API key {key_name}: {e}")
+            # Re-raise unexpected errors in development for better debugging
+            if os.getenv("ENVIRONMENT", "development") == "development":
+                raise
             return None
 
     def get_api_key_by_type(self, key_type: str) -> Optional[str]:
@@ -210,10 +264,11 @@ class ApiKeyManager:
             Decrypted API key value or None if not found
         """
         try:
+            key_name: Optional[str] = None
+            encrypted_value: Optional[str] = None
+            # Keep the transaction scope minimal to reduce lock contention
             with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
-
-                # Get the first active key of this type
                 cursor.execute(
                     """
                     SELECT key_name, encrypted_value 
@@ -224,18 +279,15 @@ class ApiKeyManager:
                     """,
                     (key_type,),
                 )
-
                 row = cursor.fetchone()
                 if not row:
                     return None
-
                 key_name, encrypted_value = row
-
-                # Update last used timestamp
                 cursor.execute("UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_name = ?", (key_name,))
 
-                # Decrypt and return
+            if encrypted_value is not None:
                 return self.decrypt_key(encrypted_value)
+            return None
 
         except Exception as e:
             logger.error(f"Error getting API key by type {key_type}: {e}")
@@ -365,9 +417,19 @@ class ApiKeyManager:
 
                 return is_valid, message
 
+        except (sqlite3.Error, ConnectionError) as db_error:
+            logger.error(f"Database error validating API key {key_name}: {db_error}")
+            return False, f"Database error: {db_error}"
+        except ImportError as import_error:
+            logger.error(f"Missing dependency for API key validation: {import_error}")
+            return False, f"Missing dependency: {import_error}"
         except Exception as e:
-            logger.error(f"Error validating API key {key_name}: {e}")
-            return False, str(e)
+            logger.error(f"Unexpected error validating API key {key_name}: {e}")
+            # Re-raise in development for better debugging
+            if os.getenv("ENVIRONMENT", "development") == "development":
+                logger.debug("Re-raising validation error in development", exc_info=True)
+                raise
+            return False, f"Validation error: {str(e)}"
 
     def _validate_key_by_type(self, key_type: str, api_key: str) -> Tuple[bool, str]:
         """Validate an API key based on its type."""

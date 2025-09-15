@@ -8,7 +8,6 @@ import logging
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .database_utils import get_database_path

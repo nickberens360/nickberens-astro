@@ -6,16 +6,21 @@
         <v-btn
           color="primary"
           variant="elevated"
-          @click="saveSettings"
           :loading="store.loading"
           prepend-icon="$check"
+          @click="saveSettings"
         >
           Save Changes
         </v-btn>
       </v-card-title>
       
       <v-card-text class="pa-0">
-        <v-alert v-if="store.error" type="error" variant="tonal" class="ma-6 mb-4">
+        <v-alert
+          v-if="store.error"
+          type="error"
+          variant="tonal"
+          class="ma-6 mb-4"
+        >
           {{ store.error }}
         </v-alert>
         
@@ -23,10 +28,19 @@
         <div class="routing-row">
           <div class="routing-content">
             <div class="routing-left">
-              <v-icon color="primary" class="routing-icon">$brain</v-icon>
+              <v-icon
+                color="primary"
+                class="routing-icon"
+              >
+                $brain
+              </v-icon>
               <div class="routing-info">
-                <div class="routing-title text-high-emphasis">Enable Smart Routing</div>
-                <div class="routing-description text-medium-emphasis">Use intelligent routing algorithms for query processing</div>
+                <div class="routing-title text-high-emphasis">
+                  Enable Smart Routing
+                </div>
+                <div class="routing-description text-medium-emphasis">
+                  Use intelligent routing algorithms for query processing
+                </div>
               </div>
             </div>
             <div class="routing-right">
@@ -43,16 +57,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Enable Fuzzy Matching Row -->
         <div class="routing-row">
           <div class="routing-content">
             <div class="routing-left">
-              <v-icon color="primary" class="routing-icon">$target</v-icon>
+              <v-icon
+                color="primary"
+                class="routing-icon"
+              >
+                $target
+              </v-icon>
               <div class="routing-info">
-                <div class="routing-title text-high-emphasis">Enable Fuzzy Matching</div>
-                <div class="routing-description text-medium-emphasis">Allow approximate string matching for better results</div>
+                <div class="routing-title text-high-emphasis">
+                  Enable Fuzzy Matching
+                </div>
+                <div class="routing-description text-medium-emphasis">
+                  Allow approximate string matching for better results
+                </div>
               </div>
             </div>
             <div class="routing-right">
@@ -69,16 +92,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Similarity Threshold Row -->
         <div class="routing-row">
           <div class="routing-content">
             <div class="routing-left">
-              <v-icon color="primary" class="routing-icon">$tune</v-icon>
+              <v-icon
+                color="primary"
+                class="routing-icon"
+              >
+                $tune
+              </v-icon>
               <div class="routing-info">
-                <div class="routing-title text-high-emphasis">Similarity Threshold</div>
-                <div class="routing-description text-medium-emphasis">Minimum similarity score for matching results</div>
+                <div class="routing-title text-high-emphasis">
+                  Search Result Threshold
+                </div>
+                <div class="routing-description text-medium-emphasis">
+                  Minimum similarity score required to include results in responses (0.0 = very strict, 1.0 = very inclusive)
+                </div>
               </div>
             </div>
             <div class="routing-right">
@@ -96,22 +128,33 @@
                   hide-details
                   style="width: 200px;"
                 />
-                <div class="routing-status text-medium-emphasis">{{ store.settings.similarity_threshold.toFixed(1) }}</div>
+                <div class="routing-status text-medium-emphasis">
+                  {{ store.settings.similarity_threshold.toFixed(1) }}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Max Search Results Row -->
         <div class="routing-row">
           <div class="routing-content">
             <div class="routing-left">
-              <v-icon color="primary" class="routing-icon">$numeric</v-icon>
+              <v-icon
+                color="primary"
+                class="routing-icon"
+              >
+                $numeric
+              </v-icon>
               <div class="routing-info">
-                <div class="routing-title text-high-emphasis">Max Search Results</div>
-                <div class="routing-description text-medium-emphasis">Maximum number of search results to return</div>
+                <div class="routing-title text-high-emphasis">
+                  Max Search Results
+                </div>
+                <div class="routing-description text-medium-emphasis">
+                  Maximum number of search results to return
+                </div>
               </div>
             </div>
             <div class="routing-right">
@@ -129,16 +172,25 @@
           </div>
         </div>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <!-- Fuzzy Threshold Row -->
         <div class="routing-row">
           <div class="routing-content">
             <div class="routing-left">
-              <v-icon color="primary" class="routing-icon">$tune</v-icon>
+              <v-icon
+                color="primary"
+                class="routing-icon"
+              >
+                $tune
+              </v-icon>
               <div class="routing-info">
-                <div class="routing-title text-high-emphasis">Fuzzy Threshold</div>
-                <div class="routing-description text-medium-emphasis">Threshold for fuzzy string matching accuracy</div>
+                <div class="routing-title text-high-emphasis">
+                  Fuzzy Threshold
+                </div>
+                <div class="routing-description text-medium-emphasis">
+                  Threshold for fuzzy string matching accuracy
+                </div>
               </div>
             </div>
             <div class="routing-right">
@@ -157,7 +209,9 @@
                   hide-details
                   style="width: 200px;"
                 />
-                <div class="routing-status text-medium-emphasis">{{ store.settings.fuzzy_threshold.toFixed(1) }}</div>
+                <div class="routing-status text-medium-emphasis">
+                  {{ store.settings.fuzzy_threshold.toFixed(1) }}
+                </div>
               </div>
             </div>
           </div>

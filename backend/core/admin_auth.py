@@ -4,6 +4,8 @@ Migrated from admin/backend/auth.py with improvements.
 """
 
 import logging
+import os
+import sqlite3
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -162,8 +164,8 @@ class AdminAuthManager:
             salt = bcrypt.gensalt(rounds=self._bcrypt_rounds)
             hashed = bcrypt.hashpw(password_bytes, salt)
             return hashed.decode("utf-8")
-        except Exception as e:
-            logger.error(f"Bcrypt hashing failed: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Bcrypt hashing failed", exc_info=True)
             raise ValueError("Failed to hash password")
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -176,8 +178,8 @@ class AdminAuthManager:
             password_bytes = plain_password.encode("utf-8")
             hash_bytes = hashed_password.encode("utf-8")
             return bcrypt.checkpw(password_bytes, hash_bytes)
-        except Exception as e:
-            logger.error(f"Password verification failed: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Password verification failed", exc_info=True)
             return False
 
     def create_session(self, user_id: int, ip_address: Optional[str] = None, user_agent: Optional[str] = None) -> str:
@@ -192,17 +194,21 @@ class AdminAuthManager:
         now = datetime.now()
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
+            # Serialize session writes to avoid DB lock contention
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
 
-                # Limit concurrent sessions per user (max 5)
-                cursor.execute("SELECT COUNT(*) FROM admin_sessions WHERE user_id = ? AND is_active = 1", (user_id,))
-                active_sessions = cursor.fetchone()[0]
-
-                if active_sessions >= 5:
-                    # Expire oldest session - SQLite doesn't support ORDER BY in UPDATE, so use subquery
+                    # Limit concurrent sessions per user (max 5)
                     cursor.execute(
-                        """
+                        "SELECT COUNT(*) FROM admin_sessions WHERE user_id = ? AND is_active = 1", (user_id,)
+                    )
+                    active_sessions = cursor.fetchone()[0]
+
+                    if active_sessions >= 5:
+                        # Expire oldest session - SQLite doesn't support ORDER BY in UPDATE, so use subquery
+                        cursor.execute(
+                            """
                         UPDATE admin_sessions
                         SET is_active = 0
                         WHERE id = (
@@ -212,27 +218,30 @@ class AdminAuthManager:
                             LIMIT 1
                         )
                         """,
-                        (user_id,),
-                    )
+                            (user_id,),
+                        )
 
-                cursor.execute(
-                    """
+                    cursor.execute(
+                        """
                     INSERT INTO admin_sessions 
                     (id, user_id, started_at, last_active_at, ip_address, user_agent, is_active)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),
-                )
+                        (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),
+                    )
 
-                # Create and store session fingerprint
-                fingerprint = session_fingerprinter.create_fingerprint(ip_address or "unknown", user_agent or "")
-                session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
+                    # Create and store session fingerprint (skip in FAST_LOGIN_MODE)
+                    if os.getenv("FAST_LOGIN_MODE", "false").lower() not in {"1", "true", "yes"}:
+                        fingerprint = session_fingerprinter.create_fingerprint(
+                            ip_address or "unknown", user_agent or ""
+                        )
+                        session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
 
-                logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
-                return session_id
+                    logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
+                    return session_id
 
-        except Exception as e:
-            logger.error(f"Error creating session for user {user_id}: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error(f"Error creating session for user {user_id}", exc_info=True)
             raise
 
     def get_session(
@@ -304,8 +313,8 @@ class AdminAuthManager:
 
                 return session_data
 
-        except Exception as e:
-            logger.error(f"Error getting session {session_id[:8]}...: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error(f"Error getting session {session_id[:8]}...", exc_info=True)
             return None
 
     def update_session_activity(self, session_id: str) -> None:
@@ -314,14 +323,15 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
-                    (datetime.now(), session_id),
-                )
-        except Exception as e:
-            logger.error(f"Error updating session activity {session_id[:8]}...: {str(e)}", exc_info=True)
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
+                        (datetime.now(), session_id),
+                    )
+        except Exception:
+            logger.error(f"Error updating session activity {session_id[:8]}...", exc_info=True)
 
     def expire_session(self, session_id: str) -> None:
         """Expire a session safely."""
@@ -329,12 +339,13 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
-                logger.info(f"Expired session {session_id[:8]}...")
-        except Exception as e:
-            logger.error(f"Error expiring session {session_id[:8]}...: {str(e)}", exc_info=True)
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
+                    logger.info(f"Expired session {session_id[:8]}...")
+        except Exception:
+            logger.error(f"Error expiring session {session_id[:8]}...", exc_info=True)
 
     def expire_user_sessions(self, user_id: int) -> None:
         """Expire all sessions for a user."""
@@ -342,12 +353,13 @@ class AdminAuthManager:
             return
 
         try:
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
-                logger.info(f"Expired all sessions for user {user_id}")
-        except Exception as e:
-            logger.error(f"Error expiring sessions for user {user_id}: {str(e)}", exc_info=True)
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
+                    logger.info(f"Expired all sessions for user {user_id}")
+        except Exception:
+            logger.error(f"Error expiring sessions for user {user_id}", exc_info=True)
 
     def authenticate_user(
         self, username: str, password: str, ip_address: Optional[str] = None, user_agent: Optional[str] = None
@@ -359,31 +371,37 @@ class AdminAuthManager:
         username = username.strip().lower()
         client_ip = ip_address or "unknown"
 
-        # Comprehensive rate limit check
-        rate_limit_status = self.check_user_rate_limits(username, client_ip)
+        fast_mode = os.getenv("FAST_LOGIN_MODE", "false").lower() in {"1", "true", "yes"}
 
-        if rate_limit_status["any_rate_limited"]:
-            limit_type = rate_limit_status["primary_limit_type"]
-            attempts = rate_limit_status.get(f"{limit_type}_attempts", 0)
-            lockout_until = rate_limit_status.get(f"{limit_type}_lockout_until")
+        if not fast_mode:
+            # Comprehensive rate limit check
+            rate_limit_status = self.check_user_rate_limits(username, client_ip)
 
-            logger.warning(
-                f"{limit_type.upper()} rate limited authentication attempt for user {username} from {client_ip} ({attempts} attempts)"
-            )
-            admin_db_manager.record_security_event(
-                "rate_limited_login",
-                username,
-                "medium",
-                f"{limit_type.upper()} rate limited ({attempts} attempts) - lockout until {lockout_until}",
-                client_ip,
-                user_agent,
-            )
-            return None
+            if rate_limit_status["any_rate_limited"]:
+                limit_type = rate_limit_status["primary_limit_type"]
+                attempts = rate_limit_status.get(f"{limit_type}_attempts", 0)
+                lockout_until = rate_limit_status.get(f"{limit_type}_lockout_until")
+
+                logger.warning(
+                    f"{limit_type.upper()} rate limited authentication attempt for user {username} from {client_ip} ({attempts} attempts)"
+                )
+                admin_db_manager.record_security_event(
+                    "rate_limited_login",
+                    username,
+                    "medium",
+                    f"{limit_type.upper()} rate limited ({attempts} attempts) - lockout until {lockout_until}",
+                    client_ip,
+                    user_agent,
+                )
+                return None
 
         # Validate login location for security
-        from .geolocation_validator import geo_validator
+        if not fast_mode:
+            from .geolocation_validator import geo_validator
 
-        location_validation = geo_validator.validate_login_location(username, client_ip, user_agent)
+            location_validation = geo_validator.validate_login_location(username, client_ip, user_agent)
+        else:
+            location_validation = {"is_unusual": False, "reason": "fast_mode", "risk_level": "low", "action": "allow"}
 
         if location_validation["action"] == "block":
             logger.warning(f"Blocked login from unusual location for user {username}: {location_validation['reason']}")
@@ -400,35 +418,42 @@ class AdminAuthManager:
         user = admin_db_manager.get_admin_user(username)
 
         if not user or not self.verify_password(password, user["password_hash"]):
-            # Record failed attempt for both IP and username
-            ip_locked = admin_db_manager.record_rate_limit_attempt(client_ip, "ip", self._lockout_duration_minutes)
-            user_locked = admin_db_manager.record_rate_limit_attempt(
-                username, "username", self._lockout_duration_minutes
-            )
+            if not fast_mode:
+                # Record failed attempt for both IP and username
+                ip_locked = admin_db_manager.record_rate_limit_attempt(client_ip, "ip", self._lockout_duration_minutes)
+                user_locked = admin_db_manager.record_rate_limit_attempt(
+                    username, "username", self._lockout_duration_minutes
+                )
 
-            # Log security event
-            severity = "high" if (ip_locked or user_locked) else "medium"
-            admin_db_manager.record_security_event(
-                "login_failure", username, severity, f"Failed login attempt from {client_ip}", client_ip, user_agent
-            )
-
-            if ip_locked or user_locked:
-                logger.warning(f"Locked out after failed authentication: user {username} from {client_ip}")
+                # Log security event
+                severity = "high" if (ip_locked or user_locked) else "medium"
                 admin_db_manager.record_security_event(
-                    "account_lockout",
+                    "login_failure",
                     username,
-                    "high",
-                    f"Account/IP locked after repeated failures from {client_ip}",
+                    severity,
+                    f"Failed login attempt from {client_ip}",
                     client_ip,
                     user_agent,
                 )
-            else:
-                logger.warning(f"Failed authentication attempt for user {username} from {client_ip}")
+
+                if ip_locked or user_locked:
+                    logger.warning(f"Locked out after failed authentication: user {username} from {client_ip}")
+                    admin_db_manager.record_security_event(
+                        "account_lockout",
+                        username,
+                        "high",
+                        f"Account/IP locked after repeated failures from {client_ip}",
+                        client_ip,
+                        user_agent,
+                    )
+                else:
+                    logger.warning(f"Failed authentication attempt for user {username} from {client_ip}")
 
             return None
 
         # Reset failed attempts on successful login
-        self.reset_user_rate_limits(username, client_ip)
+        if not fast_mode:
+            self.reset_user_rate_limits(username, client_ip)
 
         # Check if user has 2FA enabled
         from .totp_service import totp_service
@@ -443,20 +468,24 @@ class AdminAuthManager:
         # Log successful login with location information
         location_info = f" - {location_validation.get('reason', 'Normal location')}"
         severity = "medium" if location_validation.get("is_unusual", False) else "low"
-        admin_db_manager.record_security_event(
-            "successful_login",
-            username,
-            severity,
-            f"Successful login from {client_ip}{location_info}",
-            client_ip,
-            user_agent,
-        )
+        if not fast_mode:
+            admin_db_manager.record_security_event(
+                "successful_login",
+                username,
+                severity,
+                f"Successful login from {client_ip}{location_info}",
+                client_ip,
+                user_agent,
+            )
 
         try:
             # Update last login time
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"]))
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"])
+                    )
 
             # Create session
             session_id = self.create_session(user["id"], ip_address, user_agent)
@@ -465,7 +494,7 @@ class AdminAuthManager:
             return {"user": user, "session_id": session_id}
 
         except Exception as e:
-            logger.error(f"Error during authentication for user {username}: {str(e)}", exc_info=True)
+            logger.error(f"Error during authentication for user {username}", exc_info=True)
             admin_db_manager.record_security_event(
                 "authentication_error", username, "high", f"Authentication error: {str(e)}", client_ip, user_agent
             )
@@ -505,9 +534,12 @@ class AdminAuthManager:
             )
 
             # Update last login time
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"]))
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_users SET last_login_at = ? WHERE id = ?", (datetime.now(), user["id"])
+                    )
 
             # Create session
             session_id = self.create_session(user["id"], ip_address, user_agent)
@@ -516,7 +548,7 @@ class AdminAuthManager:
             return {"user": user, "session_id": session_id, "2fa_used": True}
 
         except Exception as e:
-            logger.error(f"Error during 2FA completion for user {username}: {str(e)}", exc_info=True)
+            logger.error(f"Error during 2FA completion for user {username}", exc_info=True)
             admin_db_manager.record_security_event(
                 "2fa_authentication_error",
                 username,
@@ -561,17 +593,18 @@ class AdminAuthManager:
             session_timeout_hours = self.get_dynamic_session_timeout_hours()
             expiry_cutoff = datetime.now() - timedelta(hours=session_timeout_hours)
 
-            with admin_db_manager.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE admin_sessions SET is_active = 0 WHERE last_active_at < ? AND is_active = 1",
-                    (expiry_cutoff,),
-                )
+            with admin_db_manager._write_lock:
+                with admin_db_manager.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE admin_sessions SET is_active = 0 WHERE last_active_at < ? AND is_active = 1",
+                        (expiry_cutoff,),
+                    )
                 expired_count = cursor.rowcount
                 if expired_count > 0:
                     logger.info(f"Cleaned up {expired_count} expired sessions")
-        except Exception as e:
-            logger.error(f"Error cleaning up expired sessions: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error cleaning up expired sessions", exc_info=True)
 
     def is_rate_limited(self, identifier: str, identifier_type: str = "ip") -> bool:
         """Check if identifier is currently rate limited (proxy to database method)."""
@@ -619,7 +652,7 @@ class AdminAuthManager:
             }
 
         except Exception as e:
-            logger.error(f"Error checking user rate limits: {str(e)}", exc_info=True)
+            logger.error("Error checking user rate limits", exc_info=True)
             return {"ip_rate_limited": False, "user_rate_limited": False, "any_rate_limited": False, "error": str(e)}
 
     def reset_user_rate_limits(self, username: str, ip_address: str) -> bool:
@@ -634,8 +667,8 @@ class AdminAuthManager:
 
             return True
 
-        except Exception as e:
-            logger.error(f"Error resetting user rate limits: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error resetting user rate limits", exc_info=True)
             return False
 
     def cleanup_old_sessions_and_rate_limits(self) -> None:
@@ -694,8 +727,8 @@ class AdminAuthManager:
             # Check for unusual session activity patterns
             self._check_session_activity_patterns(session_data)
 
-        except Exception as e:
-            logger.error(f"Error monitoring session activity: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error monitoring session activity", exc_info=True)
 
     def _extract_browser_type(self, user_agent: str) -> str:
         """Extract browser type from user agent string."""
@@ -788,45 +821,127 @@ class AdminAuthManager:
                         session_data.get("user_agent"),
                     )
 
-        except Exception as e:
-            logger.error(f"Error checking session activity patterns: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error checking session activity patterns", exc_info=True)
+
+    def _aggregate_security_alerts(self, raw_alerts: List[Dict]) -> List[Dict]:
+        """Aggregate security alerts by event_type, identifier, severity, and ip_address.
+
+        This helper method encapsulates the Python aggregation logic that mirrors
+        the SQL GROUP BY behavior in the main query.
+
+        Args:
+            raw_alerts: List of raw security alert dictionaries
+
+        Returns:
+            List of aggregated security alerts, sorted by severity and count
+        """
+        aggregated: Dict[tuple, Dict] = {}
+        for alert in raw_alerts:
+            key = (alert.get("event_type"), alert.get("identifier"), alert.get("severity"), alert.get("ip_address"))
+            item = aggregated.get(key)
+            if item is None:
+                aggregated[key] = {
+                    "event_type": alert.get("event_type"),
+                    "identifier": alert.get("identifier"),
+                    "details": alert.get("details"),
+                    "severity": alert.get("severity"),
+                    "ip_address": alert.get("ip_address"),
+                    "created_at": alert.get("created_at"),
+                    "count": 1,
+                }
+            else:
+                item["count"] += 1
+                # Keep the most recent timestamp
+                if alert.get("created_at") > item.get("created_at"):
+                    item["created_at"] = alert.get("created_at")
+
+        # Sort by severity (high to low) and then by created_at (most recent first)
+        severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
+        result = sorted(
+            aggregated.values(),
+            key=lambda x: (severity_order.get(x.get("severity"), 1), x.get("created_at")),
+            reverse=True,
+        )
+        return result[:50]
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict]:
-        """Get recent security events for monitoring dashboard."""
+        """Get recent security events for monitoring dashboard.
+
+        Uses the admin database connection (mocked in tests). Falls back to
+        the dedicated security events database if needed.
+        """
         try:
+            # Preferred: query via admin DB connection so tests can mock it
             with admin_db_manager.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT event_type, identifier, details, severity, ip_address, created_at, COUNT(*) as count
+                    SELECT event_type, identifier, COALESCE(details, ''), severity, ip_address,
+                           MAX(created_at) as created_at, COUNT(*) as cnt
                     FROM security_events
-                    WHERE created_at > datetime('now', '-' || ? || ' hours')
+                    WHERE created_at >= datetime('now', ?)
                     GROUP BY event_type, identifier, severity, ip_address
-                    ORDER BY severity DESC, created_at DESC
+                    ORDER BY cnt DESC, created_at DESC
                     LIMIT 50
                     """,
-                    (hours,),
+                    (f"-{int(hours)} hours",),
+                )
+                rows = cursor.fetchall()
+                return [
+                    {
+                        "event_type": r[0],
+                        "identifier": r[1],
+                        "details": r[2],
+                        "severity": r[3],
+                        "ip_address": r[4],
+                        "created_at": r[5],
+                        "count": r[6],
+                    }
+                    for r in rows
+                ]
+        except (sqlite3.Error, ConnectionError):
+            # SECURITY: Log database fallback at warning level for visibility
+            logger.warning(
+                "Admin DB connection failed for security alerts, using fallback database - "
+                "this may indicate connectivity issues"
+            )
+
+            try:
+                from .security_events_database import security_events_db_manager
+
+                raw_alerts = security_events_db_manager.get_security_alerts(hours)
+                aggregated_alerts = self._aggregate_security_alerts(raw_alerts)
+
+                # SECURITY: Log successful fallback for audit trail
+                logger.info(f"Security alerts retrieved via fallback database: {len(aggregated_alerts)} alerts")
+                return aggregated_alerts
+
+            except Exception:
+                # SECURITY: Critical error - both databases failed
+                logger.critical(
+                    "SECURITY ALERT: Both primary and fallback databases failed for security alerts retrieval",
+                    exc_info=True,
                 )
 
-                events = []
-                for row in cursor.fetchall():
-                    events.append(
-                        {
-                            "event_type": row[0],
-                            "identifier": row[1],
-                            "details": row[2],
-                            "severity": row[3],
-                            "ip_address": row[4],
-                            "created_at": row[5],
-                            "count": row[6],
-                        }
+                # Record this critical failure as a security event if possible
+                try:
+                    from .security_events_database import security_events_db_manager
+
+                    security_events_db_manager.record_security_event(
+                        "security_database_failure",
+                        "system",
+                        "critical",
+                        "Failed to retrieve security alerts from both databases",
+                        None,
+                        None,
                     )
+                except Exception:
+                    # Even security event recording failed - log at critical level
+                    logger.critical("Unable to record security database failure event")
 
-                return events
-
-        except Exception as e:
-            logger.error(f"Error getting security alerts: {str(e)}", exc_info=True)
-            return []
+                # Return empty list but ensure this failure is highly visible
+                return []
 
 
 # Global auth manager instance
@@ -855,6 +970,6 @@ def get_current_admin_user(request: Request) -> Optional[Dict]:
     """Get current admin user from request if authenticated, None otherwise."""
     try:
         return admin_auth_manager.get_session_from_request(request)
-    except Exception as e:
-        logger.error(f"Error getting current admin user: {str(e)}", exc_info=True)
+    except Exception:
+        logger.error("Error getting current admin user", exc_info=True)
         return None

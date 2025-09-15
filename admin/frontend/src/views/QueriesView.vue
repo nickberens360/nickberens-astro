@@ -1,6 +1,5 @@
 <template>
   <div class="queries-view">
-    
     <QueryTable
       title="All Queries"
       @query-selected="handleQuerySelected"

@@ -1,10 +1,23 @@
 <template>
-  <v-container class="fill-height" fluid>
-    <v-row align="center" justify="center">
-      <v-col cols="12" sm="8" md="6" lg="4">
+  <v-container
+    class="fill-height"
+    fluid
+  >
+    <v-row
+      align="center"
+      justify="center"
+    >
+      <v-col
+        cols="12"
+        sm="8"
+        md="6"
+        lg="4"
+      >
         <v-card>
           <v-card-title class="text-center">
-            <v-icon class="mr-2">$dashboard</v-icon>
+            <v-icon class="mr-2">
+              $dashboard
+            </v-icon>
             Admin Login
           </v-card-title>
           
@@ -17,7 +30,7 @@
               :error-messages="validation.username"
               data-testid="username"
               @keyup.enter="login"
-            ></v-text-field>
+            />
             
             <v-text-field
               v-model="formData.password"
@@ -28,7 +41,7 @@
               :error-messages="validation.password"
               data-testid="password"
               @keyup.enter="login"
-            ></v-text-field>
+            />
             
             <v-alert
               v-if="state.error"
@@ -40,17 +53,11 @@
               {{ state.error }}
             </v-alert>
             
-            <v-alert
-              v-if="state.success"
-              type="success"
-              class="mb-4"
-            >
-              {{ state.success }}
-            </v-alert>
+            <!-- Success notifications are shown via global toasts -->
           </v-card-text>
           
           <v-card-actions>
-            <v-spacer></v-spacer>
+            <v-spacer />
             <v-btn 
               color="primary" 
               size="large"
@@ -72,6 +79,7 @@
 import { reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { adminAPI } from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 
 export default {
   name: 'LoginView',
@@ -89,6 +97,7 @@ export default {
       error: null,
       success: null
     })
+    const { showSuccess } = useNotifications()
     
     const validation = reactive({
       username: [],
@@ -131,7 +140,7 @@ export default {
         const response = await adminStore.login(formData.username, formData.password)
         
         if (response.success) {
-          state.success = 'Login successful! Redirecting...'
+          showSuccess('Login successful! Redirecting...')
           
           // Determine a safe redirect destination (internal-only)
           const rawRedirect = Array.isArray(route.query.redirect)

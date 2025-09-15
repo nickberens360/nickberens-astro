@@ -13,8 +13,16 @@
       <div class="sidebar-header ds-p-6">
         <div class="d-flex align-center">
           <div class="brand-logo">
-            <v-avatar color="primary" size="40">
-              <v-icon size="24" color="white">$dashboard</v-icon>
+            <v-avatar
+              color="primary"
+              size="40"
+            >
+              <v-icon
+                size="24"
+                color="white"
+              >
+                $dashboard
+              </v-icon>
             </v-avatar>
           </div>
           <div class="ml-3">
@@ -25,15 +33,22 @@
         </div>
       </div>
 
-      <v-divider class="ds-mb-4"/>
+      <v-divider class="ds-mb-4" />
 
       <!-- Main Menu Section -->
       <div class="ds-px-4">
         <div class="menu-label ds-text-xs ds-font-medium text-medium-emphasis ds-mb-3">
           MAIN MENU
         </div>
-        <v-list nav density="compact" class="ds-py-0">
-          <template v-for="item in navigationItems" :key="item.name">
+        <v-list
+          nav
+          density="compact"
+          class="ds-py-0"
+        >
+          <template
+            v-for="item in navigationItems"
+            :key="item.name"
+          >
             <!-- Main navigation item -->
             <v-list-item
               v-if="!item.children"
@@ -44,7 +59,9 @@
               :prepend-icon="item.icon"
               color="primary"
             >
-              <v-list-item-title class="font-weight-medium">{{ item.title }}</v-list-item-title>
+              <v-list-item-title class="font-weight-medium">
+                {{ item.title }}
+              </v-list-item-title>
             </v-list-item>
 
             <!-- Navigation item with children -->
@@ -54,7 +71,7 @@
               :value="item.name"
               class="mb-1"
             >
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-list-item
                   v-bind="props"
                   :prepend-icon="item.icon"
@@ -64,7 +81,9 @@
                   :active="$route.name === item.name || item.children.some(child => $route.name === child.name)"
                   @click="navigateToParent(item)"
                 >
-                  <v-list-item-title class="font-weight-medium">{{ item.title }}</v-list-item-title>
+                  <v-list-item-title class="font-weight-medium">
+                    {{ item.title }}
+                  </v-list-item-title>
                 </v-list-item>
               </template>
 
@@ -77,7 +96,9 @@
                 class="ms-4 nav-item"
                 color="primary"
               >
-                <v-list-item-title class="font-weight-medium">{{ child.title }}</v-list-item-title>
+                <v-list-item-title class="font-weight-medium">
+                  {{ child.title }}
+                </v-list-item-title>
               </v-list-item>
             </v-list-group>
           </template>
@@ -86,7 +107,7 @@
 
 
       <template #append>
-        <v-divider class="mb-2"/>
+        <v-divider class="mb-2" />
 
         <v-list density="compact">
           <div class="px-4 d-flex justify-space-between align-center mb-2">
@@ -133,14 +154,14 @@
         {{ currentPageTitle }}
       </v-toolbar-title>
 
-      <v-spacer/>
+      <v-spacer />
 
       <!-- Time Range Selector -->
       <TimeRangeSelector
         v-if="showTimeRangeSelector"
         :model-value="timeRange"
-        @update:model-value="setTimeRange"
         class="mr-4"
+        @update:model-value="setTimeRange"
       />
 
       <!-- Notifications (hidden until notification system is implemented) -->
@@ -170,34 +191,53 @@
       <!-- User Profile -->
       <v-menu>
         <template #activator="{ props }">
-          <div v-bind="props" class="user-profile-section d-flex align-center pa-2 rounded-lg cursor-pointer">
-            <v-avatar size="40" class="mr-3" color="primary">
-              <v-icon color="white">$account</v-icon>
+          <div
+            v-bind="props"
+            class="user-profile-section d-flex align-center pa-2 rounded-lg cursor-pointer"
+          >
+            <v-avatar
+              size="40"
+              class="mr-3"
+              color="primary"
+            >
+              <v-icon color="white">
+                $account
+              </v-icon>
             </v-avatar>
             <div class="user-info d-none d-sm-block">
-              <div class="user-name text-subtitle-1 font-weight-medium">{{ userDisplayName }}</div>
-              <div class="user-role text-caption text-medium-emphasis">{{ userRole }}</div>
+              <div class="user-name text-subtitle-1 font-weight-medium">
+                {{ userDisplayName }}
+              </div>
+              <div class="user-role text-caption text-medium-emphasis">
+                {{ userRole }}
+              </div>
             </div>
-            <v-icon class="ml-2 d-none d-sm-block">$chevron-down</v-icon>
+            <v-icon class="ml-2 d-none d-sm-block">
+              $chevron-down
+            </v-icon>
           </div>
         </template>
 
         <v-list width="200">
           <v-list-item @click="refreshData">
             <v-list-item-title>
-              <v-icon start>$refresh</v-icon>
+              <v-icon start>
+                $refresh
+              </v-icon>
               Refresh Data
             </v-list-item-title>
           </v-list-item>
 
           <v-list-item @click="exportData">
             <v-list-item-title>
-              <v-icon start>$export</v-icon>
+              <v-icon start>
+                $export
+              </v-icon>
               Export Data
             </v-list-item-title>
           </v-list-item>
 
-          <v-divider/>
+          <v-divider />
 
           <v-list-item @click="toggleTheme">
             <v-list-item-title>
@@ -208,20 +248,24 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-divider/>
+          <v-divider />
 
           <v-list-item to="/user-settings">
             <v-list-item-title>
-              <v-icon start>$account</v-icon>
+              <v-icon start>
+                $account
+              </v-icon>
               User Settings
             </v-list-item-title>
           </v-list-item>
 
-          <v-divider/>
+          <v-divider />
 
           <v-list-item @click="handleLogout">
             <v-list-item-title>
-              <v-icon start>$logout</v-icon>
+              <v-icon start>
+                $logout
+              </v-icon>
               Logout
             </v-list-item-title>
           </v-list-item>
@@ -235,54 +279,30 @@
         class="ds-p-8"
         style="background-color: rgb(var(--v-theme-background));"
       >
+        <!-- Maintenance Mode Banner -->
+        <v-alert
+          v-if="featureStore && featureStore.featureFlags && featureStore.featureFlags.enable_maintenance_mode"
+          type="warning"
+          variant="tonal"
+          class="mb-4"
+        >
+          <v-icon start>
+            $construction
+          </v-icon>
+          Maintenance mode is enabled. Public endpoints are unavailable. Admins can still access settings here.
+        </v-alert>
         <router-view v-slot="{ Component }">
           <Transition
             name="fade"
             mode="out-in"
           >
-            <component :is="Component"/>
+            <component :is="Component" />
           </Transition>
         </router-view>
       </v-container>
     </v-main>
 
-    <!-- Error Snackbar -->
-    <v-snackbar
-      v-model="showError"
-      color="error"
-      multi-line
-      timeout="6000"
-      location="bottom"
-    >
-      {{ error }}
-
-      <template #actions>
-        <v-btn
-          text="Close"
-          variant="text"
-          @click="resetError"
-        />
-      </template>
-    </v-snackbar>
-
-    <!-- Connection Status -->
-    <v-snackbar
-      v-model="showConnectionWarning"
-      color="warning"
-      persistent
-      location="top"
-    >
-      <v-icon start>$alert</v-icon>
-      Connection to admin API lost. Retrying...
-
-      <template #actions>
-        <v-btn
-          text="Retry"
-          variant="text"
-          @click="testConnection"
-        />
-      </template>
-    </v-snackbar>
+    <!-- Toasts are handled globally via NotificationMessage -->
   </v-app>
 </template>
 
@@ -292,6 +312,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { storeToRefs } from 'pinia'
 import { useAdminStore } from '@/stores/admin'
+import { useFeatureSettingsStore } from '@/stores/featureSettings'
+import { useNotificationsStore } from '@/stores/notifications'
 import { formatDate } from '@/types/admin'
 import TimeRangeSelector from '@/components/TimeRangeSelector.vue'
 
@@ -301,6 +323,8 @@ const { mobile } = useDisplay()
 const theme = useTheme()
 
 const adminStore = useAdminStore()
+const featureStore = useFeatureSettingsStore()
+const notifications = useNotificationsStore()
 
 // Local state
 const drawer = ref(true)
@@ -377,7 +401,7 @@ const navigationItems = computed(() => [
   {
     name: 'settings',
     title: 'Settings',
-    to: '/settings/followup',
+    to: '/settings/core',
     icon: '$settings'
   }
 ]);
@@ -399,17 +423,31 @@ const showTimeRangeSelector = computed(() => {
   return ['dashboard', 'performance'].includes(route.name);
 });
 
-const showError = ref(false)
-const showConnectionWarning = ref(false)
+const connectionToastId = ref(null)
 
-// Watch for error changes
+// Toast on error changes
 watch(error, (newError) => {
-  showError.value = Boolean(newError)
+  if (newError) {
+    const msg = typeof newError === 'string' ? newError : (newError?.message || 'An error occurred')
+    notifications.error(msg)
+  }
 })
 
-// Watch for connection status changes
+// Connection status toast (persistent)
 watch([isConnected, isLoading], ([connected, loading]) => {
-  showConnectionWarning.value = !connected && !loading
+  if (!connected && !loading) {
+    if (!connectionToastId.value) {
+      connectionToastId.value = notifications.warning('Connection to admin API lost. Retrying...', {
+        persistent: true,
+        actionLabel: 'Retry',
+        onAction: () => testConnection()
+      })
+    }
+  } else if (connected && connectionToastId.value) {
+    notifications.dismiss(connectionToastId.value)
+    connectionToastId.value = null
+    notifications.success('Reconnected to admin API', { timeout: 3000 })
+  }
 })
 
 const formatLastUpdate = computed(() => {
@@ -447,10 +485,7 @@ const setTimeRange = async (newTimeRange) => {
   await adminStore.setTimeRange(newTimeRange)
 }
 
-const resetError = () => {
-  showError.value = false
-  adminStore.resetError()
-}
+// Error reset handled via store events; no local snackbar state
 
 const testConnection = async () => {
   await adminStore.testConnection()
@@ -495,6 +530,8 @@ onMounted(() => {
   if (mobile.value) {
     drawer.value = false
   }
+  // Load feature flags for maintenance banner
+  featureStore.loadData().catch(error => console.error('Failed to load feature flags:', error))
 })
 
 onUnmounted(() => {

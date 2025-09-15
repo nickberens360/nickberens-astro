@@ -1,13 +1,15 @@
 <template>
   <div class="indexed-documents-view">
     <div class="d-flex justify-space-between align-center mb-6">
-      <h1 class="text-h4">Indexed Documents</h1>
+      <h1 class="text-h4">
+        Indexed Documents
+      </h1>
       <v-btn
         color="primary"
         prepend-icon="$refresh"
-        @click="loadDocuments"
         :loading="loadingDocuments"
         variant="outlined"
+        @click="loadDocuments"
       >
         Refresh
       </v-btn>
@@ -15,53 +17,105 @@
 
     <!-- Knowledge Base Stats -->
     <v-row class="mb-6">
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="blue" size="large" class="me-3">$folder</v-icon>
+              <v-icon
+                color="blue"
+                size="large"
+                class="me-3"
+              >
+                $folder
+              </v-icon>
               <div>
-                <div class="text-h6">{{ knowledgeStats.unique_sources || 0 }}</div>
-                <div class="text-body-2 text-medium-emphasis">Source Files</div>
+                <div class="text-h6">
+                  {{ knowledgeStats.unique_sources || 0 }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Source Files
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="green" size="large" class="me-3">$description</v-icon>
+              <v-icon
+                color="green"
+                size="large"
+                class="me-3"
+              >
+                $description
+              </v-icon>
               <div>
-                <div class="text-h6">{{ knowledgeStats.total_documents || 0 }}</div>
-                <div class="text-body-2 text-medium-emphasis">Indexed Documents</div>
+                <div class="text-h6">
+                  {{ knowledgeStats.total_documents || 0 }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Indexed Documents
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="purple" size="large" class="me-3">$data_object</v-icon>
+              <v-icon
+                color="purple"
+                size="large"
+                class="me-3"
+              >
+                $data_object
+              </v-icon>
               <div>
-                <div class="text-h6">{{ knowledgeStats.total_chunks || 0 }}</div>
-                <div class="text-body-2 text-medium-emphasis">Vector Chunks</div>
+                <div class="text-h6">
+                  {{ knowledgeStats.total_chunks || 0 }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Vector Chunks
+                </div>
               </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" md="3">
+      <v-col
+        cols="12"
+        md="3"
+      >
         <v-card elevation="1">
           <v-card-text>
             <div class="d-flex align-center">
-              <v-icon color="orange" size="large" class="me-3">$memory</v-icon>
+              <v-icon
+                color="orange"
+                size="large"
+                class="me-3"
+              >
+                $memory
+              </v-icon>
               <div>
-                <div class="text-h6">{{ embeddingModel }}</div>
-                <div class="text-body-2 text-medium-emphasis">Embedding Model</div>
+                <div class="text-h6">
+                  {{ embeddingModel }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Embedding Model
+                </div>
               </div>
             </div>
           </v-card-text>
@@ -72,9 +126,11 @@
     <!-- Indexed Documents Section -->
     <v-card elevation="2">
       <v-card-title class="text-h6 bg-surface-variant d-flex align-center">
-        <v-icon class="me-2">$search</v-icon>
+        <v-icon class="me-2">
+          $search
+        </v-icon>
         Indexed Documents
-        <v-spacer></v-spacer>
+        <v-spacer />
         <v-text-field
           v-model="documentSearch"
           density="compact"
@@ -83,14 +139,14 @@
           hide-details
           class="me-2"
           style="max-width: 300px"
-        ></v-text-field>
+        />
         <v-btn
           icon="$refresh"
           variant="text"
           size="small"
-          @click="loadDocuments"
           :loading="loadingDocuments"
-        ></v-btn>
+          @click="loadDocuments"
+        />
       </v-card-title>
       <v-card-text class="pa-0">
         <v-data-table
@@ -100,20 +156,28 @@
           :search="documentSearch"
           item-key="id"
           :items-per-page="15"
-          @click:row="openDocumentDialog"
           hover
+          @click:row="openDocumentDialog"
         >
-          <template v-slot:item.source="{ item }">
-            <div class="text-truncate" style="max-width: 300px" :title="item.source">
+          <template #[`item.source`]="{ item }">
+            <div
+              class="text-truncate"
+              style="max-width: 300px"
+              :title="item.source"
+            >
               {{ item.source }}
             </div>
           </template>
-          <template v-slot:item.content_preview="{ item }">
-            <div class="text-truncate text-body-2" style="max-width: 400px" :title="item.content_preview">
+          <template #[`item.content_preview`]="{ item }">
+            <div
+              class="text-truncate text-body-2"
+              style="max-width: 400px"
+              :title="item.content_preview"
+            >
               {{ item.content_preview }}
             </div>
           </template>
-          <template v-slot:item.metadata="{ item }">
+          <template #[`item.metadata`]="{ item }">
             <v-chip
               v-for="type in getContentTypes(item.metadata)"
               :key="type"
@@ -124,7 +188,7 @@
               {{ type }}
             </v-chip>
           </template>
-          <template v-slot:item.word_count="{ item }">
+          <template #[`item.word_count`]="{ item }">
             <span class="text-body-2">{{ item.word_count }} words</span>
           </template>
         </v-data-table>
@@ -139,41 +203,51 @@
     >
       <v-card v-if="selectedDocument">
         <v-card-title class="text-h5 d-flex align-center">
-          <v-icon class="me-2">$document</v-icon>
+          <v-icon class="me-2">
+            $document
+          </v-icon>
           Document Details
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             icon="$close"
             variant="text"
             @click="closeDocumentDialog"
-          ></v-btn>
+          />
         </v-card-title>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <v-card-text class="pa-0">
           <v-container>
             <!-- Basic Information -->
             <div class="mb-4">
-              <h3 class="text-h6 mb-3">Basic Information</h3>
+              <h3 class="text-h6 mb-3">
+                Basic Information
+              </h3>
               <v-row>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Document ID"
                     :model-value="selectedDocument.id"
                     readonly
                     density="compact"
                     variant="outlined"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Word Count"
                     :model-value="selectedDocument.word_count + ' words'"
                     readonly
                     density="compact"
                     variant="outlined"
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
               <v-text-field
@@ -183,12 +257,17 @@
                 density="compact"
                 variant="outlined"
                 class="mb-3"
-              ></v-text-field>
+              />
             </div>
 
             <!-- Content Types -->
-            <div class="mb-4" v-if="selectedDocument.metadata && selectedDocument.metadata.content_types">
-              <h3 class="text-h6 mb-3">Content Types</h3>
+            <div
+              v-if="selectedDocument.metadata && selectedDocument.metadata.content_types"
+              class="mb-4"
+            >
+              <h3 class="text-h6 mb-3">
+                Content Types
+              </h3>
               <div class="d-flex flex-wrap gap-2">
                 <v-chip
                   v-for="type in getContentTypes(selectedDocument.metadata)"
@@ -202,44 +281,65 @@
             </div>
 
             <!-- Metadata -->
-            <div class="mb-4" v-if="selectedDocument.metadata">
-              <h3 class="text-h6 mb-3">Metadata</h3>
+            <div
+              v-if="selectedDocument.metadata"
+              class="mb-4"
+            >
+              <h3 class="text-h6 mb-3">
+                Metadata
+              </h3>
               <v-row>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.file_name">
+                <v-col
+                  v-if="selectedDocument.metadata.file_name"
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="File Name"
                     :model-value="selectedDocument.metadata.file_name"
                     readonly
                     density="compact"
                     variant="outlined"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.file_type">
+                <v-col
+                  v-if="selectedDocument.metadata.file_type"
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="File Type"
                     :model-value="selectedDocument.metadata.file_type"
                     readonly
                     density="compact"
                     variant="outlined"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.content_length">
+                <v-col
+                  v-if="selectedDocument.metadata.content_length"
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Content Length"
                     :model-value="selectedDocument.metadata.content_length + ' characters'"
                     readonly
                     density="compact"
                     variant="outlined"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="12" md="6" v-if="selectedDocument.metadata.hasOwnProperty('has_code')">
+                <v-col
+                  v-if="selectedDocument.metadata.hasOwnProperty('has_code')"
+                  cols="12"
+                  md="6"
+                >
                   <v-text-field
                     label="Contains Code"
                     :model-value="selectedDocument.metadata.has_code ? 'Yes' : 'No'"
                     readonly
                     density="compact"
                     variant="outlined"
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
             </div>
@@ -254,7 +354,7 @@
                   size="20"
                   width="2"
                   class="ml-2"
-                ></v-progress-circular>
+                />
               </h3>
               <v-textarea
                 :model-value="loadingFullContent ? 'Loading full content...' : fullDocumentContent"
@@ -265,20 +365,20 @@
                 no-resize
                 :loading="loadingFullContent"
                 :class="{'monospace-content': selectedDocument?.metadata?.has_code}"
-              ></v-textarea>
+              />
             </div>
           </v-container>
         </v-card-text>
 
-        <v-divider></v-divider>
+        <v-divider />
 
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             text="Close"
             variant="text"
             @click="closeDocumentDialog"
-          ></v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>

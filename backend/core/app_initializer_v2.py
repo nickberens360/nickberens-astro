@@ -18,8 +18,10 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from .config import AppConfig
+from .constants import ANTHROPIC_COMMON_PARAMS, GOOGLE_COMMON_PARAMS
 from .settings_manager import get_settings_manager
 from .smart_illustration_service import SmartIllustrationService
+from .taxonomy_loader import get_topic_taxonomy
 from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
@@ -69,7 +71,7 @@ def create_processing_llm() -> BaseLanguageModel:
             if google_api_key:
                 logger.info(f"Creating Gemini processing LLM: {processing_model_name}")
                 return ChatGoogleGenerativeAI(
-                    model=processing_model_name, temperature=0.1, timeout=60.0, google_api_key=google_api_key
+                    model=processing_model_name, google_api_key=google_api_key, **GOOGLE_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Google API key found for processing LLM, falling back to Claude")
@@ -81,7 +83,7 @@ def create_processing_llm() -> BaseLanguageModel:
             if anthropic_api_key:
                 logger.info(f"Creating Claude processing LLM: {processing_model_name}")
                 return ChatAnthropic(
-                    model=processing_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                    model_name=processing_model_name, api_key=anthropic_api_key, **ANTHROPIC_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Anthropic API key found for processing LLM, trying environment fallback")
@@ -94,12 +96,10 @@ def create_processing_llm() -> BaseLanguageModel:
     logger.info("Creating fast Claude processing LLM from environment: claude-3-haiku-20240307")
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
-        return ChatAnthropic(
-            model="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
-        )
+        return ChatAnthropic(model_name="claude-3-haiku-20240307", api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model="claude-3-haiku-20240307", temperature=0.1, timeout=60.0, stop=[])
+        return ChatAnthropic(model_name="claude-3-haiku-20240307", **ANTHROPIC_COMMON_PARAMS)
 
 
 def create_response_llm() -> BaseLanguageModel:
@@ -146,7 +146,7 @@ def create_response_llm() -> BaseLanguageModel:
             if google_api_key:
                 logger.info(f"Creating Gemini response LLM: {response_model_name}")
                 return ChatGoogleGenerativeAI(
-                    model=response_model_name, temperature=0.1, timeout=60.0, google_api_key=google_api_key
+                    model=response_model_name, google_api_key=google_api_key, **GOOGLE_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Google API key found, falling back to Claude")
@@ -157,7 +157,7 @@ def create_response_llm() -> BaseLanguageModel:
             if anthropic_api_key:
                 logger.info(f"Creating Claude response LLM: {response_model_name}")
                 return ChatAnthropic(
-                    model=response_model_name, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_api_key
+                    model_name=response_model_name, api_key=anthropic_api_key, **ANTHROPIC_COMMON_PARAMS
                 )
             else:
                 logger.warning("No Anthropic API key found, trying environment fallback")
@@ -170,12 +170,10 @@ def create_response_llm() -> BaseLanguageModel:
     logger.info(f"Creating Claude LLM from environment config: {AppConfig.CLAUDE_MODEL}")
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
-        return ChatAnthropic(
-            model=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[], api_key=anthropic_key
-        )
+        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model=AppConfig.CLAUDE_MODEL, temperature=0.1, timeout=60.0, stop=[])
+        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, **ANTHROPIC_COMMON_PARAMS)
 
 
 def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
@@ -192,6 +190,21 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     """
     logger.info("🚀 Initializing application with unified retriever system...")
 
+    # Log taxonomy status for observability
+    try:
+        tax = get_topic_taxonomy()
+        if tax and isinstance(tax.get("categories"), dict):
+            cats = [str(k) for k in tax["categories"].keys()]
+            logger.info(
+                "📚 Topic taxonomy loaded: %d categories -> %s",
+                len(cats),
+                ", ".join(cats[:8]) + (" …" if len(cats) > 8 else ""),
+            )
+        else:
+            logger.info("📚 Topic taxonomy not found/invalid; using fallback heuristics")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not load topic taxonomy: {e}")
+
     # Ensure logs directory exists during app initialization
     backend_dir = Path(__file__).parent.parent.resolve()
     logs_dir = backend_dir / "logs"
@@ -204,44 +217,73 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
 
+    # Determine persist directory (allow override via environment for tests/CI)
+    persist_dir = os.getenv("UNIFIED_PERSIST_DIR", "backend/.unified_chroma")
+
     # Create unified retriever with Claude Haiku for fast indexing
     unified_retriever = UnifiedRetriever(
-        embeddings, indexing_llm, use_fast_classifier=True, classification_mode="hybrid"
+        embeddings,
+        indexing_llm,
+        persist_dir=persist_dir,
+        use_fast_classifier=True,
+        classification_mode="hybrid",
     )
+    # Respect environment flag for heterogeneity fallback (default OFF)
+    try:
+        env_flag = os.getenv("ENABLE_HETEROGENEITY_FALLBACK", "false").lower() in ("1", "true", "yes")
+        unified_retriever.content_indexer.enable_heterogeneity_fallback = env_flag
+        logger.info(f"Heterogeneity fallback enabled: {env_flag}")
+    except Exception:
+        logger.debug("Could not configure heterogeneity fallback on content indexer")
 
-    # Auto-index all content directories
-    directories_to_index = [
-        "backend/knowledge",  # Knowledge base documents
-        "public",  # JSON data files
-        # Add more directories as needed
-    ]
-
+    # Optionally skip auto-indexing in tests/CI to speed up imports
+    skip_indexing = os.getenv("SKIP_INDEXING", "false").lower() in ("1", "true", "yes")
     total_files = 0
     total_chunks = 0
+    if not skip_indexing:
+        # Auto-index all content directories
+        directories_to_index = [
+            "backend/knowledge",  # Knowledge base documents
+            "public",  # JSON data files
+            # Add more directories as needed
+        ]
 
-    # Check if we should force rebuild
-    force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
+        # Check if we should force rebuild
+        force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
 
-    # Check for admin-triggered refresh flag
-    refresh_flag_file = backend_dir / ".refresh_required"
-    if refresh_flag_file.exists():
-        logger.info("🔄 Admin refresh flag detected - forcing rebuild")
-        force_rebuild = True
-        # Remove the flag file after processing
+        # Check for admin-triggered refresh flag
+        refresh_flag_file = backend_dir / ".refresh_required"
+        if refresh_flag_file.exists():
+            logger.info("🔄 Admin refresh flag detected - forcing rebuild")
+            force_rebuild = True
+            # Remove the flag file after processing
+            try:
+                refresh_flag_file.unlink()
+                logger.info("✅ Admin refresh flag processed and removed")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not remove refresh flag file: {e}")
+
+        for directory in directories_to_index:
+            if os.path.exists(directory):
+                files, chunks = unified_retriever.index_directory(directory, force_reindex=force_rebuild)
+                total_files += files
+                total_chunks += chunks
+                logger.info(f"📁 Indexed {directory}: {files} files, {chunks} chunks")
+
+        # Log concise metrics after indexing
         try:
-            refresh_flag_file.unlink()
-            logger.info("✅ Admin refresh flag processed and removed")
-        except Exception as e:
-            logger.warning(f"⚠️ Could not remove refresh flag file: {e}")
-
-    for directory in directories_to_index:
-        if os.path.exists(directory):
-            files, chunks = unified_retriever.index_directory(directory, force_reindex=force_rebuild)
-            total_files += files
-            total_chunks += chunks
-            logger.info(f"📁 Indexed {directory}: {files} files, {chunks} chunks")
-
-    logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
+            metrics = unified_retriever.content_indexer.get_metrics()
+            logger.info(
+                "✅ Total indexed: %d files, %d chunks | LLM file classifications: %d | Per-chunk fallbacks: %d",
+                total_files,
+                total_chunks,
+                metrics.get("llm_classifications_performed", 0),
+                metrics.get("llm_classifications_fallback_chunk", 0),
+            )
+        except Exception:
+            logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
+    else:
+        logger.info("⏭️ Skipping auto-indexing due to SKIP_INDEXING=true")
 
     # Follow-up pregeneration removed in simplification - using static questions only
     logger.info("⚡ Using static follow-up questions for instant responses")

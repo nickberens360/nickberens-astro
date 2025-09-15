@@ -15,20 +15,50 @@
       </v-btn>
     </div>
 
-    <v-card v-if="loading" variant="tonal" class="text-center pa-6">
-      <v-progress-circular indeterminate color="primary" class="mb-2" />
-      <div class="text-body-2">Loading questions…</div>
+    <v-card
+      v-if="loading"
+      variant="tonal"
+      class="text-center pa-6"
+    >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        class="mb-2"
+      />
+      <div class="text-body-2">
+        Loading questions…
+      </div>
     </v-card>
 
-    <v-card v-else-if="!questions.length" variant="tonal" class="text-center pa-6">
-      <v-icon size="40" color="grey-lighten-1">$help-circle-outline</v-icon>
-      <div class="text-subtitle-2 mt-2 mb-3">No questions yet</div>
-      <v-btn color="primary" prepend-icon="$plus" :disabled="!category.is_active" @click="openAddDialog()">
+    <v-card
+      v-else-if="!questions.length"
+      variant="tonal"
+      class="text-center pa-6"
+    >
+      <v-icon
+        size="40"
+        color="grey-lighten-1"
+      >
+        $help-circle-outline
+      </v-icon>
+      <div class="text-subtitle-2 mt-2 mb-3">
+        No questions yet
+      </div>
+      <v-btn
+        color="primary"
+        prepend-icon="$plus"
+        :disabled="!category.is_active"
+        @click="openAddDialog()"
+      >
         Add Question
       </v-btn>
     </v-card>
 
-    <v-list v-else density="comfortable" class="pa-0">
+    <v-list
+      v-else
+      density="comfortable"
+      class="pa-0"
+    >
       <v-list-item
         v-for="(q, idx) in questions"
         :key="q.id"
@@ -47,7 +77,9 @@
           />
         </template>
 
-        <v-list-item-title class="mr-2">{{ q.question_text }}</v-list-item-title>
+        <v-list-item-title class="mr-2">
+          {{ q.question_text }}
+        </v-list-item-title>
         <v-list-item-subtitle>Order: {{ q.sort_order }} • Active: {{ q.is_active ? 'Yes' : 'No' }}</v-list-item-subtitle>
 
         <template #append>
@@ -96,10 +128,15 @@
     </v-list>
 
     <!-- Add/Edit Dialog -->
-    <v-dialog v-model="showDialog" max-width="560px">
+    <v-dialog
+      v-model="showDialog"
+      max-width="560px"
+    >
       <v-card>
         <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2">$help-circle</v-icon>
+          <v-icon class="mr-2">
+            $help-circle
+          </v-icon>
           {{ editing ? 'Edit Question' : 'Add Question' }}
         </v-card-title>
         <v-card-text>
@@ -123,35 +160,75 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="closeDialog" :disabled="saving">Cancel</v-btn>
-          <v-btn color="primary" @click="save" :loading="saving">{{ editing ? 'Update' : 'Add' }}</v-btn>
+          <v-btn
+            variant="text"
+            :disabled="saving"
+            @click="closeDialog"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="saving"
+            @click="save"
+          >
+            {{ editing ? 'Update' : 'Add' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <v-dialog v-model="showDeleteDialog" max-width="520px">
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="520px"
+    >
       <v-card>
         <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2" color="error">$delete</v-icon>
+          <v-icon
+            class="mr-2"
+            color="error"
+          >
+            $delete
+          </v-icon>
           Delete Question
         </v-card-title>
         <v-card-text>
-          <div class="mb-3">Are you sure you want to delete this question?</div>
-          <v-card variant="outlined" class="pa-3">
-            <div class="text-caption text-medium-emphasis mb-1">Question</div>
-            <div class="text-body-2">{{ deleteTarget?.question_text }}</div>
+          <div class="mb-3">
+            Are you sure you want to delete this question?
+          </div>
+          <v-card
+            variant="outlined"
+            class="pa-3"
+          >
+            <div class="text-caption text-medium-emphasis mb-1">
+              Question
+            </div>
+            <div class="text-body-2">
+              {{ deleteTarget?.question_text }}
+            </div>
           </v-card>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="cancelDelete" :disabled="saving">Cancel</v-btn>
-          <v-btn color="error" @click="confirmDelete" :loading="saving">Delete</v-btn>
+          <v-btn
+            variant="text"
+            :disabled="saving"
+            @click="cancelDelete"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="saving"
+            @click="confirmDelete"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
   </div>
-  
 </template>
 
 <script setup>

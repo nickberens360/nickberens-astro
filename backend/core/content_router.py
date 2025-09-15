@@ -9,12 +9,14 @@ This module provides focused functionality for:
 """
 
 import logging
+import re
 from typing import List, Optional
 
 from langchain.docstore.document import Document
 
 from .config import AppConfig
 from .semantic_searcher import SemanticSearcher
+from .taxonomy_loader import get_topic_taxonomy
 
 logger = logging.getLogger(__name__)
 
@@ -35,31 +37,94 @@ class ContentRouter:
         Returns:
             List of detected content type hints
         """
-        query_lower = query.lower()
-        content_type_hints = []
+        query_lower = query.lower().strip()
+        hints: List[str] = []
 
-        if any(term in query_lower for term in ["experience", "work", "job", "role", "company", "resume", "cv"]):
-            content_type_hints.append("experience")
+        # 1) Try taxonomy-driven detection
+        taxonomy = get_topic_taxonomy()
+        if taxonomy and isinstance(taxonomy.get("categories"), dict):
+            cats = taxonomy["categories"]
 
-        if any(term in query_lower for term in ["skill", "technology", "expertise", "know"]):
-            content_type_hints.append("skills")
+            for cat_name, cfg in cats.items():
+                matched = False
 
-        if any(term in query_lower for term in ["about", "who", "background", "interest"]):
-            content_type_hints.append("about")
+                # Build effective regex patterns from synonyms and explicit regex overrides
+                patterns: List[re.Pattern] = []
+                synonyms = [s for s in (cfg.get("synonyms") or []) if isinstance(s, str) and s.strip()]
+                if synonyms:
+                    try:
+                        escaped = [re.escape(s.strip()) for s in synonyms]
+                        # Word-boundary group for all synonyms, case-insensitive
+                        syn_pattern = re.compile(r"\b(?:" + "|".join(escaped) + r")\b", re.IGNORECASE)
+                        patterns.append(syn_pattern)
+                    except re.error:
+                        # If building the grouped pattern fails, fall back to per-synonym tests
+                        for s in synonyms:
+                            try:
+                                patterns.append(re.compile(r"\b" + re.escape(s.strip()) + r"\b", re.IGNORECASE))
+                            except re.error:
+                                continue
 
-        # Creative/inspiration queries
-        if any(
-            term in query_lower for term in ["illustration", "art", "design", "creative", "inspiration", "artistic"]
-        ):
-            content_type_hints.append("creative")
-        if "inspiration" in query_lower or "artistic" in query_lower:
-            # Inspiration often overlaps with bio/about content
-            content_type_hints.append("about")
+                for pattern in cfg.get("regex") or []:
+                    if not isinstance(pattern, str):
+                        continue
+                    try:
+                        patterns.append(re.compile(pattern, re.IGNORECASE))
+                    except re.error:
+                        continue
 
-        if any(term in query_lower for term in ["project", "built", "created", "developed"]):
-            content_type_hints.append("project")
+                # Try regex-based matching first
+                for pat in patterns:
+                    try:
+                        if pat.search(query_lower):
+                            matched = True
+                            break
+                    except re.error:
+                        continue
 
-        return content_type_hints
+                # Fallback: simple substring search on synonyms (legacy behavior)
+                if not matched and synonyms:
+                    for word in synonyms:
+                        if word and word.lower() in query_lower:
+                            matched = True
+                            break
+
+                if matched:
+                    hints.append(cat_name)
+
+            # Special case retained for inspiration/artistic implying 'about'
+            if ("inspiration" in query_lower or "artistic" in query_lower) and "about" not in hints:
+                hints.append("about")
+
+        # 2) Fallback to existing hardcoded heuristics if taxonomy yields nothing
+        if not hints:
+            if any(term in query_lower for term in ["experience", "work", "job", "role", "company", "resume", "cv"]):
+                hints.append("experience")
+
+            if any(term in query_lower for term in ["skill", "technology", "expertise", "know"]):
+                hints.append("skills")
+
+            if any(term in query_lower for term in ["about", "who", "background", "interest"]):
+                hints.append("about")
+
+            if any(
+                term in query_lower for term in ["illustration", "art", "design", "creative", "inspiration", "artistic"]
+            ):
+                hints.append("creative")
+            if "inspiration" in query_lower or "artistic" in query_lower:
+                hints.append("about")
+
+            if any(term in query_lower for term in ["project", "built", "created", "developed"]):
+                hints.append("project")
+
+        # Deduplicate while preserving order
+        seen = set()
+        ordered = []
+        for h in hints:
+            if h not in seen:
+                ordered.append(h)
+                seen.add(h)
+        return ordered
 
     def auto_route_query(self, query: str) -> List[Document]:
         """

@@ -6,6 +6,7 @@ Migrated from admin/backend/database.py with improvements.
 import logging
 import os
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -27,12 +28,27 @@ class AdminDatabaseManager:
             # Use shared utility to determine appropriate database path
             self.db_path = get_database_path("admin_monitoring.db")
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            # Serialize writes within this process to reduce lock contention
+            # Use RLock to allow nested acquisitions from the same thread
+            self._write_lock = threading.RLock()
+            # Connection tuning (can be overridden via env)
+            try:
+                self.connect_timeout = float(os.getenv("ADMIN_DB_TIMEOUT_SECONDS", "10.0"))
+            except Exception:
+                self.connect_timeout = 10.0
+            try:
+                self.busy_timeout_ms = int(os.getenv("ADMIN_DB_BUSY_TIMEOUT_MS", "5000"))
+            except Exception:
+                self.busy_timeout_ms = 5000
             logger.info(f"Admin database path: {self.db_path}")
             self._initialize_database()
         except Exception as e:
             logger.error(f"Failed to initialize admin database manager: {e}")
             # Create a fallback in-memory database for graceful degradation
             self.db_path = Path(":memory:")
+            # Ensure write lock is still initialized for fallback
+            if not hasattr(self, "_write_lock"):
+                self._write_lock = threading.RLock()
             logger.warning("Using in-memory database as fallback - admin features may be limited")
             try:
                 self._initialize_database()
@@ -42,27 +58,96 @@ class AdminDatabaseManager:
 
     @contextmanager
     def get_connection(self):
-        """Get a database connection with proper cleanup."""
-        try:
-            # Handle both file paths and in-memory databases
-            conn = sqlite3.connect(str(self.db_path))
-            conn.row_factory = sqlite3.Row  # Enable dict-like access
+        """Get a database connection with retries and proper cleanup.
+
+        Retries connection creation when encountering transient 'database is locked' errors,
+        which can occur under concurrent writes on some filesystems.
+        """
+        import time
+
+        retries = int(os.getenv("ADMIN_DB_CONNECT_RETRIES", "5"))
+        delay_ms = int(os.getenv("ADMIN_DB_CONNECT_RETRY_DELAY_MS", "200"))
+        last_err = None
+
+        conn = None
+        for attempt in range(retries):
             try:
-                yield conn
-                conn.commit()
-            except Exception:
-                conn.rollback()
+                # Handle both file paths and in-memory databases
+                conn = sqlite3.connect(
+                    str(self.db_path),
+                    timeout=getattr(self, "connect_timeout", 10.0),
+                    check_same_thread=False,  # Allow usage from FastAPI threadpool workers
+                )
+                conn.row_factory = sqlite3.Row  # Enable dict-like access
+
+                # Apply pragmatic per-connection settings that don't require write locks
+                try:
+                    cur = conn.cursor()
+                    # Busy timeout per connection helps during brief contention
+                    cur.execute(f"PRAGMA busy_timeout={getattr(self, 'busy_timeout_ms', 5000)};")
+                    cur.execute("PRAGMA foreign_keys=ON;")
+                except Exception as e:
+                    logger.warning(f"Failed to apply SQLite PRAGMAs: {e}")
+
+                break  # success
+            except sqlite3.OperationalError as e:
+                last_err = e
+                if "locked" in str(e).lower() and attempt < retries - 1:
+                    time.sleep(delay_ms / 1000.0)
+                    continue
+                logger.error(f"Failed to create database connection to {self.db_path}: {e}")
                 raise
-            finally:
-                conn.close()
-        except Exception as e:
-            logger.error(f"Failed to create database connection to {self.db_path}: {e}")
+            except Exception as e:
+                last_err = e
+                logger.error(f"Failed to create database connection to {self.db_path}: {e}")
+                raise
+
+        if conn is None:
+            # Should not happen, but guard anyway
+            raise RuntimeError(f"Unable to connect to database at {self.db_path}: {last_err}")
+
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
             raise
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     def _initialize_database(self):
         """Initialize database tables if they don't exist."""
         try:
+            # Write lock should already be initialized in __init__
+            # This method should only be called after __init__ or with proper lock setup
             with self.get_connection() as conn:
+                # Configure journal/sync for environment
+                # - On Railway/Linux production, prefer WAL for better concurrency
+                # - On macOS/dev, DELETE avoids Spotlight/FS issues
+                try:
+                    cursor = conn.cursor()
+                    desired_mode = os.getenv("SQLITE_JOURNAL_MODE")
+                    if not desired_mode:
+                        is_prod = os.getenv("ENVIRONMENT", "development").lower() == "production" or bool(
+                            os.getenv("RAILWAY_ENVIRONMENT_NAME")
+                        )
+                        desired_mode = "WAL" if is_prod else "DELETE"
+
+                    # Validate journal mode against whitelist to prevent SQL injection
+                    valid_journal_modes = {"WAL", "DELETE", "TRUNCATE", "PERSIST", "MEMORY", "OFF"}
+                    if desired_mode not in valid_journal_modes:
+                        logger.warning(f"Invalid journal mode '{desired_mode}', falling back to DELETE")
+                        desired_mode = "DELETE"
+
+                    # Use parameterized query with validated mode
+                    cursor.execute(f"PRAGMA journal_mode={desired_mode};")
+                    # NORMAL is a good balance with WAL; safe for DELETE too
+                    cursor.execute("PRAGMA synchronous=NORMAL;")
+                except Exception as e:
+                    logger.warning(f"Could not set journal mode during init: {e}")
                 cursor = conn.cursor()
 
                 # Admin users table
@@ -110,6 +195,24 @@ class AdminDatabaseManager:
                         FOREIGN KEY (updated_by) REFERENCES admin_users (id)
                     )
                 """
+                )
+
+                # Taxonomy settings history table
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS taxonomy_settings_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        settings_json TEXT NOT NULL,
+                        category_count INTEGER DEFAULT 0,
+                        note TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_by INTEGER,
+                        FOREIGN KEY (updated_by) REFERENCES admin_users (id)
+                    )
+                """
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_taxonomy_hist_created ON taxonomy_settings_history(created_at DESC)"
                 )
 
                 # Rate limiting table for persistent storage
@@ -607,13 +710,15 @@ class AdminDatabaseManager:
                         encoded_key = base64.b64encode(api_key.strip().encode()).decode()
                         last_four = api_key.strip()[-4:] if len(api_key.strip()) >= 4 else "****"
 
+                        # updated_by references admin_users.id; during first-run migrations
+                        # the admin_users table may be empty, so avoid setting a FK value
                         cursor.execute(
                             """
                             INSERT INTO api_keys 
-                            (key_name, key_type, encrypted_value, last_four, updated_by)
-                            VALUES (?, ?, ?, ?, 1)
+                            (key_name, key_type, encrypted_value, last_four, updated_at)
+                            VALUES (?, ?, ?, ?, ?)
                             """,
-                            (key_name, key_type, encoded_key, last_four),
+                            (key_name, key_type, encoded_key, last_four, datetime.now()),
                         )
 
                         migrated_count += 1
@@ -1288,9 +1393,38 @@ class AdminDatabaseManager:
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> bool:
-        """Persist a security/audit event to the database."""
+        """Persist a security/audit event into this manager's database.
+
+        This write must NEVER block the main request path. It uses a short, non-blocking
+        connection timeout and few quick retries. If the DB is locked, it fails fast
+        and returns False, logging at debug level to avoid noisy logs under load.
+
+        Tests patch this manager and expect writes to go to its own connection,
+        so avoid delegating to external/global managers here.
+        """
+        import random
+        import time
+
+        # Very short timeout for audit writes to avoid blocking main flow
         try:
-            with self.get_connection() as conn:
+            audit_timeout = float(os.getenv("ADMIN_DB_AUDIT_TIMEOUT_SECONDS", "0.05"))
+        except Exception:
+            audit_timeout = 0.05
+
+        max_retries = int(os.getenv("ADMIN_DB_WRITE_RETRIES", "3"))
+        base_delay_ms = int(os.getenv("ADMIN_DB_WRITE_RETRY_DELAY_MS", "50"))
+
+        for attempt in range(max_retries):
+            conn = None
+            try:
+                # Use a dedicated short-timeout connection without the global write lock
+                conn = sqlite3.connect(str(self.db_path), timeout=audit_timeout, check_same_thread=False)
+                try:
+                    cur = conn.cursor()
+                    cur.execute(f"PRAGMA busy_timeout={int(audit_timeout * 1000)};")
+                except Exception:
+                    pass
+
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -1307,33 +1441,35 @@ class AdminDatabaseManager:
                         datetime.now(),
                     ),
                 )
+                conn.commit()
                 return True
-        except Exception as e:
-            logger.error(f"Error recording security event: {str(e)}", exc_info=True)
-            return False
+            except sqlite3.OperationalError as e:
+                msg = str(e).lower()
+                # Fail fast on locked DB; quick retry a couple of times with jitter, then give up
+                if ("locked" in msg or "busy" in msg) and attempt < max_retries - 1:
+                    delay = (base_delay_ms * (2**attempt) + random.randint(0, base_delay_ms)) / 1000.0
+                    time.sleep(delay)
+                    continue
+                logger.debug(f"Non-blocking audit write failed: {e}")
+                return False
+            except Exception as e:
+                logger.debug(f"Non-blocking audit write error: {e}")
+                return False
+            finally:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
-        """Return security events within the last N hours."""
+        """Return security events within the last N hours from the dedicated DB."""
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    SELECT id, event_type, identifier, details, severity, ip_address, user_agent, created_at
-                    FROM security_events
-                    WHERE created_at >= datetime('now', ?)
-                    ORDER BY created_at DESC
-                    """,
-                    (f"-{int(hours)} hours",),
-                )
-                rows = cursor.fetchall()
-                result = []
-                for row in rows:
-                    d = dict(row)
-                    result.append(d)
-                return result
+            from .security_events_database import security_events_db_manager
+
+            return security_events_db_manager.get_security_alerts(hours)
         except Exception as e:
-            logger.error(f"Error fetching security alerts: {str(e)}", exc_info=True)
+            logger.error(f"Error delegating get_security_alerts: {str(e)}", exc_info=True)
             return []
 
     def create_admin_user(self, username: str, email: Optional[str], password_hash: str, role: str = "viewer") -> int:
@@ -1516,6 +1652,66 @@ class AdminDatabaseManager:
             logger.error(f"Error setting admin setting {setting_key}: {str(e)}", exc_info=True)
             return False
 
+    # === Taxonomy history helpers ===
+    def add_taxonomy_history(self, settings_json: str, updated_by: int, note: Optional[str] = None) -> Optional[int]:
+        """Persist a snapshot of taxonomy settings for history/rollback."""
+        try:
+            try:
+                import json as _json
+
+                data = _json.loads(settings_json)
+                cats = data.get("categories") if isinstance(data, dict) else None
+                category_count = len(cats.keys()) if isinstance(cats, dict) else 0
+            except Exception:
+                category_count = 0
+
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO taxonomy_settings_history (settings_json, category_count, note, created_at, updated_by)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (settings_json, int(category_count), note, datetime.now(), updated_by),
+                )
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Error adding taxonomy history: {e}", exc_info=True)
+            return None
+
+    def list_taxonomy_history(self, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, category_count, note, created_at, updated_by
+                    FROM taxonomy_settings_history
+                    ORDER BY created_at DESC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (limit, offset),
+                )
+                rows = cursor.fetchall()
+                return [dict(r) for r in rows]
+        except Exception as e:
+            logger.error(f"Error listing taxonomy history: {e}", exc_info=True)
+            return []
+
+    def get_taxonomy_history(self, version_id: int) -> Optional[Dict[str, Any]]:
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id, settings_json, category_count, note, created_at, updated_by FROM taxonomy_settings_history WHERE id = ?",
+                    (version_id,),
+                )
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting taxonomy history {version_id}: {e}", exc_info=True)
+            return None
+
     def cleanup_expired_sessions(self) -> int:
         """Clean up expired sessions and return count of cleaned sessions."""
         try:
@@ -1557,60 +1753,62 @@ class AdminDatabaseManager:
         import random
 
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
+            # Serialize writes to reduce lock contention
+            with self._write_lock:
+                # Compute timestamps and jitter before DB operations
                 now = datetime.now()
-                # SECURITY FIX: Add randomization to prevent timing attacks
-                # Add 0-60 seconds of random jitter to lockout duration
                 jitter_seconds = random.randint(0, 60)
                 lockout_until = now + timedelta(minutes=lockout_duration_minutes, seconds=jitter_seconds)
 
-                # Check if identifier already exists
-                cursor.execute(
-                    "SELECT attempt_count, lockout_until FROM rate_limiting WHERE identifier = ? AND identifier_type = ?",
-                    (identifier, identifier_type),
-                )
-                row = cursor.fetchone()
+                with self.get_connection() as conn:
+                    cursor = conn.cursor()
 
-                if row:
-                    attempt_count, current_lockout = row
-
-                    # Check if still in lockout period
-                    if current_lockout and datetime.fromisoformat(current_lockout) > now:
-                        return True  # Still locked out
-
-                    # Reset if it's been more than 1 hour since lockout expired
-                    if current_lockout and datetime.fromisoformat(current_lockout) < (now - timedelta(hours=1)):
-                        attempt_count = 0
-
-                    new_attempt_count = attempt_count + 1
-                    should_lockout = new_attempt_count >= 5
-
+                    # Check if identifier already exists
                     cursor.execute(
-                        """
-                        UPDATE rate_limiting
-                        SET attempt_count = ?, last_attempt_at = ?, lockout_until = ?
-                        WHERE identifier = ? AND identifier_type = ?
-                        """,
-                        (
-                            new_attempt_count,
-                            now,
-                            lockout_until if should_lockout else None,
-                            identifier,
-                            identifier_type,
-                        ),
+                        "SELECT attempt_count, lockout_until FROM rate_limiting WHERE identifier = ? AND identifier_type = ?",
+                        (identifier, identifier_type),
                     )
-                    return should_lockout
-                else:
-                    # First attempt for this identifier
-                    cursor.execute(
-                        """
-                        INSERT INTO rate_limiting (identifier, identifier_type, attempt_count, first_attempt_at, last_attempt_at)
-                        VALUES (?, ?, 1, ?, ?)
-                        """,
-                        (identifier, identifier_type, now, now),
-                    )
-                    return False
+                    row = cursor.fetchone()
+
+                    if row:
+                        attempt_count, current_lockout = row
+
+                        # Check if still in lockout period
+                        if current_lockout and datetime.fromisoformat(current_lockout) > now:
+                            return True  # Still locked out
+
+                        # Reset if it's been more than 1 hour since lockout expired
+                        if current_lockout and datetime.fromisoformat(current_lockout) < (now - timedelta(hours=1)):
+                            attempt_count = 0
+
+                        new_attempt_count = attempt_count + 1
+                        should_lockout = new_attempt_count >= 5
+
+                        cursor.execute(
+                            """
+                            UPDATE rate_limiting
+                            SET attempt_count = ?, last_attempt_at = ?, lockout_until = ?
+                            WHERE identifier = ? AND identifier_type = ?
+                            """,
+                            (
+                                new_attempt_count,
+                                now,
+                                lockout_until if should_lockout else None,
+                                identifier,
+                                identifier_type,
+                            ),
+                        )
+                        return should_lockout
+                    else:
+                        # First attempt for this identifier
+                        cursor.execute(
+                            """
+                            INSERT INTO rate_limiting (identifier, identifier_type, attempt_count, first_attempt_at, last_attempt_at)
+                            VALUES (?, ?, 1, ?, ?)
+                            """,
+                            (identifier, identifier_type, now, now),
+                        )
+                        return False
         except Exception as e:
             logger.error(f"Error recording rate limit attempt: {str(e)}", exc_info=True)
             return False
@@ -1637,13 +1835,14 @@ class AdminDatabaseManager:
     def reset_rate_limit(self, identifier: str, identifier_type: str) -> bool:
         """Reset rate limiting for an identifier (e.g., on successful login)."""
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "DELETE FROM rate_limiting WHERE identifier = ? AND identifier_type = ?",
-                    (identifier, identifier_type),
-                )
-                return cursor.rowcount > 0
+            with self._write_lock:
+                with self.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "DELETE FROM rate_limiting WHERE identifier = ? AND identifier_type = ?",
+                        (identifier, identifier_type),
+                    )
+                    return cursor.rowcount > 0
         except Exception as e:
             logger.error(f"Error resetting rate limit: {str(e)}", exc_info=True)
             return False
@@ -1651,11 +1850,12 @@ class AdminDatabaseManager:
     def cleanup_old_rate_limits(self, days_old: int = 7) -> int:
         """Clean up old rate limiting records."""
         try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cutoff_date = datetime.now() - timedelta(days=days_old)
-                cursor.execute("DELETE FROM rate_limiting WHERE last_attempt_at < ?", (cutoff_date,))
-                cleaned_count = cursor.rowcount
+            with self._write_lock:
+                with self.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cutoff_date = datetime.now() - timedelta(days=days_old)
+                    cursor.execute("DELETE FROM rate_limiting WHERE last_attempt_at < ?", (cutoff_date,))
+                    cleaned_count = cursor.rowcount
                 if cleaned_count > 0:
                     logger.info(f"Cleaned up {cleaned_count} old rate limiting records")
                 return cleaned_count

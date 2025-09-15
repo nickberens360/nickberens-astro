@@ -1,5 +1,8 @@
 <template>
-  <v-card :loading="loading" class="chart-card">
+  <v-card
+    :loading="loading"
+    class="chart-card"
+  >
     <v-card-title class="d-flex align-center justify-space-between">
       <span>{{ title }}</span>
       
@@ -64,7 +67,6 @@
         </div>
       </div>
     </v-card-text>
-
   </v-card>
 </template>
 

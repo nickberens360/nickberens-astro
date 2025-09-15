@@ -19,6 +19,7 @@
     "admin": "npm run admin:frontend",
     "admin:stop": "pkill -f 'python3 admin/start-admin.py' || true",
     "admin:sync": "python3 admin/sync_logs.py",
+    "db:verify": "PYTHONPATH=. python3 scripts/verify-database-migration.py --verbose",
     "e2e": "cd tests/e2e && npx -y @playwright/mcp@latest test",
     "e2e:headed": "cd tests/e2e && npx -y @playwright/mcp@latest test --headed",
     "e2e:debug": "cd tests/e2e && npx -y @playwright/mcp@latest test --debug",

@@ -1,12 +1,15 @@
 <template>
   <v-app>
     <router-view />
+    <!-- Global toast notifications -->
+    <NotificationMessage />
   </v-app>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import NotificationMessage from '@/components/NotificationMessage.vue'
 
 const adminStore = useAdminStore()
 

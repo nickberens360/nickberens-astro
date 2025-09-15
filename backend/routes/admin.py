@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import ValidationError
 
+from ..core import taxonomy_loader
 from ..core.admin_auth import admin_auth_manager, require_admin_auth, require_admin_role
 from ..core.admin_database import admin_db_manager
 from ..core.api_key_manager import api_key_manager
@@ -26,12 +26,16 @@ from ..core.audit_logger import AuditAction, AuditLogger, audit_logger
 from ..core.query_data_manager import query_data_manager
 from ..core.settings_manager import get_settings_manager
 from ..core.settings_schemas import (
+    CoreSettings,
     FeatureFlags,
     FollowUpSettings,
     QueryRoutingSettings,
+    RagConfigurationSettings,
     ResponseSettings,
+    SearchRetrievalSettings,
     SecuritySettings,
     SystemConfigurationSettings,
+    UXSettings,
 )
 from ..models.admin_models import (
     AdminUser,
@@ -66,6 +70,15 @@ router = APIRouter()
 
 
 # Authentication endpoints
+@router.get("/ping", tags=["Admin Authentication"], summary="Lightweight ping for admin API")
+async def admin_ping() -> Dict[str, Any]:
+    """Simple ping endpoint that does not touch the database.
+
+    Useful to verify routing/middleware without exercising DB access.
+    """
+    return {"ok": True}
+
+
 @router.post(
     "/auth/login",
     tags=["Admin Authentication"],
@@ -170,14 +183,45 @@ async def login(login_data: LoginRequest, request: Request, response: Response) 
         user_data.pop("password_hash", None)  # Remove password hash from response
 
         # Set secure HTTPOnly session cookie
-        is_production = os.getenv("ENVIRONMENT", "development") == "production"
+        # Detect HTTPS even when behind a proxy and choose SameSite based on cross-site usage
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        is_https = request.url.scheme == "https" or forwarded_proto == "https"
+
+        # Determine same-site vs cross-site more accurately, treating localhost/127.0.0.1 as same-site.
+        # Default to same-site when Origin header is missing (typical for same-origin requests).
+        origin = request.headers.get("origin")
+        is_cross_site = False
+        if origin:
+            try:
+                from urllib.parse import urlparse
+
+                origin_url = urlparse(origin)
+                origin_host = origin_url.hostname
+                request_host = request.url.hostname
+
+                def _is_local(host: Optional[str]) -> bool:
+                    return host in {"localhost", "127.0.0.1"}
+
+                # Schemeful same-site: hostnames equal OR both local, and schemes equal
+                is_same_host = bool(origin_host and request_host and origin_host == request_host)
+                is_both_local = _is_local(origin_host) and _is_local(request_host)
+                is_same_scheme = origin_url.scheme == request.url.scheme
+
+                is_cross_site = not ((is_same_host or is_both_local) and is_same_scheme)
+            except Exception:
+                is_cross_site = False
+
+        # Avoid invalid SameSite=None without Secure (browsers will reject). Fallback to Lax in that case.
+        cookie_samesite = "none" if (is_cross_site and is_https) else "lax"
+
         response.set_cookie(
             key="admin_session",
             value=auth_result["session_id"],
             max_age=24 * 60 * 60,  # 24 hours
             httponly=True,  # Always HTTPOnly for security
-            secure=is_production,  # Only secure in production (requires HTTPS)
-            samesite="lax",  # Lax for better compatibility with same-domain dev
+            secure=is_https,  # Secure when request is HTTPS or forwarded as HTTPS
+            samesite=cookie_samesite,  # Allow cross-site cookies only when needed
+            path="/",
         )
 
         # Audit log successful login
@@ -204,9 +248,32 @@ async def logout(
         if session_id:
             admin_auth_manager.expire_session(session_id)
 
-        # Clear session cookie with same attributes as when set
-        is_production = os.getenv("ENVIRONMENT", "development") == "production"
-        response.delete_cookie(key="admin_session", secure=is_production, samesite="lax")
+        # Clear session cookie with attributes matching how it was set
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        is_https = request.url.scheme == "https" or forwarded_proto == "https"
+        origin = request.headers.get("origin")
+        is_cross_site = False
+        if origin:
+            try:
+                from urllib.parse import urlparse
+
+                origin_url = urlparse(origin)
+                origin_host = origin_url.hostname
+                request_host = request.url.hostname
+
+                def _is_local(host: Optional[str]) -> bool:
+                    return host in {"localhost", "127.0.0.1"}
+
+                is_same_host = bool(origin_host and request_host and origin_host == request_host)
+                is_both_local = _is_local(origin_host) and _is_local(request_host)
+                is_same_scheme = origin_url.scheme == request.url.scheme
+
+                is_cross_site = not ((is_same_host or is_both_local) and is_same_scheme)
+            except Exception:
+                is_cross_site = False
+        cookie_samesite = "none" if (is_cross_site and is_https) else "lax"
+
+        response.delete_cookie(key="admin_session", secure=is_https, samesite=cookie_samesite, path="/")
 
         # Audit log logout
         from ..core.audit_logger import audit_logger
@@ -299,7 +366,32 @@ async def change_password(
 
         # Force logout by clearing the current session cookie
         response = JSONResponse({"success": True, "message": "Password changed successfully. Please log in again."})
-        response.delete_cookie("admin_session", path="/", httponly=True, secure=True, samesite="lax")
+        # Match cookie attributes to ensure clients clear it correctly
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        is_https = request.url.scheme == "https" or forwarded_proto == "https"
+        origin = request.headers.get("origin")
+        is_cross_site = False
+        if origin:
+            try:
+                from urllib.parse import urlparse
+
+                origin_url = urlparse(origin)
+                origin_host = origin_url.hostname
+                request_host = request.url.hostname
+
+                def _is_local(host: Optional[str]) -> bool:
+                    return host in {"localhost", "127.0.0.1"}
+
+                is_same_host = bool(origin_host and request_host and origin_host == request_host)
+                is_both_local = _is_local(origin_host) and _is_local(request_host)
+                is_same_scheme = origin_url.scheme == request.url.scheme
+
+                is_cross_site = not ((is_same_host or is_both_local) and is_same_scheme)
+            except Exception:
+                is_cross_site = False
+        cookie_samesite = "none" if (is_cross_site and is_https) else "lax"
+
+        response.delete_cookie("admin_session", path="/", httponly=True, secure=is_https, samesite=cookie_samesite)
         return response
 
     except HTTPException:
@@ -1115,6 +1207,12 @@ async def update_followup_settings(
         except Exception as e:
             logger.warning(f"Could not clear followup service cache: {e}")
 
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("followup_settings")
+        except Exception:
+            pass
+
         logger.info(f"Follow-up settings updated by user {session['user_id']}: {settings.to_dict()}")
 
         return {"success": True, "message": "Follow-up settings updated successfully", "settings": settings.to_dict()}
@@ -1165,6 +1263,12 @@ async def reset_followup_settings(
                 logger.warning("FollowUp service not found or clear_cache method not available")
         except Exception as e:
             logger.warning(f"Could not clear followup service cache: {e}")
+
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("followup_settings")
+        except Exception:
+            pass
 
         logger.info(f"Follow-up settings reset to defaults by user {session['user_id']}")
 
@@ -1728,6 +1832,12 @@ async def update_response_settings(
             user_agent=user_agent,
         )
 
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("response_settings")
+        except Exception:
+            pass
+
         logger.info(f"Response settings updated by user {session['user_id']}: {settings.to_dict()}")
         return {"success": True, "message": "Response settings updated successfully", "settings": settings.to_dict()}
 
@@ -1787,6 +1897,12 @@ async def update_routing_settings(
             user_agent=user_agent,
         )
 
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("routing_settings")
+        except Exception:
+            pass
+
         logger.info(f"Routing settings updated by user {session['user_id']}: {settings.to_dict()}")
         return {"success": True, "message": "Routing settings updated successfully", "settings": settings.to_dict()}
 
@@ -1843,6 +1959,12 @@ async def update_feature_flags(
             ip_address=client_ip,
             user_agent=user_agent,
         )
+
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("feature_flags")
+        except Exception:
+            pass
 
         logger.info(f"Feature flags updated by user {session['user_id']}: {settings.to_dict()}")
         return {"success": True, "message": "Feature flags updated successfully", "settings": settings.to_dict()}
@@ -2508,12 +2630,818 @@ async def update_security_settings(
             user_agent=user_agent,
         )
 
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr = get_settings_manager()
+            settings_mgr.invalidate_cache("security_settings")
+        except Exception:
+            pass
+
         logger.info(f"Security settings updated by user {session['user_id']}: {settings.to_dict()}")
         return {"success": True, "message": "Security settings updated successfully", "settings": settings.to_dict()}
 
     except Exception as e:
         logger.error(f"Error updating security settings: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating security settings")
+
+
+@router.get("/settings/rag-config")
+async def get_rag_config_settings(
+    request: Request, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Get current RAG configuration settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_rag_config_settings()
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.DATA_VIEW,
+            username=session["username"],
+            details={"resource": "rag_config_settings"},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        return {"settings": settings.to_dict(), "lastUpdated": datetime.now().isoformat()}
+
+    except Exception as e:
+        logger.error(f"Error getting RAG configuration settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching RAG configuration settings")
+
+
+@router.put("/settings/rag-config")
+async def update_rag_config_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update RAG configuration settings."""
+    try:
+        settings = RagConfigurationSettings.from_dict(settings_data)
+
+        # Validate settings before saving
+        is_valid, errors = settings.validate()
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=f"Invalid RAG configuration settings: {', '.join(errors)}")
+
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_rag_config_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update RAG configuration settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "rag_config_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("rag_config_settings")
+        except Exception:
+            pass
+
+        logger.info(f"RAG configuration settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "RAG configuration settings updated successfully",
+            "settings": settings.to_dict(),
+            "lastUpdated": datetime.now().isoformat(),
+        }
+
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions without modification
+    except Exception as e:
+        logger.error(f"Error updating RAG configuration settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating RAG configuration settings")
+
+
+# === Core Settings Endpoints ===
+@router.get("/settings/core")
+async def get_core_settings(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get core system configuration settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_core_settings()
+        return {"settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error getting core settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching core settings")
+
+
+@router.put("/settings/core")
+async def update_core_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update core system configuration settings."""
+    try:
+        settings = CoreSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_core_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update core settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "core_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("core_settings")
+        except Exception:
+            pass
+
+        logger.info(f"Core settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "Core settings updated successfully",
+            "settings": settings.to_dict(),
+            "lastUpdated": datetime.now().isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating core settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating core settings")
+
+
+# === UX Settings Endpoints ===
+@router.get("/settings/ux")
+async def get_ux_settings(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get user experience settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_ux_settings()
+        return {"settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error getting UX settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching UX settings")
+
+
+@router.put("/settings/ux")
+async def update_ux_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update user experience settings."""
+    try:
+        settings = UXSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_ux_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update UX settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "ux_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("ux_settings")
+        except Exception:
+            pass
+
+        logger.info(f"UX settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "UX settings updated successfully",
+            "settings": settings.to_dict(),
+            "lastUpdated": datetime.now().isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating UX settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating UX settings")
+
+
+# === Search Retrieval Settings Endpoints ===
+@router.get("/settings/search-retrieval")
+async def get_search_retrieval_settings(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get search and retrieval configuration settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_search_retrieval_settings()
+        return {"settings": settings.to_dict()}
+
+    except Exception as e:
+        logger.error(f"Error getting search retrieval settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching search retrieval settings")
+
+
+@router.put("/settings/search-retrieval")
+async def update_search_retrieval_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update search and retrieval configuration settings."""
+    try:
+        settings = SearchRetrievalSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_search_retrieval_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update search retrieval settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "search_retrieval_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        # Invalidate cached settings to apply changes promptly
+        try:
+            settings_mgr.invalidate_cache("search_retrieval_settings")
+        except Exception:
+            pass
+
+        logger.info(f"Search retrieval settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "Search retrieval settings updated successfully",
+            "settings": settings.to_dict(),
+            "lastUpdated": datetime.now().isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating search retrieval settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating search retrieval settings")
+
+
+# === Taxonomy Settings Endpoints ===
+@router.get("/settings/taxonomy")
+async def get_taxonomy_settings(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get taxonomy configuration used for search/category detection."""
+    try:
+        # Prefer DB value when present
+        db_value = admin_db_manager.get_admin_setting("taxonomy_settings")
+        if db_value:
+            try:
+                data = json.loads(db_value)
+            except json.JSONDecodeError:
+                logger.warning("Stored taxonomy_settings is invalid JSON; falling back to file")
+                data = taxonomy_loader.get_topic_taxonomy() or {}
+        else:
+            data = taxonomy_loader.get_topic_taxonomy() or {}
+
+        return {"settings": data}
+    except Exception as e:
+        logger.error(f"Error getting taxonomy settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching taxonomy settings")
+
+
+def _validate_taxonomy_payload(payload: Dict[str, Any]) -> None:
+    """Validate taxonomy JSON payload; raise HTTPException 400 on error."""
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Payload must be a JSON object")
+    categories = payload.get("categories")
+    if not isinstance(categories, dict):
+        raise HTTPException(status_code=400, detail="Missing or invalid 'categories' object")
+
+    # Optional size guardrail (approximate)
+    try:
+        size_bytes = len(json.dumps(payload))
+        if size_bytes > 256 * 1024:
+            raise HTTPException(status_code=400, detail="Taxonomy JSON too large (limit ~256KB)")
+    except Exception:
+        pass
+
+    # Validate each category
+    import re
+
+    for name, cfg in categories.items():
+        if not isinstance(name, str) or not name.strip():
+            raise HTTPException(status_code=400, detail="Category names must be non-empty strings")
+        if not isinstance(cfg, dict):
+            raise HTTPException(status_code=400, detail=f"Category '{name}' must be an object")
+        syn = cfg.get("synonyms")
+        if syn is not None and not isinstance(syn, list):
+            raise HTTPException(status_code=400, detail=f"Category '{name}': 'synonyms' must be an array")
+        rx = cfg.get("regex")
+        if rx is not None and not isinstance(rx, list):
+            raise HTTPException(status_code=400, detail=f"Category '{name}': 'regex' must be an array")
+        if isinstance(rx, list):
+            for pat in rx:
+                if not isinstance(pat, str):
+                    raise HTTPException(status_code=400, detail=f"Category '{name}': regex entries must be strings")
+                try:
+                    re.compile(pat)
+                except re.error:
+                    raise HTTPException(status_code=400, detail=f"Category '{name}': invalid regex '{pat}'")
+
+
+@router.put("/settings/taxonomy")
+async def update_taxonomy_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update taxonomy configuration used for search/category detection."""
+    try:
+        _validate_taxonomy_payload(settings_data)
+
+        # Snapshot previous version to history (best-effort)
+        try:
+            prev = admin_db_manager.get_admin_setting("taxonomy_settings")
+            if prev:
+                admin_db_manager.add_taxonomy_history(prev, session["user_id"], note="auto-snapshot before publish")
+        except Exception:
+            logger.debug("Could not snapshot previous taxonomy settings to history")
+
+        # Persist to DB (current)
+        saved = admin_db_manager.set_admin_setting("taxonomy_settings", json.dumps(settings_data), session["user_id"])
+        if not saved:
+            raise HTTPException(status_code=500, detail="Failed to update taxonomy settings")
+
+        # Audit log with summary (avoid logging entire payload if large)
+        try:
+            cats = list((settings_data.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_settings",
+                "category_count": len(cats),
+                "version": settings_data.get("version"),
+                "first_categories": cats[:10],
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        # Invalidate taxonomy cache and warm up
+        try:
+            taxonomy_loader.invalidate_cache()
+            taxonomy_loader.get_topic_taxonomy(force_reload=True)
+        except Exception:
+            logger.debug("Could not warm taxonomy cache after update")
+
+        logger.info(
+            f"Taxonomy settings updated by user {session['user_id']}: categories={len((settings_data.get('categories') or {}).keys())}"
+        )
+        return {
+            "success": True,
+            "message": "Taxonomy settings updated successfully",
+            "settings": settings_data,
+            "lastUpdated": datetime.now().isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating taxonomy settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating taxonomy settings")
+
+
+# === Taxonomy Versioning Endpoints ===
+@router.get("/settings/taxonomy/versions")
+async def list_taxonomy_versions(
+    limit: int = 20, offset: int = 0, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    try:
+        limit = max(1, min(100, int(limit)))
+        offset = max(0, int(offset))
+        items = admin_db_manager.list_taxonomy_history(limit=limit, offset=offset)
+        return {"versions": items, "limit": limit, "offset": offset}
+    except Exception as e:
+        logger.error(f"Error listing taxonomy versions: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error listing taxonomy versions")
+
+
+@router.get("/settings/taxonomy/versions/{version_id}")
+async def get_taxonomy_version(
+    version_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    try:
+        item = admin_db_manager.get_taxonomy_history(int(version_id))
+        if not item:
+            raise HTTPException(status_code=404, detail="Version not found")
+        try:
+            data = json.loads(item["settings_json"]) if item.get("settings_json") else None
+        except json.JSONDecodeError:
+            data = None
+        return {"version": {k: v for k, v in item.items() if k != "settings_json"}, "settings": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting taxonomy version {version_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error getting taxonomy version")
+
+
+@router.post("/settings/taxonomy/versions/{version_id}/restore")
+async def restore_taxonomy_version(
+    request: Request, version_id: int, session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    try:
+        item = admin_db_manager.get_taxonomy_history(int(version_id))
+        if not item:
+            raise HTTPException(status_code=404, detail="Version not found")
+        raw = item.get("settings_json")
+        if not raw:
+            raise HTTPException(status_code=400, detail="Version payload missing")
+        data = json.loads(raw)
+        _validate_taxonomy_payload(data)
+
+        # Snapshot current before overwriting (best-effort)
+        try:
+            prev = admin_db_manager.get_admin_setting("taxonomy_settings")
+            if prev:
+                admin_db_manager.add_taxonomy_history(prev, session["user_id"], note="auto-snapshot before restore")
+        except Exception:
+            pass
+
+        # Persist restored version
+        saved = admin_db_manager.set_admin_setting("taxonomy_settings", raw, session["user_id"])
+        if not saved:
+            raise HTTPException(status_code=500, detail="Failed to restore taxonomy version")
+
+        # Invalidate and warm
+        try:
+            taxonomy_loader.invalidate_cache()
+            taxonomy_loader.get_topic_taxonomy(force_reload=True)
+        except Exception:
+            logger.debug("Could not warm taxonomy cache after restore")
+
+        # Parse optional note from body
+        note: str | None = None
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                note = body.get("note")
+        except Exception:
+            note = None
+
+        # Audit
+        try:
+            cats = list((data.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_settings_restore",
+                "restored_version_id": int(version_id),
+                "category_count": len(cats),
+                "note": note,
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        return {"success": True, "message": "Restored taxonomy version", "version_id": int(version_id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error restoring taxonomy version {version_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error restoring taxonomy version")
+
+
+@router.post("/settings/taxonomy/versions")
+async def create_taxonomy_version(
+    request: Request,
+    payload: Dict[str, Any],
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Create a manual snapshot of taxonomy settings for history (without publishing).
+
+    Body:
+      - settings: object (taxonomy JSON); if omitted, snapshot current DB value
+      - note: optional string
+    """
+    try:
+        note = None
+        settings_obj = None
+        if isinstance(payload, dict):
+            note = payload.get("note")
+            settings_obj = payload.get("settings")
+
+        if settings_obj is None:
+            # Use current DB value
+            current = admin_db_manager.get_admin_setting("taxonomy_settings")
+            if not current:
+                raise HTTPException(status_code=400, detail="No current taxonomy to snapshot")
+            raw = current
+            try:
+                settings_obj = json.loads(current)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Current taxonomy is corrupt; cannot snapshot")
+        else:
+            # Validate provided settings
+            if not isinstance(settings_obj, dict):
+                raise HTTPException(status_code=400, detail="settings must be an object")
+            _validate_taxonomy_payload(settings_obj)
+            raw = json.dumps(settings_obj)
+
+        version_id = admin_db_manager.add_taxonomy_history(raw, session["user_id"], note=note)
+        if not version_id:
+            raise HTTPException(status_code=500, detail="Failed to create snapshot")
+
+        # Audit
+        try:
+            cats = list((settings_obj.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_settings_snapshot",
+                "category_count": len(cats),
+                "note": note,
+                "version_id": int(version_id),
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        return {"success": True, "version_id": int(version_id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating taxonomy snapshot: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error creating taxonomy snapshot")
+
+
+@router.post("/settings/taxonomy/auto-generate")
+async def auto_generate_taxonomy(
+    request: Request,
+    options: Dict[str, Any] | None = None,
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Generate a taxonomy proposal from indexed content.
+
+    Options (all optional):
+      - max_categories: int (default 10)
+      - max_synonyms: int (default 12)
+      - min_keyword_len: int (default 4)
+      - include_filenames: bool (default True)
+    """
+    try:
+        opts = options or {}
+        max_categories = int(opts.get("max_categories", 10))
+        max_synonyms = int(opts.get("max_synonyms", 12))
+        min_kw_len = int(opts.get("min_keyword_len", 4))
+        include_filenames = bool(opts.get("include_filenames", True))
+
+        # Load index metadata if present
+        persist_dir = "backend/.unified_chroma"
+        index_metadata_path = Path(persist_dir) / "index_metadata.json"
+
+        cat_counts: Dict[str, int] = {}
+        cat_terms: Dict[str, Dict[str, int]] = {}
+        stop = {
+            "this",
+            "that",
+            "with",
+            "from",
+            "they",
+            "were",
+            "been",
+            "have",
+            "will",
+            "would",
+            "could",
+            "about",
+            "there",
+            "their",
+            "which",
+            "these",
+            "those",
+            "into",
+            "your",
+            "also",
+            "some",
+            "more",
+            "such",
+            "like",
+            "when",
+            "what",
+            "where",
+            "them",
+            "file",
+            "json",
+            "data",
+            "info",
+            "index",
+            "readme",
+        }
+
+        def add_term(category: str, term: str) -> None:
+            term_l = term.strip().lower()
+            if not term_l:
+                return
+            if len(term_l) < min_kw_len:
+                return
+            if term_l in stop:
+                return
+            if not term_l.isascii():
+                return
+            cat_terms.setdefault(category, {})
+            cat_terms[category][term_l] = cat_terms[category].get(term_l, 0) + 1
+
+        source = "index"
+        if index_metadata_path.exists():
+            try:
+                import json as _json
+
+                with index_metadata_path.open("r", encoding="utf-8") as f:
+                    indexed_files = _json.load(f)
+                for file_path, entry in indexed_files.items():
+                    cls = None
+                    if isinstance(entry, dict):
+                        cls = entry.get("classification")
+                    # Parse categories
+                    cats: list[str] = []
+                    keywords: list[str] = []
+                    if isinstance(cls, dict):
+                        # content_type or content_types can be comma-separated
+                        raw_ct = cls.get("content_type") or cls.get("content_types") or ""
+                        cats = [c.strip().lower() for c in str(raw_ct).split(",") if c and c.strip()]
+                        raw_kw = cls.get("content_keywords") or cls.get("file_keywords") or ""
+                        keywords = [k.strip() for k in str(raw_kw).split(",") if k and k.strip()]
+                    # Tally
+                    for c in cats:
+                        if not c:
+                            continue
+                        cat_counts[c] = cat_counts.get(c, 0) + 1
+                        for k in keywords:
+                            add_term(c, k)
+                        if include_filenames:
+                            try:
+                                stem = Path(file_path).stem
+                                # split on non-alnum
+                                import re as _re
+
+                                for t in _re.split(r"[^A-Za-z0-9]+", stem):
+                                    add_term(c, t)
+                            except Exception:
+                                pass
+            except Exception as e:
+                logger.debug(f"Failed to read index metadata for auto-generate: {e}")
+        else:
+            source = "default"
+
+        # If no categories were discovered, fall back to a sane starter set
+        if not cat_counts:
+            source = "default"
+            seed = {
+                "about": ["bio", "background", "introduction"],
+                "skills": ["skill", "stack", "technology", "tools"],
+                "experience": ["work", "job", "role", "career"],
+                "project": ["portfolio", "demo", "case study"],
+                "creative": ["art", "illustration", "design", "inspiration"],
+                "technical": ["code", "software", "engineering", "api"],
+            }
+            for c, syns in seed.items():
+                cat_counts[c] = 1
+                for s in syns:
+                    add_term(c, s)
+
+        # Build taxonomy output
+        def topk_terms(d: Dict[str, int], k: int) -> list[str]:
+            return [w for w, _ in sorted(d.items(), key=lambda x: x[1], reverse=True)[:k]]
+
+        top_cats = [c for c, _ in sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:max_categories]]
+        categories: Dict[str, Any] = {}
+        for c in top_cats:
+            syn = topk_terms(cat_terms.get(c, {}), max_synonyms)
+            categories[c] = {"synonyms": syn, "regex": [], "metadata": {"is_illustration_data": c == "creative"}}
+
+        proposal = {"version": "1", "categories": categories}
+
+        # Do not persist; return proposal only
+        return {"success": True, "settings": proposal, "source": source, "stats": {"categories": len(categories)}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error auto-generating taxonomy: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error auto-generating taxonomy")
+
+
+@router.get("/settings/taxonomy/fallback")
+async def get_taxonomy_fallback(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Return the current fallback taxonomy JSON from file, if present."""
+    try:
+        tl_path = Path(taxonomy_loader.__file__).parent / "topic_taxonomy.json"
+        if not tl_path.exists():
+            return {"exists": False, "settings": None}
+        try:
+            with tl_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            return {"exists": True, "settings": data}
+        except json.JSONDecodeError:
+            return {"exists": True, "settings": None, "invalid": True}
+    except Exception as e:
+        logger.error(f"Error getting taxonomy fallback: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching taxonomy fallback")
+
+
+@router.post("/settings/taxonomy/fallback-file")
+async def upload_taxonomy_fallback_file(
+    request: Request,
+    file: UploadFile = File(...),
+    session: Dict[str, Any] = Depends(require_admin_auth),
+) -> Dict[str, Any]:
+    """Upload a fallback taxonomy JSON file.
+
+    Overwrites existing fallback file if present; creates it otherwise.
+    """
+    try:
+        if not file.filename or not file.filename.lower().endswith(".json"):
+            raise HTTPException(status_code=400, detail="Please upload a .json file")
+
+        raw = await file.read()
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Uploaded file is not valid JSON")
+
+        _validate_taxonomy_payload(data)
+
+        tl_path = Path(taxonomy_loader.__file__).parent / "topic_taxonomy.json"
+        try:
+            tl_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.error(f"Failed to write taxonomy fallback file: {e}")
+            raise HTTPException(status_code=500, detail="Failed to write fallback file")
+
+        # Audit
+        try:
+            cats = list((data.get("categories") or {}).keys())
+            summary = {
+                "resource": "taxonomy_fallback_file",
+                "category_count": len(cats),
+                "version": data.get("version"),
+                "first_categories": cats[:10],
+                "filename": file.filename,
+            }
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("User-Agent", "")
+            audit_logger.log_action(
+                action=AuditAction.CONFIG_UPDATE,
+                username=session["username"],
+                details=summary,
+                ip_address=client_ip,
+                user_agent=user_agent,
+            )
+        except Exception:
+            pass
+
+        # Invalidate and warm cache
+        try:
+            taxonomy_loader.invalidate_cache()
+            taxonomy_loader.get_topic_taxonomy(force_reload=True)
+        except Exception:
+            logger.debug("Could not warm taxonomy cache after fallback upload")
+
+        return {"success": True, "message": "Fallback taxonomy file uploaded"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading taxonomy fallback file: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error uploading taxonomy fallback file")
 
 
 # User Management endpoints

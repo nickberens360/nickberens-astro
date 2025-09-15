@@ -59,6 +59,7 @@ export const useAdminStore = defineStore('admin', () => {
   // Actions
   const initialize = async () => {
     if (import.meta.env.DEV) {
+      // Development initialization code can be added here
     }
     
     // First check if user is authenticated
@@ -66,6 +67,7 @@ export const useAdminStore = defineStore('admin', () => {
     
     if (!authenticated) {
       if (import.meta.env.DEV) {
+        // Development-specific unauthenticated handling
       }
       return false
     }
@@ -88,6 +90,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (isConnected.value) {
         error.value = null
         if (import.meta.env.DEV) {
+          // Development-specific connection success handling
         }
       } else {
         error.value = 'Unable to connect to admin API'
@@ -110,6 +113,7 @@ export const useAdminStore = defineStore('admin', () => {
 
     try {
       if (import.meta.env.DEV) {
+        // Debug stats loading
       }
       const data = await adminAPI.getStats(days)
       // API response received successfully
@@ -173,6 +177,7 @@ export const useAdminStore = defineStore('admin', () => {
         ...data
       }
       if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_STORES) {
+        // Debug store state updates
       }
     } catch (err) {
       console.error('Failed to fetch system health:', err)
@@ -203,6 +208,7 @@ export const useAdminStore = defineStore('admin', () => {
     // Instead, we'll use a timeout to force reset if needed
     
     if (import.meta.env.DEV) {
+      // Development data refresh debugging
     }
     
     // Force reset loading state if it's been stuck for too long
@@ -257,6 +263,7 @@ export const useAdminStore = defineStore('admin', () => {
     }, interval)
 
     if (import.meta.env.DEV) {
+      // Debug auto-refresh interval setup
     }
   }
 
@@ -265,6 +272,7 @@ export const useAdminStore = defineStore('admin', () => {
       clearInterval(refreshInterval)
       refreshInterval = null
       if (import.meta.env.DEV) {
+        // Debug auto-refresh stop
       }
     }
   }

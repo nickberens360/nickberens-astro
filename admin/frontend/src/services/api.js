@@ -2,9 +2,15 @@ import axios from 'axios'
 
 class AdminAPI {
   constructor() {
+    // Resolve base URL from env, falling back to same-origin admin API
+    const DEFAULT_BASE_URL = '/api/admin'
+    // Prefer explicit VITE_API_BASE_URL if provided (even in dev) to bypass proxy issues
+    // Otherwise, use same-origin '/api/admin' which works with Vite dev proxy
+    const resolvedBaseURL = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL,
-      timeout: 10000,
+      baseURL: resolvedBaseURL,
+      // Slightly higher timeout to avoid spurious dev timeouts during cold starts
+      timeout: 15000,
       headers: { 'Content-Type': 'application/json' },
       withCredentials: true  // Enable cookies for session management
     })
@@ -757,29 +763,206 @@ class AdminAPI {
 
   // System Configuration Settings endpoints
   async getSystemConfigSettings() {
-    return await this.client.get('/settings/system-config')
+    try {
+      const response = await this.client.get('/settings/system-config')
+      return response
+    } catch (error) {
+      console.error('Failed to get system config settings:', error)
+      throw error
+    }
   }
 
   async updateSystemConfigSettings(settingsData) {
-    return await this.client.put('/settings/system-config', settingsData)
+    try {
+      const response = await this.client.put('/settings/system-config', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update system config settings:', error)
+      throw error
+    }
   }
 
   // Security Settings endpoints
   async getSecuritySettings() {
-    return await this.client.get('/settings/security')
+    try {
+      const response = await this.client.get('/settings/security')
+      return response
+    } catch (error) {
+      console.error('Failed to get security settings:', error)
+      throw error
+    }
   }
 
   async updateSecuritySettings(settingsData) {
-    return await this.client.put('/settings/security', settingsData)
+    try {
+      const response = await this.client.put('/settings/security', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update security settings:', error)
+      throw error
+    }
+  }
+
+  // Core Settings endpoints
+  async getCoreSettings() {
+    try {
+      const response = await this.client.get('/settings/core')
+      return response
+    } catch (error) {
+      console.error('Failed to get core settings:', error)
+      throw error
+    }
+  }
+
+  async updateCoreSettings(settingsData) {
+    try {
+      const response = await this.client.put('/settings/core', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update core settings:', error)
+      throw error
+    }
+  }
+
+  // UX Settings endpoints
+  async getUXSettings() {
+    try {
+      const response = await this.client.get('/settings/ux')
+      return response
+    } catch (error) {
+      console.error('Failed to get UX settings:', error)
+      throw error
+    }
+  }
+
+  async updateUXSettings(settingsData) {
+    try {
+      const response = await this.client.put('/settings/ux', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update UX settings:', error)
+      throw error
+    }
+  }
+
+  // Search Retrieval Settings endpoints
+  async getSearchRetrievalSettings() {
+    try {
+      const response = await this.client.get('/settings/search-retrieval')
+      return response
+    } catch (error) {
+      console.error('Failed to get search retrieval settings:', error)
+      throw error
+    }
+  }
+
+  async updateSearchRetrievalSettings(settingsData) {
+    try {
+      const response = await this.client.put('/settings/search-retrieval', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update search retrieval settings:', error)
+      throw error
+    }
+  }
+
+  // Taxonomy Settings endpoints
+  async getTaxonomySettings() {
+    try {
+      const response = await this.client.get('/settings/taxonomy')
+      return response
+    } catch (error) {
+      console.error('Failed to get taxonomy settings:', error)
+      throw error
+    }
+  }
+
+  async updateTaxonomySettings(settingsData) {
+    try {
+      const response = await this.client.put('/settings/taxonomy', settingsData)
+      return response
+    } catch (error) {
+      console.error('Failed to update taxonomy settings:', error)
+      throw error
+    }
+  }
+
+  async getTaxonomyFallback() {
+    try {
+      const response = await this.client.get('/settings/taxonomy/fallback')
+      return response
+    } catch (error) {
+      console.error('Failed to get taxonomy fallback:', error)
+      throw error
+    }
+  }
+
+  async uploadTaxonomyFallback(file) {
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const response = await this.client.post('/settings/taxonomy/fallback-file', form)
+      return response
+    } catch (error) {
+      console.error('Failed to upload taxonomy fallback file:', error)
+      throw error
+    }
+  }
+
+  async autoGenerateTaxonomy(options = {}) {
+    try {
+      const response = await this.client.post('/settings/taxonomy/auto-generate', options)
+      return response
+    } catch (error) {
+      console.error('Failed to auto-generate taxonomy:', error)
+      throw error
+    }
+  }
+
+  async listTaxonomyVersions(limit = 20, offset = 0) {
+    try {
+      const response = await this.client.get(`/settings/taxonomy/versions?limit=${limit}&offset=${offset}`)
+      return response
+    } catch (error) {
+      console.error('Failed to list taxonomy versions:', error)
+      throw error
+    }
+  }
+
+  async getTaxonomyVersion(versionId) {
+    try {
+      const response = await this.client.get(`/settings/taxonomy/versions/${versionId}`)
+      return response
+    } catch (error) {
+      console.error('Failed to get taxonomy version:', error)
+      throw error
+    }
+  }
+
+  async restoreTaxonomyVersion(versionId, note) {
+    try {
+      const response = await this.client.post(`/settings/taxonomy/versions/${versionId}/restore`, note ? { note } : {})
+      return response
+    } catch (error) {
+      console.error('Failed to restore taxonomy version:', error)
+      throw error
+    }
+  }
+
+  async createTaxonomyVersion(settings, note) {
+    try {
+      const body = { settings, note }
+      const response = await this.client.post('/settings/taxonomy/versions', body)
+      return response
+    } catch (error) {
+      console.error('Failed to create taxonomy snapshot:', error)
+      throw error
+    }
   }
 
   // User Management endpoints
   async getUsers() {
     return await this.client.get('/users')
-  }
-
-  async createUser(userData) {
-    return await this.client.post('/users', userData)
   }
 
   async deactivateUser(userId) {

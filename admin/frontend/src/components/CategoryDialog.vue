@@ -1,5 +1,9 @@
 <template>
-  <v-dialog v-model="dialog" max-width="560px" persistent>
+  <v-dialog
+    v-model="dialog"
+    max-width="560px"
+    persistent
+  >
     <v-card class="ds-card dialog-card">
       <v-card-title class="dialog-header ds-p-6">
         <div class="d-flex align-center">
@@ -9,10 +13,14 @@
             variant="tonal"
             class="mr-4"
           >
-            <v-icon size="20">{{ isEdit ? '$edit' : '$plus' }}</v-icon>
+            <v-icon size="20">
+              {{ isEdit ? '$edit' : '$plus' }}
+            </v-icon>
           </v-avatar>
           <div>
-            <h2 class="ds-text-2xl ds-font-bold ds-mb-1">{{ isEdit ? 'Edit Category' : 'New Category' }}</h2>
+            <h2 class="ds-text-2xl ds-font-bold ds-mb-1">
+              {{ isEdit ? 'Edit Category' : 'New Category' }}
+            </h2>
             <p class="ds-text-sm text-medium-emphasis ma-0">
               {{ isEdit ? 'Update category settings and configuration' : 'Create a new question category' }}
             </p>
@@ -20,13 +28,22 @@
         </div>
       </v-card-title>
 
-      <v-divider class="border-opacity-12"></v-divider>
+      <v-divider class="border-opacity-12" />
 
       <v-card-text class="ds-p-6">
-        <v-form ref="form" v-model="valid" class="form-container">
+        <v-form
+          ref="form"
+          v-model="valid"
+          class="form-container"
+        >
           <div class="form-section ds-mb-6">
             <div class="form-section-title ds-text-base ds-font-semibold ds-mb-4 d-flex align-center">
-              <v-icon size="18" class="mr-2">$info</v-icon>
+              <v-icon
+                size="18"
+                class="mr-2"
+              >
+                $info
+              </v-icon>
               Basic Information
             </div>
             <v-text-field
@@ -45,7 +62,7 @@
               hint="This will be shown in the user interface"
               persistent-hint
               class="ds-ds-mb-4"
-            ></v-text-field>
+            />
 
             <v-text-field
               v-model="categoryData.name"
@@ -66,7 +83,7 @@
               class="ds-ds-mb-4"
               :readonly="!isEdit"
               :class="{ 'auto-generated-field': !isEdit }"
-            ></v-text-field>
+            />
 
             <v-textarea
               v-model="categoryData.description"
@@ -81,16 +98,24 @@
               rows="3"
               hint="Optional description for this category"
               persistent-hint
-            ></v-textarea>
+            />
           </div>
 
           <div class="form-section ds-mb-6">
             <div class="form-section-title ds-text-base ds-font-semibold ds-mb-4 d-flex align-center">
-              <v-icon size="18" class="mr-2">$settings</v-icon>
+              <v-icon
+                size="18"
+                class="mr-2"
+              >
+                $settings
+              </v-icon>
               Configuration
             </div>
             <v-row>
-              <v-col cols="12" md="6">
+              <v-col
+                cols="12"
+                md="6"
+              >
                 <v-text-field
                   v-model.number="categoryData.sort_order"
                   label="Sort Order"
@@ -103,12 +128,20 @@
                   density="comfortable"
                   hint="Lower numbers appear first (0-999)"
                   persistent-hint
-                ></v-text-field>
+                />
               </v-col>
-              <v-col cols="12" md="6">
+              <v-col
+                cols="12"
+                md="6"
+              >
                 <div class="setting-group">
                   <div class="setting-label ds-text-sm ds-font-medium ds-mb-3 d-flex align-center">
-                    <v-icon size="16" class="mr-2">$toggle-switch</v-icon>
+                    <v-icon
+                      size="16"
+                      class="mr-2"
+                    >
+                      $toggle-switch
+                    </v-icon>
                     Category Status
                   </div>
                   <v-switch
@@ -118,8 +151,11 @@
                     inset
                     hide-details
                   >
-                    <template v-slot:append>
-                      <v-tooltip activator="parent" location="top">
+                    <template #append>
+                      <v-tooltip
+                        activator="parent"
+                        location="top"
+                      >
                         Inactive categories won't appear in the question selection interface
                       </v-tooltip>
                     </template>
@@ -131,16 +167,16 @@
         </v-form>
       </v-card-text>
 
-      <v-divider class="border-opacity-12"></v-divider>
+      <v-divider class="border-opacity-12" />
 
       <v-card-actions class="dialog-actions ds-p-6">
-        <v-spacer></v-spacer>
+        <v-spacer />
         <v-btn
           class="ds-btn mr-3"
           variant="outlined"
           size="large"
-          @click="cancel"
           :disabled="loading"
+          @click="cancel"
         >
           Cancel
         </v-btn>
@@ -151,8 +187,8 @@
           size="large"
           :loading="loading"
           :disabled="!valid"
-          @click="save"
           :prepend-icon="isEdit ? '$check-circle' : '$plus'"
+          @click="save"
         >
           {{ isEdit ? 'Update Category' : 'Create Category' }}
         </v-btn>

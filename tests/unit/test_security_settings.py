@@ -86,29 +86,6 @@ class TestSecuritySettingsIntegration:
         assert validated.rate_limit_window == 30
         assert validated.enable_rate_limiting is True
 
-    def test_cors_origins_validation(self):
-        """Test that CORS origins are properly validated."""
-        # Test with valid origins
-        data = {"allowed_origins": ["http://localhost:3000", "https://example.com", "https://app.example.com:8080"]}
-        settings = SecuritySettings.from_dict(data)
-        assert len(settings.allowed_origins) == 3
-        assert "http://localhost:3000" in settings.allowed_origins
-
-        # Test with invalid origins (should be filtered out)
-        data = {
-            "allowed_origins": [
-                "http://localhost:3000",  # Valid
-                "not-a-url",  # Invalid
-                "ftp://example.com",  # Invalid scheme
-                "https://valid.com",  # Valid
-                "",  # Empty
-            ]
-        }
-        settings = SecuritySettings.from_dict(data)
-        assert len(settings.allowed_origins) == 2  # Only valid ones kept
-        assert "http://localhost:3000" in settings.allowed_origins
-        assert "https://valid.com" in settings.allowed_origins
-
     def test_session_timeout_bounds_validation(self):
         """Test that session timeout is within valid bounds."""
         # Test minimum bound
@@ -198,28 +175,30 @@ class TestSecuritySettingsIntegration:
         """Test that boolean fields are properly validated."""
         # Test string to boolean conversion
         data = {
-            "enable_cors": "true",
-            "enable_api_keys": "false",
+            "enable_analytics": "true",
+            "enable_query_logging": "false",
             "require_https": "True",
             "enable_rate_limiting": "FALSE",
         }
         settings = SecuritySettings.from_dict(data)
 
-        assert settings.enable_cors is True
-        assert settings.enable_api_keys is False
+        assert settings.enable_analytics is True
+        assert settings.enable_query_logging is False
         assert settings.require_https is True
         assert settings.enable_rate_limiting is False
 
     def test_security_settings_json_serialization(self):
         """Test that security settings can be serialized to/from JSON."""
         settings = SecuritySettings(
-            enable_cors=False,
-            allowed_origins=["https://secure.example.com"],
+            enable_analytics=True,
+            enable_query_logging=True,
+            enable_rate_limiting=True,
             rate_limit_requests=50,
             rate_limit_window=30,
             session_timeout=1800,  # 30 minutes
             max_login_attempts=3,
             lockout_duration=900,  # 15 minutes
+            low_similarity_threshold=0.6,
         )
 
         # Test serialization
@@ -228,10 +207,46 @@ class TestSecuritySettingsIntegration:
 
         # Test deserialization
         loaded_settings = SecuritySettings.from_json(json_str)
-        assert loaded_settings.enable_cors is False
-        assert loaded_settings.allowed_origins == ["https://secure.example.com"]
+        assert loaded_settings.enable_analytics is True
+        assert loaded_settings.enable_query_logging is True
+        assert loaded_settings.enable_rate_limiting is True
         assert loaded_settings.rate_limit_requests == 50
         assert loaded_settings.rate_limit_window == 30
         assert loaded_settings.session_timeout == 1800
         assert loaded_settings.max_login_attempts == 3
         assert loaded_settings.lockout_duration == 900
+        assert loaded_settings.low_similarity_threshold == 0.6
+
+    def test_consolidated_monitoring_settings(self):
+        """Test that monitoring settings consolidated from FeatureFlags work correctly."""
+        # Test analytics and monitoring settings
+        data = {
+            "enable_analytics": True,
+            "enable_query_logging": True,
+            "enable_audit_logging": True,
+            "enable_rate_limiting": True,
+            "low_similarity_threshold": 0.8,
+        }
+
+        settings = SecuritySettings.from_dict(data)
+
+        assert settings.enable_analytics is True
+        assert settings.enable_query_logging is True
+        assert settings.enable_audit_logging is True
+        assert settings.enable_rate_limiting is True
+        assert settings.low_similarity_threshold == 0.8
+
+        # Test bounds validation for low_similarity_threshold
+        data_out_of_bounds = {
+            "low_similarity_threshold": 1.5,  # Above maximum (1.0)
+        }
+
+        settings_bounded = SecuritySettings.from_dict(data_out_of_bounds)
+        assert settings_bounded.low_similarity_threshold == 1.0  # Clamped to maximum
+
+        data_below_bounds = {
+            "low_similarity_threshold": -0.1,  # Below minimum (0.0)
+        }
+
+        settings_bounded_low = SecuritySettings.from_dict(data_below_bounds)
+        assert settings_bounded_low.low_similarity_threshold == 0.0  # Clamped to minimum
