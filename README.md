@@ -279,6 +279,21 @@ The system now uses a **unified smart retriever** that:
 - `TOTP_SECRET_KEY` - Secret key for TOTP authentication (generated automatically)
 - `ENABLE_AUDIT_LOGGING=true` - Enable comprehensive audit logging (default: true)
 
+### Stability & Debugging Variables (Backend)
+- `SQLITE_JOURNAL_MODE` — SQLite journaling mode. Use `WAL` in development for better concurrency.
+- `ADMIN_DB_BUSY_TIMEOUT_MS` — Busy timeout milliseconds for SQLite (default 5000; recommended 15000 in dev).
+- `ADMIN_DB_CONNECT_RETRIES` — Retries for transient connection/lock errors (default 5).
+- `ADMIN_DB_CONNECT_RETRY_DELAY_MS` — Delay between connection retries in ms (default 200).
+- `DISABLE_RATE_LIMITING` — If `true`, bypasses dynamic rate limiting middleware during debug.
+- `FAST_LOGIN_MODE` — If `true`, minimizes DB writes during admin login (skips audit/fingerprint writes) to avoid local lockups.
+- `ADMIN_DB_AUDIT_TIMEOUT_SECONDS` — Very short timeout for audit/security event writes so they never block requests (default 0.05).
+- `ADMIN_DB_WRITE_RETRIES` / `ADMIN_DB_WRITE_RETRY_DELAY_MS` — Quick retries for non-blocking audit writes.
+
+### Admin Frontend Variables
+- `VITE_API_BASE_URL` — Admin API base URL.
+  - Development: `http://localhost:8000/api/admin` (frontend now honors this in dev, bypassing the Vite proxy if set)
+  - Production behind same-origin reverse proxy: `/api/admin`
+
 ### Follow-up Configuration
 - `FOLLOWUP_MODE=pre_generated|optimized|static` - Follow-up question strategy (default: pre_generated)
 - `ENABLE_FOLLOWUP_PREGENERATION=true|false` - Cache follow-ups at startup (default: true)
