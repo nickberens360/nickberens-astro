@@ -46,6 +46,9 @@ class AdminDatabaseManager:
             logger.error(f"Failed to initialize admin database manager: {e}")
             # Create a fallback in-memory database for graceful degradation
             self.db_path = Path(":memory:")
+            # Ensure write lock is still initialized for fallback
+            if not hasattr(self, "_write_lock"):
+                self._write_lock = threading.RLock()
             logger.warning("Using in-memory database as fallback - admin features may be limited")
             try:
                 self._initialize_database()
@@ -87,9 +90,8 @@ class AdminDatabaseManager:
     def _initialize_database(self):
         """Initialize database tables if they don't exist."""
         try:
-            # Ensure write lock exists even if __init__ was bypassed in tests
-            if not hasattr(self, "_write_lock") or self._write_lock is None:
-                self._write_lock = threading.RLock()
+            # Write lock should already be initialized in __init__
+            # This method should only be called after __init__ or with proper lock setup
             with self.get_connection() as conn:
                 # Configure journal/sync for environment
                 # - On Railway/Linux production, prefer WAL for better concurrency

@@ -163,8 +163,8 @@ class AdminAuthManager:
             salt = bcrypt.gensalt(rounds=self._bcrypt_rounds)
             hashed = bcrypt.hashpw(password_bytes, salt)
             return hashed.decode("utf-8")
-        except Exception as e:
-            logger.error(f"Bcrypt hashing failed: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Bcrypt hashing failed", exc_info=True)
             raise ValueError("Failed to hash password")
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -177,8 +177,8 @@ class AdminAuthManager:
             password_bytes = plain_password.encode("utf-8")
             hash_bytes = hashed_password.encode("utf-8")
             return bcrypt.checkpw(password_bytes, hash_bytes)
-        except Exception as e:
-            logger.error(f"Password verification failed: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Password verification failed", exc_info=True)
             return False
 
     def create_session(self, user_id: int, ip_address: Optional[str] = None, user_agent: Optional[str] = None) -> str:
@@ -236,8 +236,8 @@ class AdminAuthManager:
                     logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
                     return session_id
 
-        except Exception as e:
-            logger.error(f"Error creating session for user {user_id}: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error(f"Error creating session for user {user_id}", exc_info=True)
             raise
 
     def get_session(
@@ -309,8 +309,8 @@ class AdminAuthManager:
 
                 return session_data
 
-        except Exception as e:
-            logger.error(f"Error getting session {session_id[:8]}...: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error(f"Error getting session {session_id[:8]}...", exc_info=True)
             return None
 
     def update_session_activity(self, session_id: str) -> None:
@@ -326,8 +326,8 @@ class AdminAuthManager:
                         "UPDATE admin_sessions SET last_active_at = ? WHERE id = ? AND is_active = 1",
                         (datetime.now(), session_id),
                     )
-        except Exception as e:
-            logger.error(f"Error updating session activity {session_id[:8]}...: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error(f"Error updating session activity {session_id[:8]}...", exc_info=True)
 
     def expire_session(self, session_id: str) -> None:
         """Expire a session safely."""
@@ -340,8 +340,8 @@ class AdminAuthManager:
                     cursor = conn.cursor()
                     cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE id = ?", (session_id,))
                     logger.info(f"Expired session {session_id[:8]}...")
-        except Exception as e:
-            logger.error(f"Error expiring session {session_id[:8]}...: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error(f"Error expiring session {session_id[:8]}...", exc_info=True)
 
     def expire_user_sessions(self, user_id: int) -> None:
         """Expire all sessions for a user."""
@@ -354,8 +354,8 @@ class AdminAuthManager:
                     cursor = conn.cursor()
                     cursor.execute("UPDATE admin_sessions SET is_active = 0 WHERE user_id = ?", (user_id,))
                     logger.info(f"Expired all sessions for user {user_id}")
-        except Exception as e:
-            logger.error(f"Error expiring sessions for user {user_id}: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error(f"Error expiring sessions for user {user_id}", exc_info=True)
 
     def authenticate_user(
         self, username: str, password: str, ip_address: Optional[str] = None, user_agent: Optional[str] = None
@@ -476,7 +476,7 @@ class AdminAuthManager:
             return {"user": user, "session_id": session_id}
 
         except Exception as e:
-            logger.error(f"Error during authentication for user {username}: {str(e)}", exc_info=True)
+            logger.error(f"Error during authentication for user {username}", exc_info=True)
             admin_db_manager.record_security_event(
                 "authentication_error", username, "high", f"Authentication error: {str(e)}", client_ip, user_agent
             )
@@ -530,7 +530,7 @@ class AdminAuthManager:
             return {"user": user, "session_id": session_id, "2fa_used": True}
 
         except Exception as e:
-            logger.error(f"Error during 2FA completion for user {username}: {str(e)}", exc_info=True)
+            logger.error(f"Error during 2FA completion for user {username}", exc_info=True)
             admin_db_manager.record_security_event(
                 "2fa_authentication_error",
                 username,
@@ -585,8 +585,8 @@ class AdminAuthManager:
                 expired_count = cursor.rowcount
                 if expired_count > 0:
                     logger.info(f"Cleaned up {expired_count} expired sessions")
-        except Exception as e:
-            logger.error(f"Error cleaning up expired sessions: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error cleaning up expired sessions", exc_info=True)
 
     def is_rate_limited(self, identifier: str, identifier_type: str = "ip") -> bool:
         """Check if identifier is currently rate limited (proxy to database method)."""
@@ -634,7 +634,7 @@ class AdminAuthManager:
             }
 
         except Exception as e:
-            logger.error(f"Error checking user rate limits: {str(e)}", exc_info=True)
+            logger.error("Error checking user rate limits", exc_info=True)
             return {"ip_rate_limited": False, "user_rate_limited": False, "any_rate_limited": False, "error": str(e)}
 
     def reset_user_rate_limits(self, username: str, ip_address: str) -> bool:
@@ -649,8 +649,8 @@ class AdminAuthManager:
 
             return True
 
-        except Exception as e:
-            logger.error(f"Error resetting user rate limits: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error resetting user rate limits", exc_info=True)
             return False
 
     def cleanup_old_sessions_and_rate_limits(self) -> None:
@@ -709,8 +709,8 @@ class AdminAuthManager:
             # Check for unusual session activity patterns
             self._check_session_activity_patterns(session_data)
 
-        except Exception as e:
-            logger.error(f"Error monitoring session activity: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error monitoring session activity", exc_info=True)
 
     def _extract_browser_type(self, user_agent: str) -> str:
         """Extract browser type from user agent string."""
@@ -803,8 +803,8 @@ class AdminAuthManager:
                         session_data.get("user_agent"),
                     )
 
-        except Exception as e:
-            logger.error(f"Error checking session activity patterns: {str(e)}", exc_info=True)
+        except Exception:
+            logger.error("Error checking session activity patterns", exc_info=True)
 
     def _aggregate_security_alerts(self, raw_alerts: List[Dict]) -> List[Dict]:
         """Aggregate security alerts by event_type, identifier, severity, and ip_address.
@@ -882,16 +882,47 @@ class AdminAuthManager:
                     }
                     for r in rows
                 ]
-        except (sqlite3.Error, ConnectionError) as db_error:
-            # Fallback to dedicated security events DB on database connection issues
-            logger.debug(f"Admin DB connection failed for security alerts, using fallback: {db_error}")
+        except (sqlite3.Error, ConnectionError):
+            # SECURITY: Log database fallback at warning level for visibility
+            logger.warning(
+                "Admin DB connection failed for security alerts, using fallback database - "
+                "this may indicate connectivity issues"
+            )
+
             try:
                 from .security_events_database import security_events_db_manager
 
                 raw_alerts = security_events_db_manager.get_security_alerts(hours)
-                return self._aggregate_security_alerts(raw_alerts)
-            except Exception as e:
-                logger.error(f"Error getting security alerts: {str(e)}", exc_info=True)
+                aggregated_alerts = self._aggregate_security_alerts(raw_alerts)
+
+                # SECURITY: Log successful fallback for audit trail
+                logger.info(f"Security alerts retrieved via fallback database: {len(aggregated_alerts)} alerts")
+                return aggregated_alerts
+
+            except Exception:
+                # SECURITY: Critical error - both databases failed
+                logger.critical(
+                    "SECURITY ALERT: Both primary and fallback databases failed for security alerts retrieval",
+                    exc_info=True,
+                )
+
+                # Record this critical failure as a security event if possible
+                try:
+                    from .security_events_database import security_events_db_manager
+
+                    security_events_db_manager.record_security_event(
+                        "security_database_failure",
+                        "system",
+                        "critical",
+                        "Failed to retrieve security alerts from both databases",
+                        None,
+                        None,
+                    )
+                except Exception:
+                    # Even security event recording failed - log at critical level
+                    logger.critical("Unable to record security database failure event")
+
+                # Return empty list but ensure this failure is highly visible
                 return []
 
 
@@ -921,6 +952,6 @@ def get_current_admin_user(request: Request) -> Optional[Dict]:
     """Get current admin user from request if authenticated, None otherwise."""
     try:
         return admin_auth_manager.get_session_from_request(request)
-    except Exception as e:
-        logger.error(f"Error getting current admin user: {str(e)}", exc_info=True)
+    except Exception:
+        logger.error("Error getting current admin user", exc_info=True)
         return None
