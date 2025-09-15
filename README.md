@@ -338,3 +338,26 @@ The system uses multiple SQLite databases for different purposes:
 - **Backend API**: http://localhost:8000 (FastAPI with protected admin routes)
 - **Health Monitoring**: Real-time system status and performance metrics
 - **Analytics**: Query monitoring, response time analysis, and usage patterns
+
+---
+
+## Railway Production Env Snippet (copy/paste)
+
+Append these to your Railway environment to improve stability without weakening protections:
+
+```
+# Connection retries for transient SQLite locks
+ADMIN_DB_CONNECT_RETRIES=7
+ADMIN_DB_CONNECT_RETRY_DELAY_MS=300
+
+# Non-blocking audit/security event writes
+ADMIN_DB_AUDIT_TIMEOUT_SECONDS=0.05
+ADMIN_DB_WRITE_RETRIES=3
+ADMIN_DB_WRITE_RETRY_DELAY_MS=50
+
+# Ensure protections remain enabled in production
+DISABLE_RATE_LIMITING=false
+FAST_LOGIN_MODE=false
+```
+
+Note: Keep `SQLITE_JOURNAL_MODE=WAL`, `ADMIN_DB_BUSY_TIMEOUT_MS=15000`, and `ADMIN_DB_TIMEOUT_SECONDS=15` as you have them.
