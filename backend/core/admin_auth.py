@@ -4,6 +4,7 @@ Migrated from admin/backend/auth.py with improvements.
 """
 
 import logging
+import os
 import sqlite3
 import uuid
 from datetime import datetime, timedelta
@@ -229,9 +230,12 @@ class AdminAuthManager:
                         (session_id, user_id, now, now, ip_address, user_agent[:500] if user_agent else None, True),
                     )
 
-                    # Create and store session fingerprint
-                    fingerprint = session_fingerprinter.create_fingerprint(ip_address or "unknown", user_agent or "")
-                    session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
+                    # Create and store session fingerprint (skip in FAST_LOGIN_MODE)
+                    if os.getenv("FAST_LOGIN_MODE", "false").lower() not in {"1", "true", "yes"}:
+                        fingerprint = session_fingerprinter.create_fingerprint(
+                            ip_address or "unknown", user_agent or ""
+                        )
+                        session_fingerprinter.store_session_fingerprint(session_id, fingerprint)
 
                     logger.info(f"Created session {session_id} for user {user_id} with fingerprint")
                     return session_id
@@ -367,31 +371,37 @@ class AdminAuthManager:
         username = username.strip().lower()
         client_ip = ip_address or "unknown"
 
-        # Comprehensive rate limit check
-        rate_limit_status = self.check_user_rate_limits(username, client_ip)
+        fast_mode = os.getenv("FAST_LOGIN_MODE", "false").lower() in {"1", "true", "yes"}
 
-        if rate_limit_status["any_rate_limited"]:
-            limit_type = rate_limit_status["primary_limit_type"]
-            attempts = rate_limit_status.get(f"{limit_type}_attempts", 0)
-            lockout_until = rate_limit_status.get(f"{limit_type}_lockout_until")
+        if not fast_mode:
+            # Comprehensive rate limit check
+            rate_limit_status = self.check_user_rate_limits(username, client_ip)
 
-            logger.warning(
-                f"{limit_type.upper()} rate limited authentication attempt for user {username} from {client_ip} ({attempts} attempts)"
-            )
-            admin_db_manager.record_security_event(
-                "rate_limited_login",
-                username,
-                "medium",
-                f"{limit_type.upper()} rate limited ({attempts} attempts) - lockout until {lockout_until}",
-                client_ip,
-                user_agent,
-            )
-            return None
+            if rate_limit_status["any_rate_limited"]:
+                limit_type = rate_limit_status["primary_limit_type"]
+                attempts = rate_limit_status.get(f"{limit_type}_attempts", 0)
+                lockout_until = rate_limit_status.get(f"{limit_type}_lockout_until")
+
+                logger.warning(
+                    f"{limit_type.upper()} rate limited authentication attempt for user {username} from {client_ip} ({attempts} attempts)"
+                )
+                admin_db_manager.record_security_event(
+                    "rate_limited_login",
+                    username,
+                    "medium",
+                    f"{limit_type.upper()} rate limited ({attempts} attempts) - lockout until {lockout_until}",
+                    client_ip,
+                    user_agent,
+                )
+                return None
 
         # Validate login location for security
-        from .geolocation_validator import geo_validator
+        if not fast_mode:
+            from .geolocation_validator import geo_validator
 
-        location_validation = geo_validator.validate_login_location(username, client_ip, user_agent)
+            location_validation = geo_validator.validate_login_location(username, client_ip, user_agent)
+        else:
+            location_validation = {"is_unusual": False, "reason": "fast_mode", "risk_level": "low", "action": "allow"}
 
         if location_validation["action"] == "block":
             logger.warning(f"Blocked login from unusual location for user {username}: {location_validation['reason']}")
@@ -408,35 +418,42 @@ class AdminAuthManager:
         user = admin_db_manager.get_admin_user(username)
 
         if not user or not self.verify_password(password, user["password_hash"]):
-            # Record failed attempt for both IP and username
-            ip_locked = admin_db_manager.record_rate_limit_attempt(client_ip, "ip", self._lockout_duration_minutes)
-            user_locked = admin_db_manager.record_rate_limit_attempt(
-                username, "username", self._lockout_duration_minutes
-            )
+            if not fast_mode:
+                # Record failed attempt for both IP and username
+                ip_locked = admin_db_manager.record_rate_limit_attempt(client_ip, "ip", self._lockout_duration_minutes)
+                user_locked = admin_db_manager.record_rate_limit_attempt(
+                    username, "username", self._lockout_duration_minutes
+                )
 
-            # Log security event
-            severity = "high" if (ip_locked or user_locked) else "medium"
-            admin_db_manager.record_security_event(
-                "login_failure", username, severity, f"Failed login attempt from {client_ip}", client_ip, user_agent
-            )
-
-            if ip_locked or user_locked:
-                logger.warning(f"Locked out after failed authentication: user {username} from {client_ip}")
+                # Log security event
+                severity = "high" if (ip_locked or user_locked) else "medium"
                 admin_db_manager.record_security_event(
-                    "account_lockout",
+                    "login_failure",
                     username,
-                    "high",
-                    f"Account/IP locked after repeated failures from {client_ip}",
+                    severity,
+                    f"Failed login attempt from {client_ip}",
                     client_ip,
                     user_agent,
                 )
-            else:
-                logger.warning(f"Failed authentication attempt for user {username} from {client_ip}")
+
+                if ip_locked or user_locked:
+                    logger.warning(f"Locked out after failed authentication: user {username} from {client_ip}")
+                    admin_db_manager.record_security_event(
+                        "account_lockout",
+                        username,
+                        "high",
+                        f"Account/IP locked after repeated failures from {client_ip}",
+                        client_ip,
+                        user_agent,
+                    )
+                else:
+                    logger.warning(f"Failed authentication attempt for user {username} from {client_ip}")
 
             return None
 
         # Reset failed attempts on successful login
-        self.reset_user_rate_limits(username, client_ip)
+        if not fast_mode:
+            self.reset_user_rate_limits(username, client_ip)
 
         # Check if user has 2FA enabled
         from .totp_service import totp_service
@@ -451,14 +468,15 @@ class AdminAuthManager:
         # Log successful login with location information
         location_info = f" - {location_validation.get('reason', 'Normal location')}"
         severity = "medium" if location_validation.get("is_unusual", False) else "low"
-        admin_db_manager.record_security_event(
-            "successful_login",
-            username,
-            severity,
-            f"Successful login from {client_ip}{location_info}",
-            client_ip,
-            user_agent,
-        )
+        if not fast_mode:
+            admin_db_manager.record_security_event(
+                "successful_login",
+                username,
+                severity,
+                f"Successful login from {client_ip}{location_info}",
+                client_ip,
+                user_agent,
+            )
 
         try:
             # Update last login time

@@ -97,6 +97,11 @@ async def maintenance_mode_middleware(request: Request, call_next):
 
 async def dynamic_rate_limit_middleware(request: Request, call_next):
     """Middleware to apply dynamic rate limiting based on security settings."""
+    # Allow hard override via env to quickly bypass rate limiting (useful for local dev/debug)
+    import os as _os
+
+    if _os.getenv("DISABLE_RATE_LIMITING", "false").lower() in {"1", "true", "yes"}:
+        return await call_next(request)
     # Skip rate limiting during testing
     if _is_testing:
         return await call_next(request)
