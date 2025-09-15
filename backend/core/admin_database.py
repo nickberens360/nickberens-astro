@@ -1029,9 +1029,17 @@ class AdminDatabaseManager:
             return None
 
     def create_followup_question(
-        self, category_id: int, question_text: str, sort_order: Optional[int] = None, created_by: Optional[int] = None
+        self,
+        category_id: int,
+        question_text: str,
+        sort_order: Optional[int] = None,
+        is_active: Optional[bool] = True,
+        created_by: Optional[int] = None,
     ) -> int:
-        """Create a new follow-up question."""
+        """Create a new follow-up question.
+
+        Accepts an explicit `is_active` flag to control activation status at creation time.
+        """
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -1057,10 +1065,18 @@ class AdminDatabaseManager:
                 cursor.execute(
                     """
                     INSERT INTO followup_questions
-                    (category_id, question_text, sort_order, created_at, updated_at, created_by)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    (category_id, question_text, sort_order, is_active, created_at, updated_at, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (category_id, question_text, sort_order, datetime.now(), datetime.now(), created_by),
+                    (
+                        category_id,
+                        question_text,
+                        sort_order,
+                        1 if (is_active is None or is_active) else 0,
+                        datetime.now(),
+                        datetime.now(),
+                        created_by,
+                    ),
                 )
 
                 question_id = cursor.lastrowid

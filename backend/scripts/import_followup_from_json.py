@@ -43,9 +43,6 @@ def upsert_followup(data: Dict[str, Any]) -> Dict[str, Any]:
     created_qs = 0
     updated_qs = 0
 
-    # Cache existing questions per category to avoid repeated queries
-    existing_cat_cache: Dict[int, List[Dict[str, Any]]] = {}
-
     for cat in cats:
         name = cat["name"].strip()
         display_name = cat.get("display_name")
@@ -64,6 +61,9 @@ def upsert_followup(data: Dict[str, Any]) -> Dict[str, Any]:
                 sort_order=sort_order,
             )
             created_cats += 1
+            # Ensure desired active state on newly-created categories
+            if is_active is not None:
+                db.update_followup_category(category_id=cat_id, is_active=is_active)
             current = db.get_followup_category(cat_id) or {"id": cat_id}
         else:
             # Update category fields to match
@@ -79,11 +79,12 @@ def upsert_followup(data: Dict[str, Any]) -> Dict[str, Any]:
             current = db.get_followup_category(existing["id"]) or existing
 
         cat_id = current["id"]
-        if cat_id not in existing_cat_cache:
-            existing_cat_cache[cat_id] = db.get_followup_questions(category_id=cat_id, active_only=False)
+
+        # Fetch fresh list of questions for this category to ensure up-to-date data
+        existing_questions = db.get_followup_questions(category_id=cat_id, active_only=False)
 
         # Build index of existing questions by text for this category
-        existing_q_index = {q["question_text"].strip(): q for q in existing_cat_cache[cat_id]}
+        existing_q_index = {q["question_text"].strip(): q for q in existing_questions}
 
         for q in cat.get("questions", []):
             q_text = q["question_text"].strip()
@@ -92,18 +93,17 @@ def upsert_followup(data: Dict[str, Any]) -> Dict[str, Any]:
 
             existing_q = existing_q_index.get(q_text)
             if existing_q is None:
-                db.create_followup_question(
+                question_id = db.create_followup_question(
                     category_id=cat_id, question_text=q_text, sort_order=q_order, is_active=q_active
                 )
                 created_qs += 1
+                # Update index to avoid duplicates within the same category block
+                existing_q_index[q_text] = {"id": question_id}
             else:
                 db.update_followup_question(
                     question_id=existing_q["id"], question_text=q_text, sort_order=q_order, is_active=q_active
                 )
                 updated_qs += 1
-
-        # Refresh cache after modifications
-        existing_cat_cache[cat_id] = db.get_followup_questions(category_id=cat_id, active_only=False)
 
     return {
         "categories_created": created_cats,
