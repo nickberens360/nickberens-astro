@@ -70,14 +70,15 @@ This is the actionable task list to deliver the Multi‑Tenant MVP. It aligns wi
 
 ## M2 — Backend Tenant Context & Session Wiring
 
-- [ ] Tenant resolution middleware (subdomain, or `/:tenant` dev fallback)
+- [ ] Tenant resolution middleware (subdomain precedence; `/:tenant` dev fallback)
   - Acceptance: Request carries `request.state.tenant_id` for all routes
 
-- [ ] DB session wrapper sets `SET LOCAL app.tenant_id = '<uuid>'`
-  - Acceptance: Queries run under correct tenant; RLS enforced without per‑query filters
+- [ ] Introduce SQLAlchemy Engine/Session and per-request transaction
+  - Acceptance: `SET LOCAL app.tenant_id` executed per request; RLS enforced without per-query filters
+  - Notes: See `sqlalchemy_adoption_blueprint.md`
 
-- [ ] Defense‑in‑depth ORM scoping (`with_loader_criteria`)
-  - Acceptance: Critical ORM models scoped by default to `tenant_id`
+- [ ] Defense‑in‑depth ORM scoping (optional, `with_loader_criteria`)
+  - Acceptance: Critical ORM models scoped by default to `tenant_id` if ORM is used
 
 - [ ] CRUD for tenants + memberships
   - Acceptance: Create tenant, add/remove member, list user’s tenants
@@ -104,6 +105,7 @@ This is the actionable task list to deliver the Multi‑Tenant MVP. It aligns wi
 
 - [ ] Issue/accept invitation endpoints with signed tokens
   - Acceptance: User B can accept invite from User A’s tenant; idempotent
+  - Notes: Token format (HMAC/JWT), single-use, expiry (e.g., 7d), stored/revoked in `invitations`.
 
 - [ ] Role checks on membership changes
   - Acceptance: Only `owner`/`admin` can invite/remove; 403 otherwise
@@ -124,6 +126,15 @@ This is the actionable task list to deliver the Multi‑Tenant MVP. It aligns wi
 - [ ] Load test hot paths; verify indexes
   - Acceptance: P95/P99 acceptable; slow queries tracked and fixed
 
+- [ ] DB role security posture
+  - Acceptance: App role is `NOBYPASSRLS`, least-privilege grants; RLS optionally forced on tenant tables
+
+- [ ] Connection/session correctness
+  - Acceptance: Every request starts a transaction and sets `SET LOCAL app.tenant_id`; no autocommit leaks
+
+- [ ] Vector/embedding store multi-tenant strategy (if applicable)
+  - Acceptance: `tenant_id` dimension propagated to any non-SQL stores and query paths
+
 ---
 
 ## Cross‑Cutting Tasks
@@ -136,6 +147,12 @@ This is the actionable task list to deliver the Multi‑Tenant MVP. It aligns wi
 
 - [ ] Write integration tests for RLS and tenant routing
   - Acceptance: Cross‑tenant attempts fail; same‑tenant succeed
+
+- [ ] Decide rate limiting scope for MVP (global vs per‑tenant)
+  - Acceptance: Behavior documented; schema toggles (`tenant_id` nullable) aligned
+
+- [ ] Admin route scoping
+  - Acceptance: Admin endpoints that manage tenant data require tenant context; global admin actions remain explicit
 
 - [ ] Data privacy review for logs/analytics
   - Acceptance: Logging excludes or anonymizes sensitive data per tenant
@@ -150,4 +167,3 @@ This is the actionable task list to deliver the Multi‑Tenant MVP. It aligns wi
 - Plan: `docs/multi_tenant/plan.md`
 - Migration outlines (Alembic): `docs/multi_tenant/migrations_outline.md`
 - SQLite → Postgres playbook: `docs/multi_tenant/sqlite_to_postgres_migration.md`
-

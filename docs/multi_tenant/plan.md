@@ -28,6 +28,9 @@ Rollback
 - Add indexes and migrate uniques to composite `(tenant_id, ... )`.
 - Enable RLS and add policies on all tenant‑scoped tables.
 
+Notes
+- For large tables, prefer creating indexes concurrently and then attaching them to constraints (Alembic supports non-transactional DDL blocks). Plan a brief maintenance window for unique swaps.
+
 Acceptance
 - Migrations run cleanly on dev DBs; new constraints enforced.
 - RLS blocks cross‑tenant reads/writes using manual `SET LOCAL app.tenant_id` in psql.
@@ -37,9 +40,9 @@ Rollback
 - Disable RLS and drop policies; remove `tenant_id` columns if unrecoverable (only in dev).
 
 ### M2 — Backend Context & Session wiring
-- Add middleware to resolve tenant from subdomain or `/:tenant` prefix.
-- Add DB session wrapper that sets `SET LOCAL app.tenant_id = '<uuid>'` per request transaction.
-- Add `with_loader_criteria` or equivalents for ORM‑level tenant scoping as defense in depth.
+- Add middleware to resolve tenant from subdomain or `/:tenant` prefix (subdomain precedence; feature-flagged default tenant fallback).
+- Introduce SQLAlchemy Engine/Session and per-request transaction; execute `SET LOCAL app.tenant_id = '<uuid>'` for every request.
+- Option A (low churn): use SQLAlchemy Core with `text()` queries first; Option B: define ORM models and optionally add `with_loader_criteria` for defense in depth.
 - Implement CRUD for tenants and memberships; simple invite flow scaffold (no email sending requirements beyond token generation).
 
 Acceptance
@@ -49,6 +52,9 @@ Acceptance
 
 Rollback
 - Feature flag to bypass middleware and set default tenant; RLS remains enabled for safety.
+
+Reference
+- See `sqlalchemy_adoption_blueprint.md` for concrete wiring and rollout.
 
 ### M3 — Frontend Tenant Awareness
 - Implement `useTenant()` composable: parse subdomain or `/:tenant` prefix, store in state.

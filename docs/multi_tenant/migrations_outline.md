@@ -232,7 +232,18 @@ from alembic import op
 revision = "r6_enable_rls"
 down_revision = "r5_composite_uniques"
 
-TENANT_TABLES = ["tenants", "tenant_memberships", "invitations", "projects", "tasks"]  # extend
+# Apply to tenant-scoped tables only (exclude truly global tables like 'tenants',
+# 'tenant_memberships', and 'invitations' unless you design specific policies).
+TENANT_TABLES = [
+    "admin_settings",
+    "followup_categories",
+    "followup_questions",
+    "welcome_questions",
+    "api_keys",
+    "query_logs",
+    "content_gaps",
+    "security_events",  # if tenant-scoped; skip if global
+]
 
 POLICY_TEMPLATE = """
 ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
@@ -240,7 +251,7 @@ ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE {table} FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS {table}_tenant_policy ON {table};
 CREATE POLICY {table}_tenant_policy ON {table}
-  USING (tenant_id = current_setting('app.tenant_id')::uuid AND (deleted_at IS NULL OR deleted_at IS NULL))
+  USING (tenant_id = current_setting('app.tenant_id')::uuid AND deleted_at IS NULL)
   WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
 """
 
@@ -256,8 +267,8 @@ def downgrade():
 ```
 
 Notes
-- Do not apply RLS to truly global tables. If `tenants` itself should be tenant‑less for owners listing, skip it or create owner‑specific policy.
-- If some tables lack `deleted_at`, simplify the `USING` clause accordingly.
+- Do not apply RLS to truly global tables. If `tenants` must be restricted, add a dedicated policy based on membership.
+- If some tables lack `deleted_at`, remove that predicate from the `USING` clause for those tables.
 
 ## Smoke Test (psql)
 ```sql
@@ -290,4 +301,3 @@ INSERT INTO projects (id, tenant_id, name) VALUES (gen_random_uuid(), '...0002',
 ```text
 End of outlines — ready for implementation as Alembic revisions.
 ```
-

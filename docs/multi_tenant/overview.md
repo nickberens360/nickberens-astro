@@ -16,6 +16,7 @@ This document outlines the architectural approach to evolve the app into a multi
 ## Tenant Resolution
 - Primary: subdomain `https://<tenant>.yourapp.com` for production.
 - Fallback (MVP/dev): path prefix `/:tenant/...` for local and early environments without DNS.
+- Precedence: subdomain wins; if absent, accept path prefix; if neither present, use default tenant only when a feature flag is enabled (otherwise 404/400, route-dependent).
 - Backend determines the current tenant per request, stores it in request context, and sets `SET LOCAL app.tenant_id = '<uuid>'` on the DB session so RLS can use `current_setting('app.tenant_id')`.
 - Headers like `X-Tenant` may be used for client convenience in early dev but are not trusted for security.
 
@@ -30,7 +31,7 @@ This document outlines the architectural approach to evolve the app into a multi
 ## RLS Policies (Pattern)
 - Enable RLS per tenant table: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`
 - Policy pattern:
-  - SELECT/UPDATE/DELETE: `USING (tenant_id = current_setting('app.tenant_id')::uuid AND deleted_at IS NULL)`
+  - SELECT/UPDATE/DELETE: `USING (tenant_id = current_setting('app.tenant_id')::uuid AND deleted_at IS NULL)` (omit `deleted_at` where not present)
   - INSERT: `WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid)`
 - Optional soft delete is encouraged for safer tenant deletion and recovery.
 
@@ -45,6 +46,13 @@ This document outlines the architectural approach to evolve the app into a multi
 - Read current tenant from subdomain or `/:tenant` prefix using a `useTenant()` composable.
 - Display a simple organization switcher in the navbar.
 - API calls: do not rely on client to enforce tenancy. The backend resolves the tenant; clients may include a non‑authoritative header for ergonomics.
+
+## Operational Decisions (MVP)
+- Admin routes: Admin endpoints that manage tenant data (settings, follow-ups, API keys) are tenant‑scoped and must run with a resolved tenant; global admin operations remain explicit and separate.
+- Rate limiting: MVP keeps global rate limits (identifier + type). Schema allows optional `tenant_id` for future per‑tenant limits.
+- Security events: Prefer tenant‑scoped; allow `tenant_id` NULL for infra‑level events. Queries must handle both.
+- Soft delete: Adopt `deleted_at` for key tenant tables (`admin_settings`, `followup_categories`, `followup_questions`, `welcome_questions`, `api_keys`). Optional for log-like tables.
+- SQLAlchemy adoption: Introduce Engine/Session and per‑request transaction in M2; rely on RLS even if some routes continue with SQL text.
 
 ## Dev & Test Strategy
 - Seed two tenants and cross‑check that cross‑tenant reads/writes are blocked by RLS.
@@ -225,4 +233,3 @@ erDiagram
         timestamptz created_at
     }
 ```
-
