@@ -9,6 +9,7 @@ This is the main entry point for the FastAPI application that:
 
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -38,10 +39,55 @@ project_root = Path(__file__).resolve().parent.parent
 
 load_dotenv(project_root / ".env")
 
-logging.basicConfig(
-    level=getattr(logging, AppConfig.LOG_LEVEL),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+
+# Configure logging to send DEBUG/INFO to stdout and WARNING+ to stderr.
+# This prevents platforms like Railway from labeling INFO logs as errors.
+def _configure_logging(level_name: str = "INFO") -> None:
+    level = getattr(logging, level_name, logging.INFO)
+
+    root = logging.getLogger()
+    # Clear existing handlers installed by basicConfig/uvicorn
+    root.handlers.clear()
+    root.setLevel(level)
+
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    class _MaxLevelFilter(logging.Filter):
+        def __init__(self, max_level: int) -> None:
+            super().__init__()
+            self.max_level = max_level
+
+        def filter(self, record: logging.LogRecord) -> bool:  # type: ignore[override]
+            return record.levelno <= self.max_level
+
+    # Send DEBUG/INFO (and lower) to stdout
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.DEBUG)
+    stdout_handler.addFilter(_MaxLevelFilter(logging.INFO))
+    stdout_handler.setFormatter(formatter)
+
+    # Send WARNING/ERROR/CRITICAL to stderr
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setLevel(logging.WARNING)
+    stderr_handler.setFormatter(formatter)
+
+    root.addHandler(stdout_handler)
+    root.addHandler(stderr_handler)
+
+    # Harmonize common third-party loggers with the root configuration (best-effort)
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        try:
+            lg = logging.getLogger(name)
+            lg.setLevel(level)
+            lg.propagate = True  # let messages flow to root handlers
+            # Avoid duplicate emission if uvicorn preconfigured handlers
+            lg.handlers.clear()
+        except Exception:
+            # Never fail startup on logging adjustments
+            pass
+
+
+_configure_logging(AppConfig.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 # Initialize application state
 retrievers: Optional[Dict[str, Any]] = None
