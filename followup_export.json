@@ -1,0 +1,109 @@
+{
+  "categories": [
+    {
+      "name": "technical",
+      "display_name": "Technical",
+      "description": "Development, technologies, and coding questions",
+      "icon": "code",
+      "sort_order": 1,
+      "is_active": true,
+      "questions": [
+        {
+          "question_text": "What technologies do you work with?",
+          "sort_order": 1,
+          "is_active": true
+        },
+        {
+          "question_text": "Tell me about your development philosophy?",
+          "sort_order": 2,
+          "is_active": false
+        },
+        {
+          "question_text": "What frameworks do you prefer?",
+          "sort_order": 4,
+          "is_active": true
+        },
+        {
+          "question_text": "What is your favorite programming language?",
+          "sort_order": 5,
+          "is_active": true
+        },
+        {
+          "question_text": "How do you approach problem solving?",
+          "sort_order": 99,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "name": "personal",
+      "display_name": "Personal",
+      "description": "Experience, background, and contact information",
+      "icon": "account",
+      "sort_order": 2,
+      "is_active": true,
+      "questions": [
+        {
+          "question_text": "Tell me about your background",
+          "sort_order": 0,
+          "is_active": true
+        },
+        {
+          "question_text": "Tell me about your experience",
+          "sort_order": 1,
+          "is_active": true
+        },
+        {
+          "question_text": "What's your background?",
+          "sort_order": 2,
+          "is_active": false
+        },
+        {
+          "question_text": "How can I contact Nick?",
+          "sort_order": 3,
+          "is_active": true
+        },
+        {
+          "question_text": "What motivates you?",
+          "sort_order": 4,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "name": "creative",
+      "display_name": "Creative",
+      "description": "Illustrations, art, and design work",
+      "icon": "palette",
+      "sort_order": 3,
+      "is_active": true,
+      "questions": [
+        {
+          "question_text": "Show me your illustrations",
+          "sort_order": 0,
+          "is_active": true
+        },
+        {
+          "question_text": "What inspires your artwork?",
+          "sort_order": 1,
+          "is_active": true
+        },
+        {
+          "question_text": "Tell me about your creative process",
+          "sort_order": 2,
+          "is_active": true
+        },
+        {
+          "question_text": "Show me your design work",
+          "sort_order": 3,
+          "is_active": true
+        },
+        {
+          "question_text": "What art styles do you enjoy?",
+          "sort_order": 4,
+          "is_active": true
+        }
+      ]
+    }
+  ]
+}
