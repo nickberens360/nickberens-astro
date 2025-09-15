@@ -1,5 +1,7 @@
 <template>
   <div class="dashboard">
+    <!-- Health Status -->
+    <HealthStatusCard />
     <!-- Metric Cards Grid -->
     <v-row class="ds-mb-6">
       <v-col
@@ -72,6 +74,7 @@ import { useAdminStore } from '@/stores/admin'
 import { useQueriesStore } from '@/stores/queries'
 import { usePerformanceStore } from '@/stores/performance'
 import MetricCard from '@/components/MetricCard.vue'
+import HealthStatusCard from '@/components/HealthStatusCard.vue'
 import PerformanceChart from '@/components/PerformanceChart.vue'
 import QueryTable from '@/components/QueryTable.vue'
 

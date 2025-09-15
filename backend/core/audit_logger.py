@@ -5,6 +5,7 @@ Tracks all administrative operations for security and compliance.
 
 import json
 import logging
+import os
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -156,7 +157,13 @@ class AuditLogger:
             severity = self._map_risk_to_severity(risk_level)
             details_json = json.dumps(audit_entry)
 
-            admin_db_manager.record_security_event(event_type, username, severity, details_json, ip_address, user_agent)
+            # In fast debug mode, skip DB writes to avoid contention
+            if os.getenv("FAST_LOGIN_MODE", "false").lower() in {"1", "true", "yes"}:
+                pass
+            else:
+                admin_db_manager.record_security_event(
+                    event_type, username, severity, details_json, ip_address, user_agent
+                )
 
             # Log to application logger as well
             log_message = self._format_log_message(audit_entry)

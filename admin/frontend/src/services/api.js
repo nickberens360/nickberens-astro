@@ -4,10 +4,13 @@ class AdminAPI {
   constructor() {
     // Resolve base URL from env, falling back to same-origin admin API
     const DEFAULT_BASE_URL = '/api/admin'
+    // Prefer explicit VITE_API_BASE_URL if provided (even in dev) to bypass proxy issues
+    // Otherwise, use same-origin '/api/admin' which works with Vite dev proxy
     const resolvedBaseURL = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL
     this.client = axios.create({
       baseURL: resolvedBaseURL,
-      timeout: 10000,
+      // Slightly higher timeout to avoid spurious dev timeouts during cold starts
+      timeout: 15000,
       headers: { 'Content-Type': 'application/json' },
       withCredentials: true  // Enable cookies for session management
     })

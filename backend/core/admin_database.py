@@ -58,34 +58,65 @@ class AdminDatabaseManager:
 
     @contextmanager
     def get_connection(self):
-        """Get a database connection with proper cleanup."""
-        try:
-            # Handle both file paths and in-memory databases
-            conn = sqlite3.connect(
-                str(self.db_path),
-                timeout=getattr(self, "connect_timeout", 10.0),
-                check_same_thread=False,  # Allow usage from FastAPI threadpool workers
-            )
-            conn.row_factory = sqlite3.Row  # Enable dict-like access
-            # Apply pragmatic per-connection settings that don't require write locks
+        """Get a database connection with retries and proper cleanup.
+
+        Retries connection creation when encountering transient 'database is locked' errors,
+        which can occur under concurrent writes on some filesystems.
+        """
+        import time
+
+        retries = int(os.getenv("ADMIN_DB_CONNECT_RETRIES", "5"))
+        delay_ms = int(os.getenv("ADMIN_DB_CONNECT_RETRY_DELAY_MS", "200"))
+        last_err = None
+
+        conn = None
+        for attempt in range(retries):
             try:
-                cur = conn.cursor()
-                # Busy timeout per connection helps during brief contention
-                cur.execute(f"PRAGMA busy_timeout={getattr(self, 'busy_timeout_ms', 5000)};")
-                cur.execute("PRAGMA foreign_keys=ON;")
-            except Exception as e:
-                logger.warning(f"Failed to apply SQLite PRAGMAs: {e}")
-            try:
-                yield conn
-                conn.commit()
-            except Exception:
-                conn.rollback()
+                # Handle both file paths and in-memory databases
+                conn = sqlite3.connect(
+                    str(self.db_path),
+                    timeout=getattr(self, "connect_timeout", 10.0),
+                    check_same_thread=False,  # Allow usage from FastAPI threadpool workers
+                )
+                conn.row_factory = sqlite3.Row  # Enable dict-like access
+
+                # Apply pragmatic per-connection settings that don't require write locks
+                try:
+                    cur = conn.cursor()
+                    # Busy timeout per connection helps during brief contention
+                    cur.execute(f"PRAGMA busy_timeout={getattr(self, 'busy_timeout_ms', 5000)};")
+                    cur.execute("PRAGMA foreign_keys=ON;")
+                except Exception as e:
+                    logger.warning(f"Failed to apply SQLite PRAGMAs: {e}")
+
+                break  # success
+            except sqlite3.OperationalError as e:
+                last_err = e
+                if "locked" in str(e).lower() and attempt < retries - 1:
+                    time.sleep(delay_ms / 1000.0)
+                    continue
+                logger.error(f"Failed to create database connection to {self.db_path}: {e}")
                 raise
-            finally:
-                conn.close()
-        except Exception as e:
-            logger.error(f"Failed to create database connection to {self.db_path}: {e}")
+            except Exception as e:
+                last_err = e
+                logger.error(f"Failed to create database connection to {self.db_path}: {e}")
+                raise
+
+        if conn is None:
+            # Should not happen, but guard anyway
+            raise RuntimeError(f"Unable to connect to database at {self.db_path}: {last_err}")
+
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
             raise
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     def _initialize_database(self):
         """Initialize database tables if they don't exist."""
@@ -1364,32 +1395,72 @@ class AdminDatabaseManager:
     ) -> bool:
         """Persist a security/audit event into this manager's database.
 
+        This write must NEVER block the main request path. It uses a short, non-blocking
+        connection timeout and few quick retries. If the DB is locked, it fails fast
+        and returns False, logging at debug level to avoid noisy logs under load.
+
         Tests patch this manager and expect writes to go to its own connection,
         so avoid delegating to external/global managers here.
         """
+        import random
+        import time
+
+        # Very short timeout for audit writes to avoid blocking main flow
         try:
-            with self._write_lock:
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        """
-                        INSERT INTO security_events (event_type, identifier, details, severity, ip_address, user_agent, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            event_type,
-                            identifier,
-                            details,
-                            severity,
-                            ip_address,
-                            (user_agent[:500] if user_agent else None),
-                            datetime.now(),
-                        ),
-                    )
-                    return True
-        except Exception as e:
-            logger.error(f"Error recording security event: {str(e)}", exc_info=True)
-            return False
+            audit_timeout = float(os.getenv("ADMIN_DB_AUDIT_TIMEOUT_SECONDS", "0.05"))
+        except Exception:
+            audit_timeout = 0.05
+
+        max_retries = int(os.getenv("ADMIN_DB_WRITE_RETRIES", "3"))
+        base_delay_ms = int(os.getenv("ADMIN_DB_WRITE_RETRY_DELAY_MS", "50"))
+
+        for attempt in range(max_retries):
+            conn = None
+            try:
+                # Use a dedicated short-timeout connection without the global write lock
+                conn = sqlite3.connect(str(self.db_path), timeout=audit_timeout, check_same_thread=False)
+                try:
+                    cur = conn.cursor()
+                    cur.execute(f"PRAGMA busy_timeout={int(audit_timeout * 1000)};")
+                except Exception:
+                    pass
+
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO security_events (event_type, identifier, details, severity, ip_address, user_agent, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        event_type,
+                        identifier,
+                        details,
+                        severity,
+                        ip_address,
+                        (user_agent[:500] if user_agent else None),
+                        datetime.now(),
+                    ),
+                )
+                conn.commit()
+                return True
+            except sqlite3.OperationalError as e:
+                msg = str(e).lower()
+                # Fail fast on locked DB; quick retry a couple of times with jitter, then give up
+                if ("locked" in msg or "busy" in msg) and attempt < max_retries - 1:
+                    delay = (base_delay_ms * (2**attempt) + random.randint(0, base_delay_ms)) / 1000.0
+                    time.sleep(delay)
+                    continue
+                logger.debug(f"Non-blocking audit write failed: {e}")
+                return False
+            except Exception as e:
+                logger.debug(f"Non-blocking audit write error: {e}")
+                return False
+            finally:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
         """Return security events within the last N hours from the dedicated DB."""
