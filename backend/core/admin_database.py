@@ -1415,6 +1415,7 @@ class AdminDatabaseManager:
         base_delay_ms = int(os.getenv("ADMIN_DB_WRITE_RETRY_DELAY_MS", "50"))
 
         for attempt in range(max_retries):
+            conn = None
             try:
                 # Use a dedicated short-timeout connection without the global write lock
                 conn = sqlite3.connect(str(self.db_path), timeout=audit_timeout, check_same_thread=False)
@@ -1441,10 +1442,6 @@ class AdminDatabaseManager:
                     ),
                 )
                 conn.commit()
-                try:
-                    conn.close()
-                except Exception:
-                    pass
                 return True
             except sqlite3.OperationalError as e:
                 msg = str(e).lower()
@@ -1454,18 +1451,16 @@ class AdminDatabaseManager:
                     time.sleep(delay)
                     continue
                 logger.debug(f"Non-blocking audit write failed: {e}")
-                try:
-                    conn.close()
-                except Exception:
-                    pass
                 return False
             except Exception as e:
                 logger.debug(f"Non-blocking audit write error: {e}")
-                try:
-                    conn.close()
-                except Exception:
-                    pass
                 return False
+            finally:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
 
     def get_security_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
         """Return security events within the last N hours from the dedicated DB."""
