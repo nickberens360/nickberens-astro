@@ -177,35 +177,66 @@
     <v-dialog
       v-model="showReindexDialog"
       max-width="500"
+      persistent
     >
       <v-card>
         <v-card-title class="text-h6">
-          Confirm Knowledge Base Re-Index
+          {{ reindexLoading ? 'Re-Indexing Knowledge Base' : 'Confirm Knowledge Base Re-Index' }}
         </v-card-title>
         <v-card-text>
-          <v-alert
-            type="warning"
-            class="mb-4"
-          >
-            <strong>This operation will:</strong>
-            <ul class="mt-2">
-              <li>Force rebuild all content indices</li>
-              <li>Re-classify all documents with AI</li>
-              <li>Take several minutes to complete</li>
-              <li>Use additional API credits</li>
-            </ul>
-          </v-alert>
-          Are you sure you want to re-index the entire knowledge base?
+          <div v-if="!reindexLoading">
+            <v-alert
+              type="warning"
+              class="mb-4"
+            >
+              <strong>This operation will:</strong>
+              <ul class="mt-2">
+                <li>Force rebuild all content indices</li>
+                <li>Re-classify all documents with AI</li>
+                <li>Take several minutes to complete</li>
+                <li>Use additional API credits</li>
+              </ul>
+            </v-alert>
+            Are you sure you want to re-index the entire knowledge base?
+          </div>
+          
+          <!-- Progress Section -->
+          <div v-else>
+            <v-alert
+              type="info"
+              class="mb-4"
+            >
+              <v-icon class="me-2">$info</v-icon>
+              Re-index process has been initiated. The system will process this request on the next server restart.
+            </v-alert>
+            
+            <div class="mb-4">
+              <div class="text-body-2 mb-2">Setting up re-index operation...</div>
+              <v-progress-linear
+                indeterminate
+                color="primary"
+                height="8"
+                rounded
+              />
+            </div>
+            
+            <div class="text-caption text-medium-emphasis">
+              <v-icon size="16" class="me-1">$clock</v-icon>
+              This may take a few moments to complete. Please wait...
+            </div>
+          </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
+            v-if="!reindexLoading"
             variant="text"
             @click="showReindexDialog = false"
           >
             Cancel
           </v-btn>
           <v-btn
+            v-if="!reindexLoading"
             color="warning"
             variant="elevated"
             :loading="reindexLoading"
@@ -227,7 +258,7 @@ import { useNotifications } from '@/composables/useNotifications'
 
 const router = useRouter()
 const route = useRoute()
-const { showSuccess, showError } = useNotifications()
+const { showSuccess, showError, showInfo } = useNotifications()
 
 const loading = ref(false)
 const refreshLoading = ref(false)
@@ -274,18 +305,55 @@ const confirmReindex = () => {
 const executeReindex = async () => {
   reindexLoading.value = true
   try {
-    await adminAPI.refreshKnowledgeBase(true)
+    // Step 1: Set the reindex flag
+    showInfo('Setting re-index flag...')
+    const result = await adminAPI.refreshKnowledgeBase(true)
     
-    // Wait a moment for the reindex to start
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Step 2: Show progress simulation with meaningful steps
+    showInfo('Re-index flag set successfully! The system will process this on next restart.')
     
-    // Refresh all data after reindex
-    await refreshData()
+    // Step 3: Provide polling to check flag status
+    let flagProcessed = false
+    let pollAttempts = 0
+    const maxPolls = 30 // Poll for up to 1 minute
     
-    showSuccess('Knowledge base re-indexing completed successfully!')
+    const pollInterval = setInterval(async () => {
+      try {
+        pollAttempts++
+        const status = await adminAPI.getRefreshStatus()
+        
+        if (!status.refresh_pending) {
+          // Flag has been processed
+          clearInterval(pollInterval)
+          flagProcessed = true
+          showSuccess('Re-index completed successfully! Knowledge base has been refreshed.')
+          await refreshData()
+          // Close dialog after successful completion
+          showReindexDialog.value = false
+        } else if (pollAttempts >= maxPolls) {
+          // Timeout - flag still pending
+          clearInterval(pollInterval)
+          showInfo('Re-index flag is set and waiting for server restart. Changes will take effect when the server restarts.')
+          // Close dialog after timeout
+          showReindexDialog.value = false
+        }
+      } catch (error) {
+        console.error('Error polling refresh status:', error)
+      }
+    }, 2000) // Poll every 2 seconds
+    
+    // If flag wasn't processed within polling period, show helpful message
+    setTimeout(() => {
+      if (!flagProcessed && pollAttempts < maxPolls) {
+        clearInterval(pollInterval)
+        showInfo('Re-index scheduled successfully. Changes will take effect on next server restart.')
+        showReindexDialog.value = false
+      }
+    }, 60000) // 1 minute timeout
+    
   } catch (error) {
-    console.error('Failed to re-index knowledge base:', error)
-    showError('Failed to re-index knowledge base: ' + (error.message || 'Unknown error'))
+    console.error('Failed to set re-index flag:', error)
+    showError('Failed to set re-index flag: ' + (error.response?.data?.detail || error.message || 'Unknown error'))
   } finally {
     reindexLoading.value = false
     showReindexDialog.value = false

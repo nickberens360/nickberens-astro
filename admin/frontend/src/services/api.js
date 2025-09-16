@@ -240,16 +240,15 @@ class AdminAPI {
   }
 
   async refreshKnowledgeBase(forceReindex = true) {
-    return await this.client.post(`/knowledge/refresh?force_reindex=${forceReindex}`)
+    return await this.client.post('/refresh', {
+      force_reindex: forceReindex
+    })
   }
 
   async getRefreshStatus() {
-    return await this.client.get('/knowledge/refresh/status')
+    return await this.client.get('/refresh/status')
   }
 
-  async waitForRefreshCompletion(timeout = 300) {
-    return await this.client.post(`/knowledge/refresh/wait?timeout=${timeout}`)
-  }
 
   async updateKnowledgeFileContent(filename, content) {
     return await this.client.put(`/knowledge/files/${encodeURIComponent(filename)}/content`, {
