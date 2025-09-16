@@ -1,26 +1,14 @@
 <template>
   <div class="sources-view">
     <div class="d-flex justify-end align-center mb-6">
-      <div class="d-flex gap-2">
-        <v-btn
-          color="success"
-          prepend-icon="$upload"
-          variant="outlined"
-          class="mr-4"
-          @click="showUploadDialog = true"
-        >
-          Upload Files
-        </v-btn>
-        <v-btn
-          color="primary"
-          prepend-icon="$refresh"
-          :loading="loading"
-          variant="outlined"
-          @click="loadSources"
-        >
-          Refresh
-        </v-btn>
-      </div>
+      <v-btn
+        color="success"
+        prepend-icon="$upload"
+        variant="text"
+        @click="showUploadDialog = true"
+      >
+        Upload Files
+      </v-btn>
     </div>
 
     <v-card>
@@ -36,15 +24,7 @@
           variant="outlined"
           placeholder="Search sources..."
           hide-details
-          class="me-2"
           style="max-width: 300px"
-        />
-        <v-btn
-          icon="$refresh"
-          variant="text"
-          size="small"
-          :loading="loading"
-          @click="loadSources"
         />
       </v-card-title>
       <v-card-text class="pa-0">
@@ -362,10 +342,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { adminAPI } from '@/services/api'
 import FileEditorModal from '@/components/FileEditorModal.vue'
 import { useNotifications } from '@/composables/useNotifications'
+
+const props = defineProps({
+  refreshTrigger: {
+    type: Number,
+    default: 0
+  }
+})
+
+const emit = defineEmits(['refresh-complete'])
 
 const loading = ref(false)
 const search = ref('')
@@ -524,6 +513,7 @@ const loadSources = async () => {
   try {
     const response = await adminAPI.getKnowledgeSources()
     sources.value = response.sources || []
+    emit('refresh-complete')
   } catch (error) {
     console.error('Failed to load sources:', error)
     showError('Failed to load sources')
@@ -531,6 +521,13 @@ const loadSources = async () => {
     loading.value = false
   }
 }
+
+// Watch for refresh trigger from parent
+watch(() => props.refreshTrigger, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    loadSources()
+  }
+})
 
 const editSource = (source) => {
   selectedSource.value = source

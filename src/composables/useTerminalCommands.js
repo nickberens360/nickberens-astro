@@ -3,7 +3,8 @@ import { getLatestCommitMessage, getCodeFrequency, getCommitHistory } from '../u
 import { navItems } from '../stores/ui.js';
 import {
   commandHistoryStore,
-  nextCommandIdStore
+  nextCommandIdStore,
+  pendingConfirmationStore
 } from '../stores/terminal-window.js';
 import { DEFAULT_TERMINAL } from '../config/terminalConfig.js';
 import { processCodeFrequencyData, processCommitHistory } from '../utils/dataProcessing.js';
@@ -103,6 +104,66 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
     }
 
     return null;
+  };
+
+  // Handle confirmation responses
+  const handleConfirmationResponse = (response, commandId) => {
+    const confirmationState = pendingConfirmationStore.get();
+
+    if (!confirmationState.isWaiting) return false;
+
+    const normalizedResponse = response.toLowerCase().trim();
+
+    // Reset confirmation state first
+    pendingConfirmationStore.set({
+      isWaiting: false,
+      commandId: null,
+      confirmationType: null,
+      originalCommand: null,
+      confirmationData: null
+    });
+
+    // Handle different confirmation types
+    switch (confirmationState.confirmationType) {
+      case 'bust-cache':
+        if (normalizedResponse === 'y' || normalizedResponse === 'yes') {
+          // User confirmed, proceed with clearing cache and reloading
+          updateHistoryItem(commandId, {
+            textOutput: ['Clearing cache and reloading page...']
+          });
+
+          setTimeout(() => {
+            localStorage.clear();
+            window.location.reload();
+          }, 500);
+        } else if (normalizedResponse === 'n' || normalizedResponse === 'no' || normalizedResponse === '') {
+          // User declined (n, no, or just pressed enter)
+          updateHistoryItem(commandId, {
+            textOutput: ['Cache clearing canceled.']
+          });
+        } else {
+          // Invalid response, ask again
+          pendingConfirmationStore.set({
+            isWaiting: true,
+            commandId: commandId,
+            confirmationType: 'bust-cache',
+            originalCommand: 'bust-cache',
+            confirmationData: null
+          });
+
+          updateHistoryItem(commandId, {
+            textOutput: ['Please enter Y (yes) or N (no): (Y/n)']
+          });
+        }
+        break;
+
+      default:
+        updateHistoryItem(commandId, {
+          textOutput: ['Unknown confirmation type.']
+        });
+    }
+
+    return true; // Indicates this was handled as a confirmation
   };
 
   // Command definitions
@@ -258,18 +319,19 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
     },
 
     'bust-cache': (args, commandId) => {
-      const userConfirmed = confirm('Are you sure you want to clear the cache and reload the page?');
+      // Set up confirmation state
+      pendingConfirmationStore.set({
+        isWaiting: true,
+        commandId: commandId,
+        confirmationType: 'bust-cache',
+        originalCommand: 'bust-cache',
+        confirmationData: null
+      });
 
-      if (userConfirmed) {
-        // User confirmed, proceed with clearing cache and reloading
-        localStorage.clear();
-        window.location.reload();
-      } else {
-        // User canceled, update history with a message
-        updateHistoryItem(commandId, {
-          textOutput: ['Cache clearing canceled by user.']
-        });
-      }
+      // Show confirmation prompt
+      updateHistoryItem(commandId, {
+        textOutput: ['Are you sure you want to clear the cache and reload the page? (Y/n)']
+      });
     },
 
     default: (baseCommand, commandId) => {
@@ -281,7 +343,14 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
 
   // Main command handler
   const handleCommand = (command, commandId, theme) => {
-    // First check if the entire command matches an easter egg
+    // First check if we're waiting for a confirmation response
+    const confirmationState = pendingConfirmationStore.get();
+    if (confirmationState.isWaiting) {
+      const wasHandled = handleConfirmationResponse(command, commandId);
+      if (wasHandled) return; // Exit early if this was a confirmation response
+    }
+
+    // Check if the entire command matches an easter egg
     const eggFound = checkForEasterEgg(command);
 
     if (eggFound) {

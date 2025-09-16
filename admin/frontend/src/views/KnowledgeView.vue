@@ -132,15 +132,90 @@
       </v-col>
     </v-row>
 
+    <!-- Action Buttons Row -->
+    <v-row class="mb-4">
+      <v-col class="d-flex justify-end">
+        <div class="d-flex gap-2">
+          <v-btn
+            color="primary"
+            prepend-icon="$refresh"
+            :loading="refreshLoading"
+            variant="outlined"
+            @click="refreshData"
+          >
+            Refresh
+          </v-btn>
+          <v-btn
+            color="warning"
+            prepend-icon="$refresh"
+            :loading="reindexLoading"
+            variant="outlined"
+            class="ml-3"
+            @click="confirmReindex"
+          >
+            Re-Index
+          </v-btn>
+        </div>
+      </v-col>
+    </v-row>
+
     <!-- Router View for child components -->
     <router-view v-slot="{ Component }">
       <Transition
         name="fade"
         mode="out-in"
       >
-        <component :is="Component" />
+        <component 
+          :is="Component" 
+          :refresh-trigger="refreshTrigger"
+          @refresh-complete="onRefreshComplete" 
+        />
       </Transition>
     </router-view>
+
+    <!-- Re-Index Confirmation Dialog -->
+    <v-dialog
+      v-model="showReindexDialog"
+      max-width="500"
+    >
+      <v-card>
+        <v-card-title class="text-h6">
+          Confirm Knowledge Base Re-Index
+        </v-card-title>
+        <v-card-text>
+          <v-alert
+            type="warning"
+            class="mb-4"
+          >
+            <strong>This operation will:</strong>
+            <ul class="mt-2">
+              <li>Force rebuild all content indices</li>
+              <li>Re-classify all documents with AI</li>
+              <li>Take several minutes to complete</li>
+              <li>Use additional API credits</li>
+            </ul>
+          </v-alert>
+          Are you sure you want to re-index the entire knowledge base?
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showReindexDialog = false"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="warning"
+            variant="elevated"
+            :loading="reindexLoading"
+            @click="executeReindex"
+          >
+            Re-Index Now
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -153,6 +228,11 @@ const router = useRouter()
 const route = useRoute()
 
 const loading = ref(false)
+const refreshLoading = ref(false)
+const reindexLoading = ref(false)
+const showReindexDialog = ref(false)
+const refreshTrigger = ref(0)
+
 const knowledgeStats = ref({
   total_documents: 0,
   total_chunks: 0,
@@ -168,18 +248,61 @@ const navigateTo = (routeName) => {
   router.push({ name: routeName })
 }
 
-const refreshAll = async () => {
-  loading.value = true
+const refreshData = async () => {
+  refreshLoading.value = true
   try {
+    // Refresh parent stats
     await loadKnowledgeStats()
     await loadContentGaps()
-    // Emit refresh event to child components if needed
-    // This could be enhanced with an event bus or provide/inject
+    
+    // Trigger child components to refresh
+    refreshTrigger.value++
   } catch (error) {
     console.error('Failed to refresh knowledge data:', error)
+    showError('Failed to refresh data')
   } finally {
-    loading.value = false
+    refreshLoading.value = false
   }
+}
+
+const confirmReindex = () => {
+  showReindexDialog.value = true
+}
+
+const executeReindex = async () => {
+  reindexLoading.value = true
+  try {
+    await adminAPI.refreshKnowledgeBase(true)
+    
+    // Wait a moment for the reindex to start
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // Refresh all data after reindex
+    await refreshData()
+    
+    showSuccess('Knowledge base re-indexing completed successfully!')
+  } catch (error) {
+    console.error('Failed to re-index knowledge base:', error)
+    showError('Failed to re-index knowledge base: ' + (error.message || 'Unknown error'))
+  } finally {
+    reindexLoading.value = false
+    showReindexDialog.value = false
+  }
+}
+
+const onRefreshComplete = () => {
+  // Called when child components finish their refresh operations
+  // Can be used for additional coordination if needed
+}
+
+const showSuccess = (message) => {
+  // Simple success notification - could be enhanced with a toast system
+  console.log('SUCCESS:', message)
+}
+
+const showError = (message) => {
+  // Simple error notification - could be enhanced with a toast system  
+  console.error('ERROR:', message)
 }
 
 const loadKnowledgeStats = async () => {

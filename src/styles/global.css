@@ -54,8 +54,8 @@ body {
     --z-index-drawer: 1001;
     --z-index-modal: 1002;
     --z-index-header: 1030;
+    --z-index-terminal: 1040;
     --z-index-highest: 9999;
-    --z-index-terminal: 1020;
 
     /* Font Family */
     --font-primary: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;

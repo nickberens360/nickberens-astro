@@ -87,3 +87,12 @@ export const previousTerminalStateStore = atom({
   position: null,
   size: null
 });
+
+// Store for tracking pending command confirmations
+export const pendingConfirmationStore = atom({
+  isWaiting: false,
+  commandId: null,
+  confirmationType: null,
+  originalCommand: null,
+  confirmationData: null
+});

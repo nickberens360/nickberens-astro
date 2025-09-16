@@ -1,16 +1,5 @@
 <template>
   <div class="indexed-documents-view">
-    <div class="d-flex justify-end align-center mb-6">
-      <v-btn
-        color="primary"
-        prepend-icon="$refresh"
-        :loading="loadingDocuments"
-        variant="outlined"
-        @click="loadDocuments"
-      >
-        Refresh
-      </v-btn>
-    </div>
 
     <!-- Indexed Documents Section -->
     <v-card>
@@ -28,13 +17,6 @@
           hide-details
           class="me-2"
           style="max-width: 300px"
-        />
-        <v-btn
-          icon="$refresh"
-          variant="text"
-          size="small"
-          :loading="loadingDocuments"
-          @click="loadDocuments"
         />
       </v-card-title>
       <v-card-text class="pa-0">
