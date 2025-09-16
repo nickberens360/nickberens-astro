@@ -239,6 +239,42 @@ class AdminAPI {
     return await this.client.delete(`/knowledge/files/${encodeURIComponent(filename)}`)
   }
 
+  // Knowledge consistency (admin)
+  async getKnowledgeConsistency(sample = 50) {
+    return await this.client.get(`/knowledge/consistency?sample=${sample}`)
+  }
+
+  async reconcileKnowledge(options = {}) {
+    const payload = {
+      dry_run: options.dryRun !== undefined ? options.dryRun : true,
+      allow_deletes: !!options.allowDeletes,
+      limit: options.limit,
+      paths: options.paths,
+    }
+    return await this.client.post('/knowledge/reconcile', payload, { timeout: 120000 })
+  }
+
+  async getKnowledgeFilesStatus(params = {}) {
+    const searchParams = new URLSearchParams()
+    if (params.status) searchParams.append('status', params.status)
+    if (params.limit) searchParams.append('limit', params.limit)
+    if (params.offset) searchParams.append('offset', params.offset)
+    const qs = searchParams.toString()
+    return await this.client.get(`/knowledge/files/status${qs ? `?${qs}` : ''}`)
+  }
+
+  async reindexKnowledgeFile(path) {
+    return await this.client.post('/knowledge/reindex-file', { path })
+  }
+
+  async getKnowledgeConsistencyList(kind, { offset = 0, limit = 50 } = {}) {
+    const searchParams = new URLSearchParams()
+    searchParams.append('kind', kind)
+    searchParams.append('offset', offset)
+    searchParams.append('limit', limit)
+    return await this.client.get(`/knowledge/consistency/list?${searchParams.toString()}`)
+  }
+
   async refreshKnowledgeBase(forceReindex = true) {
     return await this.client.post('/refresh', {
       force_reindex: forceReindex

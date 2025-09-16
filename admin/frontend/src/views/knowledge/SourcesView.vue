@@ -35,6 +35,11 @@
           :search="search"
           item-key="path"
         >
+          <template #[`item.status`]="{ item }">
+            <v-chip size="x-small" :color="getStatusColor(item.status)">
+              {{ (item.status || 'unknown').replace('_', ' ') }}
+            </v-chip>
+          </template>
           <template #[`item.path`]="{ item }">
             <div class="d-flex align-center">
               <v-icon
@@ -121,6 +126,17 @@
                   @click="viewFileContent(item)"
                 />
               </template>
+
+              <!-- Reindex button -->
+              <v-btn
+                icon="$refresh"
+                size="small"
+                variant="text"
+                color="primary"
+                :disabled="loading"
+                title="Reindex this file"
+                @click="reindexSource(item)"
+              />
 
               <!-- Delete button -->
               <v-btn
@@ -359,6 +375,7 @@ const emit = defineEmits(['refresh-complete'])
 const loading = ref(false)
 const search = ref('')
 const sources = ref([])
+const statusRows = ref([])
 const showEditDialog = ref(false)
 const showDeleteDialog = ref(false)
 const showFileEditorModal = ref(false)
@@ -381,9 +398,10 @@ const uploadProgress = ref({
 
 const sourceHeaders = [
   { title: 'Source Path', key: 'path', sortable: true },
+  { title: 'Status', key: 'status', sortable: true },
   { title: 'Content Type', key: 'content_type', sortable: true },
   { title: 'Chunks', key: 'chunk_count', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, width: '150px' }
+  { title: 'Actions', key: 'actions', sortable: false, width: '190px' }
 ]
 
 // File validation rules
@@ -513,6 +531,23 @@ const loadSources = async () => {
   try {
     const response = await adminAPI.getKnowledgeSources()
     sources.value = response.sources || []
+    // Enrich with file status from metadata DB
+    try {
+      const statusRes = await adminAPI.getKnowledgeFilesStatus({ limit: 1000 })
+      statusRows.value = statusRes.files || []
+      const byPath = Object.fromEntries(statusRows.value.map(r => [r.path, r]))
+      sources.value = (sources.value || []).map(s => {
+        const row = byPath[s.path]
+        return {
+          ...s,
+          status: row?.status || (s.chunk_count > 0 ? 'indexed' : 'discovered'),
+          vector_count: row?.vector_count ?? s.chunk_count
+        }
+      })
+    } catch (e) {
+      // Non-fatal: show without status
+      console.debug('Status enrichment skipped', e)
+    }
     emit('refresh-complete')
   } catch (error) {
     console.error('Failed to load sources:', error)
@@ -583,6 +618,21 @@ const deleteSource = async () => {
   }
 }
 
+const reindexSource = async (source) => {
+  try {
+    loading.value = true
+    await adminAPI.reindexKnowledgeFile(source.path)
+    showSuccess('Reindex started for ' + source.path)
+    // Reload to refresh chunk counts
+    loadSources()
+  } catch (e) {
+    console.error('Failed to reindex source:', e)
+    showError('Failed to reindex source')
+  } finally {
+    loading.value = false
+  }
+}
+
 const cancelEdit = () => {
   showEditDialog.value = false
   selectedSource.value = null
@@ -644,6 +694,17 @@ const isBinaryFile = (filePath) => {
 onMounted(() => {
   loadSources()
 })
+
+// UI helpers
+const getStatusColor = (status) => {
+  const s = (status || '').toLowerCase()
+  if (s === 'indexed') return 'success'
+  if (s === 'discovered') return 'grey'
+  if (s === 'pending_index') return 'info'
+  if (s === 'error') return 'error'
+  if (s === 'orphaned' || s === 'missing_file') return 'warning'
+  return 'default'
+}
 </script>
 
 <style scoped>

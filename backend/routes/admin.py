@@ -901,59 +901,9 @@ async def get_knowledge_files(session: Dict[str, Any] = Depends(require_admin_au
 
 
 # Content management endpoints
-@router.get("/content/gaps")
-async def get_content_gaps(
-    resolved: bool = Query(False, description="Include resolved content gaps"),
-    limit: int = Query(50, ge=1, le=200),
-    session: Dict[str, Any] = Depends(require_admin_auth),
-):
-    """Get content gaps detected automatically by the query logger."""
-    try:
-        with query_data_manager.get_connection() as conn:
-            cursor = conn.cursor()
-
-            where_clause = "WHERE resolved = 0" if not resolved else ""
-
-            cursor.execute(
-                f"""
-                SELECT
-                    cg.id,
-                    cg.query_pattern,
-                    cg.occurrence_count,
-                    cg.avg_similarity_score,
-                    cg.first_seen,
-                    cg.last_seen,
-                    cg.resolved,
-                    cg.notes,
-                    ql.user_query as sample_query
-                FROM content_gaps cg
-                LEFT JOIN query_logs ql ON cg.sample_query_id = ql.id
-                {where_clause}
-                ORDER BY cg.occurrence_count DESC, cg.avg_similarity_score ASC
-                LIMIT ?
-                """,
-                (limit,),
-            )
-
-            gaps = []
-            for row in cursor.fetchall():
-                gaps.append(
-                    {
-                        "id": row[0],
-                        "pattern": row[1],
-                        "count": row[2],
-                        "avg_score": round(row[3] or 0, 2),
-                        "first_seen": row[4],
-                        "last_seen": row[5],
-                        "resolved": bool(row[6]),
-                        "notes": row[7],
-                        "sample_query": row[8],
-                    }
-                )
-
-            return {"gaps": gaps, "total": len(gaps)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching content gaps: {str(e)}")
+# Note: Content gaps endpoints are provided by backend/routes/content.py.
+# They are mounted under both /api and /api/admin in app_factory to keep the
+# client base URL consistent. This avoids duplicate implementations here.
 
 
 # Export endpoints

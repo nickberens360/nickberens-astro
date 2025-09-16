@@ -1,177 +1,31 @@
 <template>
   <div class="knowledge-view">
-    <!-- Navigation Metric Cards - Always Visible -->
-    <v-row class="mb-6">
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
-        <v-card
-          elevation="1"
-          class="cursor-pointer"
-          :class="{'v-card--active': currentRoute === 'knowledge-sources'}"
-          @click="navigateTo('knowledge-sources')"
-        >
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon
-                color="green"
-                size="large"
-                class="me-3"
-              >
-                $folder
-              </v-icon>
-              <div>
-                <div class="text-h6">
-                  {{ knowledgeStats.unique_sources || 0 }}
-                </div>
-                <div class="text-body-2 text-medium-emphasis">
-                  Source Files
-                </div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
-        <v-card
-          elevation="1"
-          class="cursor-pointer"
-          :class="{'v-card--active': currentRoute === 'knowledge-documents'}"
-          @click="navigateTo('knowledge-documents')"
-        >
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon
-                color="blue"
-                size="large"
-                class="me-3"
-              >
-                $description
-              </v-icon>
-              <div>
-                <div class="text-h6">
-                  {{ knowledgeStats.total_documents || 0 }}
-                </div>
-                <div class="text-body-2 text-medium-emphasis">
-                  Indexed Documents
-                </div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
-        <v-card
-          elevation="1"
-          class="cursor-pointer"
-          :class="{'v-card--active': currentRoute === 'knowledge-gaps'}"
-          @click="navigateTo('knowledge-gaps')"
-        >
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon
-                color="warning"
-                size="large"
-                class="me-3"
-              >
-                $warning
-              </v-icon>
-              <div>
-                <div class="text-h6">
-                  {{ contentGaps || 0 }}
-                </div>
-                <div class="text-body-2 text-medium-emphasis">
-                  Content Gaps
-                </div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col
-        cols="12"
-        sm="6"
-        md="3"
-      >
-        <v-card
-          elevation="1"
-          class="cursor-pointer"
-          :class="{'v-card--active': currentRoute === 'knowledge-stats'}"
-          @click="navigateTo('knowledge-stats')"
-        >
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon
-                color="purple"
-                size="large"
-                class="me-3"
-              >
-                $chart
-              </v-icon>
-              <div>
-                <div class="text-h6">
-                  Analytics
-                </div>
-                <div class="text-body-2 text-medium-emphasis">
-                  Knowledge Stats
-                </div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <div class="knowledge-layout">
+      <!-- Vertical Navigation -->
+      <KnowledgeNavigation />
 
-    <!-- Action Buttons Row -->
-    <v-row class="mb-4">
-      <v-col class="d-flex justify-end">
-        <div class="d-flex gap-2">
-          <v-btn
-            color="primary"
-            prepend-icon="$refresh"
-            :loading="refreshLoading"
-            variant="outlined"
-            @click="refreshData"
-          >
-            Refresh
-          </v-btn>
-          <v-btn
-            color="warning"
-            prepend-icon="$refresh"
-            :loading="reindexLoading"
-            variant="outlined"
-            class="ml-3"
-            @click="confirmReindex"
-          >
-            Re-Index
-          </v-btn>
-        </div>
-      </v-col>
-    </v-row>
-
-    <!-- Router View for child components -->
-    <router-view v-slot="{ Component }">
-      <Transition
-        name="fade"
-        mode="out-in"
-      >
-        <component 
-          :is="Component" 
-          :refresh-trigger="refreshTrigger"
-          @refresh-complete="onRefreshComplete" 
+      <!-- Content Area -->
+      <main class="knowledge-content">
+        <KnowledgeHeader
+          :refresh-loading="refreshLoading"
+          :reindex-loading="reindexLoading"
+          @refresh="refreshData"
+          @reindex="confirmReindex"
         />
-      </Transition>
-    </router-view>
+
+        <!-- Legacy metric cards removed in favor of vertical nav -->
+
+        <!-- Action Buttons Row removed (buttons moved to header) -->
+
+        <!-- Routed content -->
+        <router-view v-slot="{ Component }">
+          <Transition name="fade" mode="out-in">
+            <component :is="Component" :refresh-trigger="refreshTrigger" @refresh-complete="onRefreshComplete" />
+          </Transition>
+        </router-view>
+      </main>
+    </div>
+    
 
     <!-- Re-Index Confirmation Dialog -->
     <v-dialog
@@ -199,7 +53,7 @@
             </v-alert>
             Are you sure you want to re-index the entire knowledge base?
           </div>
-          
+
           <!-- Progress Section -->
           <div v-else>
             <v-alert
@@ -209,7 +63,7 @@
               <v-icon class="me-2">$info</v-icon>
               Re-index process has been initiated. The system will process this request on the next server restart.
             </v-alert>
-            
+
             <div class="mb-4">
               <div class="text-body-2 mb-2">Setting up re-index operation...</div>
               <v-progress-linear
@@ -219,7 +73,7 @@
                 rounded
               />
             </div>
-            
+
             <div class="text-caption text-medium-emphasis">
               <v-icon size="16" class="me-1">$clock</v-icon>
               This may take a few moments to complete. Please wait...
@@ -251,13 +105,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { adminAPI } from '@/services/api'
 import { useNotifications } from '@/composables/useNotifications'
+import KnowledgeNavigation from '@/components/knowledge/KnowledgeNavigation.vue'
+import KnowledgeHeader from '@/components/knowledge/KnowledgeHeader.vue'
 
 const router = useRouter()
-const route = useRoute()
 const { showSuccess, showError, showInfo } = useNotifications()
 
 const loading = ref(false)
@@ -266,28 +121,11 @@ const reindexLoading = ref(false)
 const showReindexDialog = ref(false)
 const refreshTrigger = ref(0)
 
-const knowledgeStats = ref({
-  total_documents: 0,
-  total_chunks: 0,
-  unique_sources: 0,
-  content_types: {}
-})
-const contentGaps = ref(0)
 const embeddingModel = ref('text-embedding-3-small')
-
-const currentRoute = computed(() => route.name)
-
-const navigateTo = (routeName) => {
-  router.push({ name: routeName })
-}
 
 const refreshData = async () => {
   refreshLoading.value = true
   try {
-    // Refresh parent stats
-    await loadKnowledgeStats()
-    await loadContentGaps()
-    
     // Trigger child components to refresh
     refreshTrigger.value++
   } catch (error) {
@@ -308,20 +146,20 @@ const executeReindex = async () => {
     // Step 1: Set the reindex flag
     showInfo('Setting re-index flag...')
     const result = await adminAPI.refreshKnowledgeBase(true)
-    
+
     // Step 2: Show progress simulation with meaningful steps
     showInfo('Re-index flag set successfully! The system will process this on next restart.')
-    
+
     // Step 3: Provide polling to check flag status
     let flagProcessed = false
     let pollAttempts = 0
     const maxPolls = 30 // Poll for up to 1 minute
-    
+
     const pollInterval = setInterval(async () => {
       try {
         pollAttempts++
         const status = await adminAPI.getRefreshStatus()
-        
+
         if (!status.refresh_pending) {
           // Flag has been processed
           clearInterval(pollInterval)
@@ -341,7 +179,7 @@ const executeReindex = async () => {
         console.error('Error polling refresh status:', error)
       }
     }, 2000) // Poll every 2 seconds
-    
+
     // If flag wasn't processed within polling period, show helpful message
     setTimeout(() => {
       if (!flagProcessed && pollAttempts < maxPolls) {
@@ -350,7 +188,7 @@ const executeReindex = async () => {
         showReindexDialog.value = false
       }
     }, 60000) // 1 minute timeout
-    
+
   } catch (error) {
     console.error('Failed to set re-index flag:', error)
     showError('Failed to set re-index flag: ' + (error.response?.data?.detail || error.message || 'Unknown error'))
@@ -366,32 +204,11 @@ const onRefreshComplete = () => {
 }
 
 
-const loadKnowledgeStats = async () => {
-  try {
-    knowledgeStats.value = await adminAPI.getKnowledgeStats()
-  } catch (error) {
-    console.error('Failed to load knowledge stats:', error)
-  }
-}
-
-const loadContentGaps = async () => {
-  try {
-    const response = await adminAPI.getContentGaps({ resolved: false, limit: 100 })
-    contentGaps.value = response.total_count || 0
-  } catch (error) {
-    console.error('Failed to load content gaps:', error)
-  }
-}
-
-onMounted(() => {
-  loadKnowledgeStats()
-  loadContentGaps()
-})
+onMounted(() => {})
 </script>
 
 <style scoped>
 .knowledge-view {
-  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -405,11 +222,6 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.v-card--active {
-  border: 2px solid rgb(var(--v-theme-primary));
-  background-color: rgba(var(--v-theme-primary), 0.04);
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -418,5 +230,15 @@ onMounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* New layout mirroring Settings layout */
+.knowledge-layout { display: flex; gap: 24px; align-items: flex-start; }
+.knowledge-content { flex: 1; min-width: 0; }
+.page-header { padding: 0 8px 8px 8px; }
+.gap-2 { gap: 8px; }
+
+@media (max-width: 1024px) {
+  .knowledge-layout { flex-direction: column; gap: 16px; }
 }
 </style>

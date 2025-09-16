@@ -305,6 +305,28 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
 
+    # Validate knowledge consistency (dry-run) and log a concise summary
+    try:
+        from .knowledge_state_sync import KnowledgeStateSync
+
+        sync = KnowledgeStateSync(
+            unified_retriever,
+            persist_dir=persist_dir,
+            index_dirs=["backend/knowledge", "public"],
+        )
+        summary, diff = sync.validate()
+        logger.info(
+            "Knowledge consistency — fs:%d, vec:%d, tracked:%d | missing:%d changed:%d orphans:%d",
+            summary.filesystem_files,
+            summary.vector_docs,
+            summary.tracked_files,
+            summary.discovered_not_indexed,
+            summary.changed_files,
+            summary.vector_orphans,
+        )
+    except Exception as e:
+        logger.debug(f"Knowledge consistency validation skipped: {e}")
+
     # Warmup settings cache during app initialization
     try:
         settings_manager = get_settings_manager()

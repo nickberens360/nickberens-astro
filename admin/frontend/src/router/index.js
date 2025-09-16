@@ -86,6 +86,14 @@ const router = createRouter({
               }
             },
             {
+              path: 'consistency',
+              name: 'knowledge-consistency',
+              component: () => import('@/views/knowledge/ConsistencyView.vue'),
+              meta: {
+                title: 'Consistency & Reconciliation'
+              }
+            },
+            {
               path: 'gaps',
               name: 'knowledge-gaps',
               component: () => import('@/views/knowledge/GapsView.vue'),
