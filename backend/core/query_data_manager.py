@@ -27,9 +27,18 @@ class QueryDataManager:
 
     @contextmanager
     def get_connection(self):
-        """Get a database connection with proper cleanup."""
-        conn = sqlite3.connect(str(self.db_path))
+        """Get a database connection with proper cleanup and thread-safety."""
+        # Allow use from FastAPI threadpool workers and add a reasonable timeout
+        conn = sqlite3.connect(str(self.db_path), timeout=15.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row  # Enable dict-like access
+        try:
+            # Improve concurrency and integrity (best-effort)
+            conn.execute("PRAGMA busy_timeout=5000;")
+            conn.execute("PRAGMA foreign_keys=ON;")
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except Exception:
+            pass
         try:
             yield conn
             conn.commit()
@@ -109,6 +118,10 @@ class QueryDataManager:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_session_id ON query_logs(session_id)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_error ON query_logs(error_occurred)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved ON content_gaps(resolved)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_last_seen ON content_gaps(last_seen DESC)")
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved_last_seen ON content_gaps(resolved, last_seen DESC)"
+                )
 
                 logger.info("Query data manager database initialized successfully")
 

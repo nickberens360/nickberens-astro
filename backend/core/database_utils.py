@@ -97,8 +97,19 @@ def get_rag_monitoring_db_connection() -> Optional[sqlite3.Connection]:
         return None
 
     try:
-        conn = sqlite3.connect(str(db_path))
+        # Use a sensible timeout and allow connections from threadpool workers
+        conn = sqlite3.connect(str(db_path), timeout=15.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row  # Enable dict-like access to rows
+        try:
+            # Busy timeout helps under brief contention; foreign_keys improves integrity
+            conn.execute("PRAGMA busy_timeout=5000;")
+            conn.execute("PRAGMA foreign_keys=ON;")
+            # Favor WAL for better concurrency and NORMAL sync for performance
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except Exception:
+            # Pragmas are best-effort; ignore if not supported
+            pass
         return conn
     except Exception as e:
         logger.error(f"Failed to connect to RAG monitoring database: {e}")
