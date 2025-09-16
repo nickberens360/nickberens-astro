@@ -529,25 +529,48 @@ const getContentTypeColor = (type) => {
 const loadSources = async () => {
   loading.value = true
   try {
-    const response = await adminAPI.getKnowledgeSources()
-    sources.value = response.sources || []
-    // Enrich with file status from metadata DB
+    // DB-first: show all discovered files regardless of vector state
+    const statusRes = await adminAPI.getKnowledgeFilesStatus({ limit: 1000 })
+    const rows = statusRes.files || []
+    statusRows.value = rows
+
+    // Build base list from DB rows
+    const base = rows.map(r => {
+      const p = r.path || ''
+      let displayPath = p
+      if (p.startsWith('backend/knowledge/')) displayPath = p.replace('backend/knowledge/', '')
+      else if (p.startsWith('public/')) displayPath = p.replace('public/', '')
+      return {
+        path: p,
+        display_path: displayPath,
+        content_type: 'unknown',
+        chunk_count: typeof r.vector_count === 'number' ? r.vector_count : 0,
+        status: r.status || (r.vector_count > 0 ? 'indexed' : 'discovered'),
+      }
+    })
+
+    // Enrich content type and chunk counts from vector store (when available)
     try {
-      const statusRes = await adminAPI.getKnowledgeFilesStatus({ limit: 1000 })
-      statusRows.value = statusRes.files || []
-      const byPath = Object.fromEntries(statusRows.value.map(r => [r.path, r]))
-      sources.value = (sources.value || []).map(s => {
-        const row = byPath[s.path]
-        return {
-          ...s,
-          status: row?.status || (s.chunk_count > 0 ? 'indexed' : 'discovered'),
-          vector_count: row?.vector_count ?? s.chunk_count
-        }
+      const vec = await adminAPI.getKnowledgeSources()
+      const vecList = vec.sources || []
+      const byPath = Object.fromEntries(vecList.map(s => [s.path, s]))
+      sources.value = base.map(item => {
+        const v = byPath[item.path]
+        return v
+          ? {
+              ...item,
+              // prefer vector content type if present
+              content_type: v.content_type || item.content_type,
+              // prefer vector chunk count if present
+              chunk_count: typeof v.chunk_count === 'number' ? v.chunk_count : item.chunk_count,
+            }
+          : item
       })
     } catch (e) {
-      // Non-fatal: show without status
-      console.debug('Status enrichment skipped', e)
+      // If vector enrichment fails, still show DB rows
+      sources.value = base
     }
+
     emit('refresh-complete')
   } catch (error) {
     console.error('Failed to load sources:', error)

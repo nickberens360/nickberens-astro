@@ -1,43 +1,71 @@
 <template>
   <div class="consistency-view">
-    <v-card class="mb-4">
-      <v-card-title class="text-h6 d-flex align-center">
-        <v-icon class="me-2" color="primary">$check-circle</v-icon>
-        Knowledge Consistency
-        <v-spacer />
-        <v-btn size="small" variant="text" :loading="loading" @click="load()">Refresh</v-btn>
-      </v-card-title>
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" sm="6" md="3">
-            <v-sheet class="pa-4 rounded-lg" color="blue-lighten-5">
-              <div class="text-caption text-medium-emphasis">Filesystem Files</div>
-              <div class="text-h6">{{ summary.filesystem_files }}</div>
-            </v-sheet>
-          </v-col>
-          <v-col cols="12" sm="6" md="3">
-            <v-sheet class="pa-4 rounded-lg" color="cyan-lighten-5">
-              <div class="text-caption text-medium-emphasis">Vector Docs (chunks)</div>
-              <div class="text-h6">{{ summary.vector_docs }}</div>
-            </v-sheet>
-          </v-col>
-          <v-col cols="12" sm="6" md="3">
-            <v-sheet class="pa-4 rounded-lg" color="purple-lighten-5">
-              <div class="text-caption text-medium-emphasis">Tracked Files</div>
-              <div class="text-h6">{{ summary.tracked_files }}</div>
-            </v-sheet>
-          </v-col>
-          <v-col cols="12" sm="6" md="3">
-            <v-sheet class="pa-4 rounded-lg" color="orange-lighten-5">
-              <div class="text-caption text-medium-emphasis">Mismatches</div>
-              <div class="text-h6">{{ mismatchTotal }}</div>
-            </v-sheet>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
+    <div class="mb-4">
+      <v-row>
+        <v-col cols="12" sm="6" md="3">
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">Filesystem Files</div>
+                <v-avatar size="40" color="rgba(59, 130, 246, 0.1)" variant="flat">
+                  <v-icon color="info" size="20">$folder</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ summary.filesystem_files }}
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col cols="12" sm="6" md="3">
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">Vector Docs (chunks)</div>
+                <v-avatar size="40" color="rgba(16, 185, 129, 0.1)" variant="flat">
+                  <v-icon color="success" size="20">$database</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ summary.vector_docs }}
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col cols="12" sm="6" md="3">
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">Tracked Files</div>
+                <v-avatar size="40" color="rgba(139, 92, 246, 0.1)" variant="flat">
+                  <v-icon color="primary" size="20">$file</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ summary.tracked_files }}
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col cols="12" sm="6" md="3">
+          <v-card class="metric-style-card">
+            <v-card-text class="pa-6">
+              <div class="d-flex align-center justify-space-between mb-4">
+                <div class="text-subtitle-1 font-weight-medium text-medium-emphasis">Mismatches</div>
+                <v-avatar size="40" color="rgba(245, 158, 11, 0.1)" variant="flat">
+                  <v-icon color="warning" size="20">$alert</v-icon>
+                </v-avatar>
+              </div>
+              <div class="metric-value text-h4 font-weight-bold text-high-emphasis">
+                {{ mismatchTotal }}
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </div>
 
-    <v-card class="mb-4">
+    <v-card class="mb-4 settings-card">
       <v-card-title class="text-h6">Reconcile</v-card-title>
       <v-card-text>
         <v-row>

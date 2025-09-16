@@ -257,7 +257,9 @@ class AdminAPI {
   async getKnowledgeFilesStatus(params = {}) {
     const searchParams = new URLSearchParams()
     if (params.status) searchParams.append('status', params.status)
-    if (params.limit) searchParams.append('limit', params.limit)
+    // Backend validation caps limit at 1000; clamp client value to avoid 422
+    const limit = Math.min(params.limit ?? 200, 1000)
+    searchParams.append('limit', limit)
     if (params.offset) searchParams.append('offset', params.offset)
     const qs = searchParams.toString()
     return await this.client.get(`/knowledge/files/status${qs ? `?${qs}` : ''}`)
