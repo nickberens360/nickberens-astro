@@ -223,9 +223,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { adminAPI } from '@/services/api'
+import { useNotifications } from '@/composables/useNotifications'
 
 const router = useRouter()
 const route = useRoute()
+const { showSuccess, showError } = useNotifications()
 
 const loading = ref(false)
 const refreshLoading = ref(false)
@@ -295,15 +297,6 @@ const onRefreshComplete = () => {
   // Can be used for additional coordination if needed
 }
 
-const showSuccess = (message) => {
-  // Simple success notification - could be enhanced with a toast system
-  console.log('SUCCESS:', message)
-}
-
-const showError = (message) => {
-  // Simple error notification - could be enhanced with a toast system  
-  console.error('ERROR:', message)
-}
 
 const loadKnowledgeStats = async () => {
   try {
