@@ -377,6 +377,7 @@ class AppConfig:
             "http://localhost:8001",
             "http://localhost:8002",
             "http://localhost:8003",
+            "https://devserver-development--nickberens360.netlify.app",
         ]
 
         if environment in ["production", "prod"]:
