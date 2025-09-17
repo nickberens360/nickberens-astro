@@ -779,12 +779,8 @@ const updateCharts = () => {
 const loadStats = async () => {
   loading.value = true
   try {
-    // Call the knowledge stats endpoint through the public API
-    const response = await fetch('/api/public/knowledge/stats')
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    const data = await response.json()
+    // Call the knowledge stats endpoint through the admin API
+    const data = await adminAPI.getKnowledgeStats()
     stats.value = data
     await nextTick()
     updateCharts()
