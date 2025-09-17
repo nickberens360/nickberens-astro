@@ -159,6 +159,10 @@ class SQLiteQueryLogger:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_errors ON query_logs(error_occurred)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved ON content_gaps(resolved)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_score ON content_gaps(avg_similarity_score)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_last_seen ON content_gaps(last_seen DESC)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved_last_seen ON content_gaps(resolved, last_seen DESC)"
+            )
 
             conn.commit()
             self.logger.info("SQLite database initialized at %s", self.sqlite_db_path)

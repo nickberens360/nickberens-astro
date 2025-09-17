@@ -15,7 +15,7 @@ export const DEFAULT_TERMINAL = {
   helpOutput: [
     'Available commands:',
     '- clear: Clear the terminal',
-    '- bust-cache: Clear localStorage',
+    '- bust-cache: Clear localStorage (with confirmation)',
     '- help: Show this help message',
     '- theme: Toggle between light and dark theme',
     '- version: Show terminal version',

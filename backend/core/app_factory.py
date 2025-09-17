@@ -251,6 +251,7 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
         content,
         health,
         knowledge,
+        knowledge_admin_sync,
         knowledge_public,
         performance,
         queries,
@@ -312,6 +313,9 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     app.include_router(admin_refresh.router, prefix="/api/admin")
     app.include_router(queries.router, prefix="/api/admin")
     app.include_router(knowledge.router, prefix="/api/admin")  # Admin operations (read + write)
+    app.include_router(knowledge_admin_sync.router, prefix="/api/admin")
+    # Expose content routes under admin prefix as well for consistent client base
+    app.include_router(content.router, prefix="/api/admin")
 
     # Serve admin frontend static files (mount after API routes to avoid conflicts)
     admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"

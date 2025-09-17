@@ -113,6 +113,8 @@ test-results/
 playwright-report/
 tests/e2e/test-results/
 admin/frontend/test-results/
+.pytest_cache/
+chroma_db/
 *.png
 *.webm
 *.json.auth

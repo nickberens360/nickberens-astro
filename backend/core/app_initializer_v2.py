@@ -228,25 +228,29 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
         use_fast_classifier=True,
         classification_mode="hybrid",
     )
-    # Respect environment flag for heterogeneity fallback (default OFF)
+    # Configure knowledge settings (DB-backed with env fallback)
     try:
-        env_flag = os.getenv("ENABLE_HETEROGENEITY_FALLBACK", "false").lower() in ("1", "true", "yes")
-        unified_retriever.content_indexer.enable_heterogeneity_fallback = env_flag
-        logger.info(f"Heterogeneity fallback enabled: {env_flag}")
+        from .settings_manager import get_settings_manager
+
+        kset = get_settings_manager().get_knowledge_settings()
+        enable_fallback = bool(getattr(kset, "enable_heterogeneity_fallback", False))
+        index_on_startup = bool(getattr(kset, "index_on_startup", True))
+        index_dirs = list(getattr(kset, "index_directories", [])) or ["backend/knowledge", "public"]
+    except Exception:
+        enable_fallback = os.getenv("ENABLE_HETEROGENEITY_FALLBACK", "false").lower() in ("1", "true", "yes")
+        index_on_startup = not (os.getenv("SKIP_INDEXING", "false").lower() in ("1", "true", "yes"))
+        index_dirs = ["backend/knowledge", "public"]
+
+    try:
+        unified_retriever.content_indexer.enable_heterogeneity_fallback = enable_fallback
+        logger.info(f"Heterogeneity fallback enabled: {enable_fallback}")
     except Exception:
         logger.debug("Could not configure heterogeneity fallback on content indexer")
-
-    # Optionally skip auto-indexing in tests/CI to speed up imports
-    skip_indexing = os.getenv("SKIP_INDEXING", "false").lower() in ("1", "true", "yes")
     total_files = 0
     total_chunks = 0
-    if not skip_indexing:
-        # Auto-index all content directories
-        directories_to_index = [
-            "backend/knowledge",  # Knowledge base documents
-            "public",  # JSON data files
-            # Add more directories as needed
-        ]
+    if index_on_startup:
+        # Auto-index configured content directories
+        directories_to_index = index_dirs
 
         # Check if we should force rebuild
         force_rebuild = os.getenv("FORCE_REBUILD_DATA", "false").lower() == "true"
@@ -283,7 +287,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
         except Exception:
             logger.info(f"✅ Total indexed: {total_files} files, {total_chunks} chunks")
     else:
-        logger.info("⏭️ Skipping auto-indexing due to SKIP_INDEXING=true")
+        logger.info("⏭️ Skipping auto-indexing per knowledge settings")
 
     # Follow-up pregeneration removed in simplification - using static questions only
     logger.info("⚡ Using static follow-up questions for instant responses")
@@ -304,6 +308,28 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
 
     # Store unified retriever for direct access if needed
     all_retrievers["_unified_retriever"] = unified_retriever  # type: ignore[assignment]
+
+    # Validate knowledge consistency (dry-run) and log a concise summary
+    try:
+        from .knowledge_state_sync import KnowledgeStateSync
+
+        sync = KnowledgeStateSync(
+            unified_retriever,
+            persist_dir=persist_dir,
+            index_dirs=index_dirs,
+        )
+        summary, diff = sync.validate()
+        logger.info(
+            "Knowledge consistency — fs:%d, vec:%d, tracked:%d | missing:%d changed:%d orphans:%d",
+            summary.filesystem_files,
+            summary.vector_docs,
+            summary.tracked_files,
+            summary.discovered_not_indexed,
+            summary.changed_files,
+            summary.vector_orphans,
+        )
+    except Exception as e:
+        logger.debug(f"Knowledge consistency validation skipped: {e}")
 
     # Warmup settings cache during app initialization
     try:

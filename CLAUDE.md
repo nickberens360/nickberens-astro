@@ -2,887 +2,118 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Project Context for Claude
+# Project Context
 
 ## Project Overview
 Nick Berens' personal website with an intelligent RAG-powered AI assistant. Backend built with FastAPI, frontend with Astro. The backend uses a **unified smart retriever system** that automatically discovers, indexes, and intelligently routes queries to relevant content without manual configuration. Features a comprehensive admin dashboard for monitoring and analytics.
 
 ## Key Commands
 
-### Build Commands
-- `npm run build` - Build the Astro frontend
-- `npm run dev` - Start Astro development server
-- `npm run backend:build` - Build backend container with Podman
-- `npm run backend:dev` - Run backend in development mode with hot reload
-- `npm run backend:dev:reindex` - Run backend with forced data reindexing
-- `npm run backend:stop` - Stop the backend container
+### Development
+- `npm run dev` - Start Astro frontend dev server
+- `npm run backend:dev` - Run backend with hot reload
+- `npm run backend:dev:reindex` - Force reindex data
+- `npm run admin:frontend` - Start admin dashboard
+- `make lint-fast` - Quick format (Black + isort)
+- `make test-unit` - Run unit tests only
+- `pytest -m unit` - Fast unit tests
 
-### Admin Commands
-- `npm run admin:backend` - Start admin backend server
-- `npm run admin:frontend` - Start admin frontend development server
-- `npm run admin:build` - Build admin frontend for production
-- `npm run admin` - Start admin frontend (backend integrated into main app)
-- `npm run admin:stop` - Stop admin backend processes
-- `npm run admin:sync` - Sync query logs with admin database
-- `npm run db:verify` - Verify database migration and structure
+### Deployment
+- `npm run build` - Build Astro frontend
+- `npm run backend:build` - Build backend container
+- `npm run admin:build` - Build admin frontend
+- `npm run railway:deploy` - Deploy to Railway
 
-### Test Commands
-- `pytest` - Run Python tests with coverage (configured in pyproject.toml)
-- `pytest --cov=backend/core` - Run tests with explicit coverage
-- `pytest -m unit` - Run only unit tests (fast)
-- `pytest -m integration` - Run integration tests (slower)
-- `npm test` - Run frontend tests with Vitest
-- `npm run test:run` - Run frontend tests once
-- `PYTHONPATH=. pytest tests/` - Run tests with proper Python path
-- `pytest tests/integration/test_api_endpoints.py -v` - Run specific test file with verbose output
+### Code Quality (Run before commits)
+- `make lint-fix` - Auto-format all code
+- `make lint` - Full lint pipeline
+- `pytest` - Run all tests with coverage
 
-### E2E Test Commands
-- `npm run e2e` - Run end-to-end tests with Playwright
-- `npm run e2e:headed` - Run E2E tests in headed mode (visible browser)
-- `npm run e2e:debug` - Run E2E tests with debugging enabled
-- `npm run e2e:ui` - Run E2E tests with Playwright UI mode
-- `npm run e2e:report` - Show Playwright test report
-- `npm run e2e:install` - Install Playwright browsers
+## API Endpoints
 
-### Railway Deployment Commands
-- `npm run railway:build` - Build for Railway deployment with admin frontend
-- `npm run railway:deploy` - Deploy to Railway platform
+### Main Query API
+- `POST /api/query` - Primary AI query endpoint (streaming responses)
+- `GET /api/health` - Health check
+- `GET /api/status` - System status with rate limits
 
-### Makefile Commands
-- `make lint-fix` - Auto-format code with Black, isort, and autoflake
-- `make lint-check` - Check code formatting without making changes
-- `make type-check` - Run MyPy type checking on backend/core
-- `make lint` - Full lint pipeline: fix, check, and type-check
-- `make lint-fast` - Quick lint without MyPy (faster for dev cycles)
-- `make test-unit` - Run unit tests only (excludes integration and slow tests)
-- `make test-integration` - Run integration tests only
-
-### Linting & Type Checking
-**Pre-commit hooks (run automatically on commit):**
-- Black (code formatting) + isort (import sorting) - **MINIMAL** setup for speed
-- Basic safety checks (YAML validation, large files, merge conflicts)
-- MyPy and flake8 excluded from pre-commit for faster commits
-
-**Manual linting commands (as needed):**
-- `black .` - Format Python code (line length: 120)
-- `isort .` - Sort Python imports
-- `autoflake --in-place --remove-all-unused-imports --remove-unused-variables --recursive .` - Remove unused imports
-- `flake8 .` - Check Python style (relaxed rules, focuses on real issues)
-- `mypy backend/core --ignore-missing-imports` - Type checking on core modules
-
-### Pre-commit Hooks (Automated Quality Checks)
-**Pre-commit hooks are configured for speed and essential checks:**
-
-- `pip install pre-commit` - Install pre-commit (if not already installed)
-- `pre-commit install` - Install git pre-commit hooks
-- `pre-commit run --all-files` - Run all hooks on all files manually
-- `pre-commit clean` - Clean pre-commit cache if needed
-
-**Note:** MyPy is excluded from pre-commit for faster commits. Run manually when needed.
-
-### Linting Configuration Rules
-**Follow these rules when writing/editing Python code:**
-
-1. **Black Formatting:**
-   - Line length: 120 characters
-   - Target Python versions: 3.9, 3.10, 3.11
-   - Use Black's default formatting
-
-2. **Import Sorting (isort):**
-   - Profile: black (compatible with Black)
-   - Line length: 120
-   - Multi-line output: 3
-   - Known first party: ["backend", "tests"]
-
-3. **Flake8 Style:**
-   - Max line length: 120
-   - Ignore: E203 (whitespace before ':'), W503 (line break before binary operator)
-   - Per-file ignores: __init__.py (F401), tests/* (F401, F811)
-   - Excludes: .git, __pycache__, .venv, venv, node_modules, build, dist
-
-4. **MyPy Type Checking (Relaxed for Development):**
-   - Python version: 3.11
-   - ignore_missing_imports: true
-   - follow_imports: silent
-   - show_error_codes: true
-   - warn_unused_configs: true
-   - Relaxed settings: no_implicit_optional: false, strict_optional: false
-
-## Backend API Routes
-
-The backend exposes the following REST API endpoints:
-
-> Note: Public endpoints are standardized under the `/api/` prefix. Root-level variants remain as temporary aliases for compatibility and will be deprecated.
-
-### Public Endpoints (No Authentication Required)
-
-#### Health & Status
-- `GET /api/` - Basic health check (alias of `/api/health`)
-- `GET /api/status` - Detailed system status with rate limits and initialization status
-- `GET /api/health` - Health check with service validation for load balancers
-- `GET /api/rate-limits` - AI model rate limit status monitoring
-- `GET /api/db-paths` - Debug endpoint for database path information
-- `GET /api/welcome-questions` - Active welcome questions for homepage
-
-Legacy aliases (temporary): `GET /`, `/status`, `/health`, `/rate-limits`, `/db-paths`, `/welcome-questions`.
-
-#### Main Query API
-- `POST /api/query` - Primary endpoint for AI-powered knowledge queries with streaming responses
-- `GET /api/default-model` - Get configured default response model for frontend initialization
-
-Legacy aliases (temporary): `POST /query`, `GET /default-model`.
-
-#### Smart Query Testing (Advanced)
-- `POST /api/smart-query` - Advanced smart query with detailed metadata
-- `GET /api/smart-query/status` - Check unified retriever system status
-- `POST /api/smart-query/analyze` - Analyze query intent without retrieving documents
-
-### Public Knowledge Base (Read-Only)
-- `GET /api/knowledge/documents` - Browse indexed documents (paginated)
-- `GET /api/knowledge/stats` - Knowledge base statistics and metrics
-- `GET /api/knowledge/sources` - List unique content sources
-- `GET /api/knowledge/documents/{document_id}` - Get specific document content
-
-### Admin-Protected Endpoints (Session Authentication Required)
-
-#### Authentication & User Management
-- `POST /api/admin/auth/login` - Admin login with credentials
-- `POST /api/admin/auth/logout` - Admin logout and session cleanup
-- `GET /api/admin/auth/me` - Current user information
-- `POST /api/admin/auth/change-password` - Change user password
-- `POST /api/admin/auth/create-user` - Create new admin user (admin role required)
-- `PUT /api/admin/user/display-name` - Update user display name
-- `PUT /api/admin/user/email` - Update user email address
-
-#### Admin Dashboard Analytics
-- `GET /api/admin/stats/overview` - Overview statistics for dashboard
-- `GET /api/admin/queries` - List queries with filtering and pagination
-- `GET /api/admin/queries/{query_id}` - Get detailed query information
-- `POST /api/admin/queries/{query_id}/feedback` - Update query feedback
-- `GET /api/admin/queries/insights` - Query analytics and insights
-
-#### Performance Monitoring
-- `GET /api/admin/performance/metrics` - Performance metrics with comparison
-- `GET /api/admin/performance/timeline` - Timeline data for performance charts
-- `GET /api/admin/performance/percentiles` - Response time percentiles
-
-#### Deprecation Notice
-- Root-level public endpoints and `/api/public/*` are deprecated and will be removed in a future release. Use `/api/*`.
-
-#### Knowledge Base Management
-- `GET /admin/api/knowledge/documents` - Indexed documents with management features
-- `GET /admin/api/knowledge/stats` - Knowledge base statistics
-- `GET /admin/api/knowledge/sources` - Content sources with management options
-- `GET /admin/api/knowledge/documents/{document_id}` - Document content
-- `PUT /admin/api/knowledge/sources/{source_path}` - Update source metadata
-- `DELETE /admin/api/knowledge/sources/{source_path}` - Delete source and chunks
-- `GET /admin/api/knowledge/files/{file_path}/content` - Get file content
-- `PUT /admin/api/knowledge/files/{file_path}/content` - Update file content
-- `POST /admin/api/knowledge/upload` - Upload new files to knowledge base
-- `GET /admin/api/knowledge/files` - List files in knowledge directory
-
-#### Content Gap Analysis
-- `GET /admin/api/content/gaps` - Content gaps from analytics
-- `PATCH /admin/api/content/gaps/{gap_id}` - Update content gap status
-- `GET /admin/api/content/popular-topics` - Popular query topics analysis
-- `GET /admin/api/content/sources` - Source usage analytics
-
-#### Settings Management
-
-**System Configuration**
-- `GET /admin/api/settings/system-config` - System-wide configuration settings
-- `PUT /admin/api/settings/system-config` - Update system configuration
-
-**Response Settings**
-- `GET /admin/api/settings/response` - Response model and generation settings
-- `PUT /admin/api/settings/response` - Update response settings
-
-**Query Routing**
-- `GET /admin/api/settings/routing` - Query routing configuration
-- `PUT /admin/api/settings/routing` - Update routing settings
-
-**RAG Configuration**
-- `GET /admin/api/settings/rag-config` - RAG system configuration
-- `PUT /admin/api/settings/rag-config` - Update RAG settings
-
-**Security Settings**
-- `GET /admin/api/settings/security` - Security and rate limiting settings
-- `PUT /admin/api/settings/security` - Update security configuration
-
-**Feature Toggles**
-- `GET /admin/api/settings/features` - Feature flags and toggles
-- `PUT /admin/api/settings/features` - Update feature flags
-
-**API Key Management**
-- `GET /admin/api/settings/api-keys` - List configured API keys
-- `POST /admin/api/settings/api-keys` - Create new API key
-- `PUT /admin/api/settings/api-keys/{key_name}` - Update API key
-- `POST /admin/api/settings/api-keys/{key_name}/toggle` - Enable/disable API key
-- `DELETE /admin/api/settings/api-keys/{key_name}` - Delete API key
-- `POST /admin/api/settings/api-keys/{key_name}/validate` - Validate API key
-- `POST /admin/api/settings/api-keys/migrate-from-env` - Migrate from environment variables
-
-**Follow-up Questions Management**
-- `GET /admin/api/settings/followup` - Follow-up settings configuration
-- `PUT /admin/api/settings/followup` - Update follow-up settings
-- `POST /admin/api/settings/followup/reset` - Reset to default settings
-- `GET /admin/api/settings/followup/categories` - List followup categories
-- `POST /admin/api/settings/followup/categories` - Create new category
-- `PUT /admin/api/settings/followup/categories/{category_id}` - Update category
-- `POST /admin/api/settings/followup/categories/{category_id}/delete` - Delete category with strategy
-- `GET /admin/api/settings/followup/categories/{category_id}/stats` - Category usage statistics
-- `GET /admin/api/settings/followup/questions` - List followup questions
-- `POST /admin/api/settings/followup/questions` - Create new question
-- `PUT /admin/api/settings/followup/questions/{question_id}` - Update question
-- `DELETE /admin/api/settings/followup/questions/{question_id}` - Delete question
-- `POST /admin/api/settings/followup/questions/bulk` - Bulk update questions
-
-**Welcome Questions**
-- `GET /admin/api/settings/welcome/questions` - List welcome questions
-- `POST /admin/api/settings/welcome/questions` - Create welcome question
-- `PUT /admin/api/settings/welcome/questions/{question_id}` - Update welcome question
-- `DELETE /admin/api/settings/welcome/questions/{question_id}` - Delete welcome question
-
-**Settings Cache Management**
-- `GET /admin/api/settings/cache/status` - Settings cache status
-- `POST /admin/api/settings/cache/invalidate` - Invalidate settings cache
-
-#### Security & Monitoring
-- `GET /admin/api/security/alerts` - Security alerts and suspicious activity
-- `GET /admin/api/security/session-stats` - Session security statistics
-- `GET /admin/api/export/csv` - Export query data as CSV
-
-#### System Refresh
+### Admin Endpoints (Session Protected)
+- `POST /api/admin/auth/login` - Admin login
+- `GET /api/admin/stats/overview` - Dashboard statistics
+- `GET /admin/api/settings/*` - Settings management (API keys, followup questions, etc.)
 - `POST /admin/api/refresh` - Trigger knowledge base refresh
-- `GET /admin/api/refresh/status` - Check refresh status
+- `GET /api/query-logs` - Query logs with analytics
 
-#### User Management (Admin Role Required)
-- `GET /admin/api/users` - List all admin users
-- `POST /admin/api/users` - Create new admin user
-- `POST /admin/api/users/{user_id}/deactivate` - Deactivate user (standardized to POST)
-- `POST /admin/api/users/{user_id}/reactivate` - Reactivate user
-- `POST /admin/api/users/bulk/deactivate` - Bulk deactivate users
-- `DELETE /admin/api/users/bulk` - Bulk delete users
-- `DELETE /admin/api/users/{user_id}` - Permanently delete user
+## Architecture
 
-> **API Design Note**: User activation/deactivation uses `POST` for consistency, as these are action-oriented operations on sub-resources rather than direct resource updates.
-
-#### Testing & Debug
-- `POST /admin/api/test/reset-database` - Reset database for testing
-
-### Protected Query Logs (Admin Authentication)
-- `GET /api/query-logs` - View query logs with filtering (rate limited)
-- `GET /api/query-logs/stats` - Query log statistics
-- `DELETE /api/query-logs` - Clear all query logs (destructive)
-- `GET /api/query-logs/download` - Export logs as JSON
-- `GET /api/query-logs/health` - Query logging system health check
-- `GET /api/query-logs/admin` - Web interface for query log management
-
-### Rate Limiting
-Most admin endpoints are rate limited:
-- Authentication: 5 requests/minute
-- Query logs: 60 requests/minute  
-- Stats/performance: 30 requests/minute
-- Settings updates: 10 requests/minute
-- System refresh: 5 requests/minute
-
-### Response Formats
-- **Streaming**: `/query` endpoint supports streaming responses for real-time AI generation
-- **JSON**: All other endpoints return structured JSON responses
-- **Pagination**: List endpoints support limit/offset pagination
-- **Filtering**: Most list endpoints support filtering by date, type, status, etc.
-- **Error Handling**: Consistent HTTP status codes with detailed error messages
-
-## Smart Retriever Architecture
-
-### Unified System (NO MANUAL CONFIGURATION NEEDED!)
-The system now uses a **unified smart retriever** that:
-- ✅ **Automatically discovers** all content from directories
-- ✅ **Intelligently detects** content types (technical, experience, creative, etc.)
-- ✅ **Smart query routing** based on intent analysis
-- ✅ **No YAML configuration** required - just drop files in directories
-- ✅ **Zero manual setup** for new content sources
+### Unified Smart Retriever (Zero Configuration!)
+- ✅ **Auto-discovery**: Finds all content from directories automatically
+- ✅ **Smart routing**: Understands query intent and routes appropriately
+- ✅ **Content detection**: Categorizes technical, experience, creative content
+- ✅ **No configuration**: Just drop files in directories
 
 ### Project Structure
 ```
-backend/
-├── core/           # Core business logic
-│   ├── app_factory.py             # FastAPI application factory
-│   ├── app_initializer_v2.py      # Unified retriever initialization
-│   ├── unified_retriever.py       # Smart auto-discovery system
-│   ├── smart_illustration_service.py  # Enhanced smart image search with caching
-│   ├── smart_query_handler.py     # Intelligent query processing
-│   ├── query_logger.py            # Query logging factory (returns SQLiteQueryLogger)
-│   ├── sqlite_query_logger.py    # SQLite-based query logging implementation
-│   ├── query_router.py            # Query routing logic
-│   ├── response_service.py        # Response processing service
-│   ├── response_cache_warmer.py   # Cache warming service
-│   ├── followup_service.py        # Follow-up question service (configurable)
-│   ├── followup_management_service.py  # Enhanced followup management service
-│   ├── geolocation_service.py     # Location-based services
-│   ├── geolocation_validator.py   # Geolocation validation and security
-│   ├── llm_utils.py               # Shared LLM utilities
-│   ├── constants.py               # Shared constants and stop words
-│   ├── config.py                  # Centralized configuration with validation
-│   ├── llm_chain.py               # LLM chain with smart routing
-│   ├── fast_content_classifier.py # Fast content classification service
-│   ├── fast_query_classifier.py   # Fast query intent classification
-│   ├── startup_content_classifier.py # Startup content classification
-│   ├── performance_config.py      # Performance optimization configuration
-│   ├── taxonomy_loader.py         # Content taxonomy management
-│   ├── security_events_database.py # Security events tracking
-│   ├── settings_migration.py      # Settings migration utilities
-│   ├── admin_auth.py              # Admin authentication service
-│   ├── admin_database.py          # Admin database operations
-│   ├── query_data_manager.py      # Query data management
-│   ├── content_indexer.py         # Content indexing utilities
-│   ├── content_router.py          # Content routing logic
-│   ├── semantic_searcher.py       # Semantic search functionality
-│   ├── api_key_manager.py         # API key management and rotation
-│   ├── audit_logger.py            # Comprehensive audit logging
-│   ├── database_utils.py          # Database utility functions
-│   ├── security_middleware.py     # Security middleware and validation
-│   ├── session_fingerprint.py     # Session fingerprinting for security
-│   ├── settings_manager.py        # Settings management service
-│   ├── settings_schemas.py        # Settings validation schemas
-│   └── totp_service.py            # Time-based one-time password service
-├── knowledge/      # Auto-indexed knowledge base
-│   ├── *.md        # Markdown documentation
-│   ├── *.pdf       # PDF documents
-│   ├── *.json      # Structured data including illustrations.json
-│   └── ...         # Any content - automatically indexed!
-├── routes/         # API routes
-│   ├── query.py            # Main query endpoint with smart retriever
-│   ├── smart_query.py      # Advanced testing endpoints
-│   ├── query_logs.py       # Protected query log interface
-│   ├── health.py           # Health check endpoint
-│   ├── admin.py            # Admin dashboard API routes
-│   ├── admin_refresh.py    # Admin refresh endpoints
-│   ├── content.py          # Content management routes
-│   ├── knowledge.py        # Knowledge base routes
-│   ├── knowledge_public.py # Public knowledge base access
-│   ├── performance.py      # Performance monitoring routes
-│   ├── queries.py          # Query management routes
-│   └── stats.py            # Statistics and analytics routes
-├── templates/      # Jinja2 templates for admin interfaces
-└── main.py         # FastAPI app entry point
+backend/core/       # Core business logic (key files)
+├── unified_retriever.py       # Main smart retriever system
+├── smart_query_handler.py     # Query processing and routing
+├── config.py                  # Centralized configuration
+├── admin_auth.py              # Admin authentication
+├── settings_manager.py        # Settings management
+└── query_logger.py            # SQLite-based query logging
 
-admin/              # Admin dashboard system
-├── frontend/       # Vue.js admin frontend
-│   ├── src/
-│   │   ├── components/     # Reusable Vue components
-│   │   ├── views/         # Page components
-│   │   ├── stores/        # Pinia state management
-│   │   ├── services/      # API services
-│   │   └── plugins/       # Vuetify configuration
-│   └── dist/       # Built frontend files
-├── start-admin.py  # Admin server startup script
-├── sync_logs.py    # Query log synchronization
-├── create_admin.py # Admin user creation utility
-└── change_password.py # Password change utility
+backend/knowledge/  # Auto-indexed content
+├── *.md, *.pdf, *.json       # Any content automatically indexed!
 
-public/            # Static data files (also auto-indexed)
-├── resume.json
-├── about.json
-└── ...             # All files automatically discovered
-
-scripts/           # Utility scripts
-├── copy-content-to-knowledge.sh    # Content management scripts
-├── copy-fonts-to-knowledge.sh      # Font file management
-└── start-chromadb-visualizer.sh    # ChromaDB visualization
-
-tests/             # Comprehensive test suite
-├── unit/          # Unit tests for individual components
-├── integration/   # Integration tests for API endpoints
-├── performance/   # Performance and load testing
-├── security/      # Security and vulnerability testing
-├── e2e/           # End-to-end tests with Playwright MCP
-└── *.py           # Test files with pytest markers for organization
+admin/frontend/     # Vue.js admin dashboard
+├── src/components/
+├── src/views/
+└── src/stores/     # Pinia state management
 ```
 
-## Important Files
-
-### Core Smart Retriever Files
-- `backend/core/unified_retriever.py` - **Main**: Auto-discovery and intelligent indexing
-- `backend/core/smart_query_handler.py` - Query intent analysis and smart routing
-- `backend/core/smart_illustration_service.py` - Enhanced image search with caching and fuzzy matching
-- `backend/core/app_initializer_v2.py` - Unified system initialization
-- `backend/core/sqlite_query_logger.py` - SQLite-based query logging and analytics
-- `backend/core/query_router.py` - Advanced query routing logic
-- `backend/core/response_service.py` - Response processing and enhancement
-- `backend/core/followup_service.py` - Intelligent follow-up question generation
-- `backend/core/followup_management_service.py` - Enhanced followup management service
-- `backend/core/geolocation_service.py` - Location-based query processing
-- `backend/core/geolocation_validator.py` - Geolocation validation and security
-- `backend/core/llm_utils.py` - Shared LLM utilities
-- `backend/core/constants.py` - Shared constants for consistent processing
-- `backend/core/config.py` - Centralized configuration with enhanced security validation
-
-### Performance & Classification Files
-- `backend/core/fast_content_classifier.py` - High-performance content classification
-- `backend/core/fast_query_classifier.py` - Rapid query intent classification
-- `backend/core/startup_content_classifier.py` - Startup-time content classification
-- `backend/core/performance_config.py` - Performance optimization settings
-- `backend/core/taxonomy_loader.py` - Content taxonomy management and loading
-
-### Security & Admin Files
-- `backend/core/admin_auth.py` - Admin authentication and security
-- `backend/core/admin_database.py` - Admin database management
-- `backend/core/api_key_manager.py` - API key management and rotation
-- `backend/core/audit_logger.py` - Comprehensive audit logging
-- `backend/core/security_middleware.py` - Security middleware and validation
-- `backend/core/session_fingerprint.py` - Session fingerprinting for security
-- `backend/core/totp_service.py` - Time-based one-time password service
-
-### Settings & Management Files
-- `backend/core/settings_manager.py` - Settings management service
-- `backend/core/settings_schemas.py` - Settings validation schemas
-- `backend/core/settings_migration.py` - Settings migration and upgrade utilities
-- `backend/core/query_data_manager.py` - Query data operations and analytics
-- `backend/core/database_utils.py` - Database utility functions
-- `backend/core/security_events_database.py` - Security events tracking and logging
-
-### Configuration
-- `backend/core/config.py` - **PRIMARY**: Centralized configuration with validation
-- `pyproject.toml` - Python project configuration and linting rules
-- `.pre-commit-config.yaml` - Pre-commit hooks (minimal setup for speed)
-- `Makefile` - Development workflow commands for linting and testing
+## Core Files
+- `backend/core/unified_retriever.py` - **Main**: Smart auto-discovery system
+- `backend/core/config.py` - **Primary**: Centralized configuration
+- `backend/core/admin_auth.py` - Admin authentication
+- `backend/core/settings_manager.py` - Settings management
+- `pyproject.toml` - Python project configuration
+- `Makefile` - Development commands
 
 ## Development Guidelines
 
-### Adding New Content (SUPER SIMPLE!)
-1. **Text Content**: Just drop files in `backend/knowledge/` or `public/`
+### Adding Content (Zero Configuration!)
+1. **Text content**: Drop files in `backend/knowledge/` or `public/`
    - Supports: `.md`, `.pdf`, `.json`, `.txt`, `.html`, `.docx`
-   - No configuration needed - automatically indexed and searchable!
+   - Automatically indexed and searchable!
 
-2. **Illustrations**: Add to `backend/knowledge/illustrations.json` with format:
-   ```json
-   {
-     "file": "filename.jpg",
-     "title": "Title",
-     "tags": ["tag1", "tag2"]
-   }
-   ```
+2. **Illustrations**: Add to `backend/knowledge/illustrations.json`
+3. **Restart backend**: Content auto-discovered on startup
 
-3. **Restart Backend**: New content is automatically discovered on startup
-
-### Python Code Standards
-1. **Always format with Black before committing**
-2. **Sort imports with isort**
-3. **Fix all flake8 violations**
-4. **Address mypy type checking warnings**
-5. **Use type hints for function parameters and return values**
-6. **Follow the existing patterns in the codebase**
-7. **Write docstrings for public functions and classes**
-
-### Smart System Features
-
-#### Automatic Content Type Detection
-The system automatically detects and categorizes content:
-- **Technical**: Code, APIs, implementation details
-- **Experience**: Work history, roles, companies
-- **Skills**: Technologies, expertise, proficiencies
-- **About**: Personal information, philosophy, interests
-- **Creative**: Illustrations, art, design work
-- **Project**: Built projects, developments, creations
-
-#### Intelligent Query Routing
-Queries are automatically analyzed for:
-- **Intent**: question, retrieval, explanation, general
-- **Topics**: technical, experience, skills, personal, creative, project
-- **Complexity**: simple, moderate, complex
-- **Approach**: focused, comprehensive, list
-
-#### Smart Context Selection
-- **Semantic similarity** matching
-- **Content type filtering** based on query
-- **Duplicate removal** and quality scoring
-- **Context length optimization** for token limits
-- **Relevance ranking** with metadata boosting
-
-## Testing the Smart System
-
-### Standard Query Endpoint (Your frontend uses this)
-```bash
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is Nick's development philosophy?", "chat_history": []}'
-```
-
-### Advanced Smart Query Testing
-```bash
-# Check system status
-curl http://localhost:8000/api/smart-query/status
-
-# Analyze query intent
-curl -X POST http://localhost:8000/api/smart-query/analyze \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What CSS frameworks does Nick use?", "chat_history": []}'
-
-# Full smart query with metadata
-curl -X POST http://localhost:8000/api/smart-query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Tell me about Nick's frontend expertise", "chat_history": []}'
-```
-
-## Backend Logs - Smart Routing Examples
-```
-INFO - Smart routing: Query 'What's your development philosophy?' -> Topics: ['personal'] | Complexity: simple
-INFO - Using smart routing for query: 'What's your development philosophy?'
-INFO - Stored 8 documents in retrieval cache for key: 73ffbd0e3e3a5e87
-```
-
-## Current Development Status
-
-### Current Development Status
-The project features a fully integrated admin dashboard system with comprehensive monitoring and analytics capabilities.
-
-### Recent API Additions
-- **Query Logging**: `/api/query-logs` - Admin interface for query analytics with protected access
-- **Health Check**: `/health` - Service health monitoring
-- **Smart Query Testing**: `/api/smart-query/*` - Advanced query analysis endpoints
-- **Query Log Download**: Automated scripts for downloading and analyzing query logs
-- **Protected Endpoints**: Security validation for admin interfaces
-- **API Key Management**: `/admin/api/settings/api-keys` - Secure API key management and rotation
-- **TOTP Authentication**: Multi-factor authentication with time-based one-time passwords
-- **Audit Logging**: Comprehensive audit trail for all admin actions
-- **Settings Management**: `/admin/api/settings/*` - Centralized configuration management
-
-### Admin Dashboard Access
-- **Frontend**: Start with `npm run admin:frontend` - Vue.js + Vuetify interface
-- **Backend**: Integrated with main FastAPI app at http://localhost:8000
-- **Authentication**: Session-based with secure cookies
-- **Security**: Session fingerprinting and secure cookie attributes
-- **Admin Routes**: `/admin/*` and `/api/admin/*` endpoints protected with session authentication
-- **Utilities**: Admin user management scripts in `admin/` directory
-
-#### Admin Dashboard Features
-- **Dashboard**: System overview, query metrics, performance statistics
-- **Queries**: Real-time query monitoring, analytics, response times
-- **Knowledge**: Content management, indexed documents, gap analysis
-- **Performance**: System performance metrics, response time analysis
-- **Sessions**: User session management and authentication logs
-- **Settings**: Comprehensive configuration management including:
-  - **API Keys**: Secure management of Anthropic/Google API keys with rotation
-  - **Followup Questions**: Category-based followup question management
-  - **Response Settings**: Model preferences and response configuration
-  - **Routing Settings**: Query routing and smart retriever configuration
-  - **Feature Toggles**: Enable/disable system features and capabilities
-
-### Admin Dashboard Icon Usage
-The admin dashboard uses Vuetify with Material Design Icons (MDI). To maintain consistency and avoid console errors:
-
-#### Icon Configuration (admin/frontend/src/plugins/vuetify.js)
-- Icons are configured with aliases in the Vuetify plugin
-- MDI icons are imported from `@mdi/js` and mapped to aliases
-- **ALWAYS use icon aliases** with the `$` prefix in components
-
-#### How to Add New Icons
-1. **Import the MDI icon** in `vuetify.js`:
-   ```javascript
-   import { mdiNewIcon } from '@mdi/js'
-   ```
-
-2. **Add to aliases** in the Vuetify configuration:
-   ```javascript
-   aliases: {
-     'new-icon': mdiNewIcon,
-   }
-   ```
-
-3. **Use in components** with the `$` prefix:
-   ```vue
-   <v-icon>$new-icon</v-icon>
-   <!-- OR -->
-   <v-btn icon="$new-icon">Button</v-btn>
-   ```
-
-#### Available Icon Aliases
-Common icons already configured:
-- `$dashboard` - Dashboard/home icon
-- `$search` - Search/magnify icon  
-- `$chart` - Chart/analytics icon
-- `$document` - Document/file icon
-- `$users` - Users/people icon
-- `$knowledge` - Knowledge base icon
-- `$menu` - Menu/hamburger icon
-- `$refresh` - Refresh/reload icon
-- `$export` - Export/download icon
-- `$logout` - Logout icon
-- `$weather-night` - Dark mode icon
-- `$light-mode` - Light mode icon
-
-#### Common Mistakes to Avoid
-❌ **DON'T** use raw MDI strings:
-```vue
-<v-icon>mdi-weather-night</v-icon> <!-- WRONG - causes SVG errors -->
-```
-
-✅ **DO** use configured aliases:
-```vue
-<v-icon>$weather-night</v-icon> <!-- CORRECT -->
-```
-
-#### Building Admin Frontend
-After icon changes, rebuild the admin frontend:
-```bash
-cd admin/frontend && npm run build
-```
-
-### New Services & Modules
-
-#### Core Services
-- `sqlite_query_logger.py` - SQLite-based query logging and analytics
-- `response_service.py` - Enhanced response processing pipeline
-- `response_cache_warmer.py` - Cache warming for improved performance
-- `followup_service.py` - Intelligent follow-up question generation
-- `followup_management_service.py` - Enhanced followup management service
-- `query_router.py` - Advanced query routing with intent analysis
-- `geolocation_service.py` - Location-based services for user queries
-- `geolocation_validator.py` - Geolocation validation and security
-- `llm_utils.py` - Shared LLM utilities and helper functions
-- `constants.py` - Shared constants including stop words for query processing
-- `content_indexer.py` - Content indexing and processing utilities
-- `content_router.py` - Content routing and management
-- `semantic_searcher.py` - Advanced semantic search capabilities
-
-#### Performance & Classification Services  
-- `fast_content_classifier.py` - High-speed content classification for improved startup
-- `fast_query_classifier.py` - Rapid query intent detection and routing
-- `startup_content_classifier.py` - Optimized content classification at application startup
-- `performance_config.py` - Performance tuning and optimization settings
-- `taxonomy_loader.py` - Content taxonomy management and loading utilities
-
-#### Security & Authentication
-- `admin_auth.py` - Admin authentication and security layer
-- `api_key_manager.py` - API key management and rotation service
-- `audit_logger.py` - Comprehensive audit logging for all admin actions
-- `security_middleware.py` - Security middleware and validation
-- `session_fingerprint.py` - Session fingerprinting for enhanced security
-- `totp_service.py` - Time-based one-time password service for MFA
-
-#### Data Management
-- `admin_database.py` - Admin database operations and management
-- `query_data_manager.py` - Query data analytics and operations
-- `database_utils.py` - Database utility functions and helpers
-- `settings_manager.py` - Centralized settings management service
-- `settings_schemas.py` - Settings validation schemas and models
-- `settings_migration.py` - Settings migration and database upgrade utilities
-- `security_events_database.py` - Security events tracking and analysis
-
-### Testing & Coverage
-
-#### Python Backend Testing
-- **Coverage Reports**: HTML coverage reports generated in `htmlcov/` directory
-- **Test Markers**: `unit`, `integration`, `slow` for test organization
-- **Coverage Target**: Focuses on `backend/core` modules
-- **Async Testing**: Configured for async/await patterns with pytest-asyncio
-- **Test Files**: Comprehensive test coverage including:
-  - `test_followup_service.py` - Follow-up service testing
-  - `test_response_service.py` - Response service testing
-  - `test_illustration_service.py` - Illustration service with fuzzy matching tests
-  - `test_query_router.py` - Query routing logic tests
-  - `test_llm_chain.py` - LLM chain functionality tests
-  - `test_admin_settings_api.py` - Admin settings API testing
-  - `security/test_*.py` - Comprehensive security testing suite
-  - `integration/test_*.py` - Integration tests for API endpoints and search functionality
-
-#### End-to-End Testing
-- **Framework**: Playwright with @playwright/mcp integration
-- **Test Location**: `tests/e2e/` directory
-- **Browser Support**: Chromium, Firefox, Safari
-- **Features**: Full admin dashboard testing, API endpoint validation, user workflow testing
-- **Reports**: HTML reports with screenshots and traces for debugging failures
-
-#### Performance Testing
-- **Location**: `tests/performance/` directory
-- **Focus**: Response time analysis, load testing, performance regression detection
-- **Integration**: Works with performance monitoring and metrics collection
-
-#### Security Testing
-- **Location**: `tests/security/` directory
-- **Coverage**: Admin authentication, API security, session management, attack scenarios
-- **Features**: Comprehensive security validation and vulnerability assessment
+### Code Standards
+1. **Format with Black** before committing (line length: 120)
+2. **Sort imports with isort** (profile: black)
+3. **Use type hints** for functions
+4. **Follow existing patterns** in codebase
 
 ## Environment Variables
+- `ANTHROPIC_API_KEY` - Required for Claude API access
+- `GOOGLE_API_KEY` - Required for Gemini API access
+- `FORCE_REBUILD_DATA=true` - Force rebuild vector indices
 
-### Core Backend Variables
-- `FORCE_REBUILD_DATA=true` - Force rebuild of vector indices on server startup (optional)
-- `WATCHFILES_FORCE_POLLING=true` - Enable file watching for container environments
-- `ANTHROPIC_API_KEY` - Required for Anthropic Claude API access
-- `GOOGLE_API_KEY` - Required for Google Gemini API access (if used)
+## Admin Dashboard
 
-### Admin System Variables
-- `ADMIN_DB_PATH` - Path to admin SQLite database (defaults to backend/logs/admin_monitoring.db)
+### Access
+- Frontend: `npm run admin:frontend` (Vue.js + Vuetify)
+- Backend: Integrated with main app at http://localhost:8000
+- Authentication: Session-based with secure cookies
 
-### Development Setup
-1. **Copy environment template**: `cp .env.example .env` (if available)
-2. **Set API keys** in `.env` file
-3. **Install dependencies**: 
-   - Backend: `pip install -r backend/requirements.txt`
-   - Frontend: `npm install`
-   - Admin Frontend: `cd admin/frontend && npm install`
-
-## Database Architecture
-
-The system uses multiple SQLite databases for different purposes:
-
-### Core Backend Databases
-
-#### `/backend/logs/rag_monitoring.db`
-- **Purpose**: Primary query logging and analytics database
-- **Tables**:
-  - `query_logs` - All user queries, responses, and performance metrics
-  - `content_gaps` - Detected knowledge gaps for content improvement
-- **Usage**: Used by `QueryDataManager` for read access and query logging
-- **Location fields**: Includes geolocation data (city, region, country) for analytics
-
-#### `/backend/logs/auth_sessions.db`  
-- **Purpose**: User session tracking for the main application
-- **Tables**: 
-  - `user_sessions` - Session tracking for RAG queries
-- **Usage**: Session management and user behavior analytics
-
-### Admin System Databases
-
-#### `/backend/logs/admin_monitoring.db` 
-- **Purpose**: Admin dashboard user management and settings
-- **Tables**:
-  - `admin_users` - Admin user accounts and authentication
-  - `admin_sessions` - Admin dashboard login sessions
-  - `admin_settings` - System configuration and preferences
-- **Usage**: Used by `AdminDatabaseManager` for admin-specific operations
-- **Security**: Handles admin authentication, roles, and session management
-
-#### Query Log Storage
-The system uses an SQLite database for all query logging:
-- **Database**: `/backend/logs/rag_monitoring.db`
-- **Table**: `query_logs` — stores all user queries and responses
-- **Features**: IP filtering, anonymization, and geolocation tracking
-- **Service**: `SQLiteQueryLogger` — handles all logging operations
-- **Analytics**: Structured query analysis and performance metrics
-
-### Database Separation Strategy
-- **Admin databases**: Isolated for security and admin-specific features
-- **Backend databases**: Focus on query performance and analytics
-- **Dual managers**: `DatabaseManager` (admin) vs `QueryDataManager` (backend data)
-- **Read-only access**: Admin system reads backend data without modification rights
-
-## Dependencies
-
-### Backend Dependencies
-- **Core Framework:** FastAPI, uvicorn[standard]
-- **AI/ML:** LangChain (~0.2.0), langchain-anthropic, langchain-google-genai, langchain-community (~0.2.0), langchain-chroma (~0.1.0)
-- **Vector Database:** ChromaDB (~0.5.0)
-- **Document Processing:** pdfplumber, pypdf, python-docx, docx2txt, unstructured, langchain-unstructured (~0.1.0), lxml, beautifulsoup4
-- **Security:** passlib[bcrypt], python-multipart, slowapi (rate limiting), python-magic
-- **Utilities:** aiofiles, pyyaml (>=6.0), requests, python-dotenv, thefuzz[speed], watchdog, markdown, urllib3 (>=2.0.0,<3.0.0)
-- **Template Engine:** jinja2
-
-### Frontend Dependencies  
-- **Framework:** Astro 5.11.0, Vue.js 3.4.0
-- **UI Components:** Various FontAwesome packages, astro-icon
-- **Utilities:** marked (Markdown), lodash-es, nanostores
-- **Testing:** Vitest, jsdom, @vue/test-utils
-
-### Admin Dashboard Dependencies
-- **Frontend:** Vue.js 3.4.0, Vuetify 3.6.0, Vue Router 4.2.0
-- **State Management:** Pinia 2.1.0
-- **Charts:** Chart.js 4.5.0, vue-chartjs 5.3.2
-- **Icons:** @mdi/js 7.4.0 (Material Design Icons)
-- **Code Editor:** Monaco Editor 0.52.2, @monaco-editor/loader 1.5.0
-- **HTTP Client:** Axios 1.6.0
-- **Date Utilities:** date-fns 3.6.0
-- **UI Interactions:** vuedraggable 4.1.0
-- **Build Tools:** Vite 5.2.0, TypeScript 5.4.0, ESLint 8.57.0, Prettier 3.0.0
-
-### Development Dependencies
-- **Python:** 3.11+ required
-- **Linting:** black, isort, flake8, mypy, autoflake
-- **Pre-commit:** Minimal setup with only Black and isort for speed
-
-### Pre-commit Configuration (Minimal Setup)
-The pre-commit configuration is intentionally minimal for faster development:
-
-```yaml
-# Only essential checks - no MyPy or flake8 in pre-commit
-repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    hooks:
-      - check-yaml
-      - check-added-large-files  
-      - check-merge-conflict
-  - repo: https://github.com/psf/black
-    hooks:
-      - black (line-length=120)
-  - repo: https://github.com/pycqa/isort
-    hooks:
-      - isort (profile=black)
+### Icon Usage (Vuetify + MDI)
+**Always use icon aliases with `$` prefix to avoid console errors:**
+```vue
+<v-icon>$dashboard</v-icon>  <!-- ✅ CORRECT -->
+<v-icon>mdi-home</v-icon>    <!-- ❌ WRONG - causes SVG errors -->
 ```
 
-**Philosophy:** Pre-commit only handles auto-formatting. Manual linting and type checking via Makefile commands when needed.
-
-**For MyPy type checking:** Run manually with `make type-check` or `mypy backend/core --ignore-missing-imports`
-
-## Migration Notes
-
-### What Changed (Major Improvements!)
-- ✅ **Eliminated unified_data.json dependency** - no more manual data compilation
-- ✅ **Eliminated manual YAML configuration** - no more retriever definitions needed
-- ✅ **Automatic content discovery** - just drop files in directories
-- ✅ **Smart query routing** - understands intent automatically
-- ✅ **Better search accuracy** - semantic similarity + metadata filtering
-- ✅ **Unified vector store** - more efficient than multiple stores
-- ✅ **Intelligent context selection** - better responses with less noise
-
-### Backward Compatibility
-- ✅ **Frontend unchanged** - same API, better responses
-- ✅ **Query endpoint unchanged** - `/query` works exactly the same
-- ✅ **Image search working** - illustrations work without unified_data.json
-- ✅ **Fallback system** - gracefully handles missing data
-
-### Performance Improvements
-- ✅ **Built-in caching** - faster repeated queries
-- ✅ **Single vector store** - more efficient than multiple stores
-- ✅ **Smart filtering** - better relevance without over-processing
-- ✅ **File hash tracking** - only re-index changed files
-
-## Recent Improvements & Code Quality
-
-### Code Quality Enhancements
-- **Static Analysis**: Improved code robustness based on static analysis suggestions
-- **Error Handling**: Enhanced error handling across all services
-- **Code Deduplication**: Shared constants to eliminate duplication
-- **Performance Optimization**: Illustration data caching during initialization
-- **Security**: Protected admin endpoints with session-based authentication
-- **Testing**: Comprehensive test coverage with fuzzy matching validation
-
-### Service Architecture Improvements
-- **Modular Follow-up Services**: Multiple configurable follow-up question services
-- **Smart Caching**: Illustration and query result caching for performance
-- **Geolocation Integration**: Location-aware query processing
-- **LLM Utilities**: Shared utilities for consistent LLM interactions
-- **Query Analytics**: Advanced query logging and analysis capabilities
-
-### Development Experience
-- **Better Debugging**: Enhanced logging and error messages
-- **Code Organization**: Clear separation of concerns across services
-- **Configuration Management**: Environment-based service selection
-- **Documentation**: Comprehensive inline documentation and type hints
-
-## Key Advantages of Current System
-
-1. **Zero Configuration**: Drop files → Automatic indexing → Smart search
-2. **Intent Understanding**: Analyzes what users actually want
-3. **Better Accuracy**: Semantic similarity + intelligent filtering + fuzzy matching
-4. **Easier Maintenance**: No YAML files, no manual setup
-5. **Scalable**: Handles growing content automatically
-6. **Performance**: Multi-level caching, efficient vector operations, smart context limits
-7. **Developer Friendly**: Add content without touching code
-8. **Robust Error Handling**: Graceful fallbacks and comprehensive error management
-9. **Security**: Protected admin interfaces with proper authentication
-10. **Analytics**: Query logging and analysis for continuous improvement
-
-The system now operates like a smart assistant that understands both your content and your users' intent, with enterprise-grade reliability and performance!
-- memorize
-- memorize
+## Database Architecture
+- **Query logs**: `/backend/logs/rag_monitoring.db` (SQLite)
+- **Admin data**: `/backend/logs/admin_monitoring.db` (SQLite)
+- **Sessions**: `/backend/logs/auth_sessions.db` (SQLite)

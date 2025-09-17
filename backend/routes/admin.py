@@ -29,6 +29,7 @@ from ..core.settings_schemas import (
     CoreSettings,
     FeatureFlags,
     FollowUpSettings,
+    KnowledgeSettings,
     QueryRoutingSettings,
     RagConfigurationSettings,
     ResponseSettings,
@@ -901,59 +902,9 @@ async def get_knowledge_files(session: Dict[str, Any] = Depends(require_admin_au
 
 
 # Content management endpoints
-@router.get("/content/gaps")
-async def get_content_gaps(
-    resolved: bool = Query(False, description="Include resolved content gaps"),
-    limit: int = Query(50, ge=1, le=200),
-    session: Dict[str, Any] = Depends(require_admin_auth),
-):
-    """Get content gaps detected automatically by the query logger."""
-    try:
-        with query_data_manager.get_connection() as conn:
-            cursor = conn.cursor()
-
-            where_clause = "WHERE resolved = 0" if not resolved else ""
-
-            cursor.execute(
-                f"""
-                SELECT
-                    cg.id,
-                    cg.query_pattern,
-                    cg.occurrence_count,
-                    cg.avg_similarity_score,
-                    cg.first_seen,
-                    cg.last_seen,
-                    cg.resolved,
-                    cg.notes,
-                    ql.user_query as sample_query
-                FROM content_gaps cg
-                LEFT JOIN query_logs ql ON cg.sample_query_id = ql.id
-                {where_clause}
-                ORDER BY cg.occurrence_count DESC, cg.avg_similarity_score ASC
-                LIMIT ?
-                """,
-                (limit,),
-            )
-
-            gaps = []
-            for row in cursor.fetchall():
-                gaps.append(
-                    {
-                        "id": row[0],
-                        "pattern": row[1],
-                        "count": row[2],
-                        "avg_score": round(row[3] or 0, 2),
-                        "first_seen": row[4],
-                        "last_seen": row[5],
-                        "resolved": bool(row[6]),
-                        "notes": row[7],
-                        "sample_query": row[8],
-                    }
-                )
-
-            return {"gaps": gaps, "total": len(gaps)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching content gaps: {str(e)}")
+# Note: Content gaps endpoints are provided by backend/routes/content.py.
+# They are mounted under both /api and /api/admin in app_factory to keep the
+# client base URL consistent. This avoids duplicate implementations here.
 
 
 # Export endpoints
@@ -2898,6 +2849,62 @@ async def update_search_retrieval_settings(
     except Exception as e:
         logger.error(f"Error updating search retrieval settings: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating search retrieval settings")
+
+
+# === Knowledge Settings Endpoints ===
+@router.get("/settings/knowledge")
+async def get_knowledge_settings(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get knowledge indexing and synchronization settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_knowledge_settings()
+        return {"settings": settings.to_dict()}
+    except Exception as e:
+        logger.error(f"Error getting knowledge settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching knowledge settings")
+
+
+@router.put("/settings/knowledge")
+async def update_knowledge_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update knowledge indexing and synchronization settings."""
+    try:
+        settings = KnowledgeSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_knowledge_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update knowledge settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "knowledge_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        try:
+            settings_mgr.invalidate_cache("knowledge_settings")
+        except Exception:
+            pass
+
+        logger.info(f"Knowledge settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "Knowledge settings updated successfully",
+            "settings": settings.to_dict(),
+            "lastUpdated": datetime.now().isoformat(),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating knowledge settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating knowledge settings")
 
 
 # === Taxonomy Settings Endpoints ===

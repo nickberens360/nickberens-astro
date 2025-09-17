@@ -13,6 +13,7 @@ from .settings_schemas import (
     CoreSettings,
     FeatureFlags,
     FollowUpSettings,
+    KnowledgeSettings,
     QueryRoutingSettings,
     RagConfigurationSettings,
     ResponseSettings,
@@ -380,6 +381,7 @@ class SettingsManager:
             SettingKeys.SYSTEM_CONFIG_SETTINGS,
             SettingKeys.SECURITY_SETTINGS,
             SettingKeys.RAG_CONFIG_SETTINGS,
+            SettingKeys.KNOWLEDGE_SETTINGS,
         ]:
             cached_settings[key] = key in cache_keys
 
@@ -447,6 +449,25 @@ class SettingsManager:
         """Get the effective primary LLM for backward compatibility."""
         system_config = self.get_system_config_settings()
         return system_config.effective_primary_llm
+
+    # === Knowledge Settings ===
+    def get_knowledge_settings(self) -> KnowledgeSettings:
+        cached = self.cache.get(SettingKeys.KNOWLEDGE_SETTINGS)
+        if cached:
+            return cached
+        json_str = self._get_setting_from_db(SettingKeys.KNOWLEDGE_SETTINGS)
+        if json_str:
+            settings = KnowledgeSettings.from_json(json_str)
+        else:
+            settings = KnowledgeSettings()
+        self.cache.set(SettingKeys.KNOWLEDGE_SETTINGS, settings)
+        return settings
+
+    def set_knowledge_settings(self, settings: KnowledgeSettings, updated_by: int) -> bool:
+        ok = self._set_setting_in_db(SettingKeys.KNOWLEDGE_SETTINGS, settings.to_json(), updated_by)
+        if ok:
+            self.cache.invalidate(SettingKeys.KNOWLEDGE_SETTINGS)
+        return ok
 
 
 # Global settings manager instance

@@ -1,16 +1,5 @@
 <template>
   <div class="indexed-documents-view">
-    <div class="d-flex justify-end align-center mb-6">
-      <v-btn
-        color="primary"
-        prepend-icon="$refresh"
-        :loading="loadingDocuments"
-        variant="outlined"
-        @click="loadDocuments"
-      >
-        Refresh
-      </v-btn>
-    </div>
 
     <!-- Indexed Documents Section -->
     <v-card>
@@ -29,15 +18,19 @@
           class="me-2"
           style="max-width: 300px"
         />
-        <v-btn
-          icon="$refresh"
-          variant="text"
-          size="small"
-          :loading="loadingDocuments"
-          @click="loadDocuments"
-        />
       </v-card-title>
       <v-card-text class="pa-0">
+        <!-- Empty state hint when there are no indexed chunks -->
+        <div v-if="!loadingDocuments && (!documents || documents.length === 0)" class="pa-6">
+          <v-card variant="outlined" class="pa-6 text-center">
+            <v-icon size="40" color="warning" class="mb-2">$alert</v-icon>
+            <div class="text-h6 mb-1">No Indexed Documents</div>
+            <div class="text-body-2 text-medium-emphasis mb-4">
+              No chunks found in the vector store. If you recently uploaded files, index them via the Consistency page.
+            </div>
+            <v-btn color="primary" @click="$router.push({ name: 'knowledge-consistency' })">Go to Consistency</v-btn>
+          </v-card>
+        </div>
         <v-data-table
           :headers="documentHeaders"
           :items="documents"
