@@ -361,6 +361,7 @@ class AppConfig:
             "https://nickberens.me",
             "https://www.nickberens.me",
             "https://nickberens360.netlify.app",
+            "https://development--nickberens360.netlify.app",
             "https://nickberens-astro.onrender.com",
             "https://nickberens-astro-production.up.railway.app",
             "https://nickberens-astro-development.up.railway.app",
@@ -377,7 +378,7 @@ class AppConfig:
             "http://localhost:8001",
             "http://localhost:8002",
             "http://localhost:8003",
-            "https://devserver-development--nickberens360.netlify.app",
+            "https://development--nickberens360.netlify.app",
         ]
 
         if environment in ["production", "prod"]:
