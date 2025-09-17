@@ -59,7 +59,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
                 "font-src 'self' https://fonts.gstatic.com data:; "
                 "img-src 'self' data: https: http://localhost:*; "
-                "connect-src 'self' https: http://localhost:* ws://localhost:*; "
+                "connect-src 'self' https: http://localhost:* ws://localhost:* http://127.0.0.1:*; "
                 "frame-ancestors 'self'; "
                 "base-uri 'self'; "
                 "form-action 'self'"

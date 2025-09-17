@@ -363,6 +363,7 @@ class AppConfig:
             "https://nickberens360.netlify.app",
             "https://nickberens-astro.onrender.com",
             "https://nickberens-astro-production.up.railway.app",
+            "https://nickberens-astro-development.up.railway.app",
         ]
 
         development_origins = [
