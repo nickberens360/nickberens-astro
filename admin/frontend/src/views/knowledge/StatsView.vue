@@ -780,7 +780,7 @@ const loadStats = async () => {
   loading.value = true
   try {
     // Call the knowledge stats endpoint through the public API
-    const response = await fetch('http://localhost:8000/api/public/knowledge/stats')
+    const response = await fetch('/api/public/knowledge/stats')
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
