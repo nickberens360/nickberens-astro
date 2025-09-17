@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
-from .database_utils import get_database_path
+from .database_utils import configure_sqlite_connection, get_database_path
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +31,7 @@ class QueryDataManager:
         # Allow use from FastAPI threadpool workers and add a reasonable timeout
         conn = sqlite3.connect(str(self.db_path), timeout=15.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row  # Enable dict-like access
-        try:
-            # Improve concurrency and integrity (best-effort)
-            conn.execute("PRAGMA busy_timeout=5000;")
-            conn.execute("PRAGMA foreign_keys=ON;")
-            conn.execute("PRAGMA journal_mode=WAL;")
-            conn.execute("PRAGMA synchronous=NORMAL;")
-        except Exception:
-            pass
+        configure_sqlite_connection(conn)
         try:
             yield conn
             conn.commit()

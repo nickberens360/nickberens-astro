@@ -147,47 +147,11 @@ const executeReindex = async () => {
     showInfo('Setting re-index flag...')
     const result = await adminAPI.refreshKnowledgeBase(true)
 
-    // Step 2: Show progress simulation with meaningful steps
-    showInfo('Re-index flag set successfully! The system will process this on next restart.')
-
-    // Step 3: Provide polling to check flag status
-    let flagProcessed = false
-    let pollAttempts = 0
-    const maxPolls = 30 // Poll for up to 1 minute
-
-    const pollInterval = setInterval(async () => {
-      try {
-        pollAttempts++
-        const status = await adminAPI.getRefreshStatus()
-
-        if (!status.refresh_pending) {
-          // Flag has been processed
-          clearInterval(pollInterval)
-          flagProcessed = true
-          showSuccess('Re-index completed successfully! Knowledge base has been refreshed.')
-          await refreshData()
-          // Close dialog after successful completion
-          showReindexDialog.value = false
-        } else if (pollAttempts >= maxPolls) {
-          // Timeout - flag still pending
-          clearInterval(pollInterval)
-          showInfo('Re-index flag is set and waiting for server restart. Changes will take effect when the server restarts.')
-          // Close dialog after timeout
-          showReindexDialog.value = false
-        }
-      } catch (error) {
-        console.error('Error polling refresh status:', error)
-      }
-    }, 2000) // Poll every 2 seconds
-
-    // If flag wasn't processed within polling period, show helpful message
-    setTimeout(() => {
-      if (!flagProcessed && pollAttempts < maxPolls) {
-        clearInterval(pollInterval)
-        showInfo('Re-index scheduled successfully. Changes will take effect on next server restart.')
-        showReindexDialog.value = false
-      }
-    }, 60000) // 1 minute timeout
+    // Show clear success message about what actually happened
+    showSuccess('Re-index scheduled successfully! The knowledge base will be refreshed on the next server restart.')
+    
+    // Close dialog immediately - no need to wait or poll
+    showReindexDialog.value = false
 
   } catch (error) {
     console.error('Failed to set re-index flag:', error)

@@ -14,6 +14,28 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+def configure_sqlite_connection(conn: sqlite3.Connection) -> None:
+    """
+    Apply standard SQLite PRAGMA settings for optimal performance and reliability.
+
+    This helper function centralizes SQLite configuration to ensure consistency
+    across all database connections in the application.
+
+    Args:
+        conn: The SQLite connection to configure
+    """
+    try:
+        # Busy timeout helps under brief contention; foreign_keys improves integrity
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        # Favor WAL for better concurrency and NORMAL sync for performance
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
+    except Exception:
+        # Pragmas are best-effort; ignore if not supported
+        pass
+
+
 def get_database_path(filename: str) -> Path:
     """
     Get the appropriate database path based on environment.
@@ -100,16 +122,7 @@ def get_rag_monitoring_db_connection() -> Optional[sqlite3.Connection]:
         # Use a sensible timeout and allow connections from threadpool workers
         conn = sqlite3.connect(str(db_path), timeout=15.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row  # Enable dict-like access to rows
-        try:
-            # Busy timeout helps under brief contention; foreign_keys improves integrity
-            conn.execute("PRAGMA busy_timeout=5000;")
-            conn.execute("PRAGMA foreign_keys=ON;")
-            # Favor WAL for better concurrency and NORMAL sync for performance
-            conn.execute("PRAGMA journal_mode=WAL;")
-            conn.execute("PRAGMA synchronous=NORMAL;")
-        except Exception:
-            # Pragmas are best-effort; ignore if not supported
-            pass
+        configure_sqlite_connection(conn)
         return conn
     except Exception as e:
         logger.error(f"Failed to connect to RAG monitoring database: {e}")
