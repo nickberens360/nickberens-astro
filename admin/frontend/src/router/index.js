@@ -177,6 +177,15 @@ const router = createRouter({
               }
             },
             {
+              path: 'knowledge',
+              name: 'settings-knowledge',
+              component: () => import('@/views/settings/KnowledgeSettings.vue'),
+              meta: {
+                title: 'Knowledge',
+                description: 'Indexing & synchronization settings'
+              }
+            },
+            {
               path: 'taxonomy',
               name: 'settings-taxonomy',
               component: () => import('@/views/settings/TaxonomySettings.vue'),

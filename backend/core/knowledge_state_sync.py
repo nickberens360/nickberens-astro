@@ -266,4 +266,14 @@ class KnowledgeStateSync:
                         logger.error(f"Failed to delete orphan {p}: {e}")
                         actions["errors"].append(p)
 
+        # Record last reconcile time when we actually performed actions
+        try:
+            if not dry_run:
+                from datetime import datetime
+
+                marker = Path(self.persist_dir) / ".last_reconcile"
+                marker.write_text(datetime.now().isoformat(), encoding="utf-8")
+        except Exception:
+            pass
+
         return {"summary": summary.__dict__, "diff": diff, "actions": actions}

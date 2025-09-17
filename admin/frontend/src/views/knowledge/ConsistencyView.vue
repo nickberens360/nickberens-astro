@@ -65,6 +65,42 @@
       </v-row>
     </div>
 
+    <!-- Knowledge Health & Settings Snapshot -->
+    <v-card class="mb-4 settings-card">
+      <v-card-title class="text-h6 d-flex align-center">
+        <v-icon class="me-2" :color="healthOk ? 'success' : 'warning'">$shield-check</v-icon>
+        Knowledge Health
+        <v-chip size="x-small" class="ms-2" :color="healthOk ? 'success' : 'warning'">{{ healthOk ? 'OK' : 'Degraded' }}</v-chip>
+        <v-spacer />
+        <v-btn size="small" variant="text" :loading="loadingHealth" @click="loadHealth">Refresh</v-btn>
+        <v-btn size="small" variant="text" prepend-icon="$tune" @click="$router.push({ name: 'settings-knowledge' })">Settings</v-btn>
+      </v-card-title>
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" md="6">
+            <div class="text-subtitle-2 text-medium-emphasis mb-2">Settings</div>
+            <v-list density="compact">
+              <v-list-item title="Index on Startup" :subtitle="settings.index_on_startup ? 'Enabled' : 'Disabled'" />
+              <v-list-item title="Background Sync Interval (s)" :subtitle="String(settings.background_sync_interval_seconds || 0)" />
+              <v-list-item title="Auto-Reindex Deltas" :subtitle="settings.auto_reindex_deltas ? 'Enabled' : 'Disabled'" />
+              <v-list-item title="Heterogeneity Fallback" :subtitle="settings.enable_heterogeneity_fallback ? 'Enabled' : 'Disabled'" />
+              <v-list-item title="Index Directories" :subtitle="(settings.index_directories || []).join(', ')" />
+            </v-list>
+          </v-col>
+          <v-col cols="12" md="6">
+            <div class="text-subtitle-2 text-medium-emphasis mb-2">Summary</div>
+            <v-list density="compact">
+              <v-list-item title="Filesystem Files" :subtitle="String(summary.filesystem_files || 0)" />
+              <v-list-item title="Vector Docs (chunks)" :subtitle="String(summary.vector_docs || 0)" />
+              <v-list-item title="Tracked Files" :subtitle="String(summary.tracked_files || 0)" />
+              <v-list-item title="Mismatches" :subtitle="String(mismatchTotal)" />
+              <v-list-item title="Last Reconcile" :subtitle="formatLastReconcile(lastReconcileAt)" />
+            </v-list>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
     <v-card class="mb-4 settings-card">
       <v-card-title class="text-h6">Reconcile</v-card-title>
       <v-card-text>
@@ -228,6 +264,18 @@ const { showError, showSuccess } = useNotifications()
 
 const mismatchTotal = computed(() => (summary.value.discovered_not_indexed || 0) + (summary.value.changed_files || 0) + (summary.value.vector_orphans || 0))
 
+// Health/settings state
+const loadingHealth = ref(false)
+const healthOk = ref(false)
+const lastReconcileAt = ref(null)
+const settings = ref({
+  index_on_startup: true,
+  background_sync_interval_seconds: 0,
+  auto_reindex_deltas: false,
+  enable_heterogeneity_fallback: false,
+  index_directories: ['backend/knowledge', 'public']
+})
+
 // Paginated lists state
 const makeListState = () => ({ items: [], total: 0, page: 1, perPage: 10, loading: false })
 const dni = ref(makeListState())
@@ -262,6 +310,23 @@ const load = async () => {
   }
 }
 
+const loadHealth = async () => {
+  loadingHealth.value = true
+  try {
+    const [health, kset] = await Promise.all([
+      adminAPI.getKnowledgeHealth(),
+      adminAPI.getKnowledgeSettings()
+    ])
+    healthOk.value = !!(health && health.ok)
+    lastReconcileAt.value = health?.last_reconcile_at || null
+    if (kset?.settings) settings.value = { ...settings.value, ...kset.settings }
+  } catch (e) {
+    // Non-fatal
+  } finally {
+    loadingHealth.value = false
+  }
+}
+
 const runReconcile = async () => {
   running.value = true
   planned.value = null
@@ -288,7 +353,17 @@ const runReconcile = async () => {
   }
 }
 
-onMounted(load)
+const formatLastReconcile = (timestamp) => {
+  if (!timestamp) return 'Never'
+  try {
+    const date = new Date(timestamp)
+    return date.toLocaleString()
+  } catch {
+    return 'Invalid date'
+  }
+}
+
+onMounted(async () => { await Promise.all([load(), loadHealth()]) })
 
 // Helpers: fetch paginated lists
 const fetchList = async (stateRef, kind) => {

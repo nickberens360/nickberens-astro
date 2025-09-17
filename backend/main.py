@@ -34,6 +34,7 @@ from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_cache_warmer import start_cache_warming
 from .core.response_service import ResponseService
+from .core.settings_manager import get_settings_manager
 from .core.smart_illustration_service import SmartIllustrationService
 
 project_root = Path(__file__).resolve().parent.parent
@@ -140,12 +141,17 @@ async def lifespan(app: FastAPI):
             await start_cache_warming(retrievers, app.state)
 
         # Optional: start periodic knowledge validation/sync
+        # Read background sync config from DB settings with env fallback
         try:
-            interval = int(os.getenv("KNOWLEDGE_SYNC_INTERVAL_SECONDS", "0"))
+            kset = get_settings_manager().get_knowledge_settings()
+            interval = int(getattr(kset, "background_sync_interval_seconds", 0))
+            auto_reconcile = bool(getattr(kset, "auto_reindex_deltas", False))
         except Exception:
-            interval = 0
-
-        auto_reconcile = os.getenv("KNOWLEDGE_SYNC_AUTO_RECONCILE", "false").lower() in {"1", "true", "yes"}
+            try:
+                interval = int(os.getenv("KNOWLEDGE_SYNC_INTERVAL_SECONDS", "0"))
+            except Exception:
+                interval = 0
+            auto_reconcile = os.getenv("KNOWLEDGE_SYNC_AUTO_RECONCILE", "false").lower() in {"1", "true", "yes"}
 
         if interval > 0 and getattr(app.state, "unified_retriever", None) is not None:
             from .core.knowledge_state_sync import KnowledgeStateSync

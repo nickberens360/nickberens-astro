@@ -185,9 +185,20 @@ async def knowledge_health(request: Request) -> Dict[str, Any]:
         sync = _get_sync(request)
         summary, _ = sync.validate()
         healthy = summary.discovered_not_indexed == 0 and summary.changed_files == 0 and summary.vector_orphans == 0
+
+        # Read last reconcile timestamp if available
+        last_reconcile_at: Optional[str] = None
+        try:
+            marker = Path(sync.persist_dir) / ".last_reconcile"
+            if marker.exists():
+                last_reconcile_at = marker.read_text(encoding="utf-8").strip()
+        except Exception:
+            pass
+
         return {
             "ok": healthy,
             "summary": summary.__dict__,
+            "last_reconcile_at": last_reconcile_at,
         }
     except HTTPException:
         raise

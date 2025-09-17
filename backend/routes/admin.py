@@ -29,6 +29,7 @@ from ..core.settings_schemas import (
     CoreSettings,
     FeatureFlags,
     FollowUpSettings,
+    KnowledgeSettings,
     QueryRoutingSettings,
     RagConfigurationSettings,
     ResponseSettings,
@@ -2848,6 +2849,62 @@ async def update_search_retrieval_settings(
     except Exception as e:
         logger.error(f"Error updating search retrieval settings: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating search retrieval settings")
+
+
+# === Knowledge Settings Endpoints ===
+@router.get("/settings/knowledge")
+async def get_knowledge_settings(session: Dict[str, Any] = Depends(require_admin_auth)) -> Dict[str, Any]:
+    """Get knowledge indexing and synchronization settings."""
+    try:
+        settings_mgr = get_settings_manager()
+        settings = settings_mgr.get_knowledge_settings()
+        return {"settings": settings.to_dict()}
+    except Exception as e:
+        logger.error(f"Error getting knowledge settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching knowledge settings")
+
+
+@router.put("/settings/knowledge")
+async def update_knowledge_settings(
+    request: Request, settings_data: Dict[str, Any], session: Dict[str, Any] = Depends(require_admin_auth)
+) -> Dict[str, Any]:
+    """Update knowledge indexing and synchronization settings."""
+    try:
+        settings = KnowledgeSettings.from_dict(settings_data)
+        settings_mgr = get_settings_manager()
+        success = settings_mgr.set_knowledge_settings(settings, session["user_id"])
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update knowledge settings")
+
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("User-Agent", "")
+
+        audit_logger.log_action(
+            action=AuditAction.CONFIG_UPDATE,
+            username=session["username"],
+            details={"resource": "knowledge_settings", "new_settings": settings.to_dict()},
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        try:
+            settings_mgr.invalidate_cache("knowledge_settings")
+        except Exception:
+            pass
+
+        logger.info(f"Knowledge settings updated by user {session['user_id']}: {settings.to_dict()}")
+        return {
+            "success": True,
+            "message": "Knowledge settings updated successfully",
+            "settings": settings.to_dict(),
+            "lastUpdated": datetime.now().isoformat(),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating knowledge settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating knowledge settings")
 
 
 # === Taxonomy Settings Endpoints ===

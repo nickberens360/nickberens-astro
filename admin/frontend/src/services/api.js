@@ -269,12 +269,25 @@ class AdminAPI {
     return await this.client.post('/knowledge/reindex-file', { path })
   }
 
+  // Knowledge settings
+  async getKnowledgeSettings() {
+    return await this.client.get('/settings/knowledge')
+  }
+
+  async updateKnowledgeSettings(data) {
+    return await this.client.put('/settings/knowledge', data)
+  }
+
   async getKnowledgeConsistencyList(kind, { offset = 0, limit = 50 } = {}) {
     const searchParams = new URLSearchParams()
     searchParams.append('kind', kind)
     searchParams.append('offset', offset)
     searchParams.append('limit', limit)
     return await this.client.get(`/knowledge/consistency/list?${searchParams.toString()}`)
+  }
+
+  async getKnowledgeHealth() {
+    return await this.client.get('/knowledge/health')
   }
 
   async refreshKnowledgeBase(forceReindex = true) {

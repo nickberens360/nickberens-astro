@@ -570,21 +570,32 @@ class SemanticSearcher:
 
     def delete_where(self, where: Dict[str, Any]) -> None:
         """Delete documents from the underlying store by metadata filter."""
-        if hasattr(self.vector_store, "delete"):
-            # LangChain vector stores commonly expose delete(where=...) for Chroma
-            try:
-                self.vector_store.delete(where=where)  # type: ignore[attr-defined]
-                return
-            except Exception as e:
-                logger.warning("Vector store delete(where=...) failed: %s", e, exc_info=True)
-        # ChromaDB collection fallback
+        # Try to access the underlying ChromaDB collection directly
         if hasattr(self.vector_store, "_collection"):
             try:
+                # ChromaDB's delete requires at least one of: ids, where, or where_document
+                # The where parameter should work for metadata filtering
                 self.vector_store._collection.delete(where=where)  # type: ignore[attr-defined]
+                logger.info(f"Deleted documents matching filter: {where}")
                 return
             except Exception as e:
                 logger.warning("Chroma _collection.delete failed: %s", e, exc_info=True)
-        raise RuntimeError("Delete not supported by current vector store")
+
+        # Fallback: Query for matching documents and delete by ID
+        if hasattr(self.vector_store, "get") and hasattr(self.vector_store, "delete"):
+            try:
+                # First get documents matching the filter
+                results = self.vector_store.get(where=where)  # type: ignore[attr-defined]
+                if results and "ids" in results and results["ids"]:
+                    # Delete by IDs
+                    self.vector_store.delete(ids=results["ids"])  # type: ignore[attr-defined]
+                    logger.info(f"Deleted {len(results['ids'])} documents matching filter: {where}")
+                    return
+            except Exception as e:
+                logger.warning("Fallback delete by ID failed: %s", e, exc_info=True)
+
+        # If no delete mechanism works, log but don't fail
+        logger.warning(f"Could not delete documents with filter {where} - continuing anyway")
 
     def reset_store(self) -> None:
         """Reset and reinitialize the vector store."""

@@ -1,14 +1,24 @@
 <template>
   <div class="sources-view">
-    <div class="d-flex justify-end align-center mb-6">
-      <v-btn
-        color="success"
-        prepend-icon="$upload"
-        variant="text"
-        @click="showUploadDialog = true"
-      >
-        Upload Files
-      </v-btn>
+    <div class="mb-4">
+      <v-alert type="info" variant="tonal" class="mb-4">
+        <div class="d-flex align-center gap-2">
+          <v-icon color="info">$info</v-icon>
+          <div>
+            <strong>Status Legend</strong> — <v-chip size="x-small" color="success">indexed</v-chip>: file has chunks in the vector store; <v-chip size="x-small" color="grey">discovered</v-chip>: file found on disk but not yet indexed; <v-chip size="x-small" color="warning">orphaned/missing</v-chip>: vector or file mismatch; <v-chip size="x-small" color="error">error</v-chip>: indexing failed.
+          </div>
+        </div>
+      </v-alert>
+      <div class="d-flex justify-end align-center">
+        <v-btn
+          color="success"
+          prepend-icon="$upload"
+          variant="text"
+          @click="showUploadDialog = true"
+        >
+          Upload Files
+        </v-btn>
+      </div>
     </div>
 
     <v-card>
