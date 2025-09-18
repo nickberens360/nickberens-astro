@@ -14,22 +14,22 @@ class TestConfig:
     @pytest.mark.unit
     def test_default_llm_configuration(self):
         """Test default LLM configuration values."""
-        assert AppConfig.PRIMARY_LLM == "claude"
-        assert "claude" in AppConfig.CLAUDE_MODEL
-        assert "gemini" in AppConfig.GEMINI_MODEL
-        assert "embedding" in AppConfig.EMBEDDING_MODEL
+        assert AppConfig.get_primary_llm() == "claude"
+        assert "claude" in AppConfig.get_claude_model()
+        assert "gemini" in AppConfig.get_gemini_model()
+        assert "embedding" in AppConfig.get_embedding_model()
 
     @pytest.mark.unit
     def test_search_threshold_validation(self):
         """Test search threshold validation with valid values."""
-        assert 0 <= AppConfig.SEARCH_THRESHOLD <= 100
-        assert isinstance(AppConfig.SEARCH_THRESHOLD, int)
+        assert 0 <= AppConfig.get_search_threshold() <= 100
+        assert isinstance(AppConfig.get_search_threshold(), int)
 
     @pytest.mark.unit
     def test_max_results_validation(self):
         """Test max results validation with valid values."""
-        assert 1 <= AppConfig.MAX_RESULTS <= 100
-        assert isinstance(AppConfig.MAX_RESULTS, int)
+        assert 1 <= AppConfig.get_max_results() <= 100
+        assert isinstance(AppConfig.get_max_results(), int)
 
     @pytest.mark.unit
     def test_port_validation(self):
@@ -159,9 +159,9 @@ class TestConfig:
     @pytest.mark.unit
     def test_rate_limit_configuration(self):
         """Test rate limit configuration."""
-        assert AppConfig.RATE_LIMIT is not None
-        assert isinstance(AppConfig.RATE_LIMIT, str)
-        assert "/" in AppConfig.RATE_LIMIT  # Should be in format like "5/minute"
+        assert AppConfig.get_rate_limit() is not None
+        assert isinstance(AppConfig.get_rate_limit(), str)
+        assert "/" in AppConfig.get_rate_limit()  # Should be in format like "5/minute"
 
     @pytest.mark.unit
     def test_app_metadata(self):
@@ -177,13 +177,13 @@ class TestConfig:
     @pytest.mark.unit
     def test_default_search_threshold_is_valid(self):
         """Search threshold should be a valid percentage (0-100)."""
-        assert 0 <= AppConfig.SEARCH_THRESHOLD <= 100
-        assert isinstance(AppConfig.SEARCH_THRESHOLD, int)
+        assert 0 <= AppConfig.get_search_threshold() <= 100
+        assert isinstance(AppConfig.get_search_threshold(), int)
 
     @pytest.mark.unit
     def test_default_max_results_is_15(self):
         """Default max results (DB default) is 15."""
-        assert AppConfig.MAX_RESULTS == 15
+        assert AppConfig.get_max_results() == 15
 
     @pytest.mark.unit
     def test_default_port_is_8000(self):
