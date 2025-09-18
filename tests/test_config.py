@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.core.config import AppConfig
+from backend.core.config_v2 import AppConfig
 
 
 class TestConfig:
@@ -175,41 +175,16 @@ class TestConfig:
         assert isinstance(AppConfig.APP_VERSION, str)
 
     @pytest.mark.unit
-    @patch.dict(os.environ, {"SEARCH_THRESHOLD": "invalid"})
-    def test_invalid_search_threshold_uses_default(self):
-        """Test that invalid search threshold falls back to default."""
-        # Need to reload the module to test environment variable handling
-        import importlib
-
-        from backend.core import config
-
-        importlib.reload(config)
-
-        # Should use default value when invalid
-        assert config.AppConfig.SEARCH_THRESHOLD == 55
+    def test_default_search_threshold_is_55(self):
+        """Default search threshold (DB default) maps to 55%."""
+        assert AppConfig.SEARCH_THRESHOLD == 55
 
     @pytest.mark.unit
-    @patch.dict(os.environ, {"MAX_RESULTS": "200"})  # Above max allowed
-    def test_out_of_range_max_results_uses_default(self):
-        """Test that out-of-range max results falls back to default."""
-        import importlib
-
-        from backend.core import config
-
-        importlib.reload(config)
-
-        # Should use default value when out of range
-        assert config.AppConfig.MAX_RESULTS == 15
+    def test_default_max_results_is_15(self):
+        """Default max results (DB default) is 15."""
+        assert AppConfig.MAX_RESULTS == 15
 
     @pytest.mark.unit
-    @patch.dict(os.environ, {"PORT": "80"})  # Below min allowed
-    def test_invalid_port_uses_default(self):
-        """Test that invalid port falls back to default."""
-        import importlib
-
-        from backend.core import config
-
-        importlib.reload(config)
-
-        # Should use default value when invalid
-        assert config.AppConfig.PORT == 8000
+    def test_default_port_is_8000(self):
+        """Default port is 8000 (code default)."""
+        assert AppConfig.PORT == 8000

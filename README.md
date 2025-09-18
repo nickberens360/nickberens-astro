@@ -87,16 +87,32 @@ pytest -m unit           # Run tests
 
 ---
 
-## Environment Variables
+## Configuration & Environment
+
+The backend now uses a database‑first configuration with code defaults:
+
+- Secrets in env: `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, optional `GITHUB_TOKEN`, `IP_HASH_SALT`, `ADMIN_DEFAULT_*`
+- Deployment in env: `ENVIRONMENT`, `PUBLIC_API_URL`, public GitHub vars, optional GA tracking id
+- Non‑secrets in DB (editable via Admin UI): LLM models, search/retrieval, RAG, feature flags, rate limit string, security/privacy
+- Code defaults live in `backend/core/config_v2.py` and are overridden by DB values
+
+Minimal `.env` example:
 
 ```bash
-# Required
+# Required secrets
 ANTHROPIC_API_KEY=your_key_here
 GOOGLE_API_KEY=your_key_here
 
-# Optional
-FORCE_REBUILD_DATA=true    # Force rebuild vector indices
+# Deployment
+ENVIRONMENT=development
+PUBLIC_API_URL=http://localhost:8000
 ```
+
+Notes
+
+- Most settings are managed in the Admin Dashboard (DB overrides). Changes take effect without restart.
+- FORCE_REBUILD_DATA is treated as an operational flag (one‑off), not a persisted setting.
+- New code should import `AppConfig` from `backend.core.config_v2`.
 
 ## Admin Dashboard
 
@@ -104,6 +120,14 @@ FORCE_REBUILD_DATA=true    # Force rebuild vector indices
 * **Backend**: Integrated at http://localhost:8000
 * **Authentication**: Session-based with secure cookies
 * **Features**: Analytics, settings, API key management
+
+---
+
+## Migration Summary (for contributors)
+
+- New config entry point: `backend/core/config_v2.py`
+- Legacy shim retained: `backend/core/config.py` (deprecated; kept for tests/back‑compat)
+- Migration script: `backend/scripts/migrate_env_to_db.py` to seed DB from env where applicable
 
 ---
 

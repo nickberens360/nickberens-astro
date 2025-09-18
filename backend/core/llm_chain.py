@@ -20,7 +20,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import Runnable
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .query_logger import get_query_logger
 
 # Import API key manager for secure key retrieval
@@ -673,7 +673,7 @@ class CacheManager:
             cache_components.append("hist_len:0")
 
         # Add model information
-        from backend.core.config import AppConfig
+        from backend.core.config_v2 import AppConfig
 
         model_name = model or getattr(AppConfig, "CLAUDE_MODEL", "default")
         cache_components.append(f"model:{model_name}")

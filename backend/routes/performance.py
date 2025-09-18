@@ -16,7 +16,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ..core.config import AppConfig
+from ..core.config_v2 import AppConfig
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

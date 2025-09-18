@@ -624,7 +624,7 @@ async def get_performance_metrics(
         # Use the same logic as the main performance API endpoint
         from datetime import datetime, timedelta
 
-        from ..core.config import AppConfig
+        from ..core.config_v2 import AppConfig
 
         # Import database connection utility from performance route
         from ..core.database_utils import get_rag_monitoring_db_connection as get_db_connection

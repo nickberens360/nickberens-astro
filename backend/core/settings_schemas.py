@@ -1189,7 +1189,7 @@ class SearchRetrievalSettings:
     """Search and document retrieval configuration settings."""
 
     # Search Configuration
-    semantic_similarity_threshold: float = 0.7
+    semantic_similarity_threshold: float = 0.55
     max_search_results: int = 10
     search_timeout_seconds: int = 30
 

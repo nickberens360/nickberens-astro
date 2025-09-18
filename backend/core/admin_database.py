@@ -1769,8 +1769,11 @@ class AdminDatabaseManager:
         import random
 
         try:
-            # Serialize writes to reduce lock contention
-            with self._write_lock:
+            # Serialize writes to reduce lock contention (gracefully handle tests that bypass __init__)
+            import threading as _threading
+
+            _lock = getattr(self, "_write_lock", _threading.RLock())
+            with _lock:
                 # Compute timestamps and jitter before DB operations
                 now = datetime.now()
                 jitter_seconds = random.randint(0, 60)

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from ..core.admin_auth import require_admin_auth
-from ..core.config import AppConfig
+from ..core.config_v2 import AppConfig
 from ..core.knowledge_index_db import KnowledgeIndexDB
 from ..core.knowledge_state_sync import KnowledgeStateSync
 
@@ -37,7 +37,7 @@ def _get_sync(request: Request) -> KnowledgeStateSync:
         pass
 
     # Index dirs from config (backend/knowledge, public, ...)
-    index_dirs = AppConfig.RAG_INDEX_DIRS or ["backend/knowledge", "public"]
+    index_dirs = AppConfig.get_rag_index_dirs() or ["backend/knowledge", "public"]
     return KnowledgeStateSync(retriever, persist_dir=persist_dir, index_dirs=index_dirs)
 
 

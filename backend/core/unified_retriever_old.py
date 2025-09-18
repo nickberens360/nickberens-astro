@@ -27,7 +27,7 @@ except ImportError:
 
 from ..ingest.chunking import splitter_for_ext
 from ..ingest.loaders import load_doc
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .llm_utils import extract_topics_with_llm
 
 logger = logging.getLogger(__name__)

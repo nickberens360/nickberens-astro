@@ -17,7 +17,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseLanguageModel
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .constants import ANTHROPIC_COMMON_PARAMS, GOOGLE_COMMON_PARAMS
 from .settings_manager import get_settings_manager
 from .smart_illustration_service import SmartIllustrationService

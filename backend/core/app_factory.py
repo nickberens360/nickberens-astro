@@ -19,7 +19,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .security_middleware import add_security_middleware
 from .settings_manager import get_settings_manager
 

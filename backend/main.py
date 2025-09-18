@@ -28,7 +28,7 @@ os.environ.setdefault("POSTHOG_DISABLED", "1")
 
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
-from .core.config import AppConfig
+from .core.config_v2 import AppConfig
 from .core.followup_service import FollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter

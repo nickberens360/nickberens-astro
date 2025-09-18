@@ -15,7 +15,7 @@ from fastapi import APIRouter, Query
 
 from backend.models.admin_models import OverviewStats  # reuse shared model
 
-from ..core.config import AppConfig
+from ..core.config_v2 import AppConfig
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -161,10 +161,18 @@ async def start_cache_warming(retrievers: Dict[str, BaseRetriever], app_state: A
     This function starts cache warming and returns immediately,
     allowing the app to start serving requests while warming happens.
     """
-    from ..core.config import AppConfig
+    # Check response caching settings from DB
+    try:
+        from ..core.settings_manager import get_settings_manager
 
-    if not AppConfig.CACHE_FOLLOWUP_RESPONSES:
-        logger.info("Follow-up response caching is disabled")
+        sm = get_settings_manager()
+        rs = sm.get_response_settings()
+        # Require both global caching and response caching to be enabled
+        if not getattr(rs, "enable_caching", True) or not getattr(rs, "enable_response_caching", True):
+            logger.info("Follow-up response caching is disabled by settings")
+            return
+    except Exception as e:
+        logger.warning(f"Could not read response caching settings, skipping cache warming: {e}")
         return
 
     # Get the follow-up service to extract general questions
