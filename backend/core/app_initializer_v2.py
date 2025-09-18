@@ -229,13 +229,13 @@ def create_response_llm() -> BaseLanguageModel:
         logger.debug(f"Could not get LLM settings from database: {e}, using environment fallback")
 
     # Fallback to environment configuration
-    logger.info(f"Creating Claude LLM from environment config: {AppConfig.CLAUDE_MODEL}")
+    logger.info(f"Creating Claude LLM from environment config: {AppConfig.get_claude_model()}")
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
-        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
+        return ChatAnthropic(model_name=AppConfig.get_claude_model(), api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model_name=AppConfig.CLAUDE_MODEL, **ANTHROPIC_COMMON_PARAMS)
+        return ChatAnthropic(model_name=AppConfig.get_claude_model(), **ANTHROPIC_COMMON_PARAMS)
 
 
 def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, BaseLanguageModel]:
@@ -283,7 +283,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     user_query_llm = create_response_llm()
 
     # Initialize embeddings
-    embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
+    embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.get_embedding_model())
 
     # Determine persist directory (allow override via environment for tests/CI)
     persist_dir = os.getenv("UNIFIED_PERSIST_DIR", "backend/.unified_chroma")

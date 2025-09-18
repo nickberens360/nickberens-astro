@@ -69,13 +69,13 @@ def get_primary_llm() -> str:
         logger.debug(f"Could not get LLM settings from database: {e}, using environment fallback")
 
     # Fallback to environment variable
-    env_primary_llm = AppConfig.PRIMARY_LLM
+    env_primary_llm = AppConfig.get_primary_llm()
     logger.debug(f"Using primary LLM from environment: {env_primary_llm}")
     return env_primary_llm
 
 
 # --- Configuration ---
-GEMINI_MODEL = AppConfig.GEMINI_MODEL
+GEMINI_MODEL = AppConfig.get_gemini_model()
 
 # Model name constants
 FAST_MODEL = "claude_haiku"
@@ -97,8 +97,8 @@ answer the question, just reformulate it if needed and otherwise return it as is
 }
 
 
-CLAUDE_MODEL = AppConfig.CLAUDE_MODEL
-EMBEDDING_MODEL = AppConfig.EMBEDDING_MODEL
+CLAUDE_MODEL = AppConfig.get_claude_model()
+EMBEDDING_MODEL = AppConfig.get_embedding_model()
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
 ENABLE_CACHING = os.getenv("ENABLE_CACHING", "true").lower() == "true"
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
@@ -693,9 +693,9 @@ class CacheManager:
         # Add relevant configuration that affects retrieval/generation
 
         config_hash_parts = [
-            f"threshold:{AppConfig.RAG_SCORE_THRESHOLD}",
-            f"max_results:{AppConfig.MAX_RESULTS}",
-            f"mmr:{AppConfig.RAG_USE_MMR}",
+            f"threshold:{AppConfig.get_rag_score_threshold()}",
+            f"max_results:{AppConfig.get_max_results()}",
+            f"mmr:{AppConfig.get_rag_use_mmr()}",
         ]
 
         if additional_context:
@@ -806,7 +806,7 @@ async def stream_with_fallback(
     Handle user input, perform retrieval (with caching),
     and stream a response from an LLM with fallback capabilities.
     """
-    cache_key = CacheManager.get_cache_key(user_input, chat_history=chat_history, model=AppConfig.CLAUDE_MODEL)
+    cache_key = CacheManager.get_cache_key(user_input, chat_history=chat_history, model=AppConfig.get_claude_model())
     metadata = {"rate_limit_status": rate_limit_tracker.get_status()}
 
     # Merge additional metadata from routes
@@ -976,7 +976,9 @@ async def stream_with_fallback(
                             env_key = os.getenv("ANTHROPIC_API_KEY")
                             if env_key:
                                 fallback_model = (
-                                    AppConfig.CLAUDE_MODEL if model_name == "claude" else "claude-3-haiku-20240307"
+                                    AppConfig.get_claude_model()
+                                    if model_name == "claude"
+                                    else "claude-3-haiku-20240307"
                                 )
                                 try:
                                     fallback_llm = ChatAnthropic(

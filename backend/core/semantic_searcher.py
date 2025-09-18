@@ -342,7 +342,7 @@ class SemanticSearcher:
                 use_mmr = rag_settings.rag_use_mmr
                 logger.debug(f"Using dynamic MMR setting: {use_mmr}")
             else:
-                use_mmr = AppConfig.RAG_USE_MMR
+                use_mmr = AppConfig.get_rag_use_mmr()
 
         # Get more results than needed for filtering and reranking
         search_k = k * AppConfig.SEARCH_EXPANSION_MULTIPLIER

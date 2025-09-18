@@ -163,7 +163,7 @@ async def lifespan(app: FastAPI):
                 )
             except Exception:
                 persist_dir = "backend/.unified_chroma"
-            index_dirs = AppConfig.RAG_INDEX_DIRS or ["backend/knowledge", "public"]
+            index_dirs = AppConfig.get_rag_index_dirs() or ["backend/knowledge", "public"]
 
             async def _periodic_sync():
                 sync = KnowledgeStateSync(retr, persist_dir=persist_dir, index_dirs=index_dirs)
