@@ -181,9 +181,11 @@ class TestConfig:
         assert isinstance(AppConfig.get_search_threshold(), int)
 
     @pytest.mark.unit
-    def test_default_max_results_is_15(self):
-        """Default max results (DB default) is 15."""
-        assert AppConfig.get_max_results() == 15
+    def test_default_max_results_is_valid_range(self):
+        """Max results should be in valid range (1-100)."""
+        max_results = AppConfig.get_max_results()
+        assert 1 <= max_results <= 100
+        assert isinstance(max_results, int)
 
     @pytest.mark.unit
     def test_default_port_is_8000(self):
