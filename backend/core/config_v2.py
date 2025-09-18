@@ -63,7 +63,7 @@ class AppConfig:
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # Optional, for git integration
-    ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123456789")
+    ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_DEFAULT_PASSWORD")
     ADMIN_DEFAULT_USERNAME = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
 
     # =====================================
@@ -498,6 +498,27 @@ class AppConfig:
         return salt
 
     @classmethod
+    def get_admin_default_password(cls) -> str:
+        """Get admin default password with secure default generation."""
+        password = os.getenv("ADMIN_DEFAULT_PASSWORD", "")
+
+        if not password:
+            if cls.IS_PRODUCTION:
+                raise ValueError(
+                    "ADMIN_DEFAULT_PASSWORD must be explicitly set in production environments. "
+                    "Generate a secure password using: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
+            else:
+                # Generate a secure random password for development
+                password = secrets.token_urlsafe(32)
+                logger.warning(
+                    f"Using generated ADMIN_DEFAULT_PASSWORD for development: {password[:8]}... "
+                    "Set ADMIN_DEFAULT_PASSWORD environment variable for consistent authentication."
+                )
+
+        return password
+
+    @classmethod
     def get_excluded_ips(cls) -> List[str]:
         """Get excluded IPs from SecuritySettings if available, else env."""
         try:
@@ -615,6 +636,7 @@ def _init_backcompat_from_db() -> None:
 # Initialize properties and back-compat constants at module load time
 AppConfig.EXCLUDED_IPS = AppConfig.get_excluded_ips()
 AppConfig.IP_HASH_SALT = AppConfig.get_ip_hash_salt()
+AppConfig.ADMIN_DEFAULT_PASSWORD = AppConfig.get_admin_default_password()
 _init_backcompat_from_db()
 
 # NOTE: Static attribute assignments removed to enable dynamic configuration updates.

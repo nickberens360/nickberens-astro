@@ -442,19 +442,16 @@ class AdminDatabaseManager:
 
         # Default credentials (require secure password via env var)
         username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
-        password = os.getenv("ADMIN_DEFAULT_PASSWORD")
+        # Use secure password method to ensure production safety
+        from .config_v2 import AppConfig
+
+        password = AppConfig.get_admin_default_password()
         email = os.getenv("ADMIN_DEFAULT_EMAIL", "admin@localhost")
         role = "admin"
 
-        if not password:
-            # Generate a secure random password if none provided
-            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-            password = "".join(secrets.choice(alphabet) for _ in range(16))
-            logger.warning("No ADMIN_DEFAULT_PASSWORD set. Generated secure random password.")
-            logger.warning(f"GENERATED ADMIN PASSWORD: {password}")
-            logger.warning("SAVE THIS PASSWORD - IT WILL NOT BE DISPLAYED AGAIN!")
-        elif len(password) < 12:
-            raise ValueError("ADMIN_DEFAULT_PASSWORD must be at least 12 characters long")
+        # Validate password length for security
+        if len(password) < 12:
+            raise ValueError("Admin password must be at least 12 characters long")
 
         # Use the same bcrypt method as authentication for consistency
         password_bytes = password.encode("utf-8")
@@ -469,17 +466,17 @@ class AdminDatabaseManager:
         )
 
         logger.info(f"Created default admin user: {username}")
-        if os.getenv("ADMIN_DEFAULT_PASSWORD"):
-            logger.info("Using admin password from ADMIN_DEFAULT_PASSWORD environment variable")
-        else:
-            logger.warning("Random password generated - check logs above for password")
+        # Password creation is handled by AppConfig.get_admin_default_password() with secure defaults
 
     def _ensure_default_admin_user(self, cursor):
         """Ensure the default admin user exists and has correct password format."""
         import os
 
         default_username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin").lower()
-        default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
+        # Use secure password method
+        from .config_v2 import AppConfig
+
+        default_password = AppConfig.get_admin_default_password()
 
         # SECURITY FIX: Always verify admin user integrity
         # Check if the default admin user exists
