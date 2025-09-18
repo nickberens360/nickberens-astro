@@ -11,7 +11,6 @@ from pathlib import Path
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from backend.core.admin_database import admin_db_manager
 from backend.core.settings_manager import get_settings_manager
 from backend.core.settings_schemas import (
     FeatureFlags,

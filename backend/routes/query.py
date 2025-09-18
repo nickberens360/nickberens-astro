@@ -21,7 +21,6 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from ..core.admin_database import admin_db_manager
-from ..core.app_factory import limiter
 from ..core.config_v2 import AppConfig
 from ..core.llm_chain import get_rate_limit_status, stream_with_fallback
 from ..core.query_logger import get_query_logger

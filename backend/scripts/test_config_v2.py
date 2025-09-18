@@ -4,7 +4,6 @@ Test script to verify the new configuration system is working correctly.
 Checks that database overrides work and fallback to defaults happens properly.
 """
 
-import os
 import sys
 from pathlib import Path
 
