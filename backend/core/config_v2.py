@@ -342,19 +342,7 @@ class AppConfig:
     # COMPATIBILITY PROPERTIES
     # =====================================
     # These provide backward compatibility with existing code
-
-    PRIMARY_LLM = property(lambda self: self.get_primary_llm())
-    CLAUDE_MODEL = property(lambda self: self.get_claude_model())
-    GEMINI_MODEL = property(lambda self: self.get_gemini_model())
-    EMBEDDING_MODEL = property(lambda self: self.get_embedding_model())
-    SEARCH_THRESHOLD = property(lambda self: self.get_search_threshold())
-    MAX_RESULTS = property(lambda self: self.get_max_results())
-    CACHE_TTL = property(lambda self: self.get_cache_ttl())
-    ENABLE_CACHING = property(lambda self: self.get_enable_caching())
-    RATE_LIMIT = property(lambda self: self.get_rate_limit())
-    RAG_USE_MMR = property(lambda self: self.get_rag_use_mmr())
-    RAG_SCORE_THRESHOLD = property(lambda self: self.get_rag_score_threshold())
-    RAG_INDEX_DIRS = property(lambda self: self.get_rag_index_dirs())
+    # Note: These will be populated at module load time below
 
     # Server Configuration (hardcoded, rarely changes)
     LOG_LEVEL = LOG_LEVEL_DEFAULT
@@ -478,7 +466,11 @@ class AppConfig:
             "https://development--nickberens360.netlify.app",
         ]
 
-        if AppConfig.IS_PRODUCTION:
+        # Check environment dynamically for testing
+        current_env = os.getenv("ENVIRONMENT", "development").split("#", 1)[0].strip().lower()
+        is_production = current_env in ("production", "prod")
+
+        if is_production:
             return production_origins
         else:
             return production_origins + development_origins
@@ -630,4 +622,11 @@ AppConfig.PRIMARY_LLM = AppConfig.get_primary_llm()
 AppConfig.CLAUDE_MODEL = AppConfig.get_claude_model()
 AppConfig.GEMINI_MODEL = AppConfig.get_gemini_model()
 AppConfig.EMBEDDING_MODEL = AppConfig.get_embedding_model()
+AppConfig.SEARCH_THRESHOLD = AppConfig.get_search_threshold()
+AppConfig.MAX_RESULTS = AppConfig.get_max_results()
+AppConfig.CACHE_TTL = AppConfig.get_cache_ttl()
+AppConfig.ENABLE_CACHING = AppConfig.get_enable_caching()
 AppConfig.RATE_LIMIT = AppConfig.get_rate_limit()
+AppConfig.RAG_USE_MMR = AppConfig.get_rag_use_mmr()
+AppConfig.RAG_SCORE_THRESHOLD = AppConfig.get_rag_score_threshold()
+AppConfig.RAG_INDEX_DIRS = AppConfig.get_rag_index_dirs()

@@ -27,6 +27,68 @@ from .unified_retriever import UnifiedRetriever
 logger = logging.getLogger(__name__)
 
 
+def _sync_env_api_keys_to_db_if_needed() -> None:
+    """One-time sync of env API keys into the database before LLM init.
+
+    - If DB is empty for a provider, create the canonical key using the env value.
+    - If DB has a different value than the env value, update it to match env.
+    - Uses proper encryption via ApiKeyManager where available.
+
+    This runs on every startup but is idempotent and low-cost.
+    """
+    try:
+        from .admin_database import admin_db_manager
+        from .api_key_manager import api_key_manager
+    except Exception as e:
+        logger.debug(f"API key sync skipped (imports failed): {e}")
+        return
+
+    mappings = [
+        ("ANTHROPIC_API_KEY", "anthropic_primary", "anthropic"),
+        ("GOOGLE_API_KEY", "google_primary", "google"),
+        ("OPENAI_API_KEY", "openai_primary", "openai"),
+    ]
+
+    for env_var, key_name, key_type in mappings:
+        try:
+            env_value = os.getenv(env_var)
+            if not env_value or len(env_value.strip()) < 10:
+                continue
+
+            # Current DB value by provider type (decrypted)
+            try:
+                current_value = api_key_manager.get_api_key_by_type(key_type)  # may be None
+            except Exception as e:
+                logger.debug(f"Could not read {key_type} key from DB: {e}")
+                current_value = None
+
+            # If missing or differs, upsert canonical record to env value
+            if (current_value or "").strip() != env_value.strip():
+                # Does canonical key row exist?
+                exists = False
+                try:
+                    with admin_db_manager.get_connection() as conn:
+                        cur = conn.cursor()
+                        cur.execute("SELECT 1 FROM api_keys WHERE key_name = ? LIMIT 1", (key_name,))
+                        exists = cur.fetchone() is not None
+                except Exception as e:
+                    logger.debug(f"DB probe for {key_name} failed (will still attempt write): {e}")
+
+                try:
+                    if exists:
+                        api_key_manager.update_api_key(key_name=key_name, new_api_key=env_value, updated_by=None)
+                        logger.info(f"Synced env {env_var} into DB (updated {key_name})")
+                    else:
+                        api_key_manager.create_api_key(
+                            key_name=key_name, key_type=key_type, api_key=env_value, updated_by=None
+                        )
+                        logger.info(f"Synced env {env_var} into DB (created {key_name})")
+                except Exception as write_err:
+                    logger.warning(f"Failed to sync {env_var} into DB: {write_err}")
+        except Exception as e:
+            logger.debug(f"Key sync step for {env_var} skipped: {e}")
+
+
 def create_processing_llm() -> BaseLanguageModel:
     """
     Create the appropriate LLM for background processing operations.
@@ -209,6 +271,12 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     backend_dir = Path(__file__).parent.parent.resolve()
     logs_dir = backend_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
+
+    # Before creating any LLM clients, ensure env keys are synced into DB
+    try:
+        _sync_env_api_keys_to_db_if_needed()
+    except Exception as e:
+        logger.debug(f"Env→DB API key sync skipped: {e}")
 
     # Initialize LLMs - database-configured processing LLM for indexing, response LLM for user queries
     indexing_llm = create_processing_llm()

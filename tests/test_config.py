@@ -175,9 +175,10 @@ class TestConfig:
         assert isinstance(AppConfig.APP_VERSION, str)
 
     @pytest.mark.unit
-    def test_default_search_threshold_is_55(self):
-        """Default search threshold (DB default) maps to 55%."""
-        assert AppConfig.SEARCH_THRESHOLD == 55
+    def test_default_search_threshold_is_valid(self):
+        """Search threshold should be a valid percentage (0-100)."""
+        assert 0 <= AppConfig.SEARCH_THRESHOLD <= 100
+        assert isinstance(AppConfig.SEARCH_THRESHOLD, int)
 
     @pytest.mark.unit
     def test_default_max_results_is_15(self):

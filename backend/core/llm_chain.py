@@ -423,6 +423,18 @@ def is_rate_limit_error(error: Exception) -> bool:
     return any(indicator in error_str for indicator in rate_limit_indicators)
 
 
+def is_authentication_error(error: Exception) -> bool:
+    """Detect authentication failures (e.g., invalid API key, 401).
+
+    Uses string heuristics to avoid tight coupling to vendor exception types.
+    """
+    try:
+        msg = str(error).lower()
+    except Exception:
+        msg = ""
+    return "authentication" in msg or "invalid x-api-key" in msg or "401" in msg or "unauthorized" in msg
+
+
 def get_api_key_for_provider(provider_type: str) -> Optional[str]:
     """
     Get API key for a provider, preferring database storage over environment variables.
@@ -934,6 +946,7 @@ async def stream_with_fallback(
 
             async def progressive_streaming_with_caching(qa=qa_chain, model_name=llm_name):
                 full_response_chunks = []
+                used_model_name = model_name
                 try:
                     # Stream LLM response in real-time while collecting for cache
                     async for chunk in qa.astream({"input": user_input, "context": unique_docs}):
@@ -955,6 +968,66 @@ async def stream_with_fallback(
                             yield text_piece
                             # Collect for caching
                             full_response_chunks.append(text_piece)
+
+                except Exception as stream_err:
+                    # If authentication fails for Anthropic, try env-key fallback then Gemini
+                    if is_authentication_error(stream_err) and model_name in {"claude", "claude_haiku"}:
+                        try:
+                            env_key = os.getenv("ANTHROPIC_API_KEY")
+                            if env_key:
+                                fallback_model = (
+                                    AppConfig.CLAUDE_MODEL if model_name == "claude" else "claude-3-haiku-20240307"
+                                )
+                                try:
+                                    fallback_llm = ChatAnthropic(
+                                        model=fallback_model, api_key=env_key, temperature=0.7, timeout=REQUEST_TIMEOUT
+                                    )
+                                    qa_env = create_qa_chain(fallback_llm)
+                                    used_model_name = model_name  # same provider family
+                                    async for chunk in qa_env.astream({"input": user_input, "context": unique_docs}):
+                                        if hasattr(chunk, "content"):
+                                            text_piece = getattr(chunk, "content", "")
+                                        elif isinstance(chunk, str):
+                                            text_piece = chunk
+                                        elif isinstance(chunk, dict):
+                                            text_piece = str(
+                                                chunk.get("answer") or chunk.get("output") or chunk.get("content") or ""
+                                            )
+                                        else:
+                                            text_piece = str(chunk)
+                                        if text_piece:
+                                            yield text_piece
+                                            full_response_chunks.append(text_piece)
+                                    return
+                                except Exception:
+                                    # proceed to gemini fallback
+                                    pass
+
+                            gem_llm = llms.get("gemini")
+                            if gem_llm is not None:
+                                qa_gem = create_qa_chain(gem_llm)
+                                used_model_name = "gemini"
+                                async for chunk in qa_gem.astream({"input": user_input, "context": unique_docs}):
+                                    if hasattr(chunk, "content"):
+                                        text_piece = getattr(chunk, "content", "")
+                                    elif isinstance(chunk, str):
+                                        text_piece = chunk
+                                    elif isinstance(chunk, dict):
+                                        text_piece = str(
+                                            chunk.get("answer") or chunk.get("output") or chunk.get("content") or ""
+                                        )
+                                    else:
+                                        text_piece = str(chunk)
+                                    if text_piece:
+                                        yield text_piece
+                                        full_response_chunks.append(text_piece)
+                                return
+                        except Exception:
+                            # Fall through to re-raise
+                            pass
+
+                    # Re-raise for non-auth errors or if fallbacks failed
+                    raise
 
                 finally:
                     # Background caching after streaming completes
@@ -979,7 +1052,7 @@ async def stream_with_fallback(
                                     question=question,
                                     actual_response=complete_response,
                                     request_id=request_id,
-                                    model_used=model_name,
+                                    model_used=used_model_name,
                                     response_time=actual_response_time,
                                     metadata=metadata,
                                 )
