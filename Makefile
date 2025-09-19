@@ -34,3 +34,4 @@ test-integration:
 # Run indexing on a directory and print metrics JSON
 index-report:
 	python -m backend.scripts.indexing_report --dir "$(DIR)" $(if $(FORCE),--force,) $(if $(HETERO),--hetero,) $(if $(PERSIST_DIR),--persist-dir "$(PERSIST_DIR)",)
+

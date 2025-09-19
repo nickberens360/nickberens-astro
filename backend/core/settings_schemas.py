@@ -1189,7 +1189,7 @@ class SearchRetrievalSettings:
     """Search and document retrieval configuration settings."""
 
     # Search Configuration
-    semantic_similarity_threshold: float = 0.7
+    semantic_similarity_threshold: float = 0.55
     max_search_results: int = 10
     search_timeout_seconds: int = 30
 
@@ -1275,3 +1275,65 @@ class SettingKeys:
     UX_SETTINGS = "ux_settings"
     SEARCH_RETRIEVAL_SETTINGS = "search_retrieval_settings"
     SYSTEM_SETTINGS = "system_settings"  # For unified storage (future use)
+    KNOWLEDGE_SETTINGS = "knowledge_settings"
+
+
+@dataclass
+class KnowledgeSettings:
+    """Configuration for knowledge indexing and synchronization."""
+
+    index_on_startup: bool = True
+    background_sync_interval_seconds: int = 0  # 0 disables
+    auto_reindex_deltas: bool = False
+    enable_heterogeneity_fallback: bool = False
+    heterogeneity_fallback_include: List[str] = field(default_factory=list)
+    index_directories: List[str] = field(default_factory=lambda: ["backend/knowledge", "public"])
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "KnowledgeSettings":
+        defaults = cls()
+        validated = {}
+        for k, v in asdict(defaults).items():
+            validated[k] = data.get(k, v)
+
+        # Normalize types and bounds
+        validated["index_on_startup"] = bool(validated.get("index_on_startup", defaults.index_on_startup))
+        try:
+            ival = int(validated.get("background_sync_interval_seconds", defaults.background_sync_interval_seconds))
+        except Exception:
+            ival = defaults.background_sync_interval_seconds
+        validated["background_sync_interval_seconds"] = max(0, min(86400, ival))
+
+        validated["auto_reindex_deltas"] = bool(validated.get("auto_reindex_deltas", defaults.auto_reindex_deltas))
+        validated["enable_heterogeneity_fallback"] = bool(
+            validated.get("enable_heterogeneity_fallback", defaults.enable_heterogeneity_fallback)
+        )
+
+        includes = validated.get("heterogeneity_fallback_include") or []
+        if not isinstance(includes, list):
+            includes = [str(includes)]
+        validated["heterogeneity_fallback_include"] = [str(x).strip() for x in includes if str(x).strip()]
+
+        dirs = validated.get("index_directories") or []
+        if not isinstance(dirs, list):
+            dirs = [str(dirs)]
+        validated["index_directories"] = [str(x).strip() for x in dirs if str(x).strip()]
+        if not validated["index_directories"]:
+            validated["index_directories"] = list(defaults.index_directories)
+
+        return cls(**validated)
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "KnowledgeSettings":
+        try:
+            data = json.loads(json_str)
+            return cls.from_dict(data)
+        except Exception as e:
+            logger.warning(f"Failed to parse knowledge settings JSON: {e}")
+            return cls()

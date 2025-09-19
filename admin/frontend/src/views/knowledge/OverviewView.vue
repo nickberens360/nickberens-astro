@@ -64,15 +64,6 @@
           >
             Clear
           </v-btn>
-          <v-btn
-            color="secondary"
-            prepend-icon="$refresh"
-            :loading="refreshing"
-            variant="outlined"
-            @click="refreshKnowledgeBase"
-          >
-            Refresh Index
-          </v-btn>
         </div>
 
         <!-- Inline refresh status (non-intrusive) -->
@@ -110,7 +101,7 @@
           >
             $info
           </v-icon>
-          <strong>Note:</strong> Files will be automatically indexed after upload. Use "Refresh Index" to force re-indexing.
+          <strong>Note:</strong> Files will be automatically indexed after upload. Use the "Re-Index" button above to force re-indexing if needed.
         </div>
       </v-card-text>
     </v-card>
@@ -123,13 +114,6 @@
         </v-icon>
         Knowledge Base Files
         <v-spacer />
-        <v-btn
-          icon="$refresh"
-          variant="text"
-          size="small"
-          :loading="loadingFiles"
-          @click="loadFiles"
-        />
       </v-card-title>
       <v-card-text class="pa-0">
         <v-data-table
@@ -217,10 +201,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { adminAPI } from '@/services/api'
 import FileEditorModal from '@/components/FileEditorModal.vue'
 import { useNotifications } from '@/composables/useNotifications'
+
+const props = defineProps({
+  refreshTrigger: {
+    type: Number,
+    default: 0
+  }
+})
+
+const emit = defineEmits(['refresh-complete'])
 
 const selectedFiles = ref([])
 const uploading = ref(false)
@@ -375,12 +368,20 @@ const loadFiles = async () => {
   try {
     const response = await adminAPI.getKnowledgeFiles()
     files.value = response.files || []
+    emit('refresh-complete')
   } catch (error) {
     console.error('Failed to load files:', error)
   } finally {
     loadingFiles.value = false
   }
 }
+
+// Watch for refresh trigger from parent
+watch(() => props.refreshTrigger, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    loadFiles()
+  }
+})
 
 const confirmDelete = (file) => {
   fileToDelete.value = file

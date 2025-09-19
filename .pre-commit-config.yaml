@@ -22,6 +22,15 @@ repos:
       - id: isort
         args: [--profile=black, --line-length=120]
 
+  # Custom checks
+  - repo: local
+    hooks:
+      - id: forbid-legacy-config-imports
+        name: Forbid legacy backend.core.config imports
+        entry: python scripts/check_no_legacy_config_imports.py
+        language: python
+        types: [python, markdown]
+
 # Linting and type checking removed from pre-commit
 # Run manually when ready:
 #   flake8 backend/

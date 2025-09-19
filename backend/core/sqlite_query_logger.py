@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .database_utils import get_database_path
 from .geolocation_service import get_geolocation_service
 from .settings_manager import get_settings_manager
@@ -159,6 +159,10 @@ class SQLiteQueryLogger:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_query_logs_errors ON query_logs(error_occurred)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved ON content_gaps(resolved)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_score ON content_gaps(avg_similarity_score)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_content_gaps_last_seen ON content_gaps(last_seen DESC)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_content_gaps_resolved_last_seen ON content_gaps(resolved, last_seen DESC)"
+            )
 
             conn.commit()
             self.logger.info("SQLite database initialized at %s", self.sqlite_db_path)

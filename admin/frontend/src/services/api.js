@@ -239,17 +239,67 @@ class AdminAPI {
     return await this.client.delete(`/knowledge/files/${encodeURIComponent(filename)}`)
   }
 
+  // Knowledge consistency (admin)
+  async getKnowledgeConsistency(sample = 50) {
+    return await this.client.get(`/knowledge/consistency?sample=${sample}`)
+  }
+
+  async reconcileKnowledge(options = {}) {
+    const payload = {
+      dry_run: options.dryRun !== undefined ? options.dryRun : true,
+      allow_deletes: !!options.allowDeletes,
+      limit: options.limit,
+      paths: options.paths,
+    }
+    return await this.client.post('/knowledge/reconcile', payload, { timeout: 120000 })
+  }
+
+  async getKnowledgeFilesStatus(params = {}) {
+    const searchParams = new URLSearchParams()
+    if (params.status) searchParams.append('status', params.status)
+    // Backend validation caps limit at 1000; clamp client value to avoid 422
+    const limit = Math.min(params.limit ?? 200, 1000)
+    searchParams.append('limit', limit)
+    if (params.offset) searchParams.append('offset', params.offset)
+    const qs = searchParams.toString()
+    return await this.client.get(`/knowledge/files/status${qs ? `?${qs}` : ''}`)
+  }
+
+  async reindexKnowledgeFile(path) {
+    return await this.client.post('/knowledge/reindex-file', { path })
+  }
+
+  // Knowledge settings
+  async getKnowledgeSettings() {
+    return await this.client.get('/settings/knowledge')
+  }
+
+  async updateKnowledgeSettings(data) {
+    return await this.client.put('/settings/knowledge', data)
+  }
+
+  async getKnowledgeConsistencyList(kind, { offset = 0, limit = 50 } = {}) {
+    const searchParams = new URLSearchParams()
+    searchParams.append('kind', kind)
+    searchParams.append('offset', offset)
+    searchParams.append('limit', limit)
+    return await this.client.get(`/knowledge/consistency/list?${searchParams.toString()}`)
+  }
+
+  async getKnowledgeHealth() {
+    return await this.client.get('/knowledge/health')
+  }
+
   async refreshKnowledgeBase(forceReindex = true) {
-    return await this.client.post(`/knowledge/refresh?force_reindex=${forceReindex}`)
+    return await this.client.post('/refresh', {
+      force_reindex: forceReindex
+    })
   }
 
   async getRefreshStatus() {
-    return await this.client.get('/knowledge/refresh/status')
+    return await this.client.get('/refresh/status')
   }
 
-  async waitForRefreshCompletion(timeout = 300) {
-    return await this.client.post(`/knowledge/refresh/wait?timeout=${timeout}`)
-  }
 
   async updateKnowledgeFileContent(filename, content) {
     return await this.client.put(`/knowledge/files/${encodeURIComponent(filename)}/content`, {

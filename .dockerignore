@@ -65,3 +65,10 @@ ENV/
 
 # Railway
 .railway/
+
+# Dev-only utility scripts (avoid shipping ad-hoc root scripts)
+reset_admin_password.py
+check_permissions.py
+diagnose_data_permissions.py
+test_db_path.py
+test_volume_fix.py

@@ -240,6 +240,22 @@ class UnifiedRetriever:
                 with open(index_metadata_path, "w", encoding="utf-8") as f:
                     json.dump(metadata_index, f)
 
+                # Best-effort: update KnowledgeIndexDB status for this file
+                try:
+                    from .knowledge_index_db import KnowledgeIndexDB
+
+                    db = KnowledgeIndexDB()
+                    # Recompute vector_count precisely from the store
+                    try:
+                        vcount = self.semantic_searcher.get_count(where={"source": str(file_path_obj)})
+                    except Exception:
+                        vcount = None
+                    db.update_indexed(
+                        str(file_path_obj), file_hash=file_hash, chunk_count=len(chunks), vector_count=vcount
+                    )
+                except Exception as _e:
+                    logger.debug(f"KnowledgeIndexDB update skipped: {_e}")
+
                 return True
             else:
                 logger.warning(f"No chunks created from {file_path}")

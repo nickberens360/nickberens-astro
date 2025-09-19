@@ -1,24 +1,21 @@
 <template>
   <div class="sources-view">
-    <div class="d-flex justify-end align-center mb-6">
-      <div class="d-flex gap-2">
+    <div class="mb-4">
+      <v-alert type="info" variant="tonal" class="mb-4">
+        <div class="d-flex align-center gap-2">
+          <div>
+            <strong>Status Legend</strong> — <v-chip size="x-small" color="success">indexed</v-chip>: file has chunks in the vector store; <v-chip size="x-small" color="grey">discovered</v-chip>: file found on disk but not yet indexed; <v-chip size="x-small" color="warning">orphaned/missing</v-chip>: vector or file mismatch; <v-chip size="x-small" color="error">error</v-chip>: indexing failed.
+          </div>
+        </div>
+      </v-alert>
+      <div class="d-flex justify-end align-center">
         <v-btn
           color="success"
           prepend-icon="$upload"
-          variant="outlined"
-          class="mr-4"
+          variant="text"
           @click="showUploadDialog = true"
         >
           Upload Files
-        </v-btn>
-        <v-btn
-          color="primary"
-          prepend-icon="$refresh"
-          :loading="loading"
-          variant="outlined"
-          @click="loadSources"
-        >
-          Refresh
         </v-btn>
       </div>
     </div>
@@ -36,15 +33,7 @@
           variant="outlined"
           placeholder="Search sources..."
           hide-details
-          class="me-2"
           style="max-width: 300px"
-        />
-        <v-btn
-          icon="$refresh"
-          variant="text"
-          size="small"
-          :loading="loading"
-          @click="loadSources"
         />
       </v-card-title>
       <v-card-text class="pa-0">
@@ -55,6 +44,11 @@
           :search="search"
           item-key="path"
         >
+          <template #[`item.status`]="{ item }">
+            <v-chip size="x-small" :color="getStatusColor(item.status)">
+              {{ (item.status || 'unknown').replace('_', ' ') }}
+            </v-chip>
+          </template>
           <template #[`item.path`]="{ item }">
             <div class="d-flex align-center">
               <v-icon
@@ -141,6 +135,17 @@
                   @click="viewFileContent(item)"
                 />
               </template>
+
+              <!-- Reindex button -->
+              <v-btn
+                icon="$refresh"
+                size="small"
+                variant="text"
+                color="primary"
+                :disabled="loading"
+                title="Reindex this file"
+                @click="reindexSource(item)"
+              />
 
               <!-- Delete button -->
               <v-btn
@@ -362,14 +367,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { adminAPI } from '@/services/api'
 import FileEditorModal from '@/components/FileEditorModal.vue'
 import { useNotifications } from '@/composables/useNotifications'
 
+const props = defineProps({
+  refreshTrigger: {
+    type: Number,
+    default: 0
+  }
+})
+
+const emit = defineEmits(['refresh-complete'])
+
 const loading = ref(false)
 const search = ref('')
 const sources = ref([])
+const statusRows = ref([])
 const showEditDialog = ref(false)
 const showDeleteDialog = ref(false)
 const showFileEditorModal = ref(false)
@@ -392,9 +407,10 @@ const uploadProgress = ref({
 
 const sourceHeaders = [
   { title: 'Source Path', key: 'path', sortable: true },
+  { title: 'Status', key: 'status', sortable: true },
   { title: 'Content Type', key: 'content_type', sortable: true },
   { title: 'Chunks', key: 'chunk_count', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, width: '150px' }
+  { title: 'Actions', key: 'actions', sortable: false, width: '190px' }
 ]
 
 // File validation rules
@@ -522,8 +538,49 @@ const getContentTypeColor = (type) => {
 const loadSources = async () => {
   loading.value = true
   try {
-    const response = await adminAPI.getKnowledgeSources()
-    sources.value = response.sources || []
+    // DB-first: show all discovered files regardless of vector state
+    const statusRes = await adminAPI.getKnowledgeFilesStatus({ limit: 1000 })
+    const rows = statusRes.files || []
+    statusRows.value = rows
+
+    // Build base list from DB rows
+    const base = rows.map(r => {
+      const p = r.path || ''
+      let displayPath = p
+      if (p.startsWith('backend/knowledge/')) displayPath = p.replace('backend/knowledge/', '')
+      else if (p.startsWith('public/')) displayPath = p.replace('public/', '')
+      return {
+        path: p,
+        display_path: displayPath,
+        content_type: 'unknown',
+        chunk_count: typeof r.vector_count === 'number' ? r.vector_count : 0,
+        status: r.status || (r.vector_count > 0 ? 'indexed' : 'discovered'),
+      }
+    })
+
+    // Enrich content type and chunk counts from vector store (when available)
+    try {
+      const vec = await adminAPI.getKnowledgeSources()
+      const vecList = vec.sources || []
+      const byPath = Object.fromEntries(vecList.map(s => [s.path, s]))
+      sources.value = base.map(item => {
+        const v = byPath[item.path]
+        return v
+          ? {
+              ...item,
+              // prefer vector content type if present
+              content_type: v.content_type || item.content_type,
+              // prefer vector chunk count if present
+              chunk_count: typeof v.chunk_count === 'number' ? v.chunk_count : item.chunk_count,
+            }
+          : item
+      })
+    } catch (e) {
+      // If vector enrichment fails, still show DB rows
+      sources.value = base
+    }
+
+    emit('refresh-complete')
   } catch (error) {
     console.error('Failed to load sources:', error)
     showError('Failed to load sources')
@@ -531,6 +588,13 @@ const loadSources = async () => {
     loading.value = false
   }
 }
+
+// Watch for refresh trigger from parent
+watch(() => props.refreshTrigger, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    loadSources()
+  }
+})
 
 const editSource = (source) => {
   selectedSource.value = source
@@ -581,6 +645,21 @@ const deleteSource = async () => {
   } catch (error) {
     console.error('Failed to delete source:', error)
     showError('Failed to delete source')
+  } finally {
+    loading.value = false
+  }
+}
+
+const reindexSource = async (source) => {
+  try {
+    loading.value = true
+    await adminAPI.reindexKnowledgeFile(source.path)
+    showSuccess('Reindex started for ' + source.path)
+    // Reload to refresh chunk counts
+    loadSources()
+  } catch (e) {
+    console.error('Failed to reindex source:', e)
+    showError('Failed to reindex source')
   } finally {
     loading.value = false
   }
@@ -647,6 +726,17 @@ const isBinaryFile = (filePath) => {
 onMounted(() => {
   loadSources()
 })
+
+// UI helpers
+const getStatusColor = (status) => {
+  const s = (status || '').toLowerCase()
+  if (s === 'indexed') return 'success'
+  if (s === 'discovered') return 'grey'
+  if (s === 'pending_index') return 'info'
+  if (s === 'error') return 'error'
+  if (s === 'orphaned' || s === 'missing_file') return 'warning'
+  return 'default'
+}
 </script>
 
 <style scoped>

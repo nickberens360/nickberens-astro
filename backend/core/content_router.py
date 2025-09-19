@@ -14,7 +14,7 @@ from typing import List, Optional
 
 from langchain.docstore.document import Document
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .semantic_searcher import SemanticSearcher
 from .taxonomy_loader import get_topic_taxonomy
 

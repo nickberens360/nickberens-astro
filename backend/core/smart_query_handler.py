@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from langchain.schema import Document
 from langchain_core.language_models import BaseLanguageModel
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .fast_query_classifier import FastQueryClassifier
 from .llm_utils import analyze_query_with_llm
 from .performance_config import PerformanceConfig, performance_monitor

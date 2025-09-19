@@ -86,6 +86,14 @@ const router = createRouter({
               }
             },
             {
+              path: 'consistency',
+              name: 'knowledge-consistency',
+              component: () => import('@/views/knowledge/ConsistencyView.vue'),
+              meta: {
+                title: 'Consistency & Reconciliation'
+              }
+            },
+            {
               path: 'gaps',
               name: 'knowledge-gaps',
               component: () => import('@/views/knowledge/GapsView.vue'),
@@ -166,6 +174,15 @@ const router = createRouter({
               meta: {
                 title: 'Search & Retrieval',
                 description: 'Query routing and RAG configuration'
+              }
+            },
+            {
+              path: 'knowledge',
+              name: 'settings-knowledge',
+              component: () => import('@/views/settings/KnowledgeSettings.vue'),
+              meta: {
+                title: 'Knowledge',
+                description: 'Indexing & synchronization settings'
               }
             },
             {

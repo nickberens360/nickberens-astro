@@ -1,16 +1,5 @@
 <template>
   <div class="stats-view">
-    <div class="d-flex justify-end align-center mb-6">
-      <v-btn
-        color="primary"
-        prepend-icon="$refresh"
-        :loading="loading"
-        variant="outlined"
-        @click="loadStats"
-      >
-        Refresh
-      </v-btn>
-    </div>
 
     <!-- Key Metrics Row -->
     <v-row class="mb-6">
@@ -366,6 +355,15 @@ import { adminAPI } from '@/services/api'
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
+
+const props = defineProps({
+  refreshTrigger: {
+    type: Number,
+    default: 0
+  }
+})
+
+const emit = defineEmits(['refresh-complete'])
 
 const loading = ref(false)
 const typeSearch = ref('')
@@ -781,15 +779,12 @@ const updateCharts = () => {
 const loadStats = async () => {
   loading.value = true
   try {
-    // Call the knowledge stats endpoint through the public API
-    const response = await fetch('http://localhost:8000/api/public/knowledge/stats')
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    const data = await response.json()
+    // Call the knowledge stats endpoint through the admin API
+    const data = await adminAPI.getKnowledgeStats()
     stats.value = data
     await nextTick()
     updateCharts()
+    emit('refresh-complete')
   } catch (error) {
     console.error('Failed to load knowledge stats:', error)
   } finally {
@@ -800,6 +795,13 @@ const loadStats = async () => {
 watch(stats, () => {
   updateCharts()
 }, { deep: true })
+
+// Watch for refresh trigger from parent
+watch(() => props.refreshTrigger, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    loadStats()
+  }
+})
 
 onMounted(() => {
   loadStats()

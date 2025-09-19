@@ -7,6 +7,7 @@ This is the main entry point for the FastAPI application that:
 - Sets up global state for routes
 """
 
+import asyncio
 import logging
 import os
 import sys
@@ -27,12 +28,13 @@ os.environ.setdefault("POSTHOG_DISABLED", "1")
 
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
-from .core.config import AppConfig
+from .core.config_v2 import AppConfig
 from .core.followup_service import FollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
 from .core.response_cache_warmer import start_cache_warming
 from .core.response_service import ResponseService
+from .core.settings_manager import get_settings_manager
 from .core.smart_illustration_service import SmartIllustrationService
 
 project_root = Path(__file__).resolve().parent.parent
@@ -138,6 +140,64 @@ async def lifespan(app: FastAPI):
         if app_initialized and retrievers:
             await start_cache_warming(retrievers, app.state)
 
+        # Optional: start periodic knowledge validation/sync
+        # Read background sync config from DB settings with env fallback
+        try:
+            kset = get_settings_manager().get_knowledge_settings()
+            interval = int(getattr(kset, "background_sync_interval_seconds", 0))
+            auto_reconcile = bool(getattr(kset, "auto_reindex_deltas", False))
+        except Exception:
+            try:
+                interval = int(os.getenv("KNOWLEDGE_SYNC_INTERVAL_SECONDS", "0"))
+            except Exception:
+                interval = 0
+            auto_reconcile = os.getenv("KNOWLEDGE_SYNC_AUTO_RECONCILE", "false").lower() in {"1", "true", "yes"}
+
+        if interval > 0 and getattr(app.state, "unified_retriever", None) is not None:
+            from .core.knowledge_state_sync import KnowledgeStateSync
+
+            retr = app.state.unified_retriever
+            try:
+                persist_dir = getattr(
+                    getattr(retr, "semantic_searcher", None), "persist_dir", "backend/.unified_chroma"
+                )
+            except Exception:
+                persist_dir = "backend/.unified_chroma"
+            index_dirs = AppConfig.get_rag_index_dirs() or ["backend/knowledge", "public"]
+
+            async def _periodic_sync():
+                sync = KnowledgeStateSync(retr, persist_dir=persist_dir, index_dirs=index_dirs)
+                while True:
+                    try:
+                        if auto_reconcile:
+                            res = sync.reconcile(dry_run=False, allow_deletes=False, limit=50)
+                            logger.info(
+                                "Knowledge sync ran: reindexed=%d, deleted=%d, errors=%d",
+                                len(res.get("actions", {}).get("reindexed", [])),
+                                len(res.get("actions", {}).get("deleted_orphans", [])),
+                                len(res.get("actions", {}).get("errors", [])),
+                            )
+                        else:
+                            summ, _ = sync.validate()
+                            logger.debug(
+                                "Knowledge validate: fs=%d vec=%d missing=%d changed=%d orphans=%d",
+                                summ.filesystem_files,
+                                summ.vector_docs,
+                                summ.discovered_not_indexed,
+                                summ.changed_files,
+                                summ.vector_orphans,
+                            )
+                    except Exception as e:
+                        logger.debug(f"Periodic knowledge sync error: {e}")
+                    await asyncio.sleep(interval)
+
+            app.state.knowledge_sync_task = asyncio.create_task(_periodic_sync())
+            logger.info(
+                "Started periodic knowledge %s every %ss",
+                "reconcile" if auto_reconcile else "validate",
+                interval,
+            )
+
         logger.info("✅ Application startup completed successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize application: {e}")
@@ -146,6 +206,12 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown: Clean shutdown
+    try:
+        task = getattr(app.state, "knowledge_sync_task", None)
+        if task:
+            task.cancel()
+    except Exception:
+        pass
     logger.info("✅ Application shutdown completed successfully")
 
 
