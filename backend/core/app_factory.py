@@ -19,7 +19,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .security_middleware import add_security_middleware
 from .settings_manager import get_settings_manager
 
@@ -171,7 +171,15 @@ def configure_cors(app: FastAPI):
         allow_origins=AppConfig.get_cors_origins(),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type"],
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers",
+        ],
         expose_headers=["X-Model-Used", "X-Followup-Questions"],
     )
 
@@ -232,6 +240,9 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
+    # Add CORS middleware FIRST (so it runs last/handles requests first)
+    configure_cors(app)
+
     # Add security middleware
     add_security_middleware(app)
 
@@ -240,9 +251,6 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
 
     # Add dynamic rate limiting middleware
     app.middleware("http")(dynamic_rate_limit_middleware)
-
-    # Add CORS middleware with hardcoded configuration
-    configure_cors(app)
 
     # Register routers - import here to avoid circular imports
     from ..routes import (

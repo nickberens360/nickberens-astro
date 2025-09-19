@@ -11,7 +11,7 @@ import re
 from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Tuple
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)

@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from .config import AppConfig
+from .config_v2 import AppConfig
 from .database_utils import get_database_path
 from .geolocation_service import get_geolocation_service
 from .settings_manager import get_settings_manager

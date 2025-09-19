@@ -6,7 +6,7 @@ Tests that CORS origins are properly configured and validated.
 import os
 from unittest.mock import patch
 
-from backend.core.config import AppConfig
+from backend.core.config_v2 import AppConfig
 
 
 class TestCORSConfiguration:
@@ -70,10 +70,10 @@ class TestCORSConfiguration:
 
     def test_cors_wildcard_development_mode(self):
         """Test that wildcard CORS is allowed in development mode."""
-        with patch("backend.core.config.AppConfig.is_production", return_value=False):
+        with patch.dict(os.environ, {"ENVIRONMENT": "development"}):
             assert AppConfig._is_valid_origin("*")
 
     def test_cors_wildcard_production_mode(self):
         """Test that wildcard CORS is rejected in production mode."""
-        with patch("backend.core.config.AppConfig.is_production", return_value=True):
+        with patch.dict(os.environ, {"ENVIRONMENT": "production"}):
             assert not AppConfig._is_valid_origin("*")

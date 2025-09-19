@@ -28,7 +28,7 @@ os.environ.setdefault("POSTHOG_DISABLED", "1")
 
 from .core.app_factory import create_app
 from .core.app_initializer_v2 import initialize_app_state
-from .core.config import AppConfig
+from .core.config_v2 import AppConfig
 from .core.followup_service import FollowUpService
 from .core.query_logger import get_query_logger
 from .core.query_router import QueryRouter
@@ -163,7 +163,7 @@ async def lifespan(app: FastAPI):
                 )
             except Exception:
                 persist_dir = "backend/.unified_chroma"
-            index_dirs = AppConfig.RAG_INDEX_DIRS or ["backend/knowledge", "public"]
+            index_dirs = AppConfig.get_rag_index_dirs() or ["backend/knowledge", "public"]
 
             async def _periodic_sync():
                 sync = KnowledgeStateSync(retr, persist_dir=persist_dir, index_dirs=index_dirs)

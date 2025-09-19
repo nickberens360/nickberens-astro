@@ -31,9 +31,20 @@ class ApiKeyManager:
         # Get or generate encryption key from environment
         encryption_password = os.getenv("API_KEY_ENCRYPTION_SECRET")
 
+        # Use centralized environment detection to avoid env-file parsing quirks
+        try:
+            from .config_v2 import AppConfig
+
+            is_production = AppConfig.IS_PRODUCTION
+        except Exception:
+            # Fallback: sanitize ENVIRONMENT manually
+            env_raw = os.getenv("ENVIRONMENT", "development")
+            env_clean = env_raw.split("#", 1)[0].strip().lower()
+            is_production = env_clean in ("production", "prod")
+
         if not encryption_password:
             # In development, use a default (NOT for production!)
-            if os.getenv("ENVIRONMENT", "development") == "development":
+            if not is_production:
                 encryption_password = "dev-encryption-key-change-in-production"
                 logger.warning("Using development encryption key. Set API_KEY_ENCRYPTION_SECRET in production!")
             else:

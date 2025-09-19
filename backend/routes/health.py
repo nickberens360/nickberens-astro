@@ -14,7 +14,7 @@ import time
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from ..core.config import AppConfig
+from ..core.config_v2 import AppConfig
 from ..dependencies import get_app_state
 
 router = APIRouter()
@@ -30,8 +30,8 @@ def _get_current_primary_llm() -> str:
         system_config = settings_manager.get_system_config_settings()
         return system_config.primary_llm
     except Exception:
-        # Fallback to environment config
-        return AppConfig.PRIMARY_LLM
+        # Fallback to configured default via config_v2
+        return AppConfig.get_primary_llm()
 
 
 @router.get(
