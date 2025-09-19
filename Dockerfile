@@ -44,8 +44,10 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install only runtime dependencies (no build tools)
+# gosu is needed for privilege dropping in entrypoint script
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Create user
@@ -72,27 +74,12 @@ RUN mkdir -p /app/backend/logs && chown -R app:app /app/backend/logs
 # Create /data directory for Railway volume mounting (must be accessible by app user)
 RUN mkdir -p /data && chown -R app:app /data
 
-# Create a startup script to ensure volume permissions are correct
-# Using command group for better readability and maintainability
-RUN { \
-        echo '#!/bin/bash'; \
-        echo 'set -e'; \
-        echo ''; \
-        echo '# Fix volume permissions if needed'; \
-        echo 'if [ -d "/data" ] && [ "$(stat -c %U /data 2>/dev/null)" != "app" ]; then'; \
-        echo '    echo "Fixing /data directory permissions..."'; \
-        echo '    chown -R app:app /data'; \
-        echo 'else'; \
-        echo '    echo "/data permissions already correct or directory not found"'; \
-        echo 'fi'; \
-        echo ''; \
-        echo '# Execute the main command'; \
-        echo 'exec "$@"'; \
-    } > /entrypoint.sh && \
-    chmod +x /entrypoint.sh
+# Copy and set up entrypoint script (runs as root, drops privileges with gosu)
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Switch to app user for runtime
-USER app
+# Note: We don't switch to USER app here because the entrypoint needs root privileges
+# to fix volume permissions, then it drops privileges using gosu before running the app
 
 # Expose port
 EXPOSE 8000
