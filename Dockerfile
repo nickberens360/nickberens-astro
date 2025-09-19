@@ -92,5 +92,5 @@ HEALTHCHECK --interval=60s --timeout=15s --start-period=120s --retries=3 \
 # Set entrypoint to fix permissions on startup
 ENTRYPOINT ["/entrypoint.sh"]
 
-# Production command - use PORT env var if provided (Railway sets this)
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Default arguments (entrypoint handles PORT variable expansion and privilege dropping)
+CMD []
