@@ -44,8 +44,10 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install only runtime dependencies (no build tools)
+# gosu is needed for privilege dropping in entrypoint script
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Create user
@@ -72,7 +74,12 @@ RUN mkdir -p /app/backend/logs && chown -R app:app /app/backend/logs
 # Create /data directory for Railway volume mounting (must be accessible by app user)
 RUN mkdir -p /data && chown -R app:app /data
 
-USER app
+# Copy and set up entrypoint script (runs as root, drops privileges with gosu)
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Note: We don't switch to USER app here because the entrypoint needs root privileges
+# to fix volume permissions, then it drops privileges using gosu before running the app
 
 # Expose port
 EXPOSE 8000
@@ -82,5 +89,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=60s --timeout=15s --start-period=120s --retries=3 \
   CMD python3 -c "import urllib.request, os; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", \"8000\")}/health')" || exit 1
 
-# Production command - use PORT env var if provided (Railway sets this)
-CMD uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Set entrypoint to fix permissions on startup
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Default arguments (entrypoint handles PORT variable expansion and privilege dropping)
+CMD []
