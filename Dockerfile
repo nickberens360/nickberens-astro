@@ -72,13 +72,26 @@ RUN mkdir -p /app/backend/logs && chown -R app:app /app/backend/logs
 # Create /data directory for Railway volume mounting (must be accessible by app user)
 RUN mkdir -p /data && chown -R app:app /data
 
-# Switch to app user but allow startup script to fix volume permissions
-USER app
-
 # Create a startup script to ensure volume permissions are correct
-USER root
-RUN echo '#!/bin/bash\nchown -R app:app /data 2>/dev/null || true\nexec "$@"' > /entrypoint.sh && \
+# Using command group for better readability and maintainability
+RUN { \
+        echo '#!/bin/bash'; \
+        echo 'set -e'; \
+        echo ''; \
+        echo '# Fix volume permissions if needed'; \
+        echo 'if [ -d "/data" ] && [ "$(stat -c %U /data 2>/dev/null)" != "app" ]; then'; \
+        echo '    echo "Fixing /data directory permissions..."'; \
+        echo '    chown -R app:app /data'; \
+        echo 'else'; \
+        echo '    echo "/data permissions already correct or directory not found"'; \
+        echo 'fi'; \
+        echo ''; \
+        echo '# Execute the main command'; \
+        echo 'exec "$@"'; \
+    } > /entrypoint.sh && \
     chmod +x /entrypoint.sh
+
+# Switch to app user for runtime
 USER app
 
 # Expose port
