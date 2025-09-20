@@ -11,7 +11,7 @@ References
 - One worktree + branch per workstream below.
 - Agents must not edit files outside their declared scope.
 - Run `pre-commit install` inside the worktree.
-- Before opening a PR: `git fetch origin && git rebase origin/main` (from your worktree).
+- Before opening a PR: `git fetch origin && git rebase origin/development` (from your worktree).
 - No secrets in logs or docs. Never print key values.
 
 ## Workstreams (A1–A7)
@@ -23,7 +23,7 @@ References
   - `docs/reports/settings-inventory.md`
 - Code changes: none.
 - Commands:
-  - `git worktree add -b chore/settings-inventory ../wt-settings-inventory origin/main`
+  - `git worktree add -b chore/settings-inventory ../wt-settings-inventory origin/development`
 - Tasks:
   - Discover env access: `rg -n "os.getenv\(" backend`
   - Discover AppConfig usage: `rg -n "\bAppConfig\.(get_|[A-Z_]+)" backend`
@@ -38,7 +38,7 @@ References
   - `tests/test_settings_manifest.py`
 - Code integration: none (do NOT edit `backend/main.py` here).
 - Commands:
-  - `git worktree add -b feat/settings-manifest-validation ../wt-settings-manifest origin/main`
+  - `git worktree add -b feat/settings-manifest-validation ../wt-settings-manifest origin/development`
 - Tasks:
   - Add `ADMIN_MANAGED_SETTINGS`, `ENV_ONLY_SETTINGS`, `ENV_DB_NAME_MAP`
   - Implement `validate_configuration()` with fail-fast for required env-only keys
@@ -51,7 +51,7 @@ References
   - `tests/test_admin_diagnostics.py`
 - Code integration: none (A6 wires router into app).
 - Commands:
-  - `git worktree add -b feat/admin-diagnostics-endpoint ../wt-admin-diagnostics origin/main`
+  - `git worktree add -b feat/admin-diagnostics-endpoint ../wt-admin-diagnostics origin/development`
 - Tasks:
   - Endpoint `GET /api/admin/diagnostics` returns:
     - `environment`: `ENVIRONMENT` or fallback to `RAILWAY_ENVIRONMENT`
@@ -69,7 +69,7 @@ References
   - `scripts/validate-deployment.sh`
   - Optional doc updates in `docs/`
 - Commands:
-  - `git worktree add -b feat/settings-migration-scripts ../wt-settings-migration origin/main`
+  - `git worktree add -b feat/settings-migration-scripts ../wt-settings-migration origin/development`
 - Tasks:
   - Export non-admin-managed keys to `.env.infrastructure` using name mapping
   - Delete those keys from DB (idempotent; consider `--dry-run`)
@@ -82,7 +82,7 @@ References
   - New: `admin/frontend/src/config/featureFlags.ts`
   - Minimal conditional rendering in settings views (do not remove routes yet)
 - Commands:
-  - `git worktree add -b feat/admin-settings-simplify-flag ../wt-admin-simplify origin/main`
+  - `git worktree add -b feat/admin-settings-simplify-flag ../wt-admin-simplify origin/development`
 - Tasks:
   - Introduce `ADMIN_HIDE_INFRA_SETTINGS` flag (default false)
   - Guard infra/advanced UI with v-if based on the flag
@@ -95,7 +95,7 @@ References
   - `backend/core/app_factory.py` (include `admin_diagnostics` router)
   - Optional tiny adjustments in `backend/core/config_v2.py` if needed (avoid churn)
 - Commands:
-  - `git worktree add -b chore/settings-integration ../wt-settings-integration origin/main`
+  - `git worktree add -b chore/settings-integration ../wt-settings-integration origin/development`
 - Tasks:
   - Add env flag `USE_NEW_CONFIG_SYSTEM` (default false) consumed in startup
   - Wire diagnostics router into the app under `/api/admin`
@@ -106,7 +106,7 @@ References
 - Files (new only):
   - `tests/` additions; `tests/conftest.py` if needed
 - Commands:
-  - `git worktree add -b chore/settings-tests-ci ../wt-settings-tests origin/main`
+  - `git worktree add -b chore/settings-tests-ci ../wt-settings-tests origin/development`
 - Tasks:
   - Add tests to exercise A2/A3 behaviors
   - Ensure `pytest -q` passes locally and in CI
@@ -129,15 +129,15 @@ References
 
 ## Branch & Worktree Conventions
 - Branch naming: `feat/...` for features, `chore/...` for non-functional, `docs/...` for docs
-- Create worktree: `git worktree add -b <branch> ../<wt-dir> origin/main`
-- Rebase before PR: `git fetch origin && git rebase origin/main`
+- Create worktree: `git worktree add -b <branch> ../<wt-dir> origin/development`
+- Rebase before PR: `git fetch origin && git rebase origin/development`
 - Remove after merge: `git worktree remove ../<wt-dir>`
 
 ## PR Checklist (per agent)
 - Scope limited to declared files
 - No secrets exposed in code or tests
 - Tests updated/added and passing locally
-- Rebased on `origin/main`
+- Rebased on `origin/development`
 - Updated relevant docs (link to this plan and the implementation plan)
 
 ## Definition of Done (per workstream)

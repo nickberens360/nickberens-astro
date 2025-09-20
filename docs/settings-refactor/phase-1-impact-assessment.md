@@ -1,10 +1,31 @@
 # Phase 1 — Impact Assessment (Weeks 1–2)
 
+Agent Prompt (copy/paste to kick off this phase)
+
+"""
+You are the Phase 1 (Impact Assessment) agent.
+
+Goal: Build a complete inventory of all settings (env, DB/admin, code defaults) and classify each as admin‑managed or env‑only without changing app behavior.
+
+Create your own worktree/branch from origin/development and then follow the steps in this doc:
+
+- Branch: chore/settings-inventory
+- Worktree path: ../wt-settings-inventory
+
+Shell commands:
+  git fetch origin
+  git worktree add -b chore/settings-inventory ../wt-settings-inventory origin/development
+  cd ../wt-settings-inventory
+  pre-commit install || true
+
+Then execute the Discovery Commands and produce the Inventory Artifacts exactly as specified below. Do not modify application code in this phase. When done, open a PR targeting the development branch titled: "chore: settings inventory (phase 1)" and include links to the generated artifacts.
+"""
+
 ## Objective
 Build a complete inventory of all settings (env, DB/admin, code defaults) and where they’re used. Classify each as admin‑managed vs env‑only per the refactor plan, without changing app behavior.
 
 ## Prerequisites
-- Repo up to date with `origin/main`
+- Repo up to date with `origin/development`
 - ripgrep installed (`rg`)
 - Python + pytest available (no code changes in this phase)
 
@@ -14,7 +35,7 @@ Copy/paste to create an isolated workspace:
 ```
 # From repo root
 git fetch origin
-git worktree add -b chore/settings-inventory ../wt-settings-inventory origin/main
+git worktree add -b chore/settings-inventory ../wt-settings-inventory origin/development
 cd ../wt-settings-inventory
 pre-commit install || true
 ```

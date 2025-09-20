@@ -1,10 +1,31 @@
 # Phase 3 — Infrastructure Settings Migration (Weeks 9–12)
 
+Agent Prompt (copy/paste to kick off this phase)
+
+"""
+You are the Phase 3 (Infrastructure Migration) agent.
+
+Goal: Implement the scripts to migrate infra settings from DB to env, plus Railway env sync and deployment validation scripts. Use dry-run first; do not change runtime precedence.
+
+Create your own worktree/branch from origin/development and then follow the steps in this doc:
+
+- Branch: feat/settings-migration-scripts
+- Worktree path: ../wt-settings-migration
+
+Shell commands:
+  git fetch origin
+  git worktree add -b feat/settings-migration-scripts ../wt-settings-migration origin/development
+  cd ../wt-settings-migration
+  pre-commit install || true
+
+Then add the scripts exactly as specified (backend/scripts/migrate_settings_to_env.py, scripts/sync-environments.sh, scripts/validate-deployment.sh, scripts/required-env.txt). Validate locally with dry-run. When done, open a PR targeting the development branch titled: "feat: infra settings migration scripts (phase 3)".
+"""
+
 ## Objective
 Move infrastructure settings to environment variables, add sync/validation tooling, and enforce precedence under a feature flag — without disrupting production.
 
 ## Prerequisites
-- Repo up to date with `origin/main`
+- Repo up to date with `origin/development`
 - Railway CLI + jq installed for env sync
 - Dry-run any destructive steps first
 
@@ -12,7 +33,7 @@ Move infrastructure settings to environment variables, add sync/validation tooli
 ```
 # From repo root
 git fetch origin
-git worktree add -b feat/settings-migration-scripts ../wt-settings-migration origin/main
+git worktree add -b feat/settings-migration-scripts ../wt-settings-migration origin/development
 cd ../wt-settings-migration
 pre-commit install || true
 ```

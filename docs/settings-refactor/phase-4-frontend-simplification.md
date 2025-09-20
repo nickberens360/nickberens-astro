@@ -1,10 +1,31 @@
 # Phase 4 — Frontend Simplification (Weeks 13–16)
 
+Agent Prompt (copy/paste to kick off this phase)
+
+"""
+You are the Phase 4 (Frontend Simplification) agent.
+
+Goal: Introduce feature flags to hide infra/advanced settings in the admin UI without changing routes. Keep edits minimal and localized.
+
+Create your own worktree/branch from origin/development and then follow the steps in this doc:
+
+- Branch: feat/admin-settings-simplify-flag
+- Worktree path: ../wt-admin-simplify
+
+Shell commands:
+  git fetch origin
+  git worktree add -b feat/admin-settings-simplify-flag ../wt-admin-simplify origin/development
+  cd ../wt-admin-simplify
+  pre-commit install || true
+
+Then add admin/frontend/src/config/featureFlags.ts and apply minimal v-if guards as shown below. Build locally to verify. When done, open a PR targeting the development branch titled: "feat: admin settings simplify via flags (phase 4)".
+"""
+
 ## Objective
 Hide/remove admin UI for environment-only settings, preserving the SPA routing. Use feature flags first to avoid router churn; handle removals after cutover.
 
 ## Prerequisites
-- Repo up to date with `origin/main`
+- Repo up to date with `origin/development`
 - Node/npm tooling installed
 - Do not remove routes yet (flagged hiding only in this phase)
 
@@ -12,7 +33,7 @@ Hide/remove admin UI for environment-only settings, preserving the SPA routing. 
 ```
 # From repo root
 git fetch origin
-git worktree add -b feat/admin-settings-simplify-flag ../wt-admin-simplify origin/main
+git worktree add -b feat/admin-settings-simplify-flag ../wt-admin-simplify origin/development
 cd ../wt-admin-simplify
 pre-commit install || true
 ```

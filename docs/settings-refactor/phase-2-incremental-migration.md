@@ -1,10 +1,31 @@
 # Phase 2 — Incremental Migration (Weeks 3–8)
 
+Agent Prompt (copy/paste to kick off this phase)
+
+"""
+You are the Phase 2 (Incremental Migration) agent.
+
+Goal: Add a centralized settings manifest with validation and tests, without changing runtime behavior or touching integration points. Do not modify backend/main.py or app wiring in this phase.
+
+Create your own worktree/branch from origin/development and then follow the steps in this doc:
+
+- Branch: feat/settings-manifest-validation
+- Worktree path: ../wt-settings-manifest
+
+Shell commands:
+  git fetch origin
+  git worktree add -b feat/settings-manifest-validation ../wt-settings-manifest origin/development
+  cd ../wt-settings-manifest
+  pre-commit install || true
+
+Then implement backend/core/settings_manifest.py and tests/test_settings_manifest.py exactly as specified below. Keep changes isolated to new files. When done, open a PR targeting the development branch titled: "feat: settings manifest + validation (phase 2)".
+"""
+
 ## Objective
 Introduce a centralized settings manifest, validation utilities, a diagnostics endpoint (A3 handles code), and a feature flag — without changing runtime behavior yet.
 
 ## Prerequisites
-- Repo up to date with `origin/main`
+- Repo up to date with `origin/development`
 - pytest configured (`pytest -q`)
 - Do not edit integration points; A6 will wire things up later
 
@@ -12,7 +33,7 @@ Introduce a centralized settings manifest, validation utilities, a diagnostics e
 ```
 # From repo root
 git fetch origin
-git worktree add -b feat/settings-manifest-validation ../wt-settings-manifest origin/main
+git worktree add -b feat/settings-manifest-validation ../wt-settings-manifest origin/development
 cd ../wt-settings-manifest
 pre-commit install || true
 ```
