@@ -38,227 +38,241 @@
         </v-card-title>
         
         <v-card-text class="pa-0">
-          <v-alert
-            type="info"
-            variant="tonal"
-            class="ma-6 mb-4"
-          >
-            These settings control how content is discovered, indexed, and synchronized across your knowledge base.
-          </v-alert>
-          
-          <!-- Index on Startup Row -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon
-                  color="primary"
-                  class="setting-icon"
-                >
-                  $book-open
-                </v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">
-                    Index on Startup
-                  </div>
-                  <div class="setting-description text-medium-emphasis">
-                    Automatically index all configured directories when the application starts
-                  </div>
-                </div>
-              </div>
-              <div class="setting-right">
-                <v-switch
-                  v-model="form.index_on_startup"
-                  color="primary"
-                  inset
-                  hide-details
-                />
-                <div class="setting-status text-medium-emphasis">
-                  {{ form.index_on_startup ? 'Enabled' : 'Disabled' }}
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- Infrastructure Settings (hidden by feature flag) -->
+          <section v-if="!flags.ADMIN_HIDE_INFRA_SETTINGS">
+            <v-alert
+              type="info"
+              variant="tonal"
+              class="ma-6 mb-4"
+            >
+              These settings control how content is discovered, indexed, and synchronized across your knowledge base.
+            </v-alert>
 
-          <v-divider />
-
-          <!-- Auto-Reindex Deltas Row -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon
-                  color="primary"
-                  class="setting-icon"
-                >
-                  $cached
-                </v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">
-                    Auto-Reindex Changes
-                  </div>
-                  <div class="setting-description text-medium-emphasis">
-                    Automatically reindex files when changes are detected during background sync
+            <!-- Index on Startup Row -->
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $book-open
+                  </v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">
+                      Index on Startup
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Automatically index all configured directories when the application starts
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="setting-right">
-                <v-switch
-                  v-model="form.auto_reindex_deltas"
-                  color="primary"
-                  inset
-                  hide-details
-                />
-                <div class="setting-status text-medium-emphasis">
-                  {{ form.auto_reindex_deltas ? 'Enabled' : 'Disabled' }}
+                <div class="setting-right">
+                  <v-switch
+                    v-model="form.index_on_startup"
+                    color="primary"
+                    inset
+                    hide-details
+                  />
+                  <div class="setting-status text-medium-emphasis">
+                    {{ form.index_on_startup ? 'Enabled' : 'Disabled' }}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <v-divider />
+            <v-divider />
 
-          <!-- Background Sync Interval Row -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon
-                  color="primary"
-                  class="setting-icon"
-                >
-                  $clock
-                </v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">
-                    Background Sync Interval
-                  </div>
-                  <div class="setting-description text-medium-emphasis">
-                    How often to check for file changes in seconds (0 disables background sync)
-                  </div>
-                </div>
-              </div>
-              <div class="setting-right">
-                <v-text-field
-                  v-model.number="form.background_sync_interval_seconds"
-                  type="number"
-                  variant="outlined"
-                  density="compact"
-                  :min="0"
-                  :max="3600"
-                  hide-details
-                  style="width: 120px;"
-                />
-              </div>
-            </div>
-          </div>
-
-          <v-divider />
-
-          <!-- Enable Heterogeneity Fallback Row -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon
-                  color="primary"
-                  class="setting-icon"
-                >
-                  $tune
-                </v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">
-                    Enable Heterogeneity Fallback
-                  </div>
-                  <div class="setting-description text-medium-emphasis">
-                    Use advanced content classification for mixed content types
+            <!-- Auto-Reindex Deltas Row -->
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $cached
+                  </v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">
+                      Auto-Reindex Changes
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Automatically reindex files when changes are detected during background sync
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="setting-right">
-                <v-switch
-                  v-model="form.enable_heterogeneity_fallback"
-                  color="primary"
-                  inset
-                  hide-details
-                />
-                <div class="setting-status text-medium-emphasis">
-                  {{ form.enable_heterogeneity_fallback ? 'Enabled' : 'Disabled' }}
+                <div class="setting-right">
+                  <v-switch
+                    v-model="form.auto_reindex_deltas"
+                    color="primary"
+                    inset
+                    hide-details
+                  />
+                  <div class="setting-status text-medium-emphasis">
+                    {{ form.auto_reindex_deltas ? 'Enabled' : 'Disabled' }}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <v-divider />
+            <v-divider />
 
-          <!-- Fallback Include Globs Row -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon
-                  color="primary"
-                  class="setting-icon"
-                >
-                  $filter
-                </v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">
-                    Fallback Include Patterns
+            <!-- Background Sync Interval Row -->
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $clock
+                  </v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">
+                      Background Sync Interval
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      How often to check for file changes in seconds (0 disables background sync)
+                    </div>
                   </div>
-                  <div class="setting-description text-medium-emphasis">
-                    Glob patterns to force per-chunk classification (only when heterogeneity fallback is enabled)
+                </div>
+                <div class="setting-right">
+                  <v-text-field
+                    v-model.number="form.background_sync_interval_seconds"
+                    type="number"
+                    variant="outlined"
+                    density="compact"
+                    :min="0"
+                    :max="3600"
+                    hide-details
+                    style="width: 120px;"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <v-divider />
+
+            <!-- Enable Heterogeneity Fallback Row -->
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $tune
+                  </v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">
+                      Enable Heterogeneity Fallback
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Use advanced content classification for mixed content types
+                    </div>
+                  </div>
+                </div>
+                <div class="setting-right">
+                  <v-switch
+                    v-model="form.enable_heterogeneity_fallback"
+                    color="primary"
+                    inset
+                    hide-details
+                  />
+                  <div class="setting-status text-medium-emphasis">
+                    {{ form.enable_heterogeneity_fallback ? 'Enabled' : 'Disabled' }}
                   </div>
                 </div>
               </div>
-              <div class="setting-right">
-                <v-combobox
-                  v-model="form.heterogeneity_fallback_include"
-                  variant="outlined"
-                  density="compact"
-                  multiple
-                  chips
-                  clearable
-                  :disabled="!form.enable_heterogeneity_fallback"
-                  hide-details
-                  placeholder="e.g., *.md, docs/**"
-                  style="width: 280px;"
-                />
-              </div>
             </div>
-          </div>
 
-          <v-divider />
+            <v-divider />
 
-          <!-- Index Directories Row -->
-          <div class="setting-row">
-            <div class="setting-content">
-              <div class="setting-left">
-                <v-icon
-                  color="primary"
-                  class="setting-icon"
-                >
-                  $folder-search
-                </v-icon>
-                <div class="setting-info">
-                  <div class="setting-title text-high-emphasis">
-                    Index Directories
-                  </div>
-                  <div class="setting-description text-medium-emphasis">
-                    Directories to scan and index for content search
+            <!-- Fallback Include Globs Row -->
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $filter
+                  </v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">
+                      Fallback Include Patterns
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Glob patterns to force per-chunk classification (only when heterogeneity fallback is enabled)
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="setting-right">
-                <v-combobox
-                  v-model="form.index_directories"
-                  variant="outlined"
-                  density="compact"
-                  multiple
-                  chips
-                  clearable
-                  hide-details
-                  placeholder="e.g., backend/knowledge, public"
-                  style="width: 280px;"
-                />
+                <div class="setting-right">
+                  <v-combobox
+                    v-model="form.heterogeneity_fallback_include"
+                    variant="outlined"
+                    density="compact"
+                    multiple
+                    chips
+                    clearable
+                    :disabled="!form.enable_heterogeneity_fallback"
+                    hide-details
+                    placeholder="e.g., *.md, docs/**"
+                    style="width: 280px;"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+
+            <v-divider />
+
+            <!-- Index Directories Row -->
+            <div class="setting-row">
+              <div class="setting-content">
+                <div class="setting-left">
+                  <v-icon
+                    color="primary"
+                    class="setting-icon"
+                  >
+                    $folder-search
+                  </v-icon>
+                  <div class="setting-info">
+                    <div class="setting-title text-high-emphasis">
+                      Index Directories
+                    </div>
+                    <div class="setting-description text-medium-emphasis">
+                      Directories to scan and index for content search
+                    </div>
+                  </div>
+                </div>
+                <div class="setting-right">
+                  <v-combobox
+                    v-model="form.index_directories"
+                    variant="outlined"
+                    density="compact"
+                    multiple
+                    chips
+                    clearable
+                    hide-details
+                    placeholder="e.g., backend/knowledge, public"
+                    style="width: 280px;"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Simplified message when infrastructure settings are hidden -->
+          <section v-else>
+            <v-alert
+              type="info"
+              variant="tonal"
+              class="ma-6"
+            >
+              Knowledge indexing and processing settings are managed at the infrastructure level and are not available in this simplified view.
+            </v-alert>
+          </section>
         </v-card-text>
       </v-card>
     </div>
@@ -269,6 +283,7 @@
 import { ref, onMounted } from 'vue'
 import { adminAPI } from '@/services/api'
 import { useNotifications } from '@/composables/useNotifications'
+import flags from '@/config/featureFlags'
 
 const form = ref({
   index_on_startup: true,
