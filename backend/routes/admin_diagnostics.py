@@ -285,13 +285,14 @@ def _check_env_only_settings() -> Dict[str, Dict[str, Any]]:
         }
 
         # Add additional context for some settings (with security validation)
-        sanitized_value = _sanitize_setting_value(var, value)
-        if sanitized_value is not None:
-            result[var]["current_value"] = sanitized_value
-        elif var == "ENVIRONMENT":
-            result[var]["current_value"] = value if value else "development"  # Safe to expose
-        elif var == "DEBUG_MODE":
-            result[var]["current_value"] = value if value else "false"  # Safe to expose
+        if var in ["ENVIRONMENT", "DEBUG_MODE"]:
+            # These are safe to expose with defaults
+            result[var]["current_value"] = value if value else ("development" if var == "ENVIRONMENT" else "false")
+        else:
+            # Use security validation for all other settings
+            sanitized_value = _sanitize_setting_value(var, value)
+            if sanitized_value is not None:
+                result[var]["current_value"] = sanitized_value
 
     return result
 

@@ -66,8 +66,14 @@ const fetchDiagnostics = async () => {
   try {
     const [configStatus, validation, critical] = await Promise.all([
       adminAPI.getDiagnosticsConfigStatus(),
-      adminAPI.getDiagnosticsValidation().catch(() => ({})),
-      adminAPI.getDiagnosticsCriticalCheck().catch(() => ({}))
+      adminAPI.getDiagnosticsValidation().catch(err => {
+        console.warn('Validation endpoint unavailable:', err.message)
+        return {}
+      }),
+      adminAPI.getDiagnosticsCriticalCheck().catch(err => {
+        console.warn('Critical check endpoint unavailable:', err.message)
+        return {}
+      })
     ])
 
     // Config status
@@ -75,8 +81,8 @@ const fetchDiagnostics = async () => {
       const statusObj = configStatus.env_only
       const entries = Object.entries(statusObj)
       envTotal.value = entries.length
-      envConfigured.value = entries.filter(([_, v]) => v && v.present).length
-      missingEnvKeys.value = entries.filter(([_, v]) => !(v && v.present)).map(([k]) => k).sort()
+      envConfigured.value = entries.filter(([, setting]) => setting && setting.present).length
+      missingEnvKeys.value = entries.filter(([, setting]) => !(setting && setting.present)).map(([key]) => key).sort()
     } else if (configStatus?.summary) {
       // Fallback if backend returns summary only
       envTotal.value = configStatus.summary.total || 0
@@ -138,7 +144,8 @@ const overallColor = computed(() => {
   return 'info'
 })
 
-// Limit missing env-only keys preview in the card
+// Limit missing env-only keys preview in the card to keep UI compact
+// Shows first 8 keys with overflow indicator for better UX
 const MISSING_PREVIEW_LIMIT = 8
 const limitedMissing = computed(() => missingEnvKeys.value.slice(0, MISSING_PREVIEW_LIMIT))
 const missingOverflowCount = computed(() => Math.max(0, (missingEnvKeys.value.length || 0) - MISSING_PREVIEW_LIMIT))
