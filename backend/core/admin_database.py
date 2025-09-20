@@ -437,8 +437,6 @@ class AdminDatabaseManager:
 
     def _create_default_admin_user(self, cursor):
         """Create a default admin user."""
-        import secrets
-        import string
 
         # Default credentials (require secure password via env var)
         username = os.getenv("ADMIN_DEFAULT_USERNAME", "admin")
