@@ -405,6 +405,9 @@ class FeatureFlags:
     enable_maintenance_mode: bool = False
     enable_api_versioning: bool = False
 
+    # Admin features
+    enable_admin_diagnostics: bool = False
+
     # Back-compat flags expected by tests/legacy callers (mapped elsewhere at runtime)
     enable_followup_questions: bool = True
     enable_smart_routing: bool = True

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from ..core.admin_auth import require_admin_auth
+from ..core.config_validation import get_configuration_health_summary, get_current_timestamp, validate_critical_settings
 from ..core.settings_manager import get_settings_manager
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ async def get_config_status(
                 "admin_managed_env": admin_managed_env,
                 "database_settings": database_settings,
                 "summary": summary,
-                "timestamp": _get_current_timestamp(),
+                "timestamp": get_current_timestamp(),
             }
         )
     except Exception as e:
@@ -84,7 +85,7 @@ async def get_env_only_status(
                     "configured": sum(1 for s in env_only_settings.values() if s["present"]),
                     "missing": sum(1 for s in env_only_settings.values() if not s["present"]),
                 },
-                "timestamp": _get_current_timestamp(),
+                "timestamp": get_current_timestamp(),
             }
         )
     except Exception as e:
@@ -125,12 +126,74 @@ async def get_admin_managed_status(
                         "using_defaults": sum(1 for s in database_settings.values() if not s["configured"]),
                     },
                 },
-                "timestamp": _get_current_timestamp(),
+                "timestamp": get_current_timestamp(),
             }
         )
     except Exception as e:
         logger.error(f"Error retrieving admin-managed settings status: {e}")
         return JSONResponse(content={"error": "Failed to retrieve admin-managed settings status"}, status_code=500)
+
+
+@router.get("/config-validation", summary="Validate configuration health and completeness")
+async def get_config_validation(
+    user_session=Depends(require_admin_auth),
+) -> JSONResponse:
+    """
+    Validate system configuration health and completeness.
+
+    Performs comprehensive validation of:
+    - Critical environment variables
+    - Feature flag consistency
+    - Database settings health
+    - Overall system configuration status
+
+    Returns actionable recommendations for configuration improvements.
+    """
+    try:
+        health_summary = get_configuration_health_summary()
+
+        return JSONResponse(
+            content={
+                "validation_results": health_summary,
+                "timestamp": get_current_timestamp(),
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error performing configuration validation: {e}")
+        return JSONResponse(content={"error": "Failed to perform configuration validation"}, status_code=500)
+
+
+@router.get("/critical-settings-check", summary="Check critical settings for system operation")
+async def get_critical_settings_check(
+    user_session=Depends(require_admin_auth),
+) -> JSONResponse:
+    """
+    Quick check of critical settings required for basic system operation.
+
+    Returns only the most important configuration issues that could prevent
+    the system from functioning properly.
+    """
+    try:
+        critical_validation = validate_critical_settings()
+
+        # Simplified response focusing on critical issues
+        response_data = {
+            "status": critical_validation["overall_status"],
+            "critical_missing": critical_validation["critical_missing"],
+            "critical_count": len(critical_validation["critical_missing"]),
+            "recommendations": critical_validation["recommendations"],
+            "timestamp": _get_current_timestamp(),
+        }
+
+        # Set appropriate HTTP status based on critical issues
+        status_code = 200
+        if critical_validation["overall_status"] == "critical":
+            status_code = 503  # Service Unavailable for critical config issues
+
+        return JSONResponse(content=response_data, status_code=status_code)
+    except Exception as e:
+        logger.error(f"Error checking critical settings: {e}")
+        return JSONResponse(content={"error": "Failed to check critical settings"}, status_code=500)
 
 
 def _check_env_only_settings() -> Dict[str, Dict[str, Any]]:
@@ -455,10 +518,3 @@ def _get_setting_description(setting_name: str) -> str:
     }
 
     return descriptions.get(setting_name, f"Configuration setting: {setting_name}")
-
-
-def _get_current_timestamp() -> str:
-    """Get current timestamp in ISO format."""
-    from datetime import datetime, timezone
-
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
