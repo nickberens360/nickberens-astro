@@ -18,15 +18,13 @@ import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # Add backend to path for imports
 backend_path = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-from core.admin_database import admin_db_manager
 from core.settings_manager import settings_manager
-from core.settings_schemas import CoreSettings, KnowledgeSettings, SecuritySettings, SystemConfigurationSettings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -311,7 +309,7 @@ class InfraSettingsMigrator:
 
             for warning in plan["warnings"]:
                 env_key = warning["env_key"]
-                issue = warning["issue"]
+                warning["issue"]
                 db_val = warning["db_value"]
                 env_val = warning["env_value"]
 
@@ -392,6 +390,90 @@ class InfraSettingsMigrator:
 
         return backup_file
 
+    def rollback_migration(self, backup_file: str) -> bool:
+        """
+        Rollback migration using a backup file.
+
+        This restores database settings from the backup and removes the migration env file.
+        """
+        try:
+            if not os.path.exists(backup_file):
+                logger.error(f"Backup file not found: {backup_file}")
+                return False
+
+            logger.info(f"Rolling back migration using backup: {backup_file}")
+
+            # Import schema classes needed for restoration
+            from core.settings_schemas import (
+                CoreSettings,
+                KnowledgeSettings,
+                SecuritySettings,
+                SystemConfigurationSettings,
+            )
+
+            # Load backup data
+            with open(backup_file, "r") as f:
+                backup_data = json.load(f)
+
+            if self.dry_run:
+                logger.info("DRY RUN: Would restore the following settings:")
+                logger.info(f"Database settings: {len(backup_data.get('db_settings', {}))}")
+                logger.info(f"Environment variables: {len(backup_data.get('current_env_vars', {}))}")
+                return True
+
+            # Restore database settings
+            restored_count = 0
+            for setting_type, settings_data in backup_data.get("db_settings", {}).items():
+                if settings_data:
+                    try:
+                        # Map setting types to their schema classes and manager methods
+                        settings_mapping = {
+                            "system_config_settings": (
+                                SystemConfigurationSettings,
+                                settings_manager.set_system_config_settings,
+                            ),
+                            "security_settings": (SecuritySettings, settings_manager.set_security_settings),
+                            "knowledge_settings": (KnowledgeSettings, settings_manager.set_knowledge_settings),
+                            "core_settings": (CoreSettings, settings_manager.set_core_settings),
+                        }
+
+                        if setting_type in settings_mapping:
+                            schema_class, setter_method = settings_mapping[setting_type]
+
+                            # Reconstruct the settings object from backup data
+                            restored_settings = schema_class(**settings_data)
+
+                            # Save to database (updated_by=0 indicates system restoration)
+                            success = setter_method(restored_settings, updated_by=0)
+
+                            if success:
+                                logger.info(f"✅ Restored {setting_type}: {len(settings_data)} settings")
+                                restored_count += 1
+                            else:
+                                logger.error(f"❌ Failed to save {setting_type} to database")
+                        else:
+                            logger.warning(f"⚠️  Unknown setting type: {setting_type} - skipping")
+
+                    except Exception as e:
+                        logger.error(f"❌ Failed to restore {setting_type}: {e}")
+
+            # Remove migration env file if it exists
+            migration_files = [".env.migration", "env.migration"]
+            for env_file in migration_files:
+                if os.path.exists(env_file):
+                    try:
+                        os.remove(env_file)
+                        logger.info(f"Removed migration file: {env_file}")
+                    except Exception as e:
+                        logger.warning(f"Failed to remove {env_file}: {e}")
+
+            logger.info(f"Rollback completed. Restored {restored_count} setting categories.")
+            return True
+
+        except Exception as e:
+            logger.error(f"Rollback failed: {e}")
+            return False
+
 
 def main():
     """Main function to run infrastructure settings migration."""
@@ -401,6 +483,8 @@ def main():
     parser.add_argument("--execute", action="store_true", help="Execute migration (default: dry-run)")
     parser.add_argument("--output", default=".env.migration", help="Output env file path")
     parser.add_argument("--analyze-only", action="store_true", help="Only analyze current state")
+    parser.add_argument("--rollback", help="Rollback migration using specified backup file")
+    parser.add_argument("--list-backups", action="store_true", help="List available backup files")
 
     args = parser.parse_args()
 
@@ -408,7 +492,30 @@ def main():
     migrator = InfraSettingsMigrator(dry_run=not args.execute)
 
     try:
-        # Create backup
+        # Handle special operations first
+        if args.list_backups:
+            # List available backup files
+            backup_files = [f for f in os.listdir(".") if f.startswith("settings_backup_") and f.endswith(".json")]
+            if backup_files:
+                print("\n=== AVAILABLE BACKUP FILES ===")
+                for backup in sorted(backup_files, reverse=True):
+                    print(f"  {backup}")
+            else:
+                print("No backup files found in current directory.")
+            return
+
+        if args.rollback:
+            # Perform rollback
+            print(f"\n=== ROLLBACK MIGRATION ===")
+            success = migrator.rollback_migration(args.rollback)
+            if success:
+                print(f"✅ Rollback completed successfully!")
+            else:
+                print(f"❌ Rollback failed!")
+                sys.exit(1)
+            return
+
+        # Create backup for regular operations
         backup_file = migrator.backup_current_settings()
 
         if args.analyze_only:

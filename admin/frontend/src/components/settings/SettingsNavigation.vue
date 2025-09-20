@@ -80,6 +80,12 @@ const navigationTabs = [
     description: 'Security settings and analytics'
   },
   {
+    value: 'features',
+    title: 'Feature Flags',
+    icon: '$tune',
+    description: 'System and UX feature toggles'
+  },
+  {
     value: 'ux',
     title: 'User Experience',
     icon: '$account-heart',
@@ -107,6 +113,7 @@ const navigateToTab = (tabValue) => {
     'search-taxonomy': 'settings-taxonomy',
     'response': 'settings-response',
     'security': 'settings-security',
+    'features': 'settings-features',
     'ux': 'settings-ux'
   }
 

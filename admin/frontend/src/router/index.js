@@ -213,6 +213,15 @@ const router = createRouter({
               }
             },
             {
+              path: 'features',
+              name: 'settings-features',
+              component: () => import('@/views/settings/FeatureSettings.vue'),
+              meta: {
+                title: 'Feature Flags',
+                description: 'System and UX feature toggles'
+              }
+            },
+            {
               path: 'ux',
               name: 'settings-ux',
               component: () => import('@/views/settings/UXSettings.vue'),

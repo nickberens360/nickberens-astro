@@ -509,6 +509,20 @@ class AdminAPI {
     }
   }
 
+  // Diagnostics endpoints
+  async getDiagnosticsConfigStatus() {
+    return await this.client.get('/diagnostics/config-status')
+  }
+
+  async getDiagnosticsValidation() {
+    return await this.client.get('/diagnostics/config-validation')
+  }
+
+  async getDiagnosticsCriticalCheck() {
+    // Returns { status: 'healthy'|'warning'|'critical', critical_missing: [], ... }
+    return await this.client.get('/diagnostics/critical-settings-check')
+  }
+
 
   async resetFollowupQuestions() {
     try {

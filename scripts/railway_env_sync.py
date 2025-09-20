@@ -13,9 +13,7 @@ Features:
 - Support for multiple Railway environments (dev, staging, production)
 """
 
-import json
 import logging
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -187,7 +185,7 @@ class RailwayEnvSync:
                                 value = value[1:-1]
 
                             env_vars[key] = value
-                        except ValueError as e:
+                        except ValueError:
                             logger.warning(f"Skipping malformed line {line_num} in {env_file}: {line}")
                     else:
                         logger.warning(f"Skipping invalid line {line_num} in {env_file}: {line}")

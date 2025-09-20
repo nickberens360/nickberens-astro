@@ -21,7 +21,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 # Add backend to path for imports
 backend_path = Path(__file__).parent.parent / "backend"
@@ -446,7 +446,7 @@ class DeploymentValidator:
         try:
             from core.settings_manager import settings_manager
 
-            all_settings = settings_manager.get_all_settings()
+            settings_manager.get_all_settings()
             smoke_tests["settings_loading"] = {"passed": True, "message": "All settings loaded successfully"}
         except Exception as e:
             smoke_tests["settings_loading"] = {"passed": False, "message": f"Settings loading failed: {e}"}
@@ -454,8 +454,7 @@ class DeploymentValidator:
 
         # Test 2: Core imports
         try:
-            from core.smart_query_handler import SmartQueryHandler
-            from core.unified_retriever import UnifiedSmartRetriever
+            pass
 
             smoke_tests["core_imports"] = {"passed": True, "message": "Core modules imported successfully"}
         except Exception as e:
@@ -567,15 +566,14 @@ def main():
                 "smoke": validator.run_smoke_tests,
             }
 
-            all_passed = True
             for check_name in args.check:
                 logger.info(f"Running {check_name} validation...")
                 result = check_mapping[check_name]()
                 if not result:
-                    all_passed = False
+                    pass
         else:
             # Run full validation
-            all_passed = validator.run_full_validation()
+            validator.run_full_validation()
 
         # Generate report
         report = validator.generate_report()

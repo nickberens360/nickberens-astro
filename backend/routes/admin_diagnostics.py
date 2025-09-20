@@ -21,6 +21,46 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/diagnostics", tags=["Admin Diagnostics"])
 
 
+def _is_sensitive_setting(setting_name: str) -> bool:
+    """
+    Check if a setting contains sensitive information that should never be logged or exposed.
+
+    Returns True for API keys, passwords, secrets, and other sensitive data.
+    """
+    sensitive_patterns = [
+        "api_key",
+        "password",
+        "secret",
+        "token",
+        "key",
+        "salt",
+        "credentials",
+        "auth",
+        "private",
+        "cert",
+        "oauth",
+    ]
+    setting_lower = setting_name.lower()
+    return any(pattern in setting_lower for pattern in sensitive_patterns)
+
+
+def _sanitize_setting_value(setting_name: str, value: Any) -> Any:
+    """
+    Sanitize setting values to prevent accidental exposure of sensitive data.
+
+    Returns None for sensitive settings, actual value for safe settings.
+    """
+    if _is_sensitive_setting(setting_name):
+        return None
+
+    # Only allow specific safe settings to show values
+    safe_value_settings = ["ENVIRONMENT", "DEBUG_MODE", "PRIMARY_LLM", "PERFORMANCE_MODE"]
+    if setting_name in safe_value_settings:
+        return value
+
+    return None
+
+
 @router.get("/config-status", summary="Get configuration status overview")
 async def get_config_status(
     user_session=Depends(require_admin_auth),
@@ -182,7 +222,7 @@ async def get_critical_settings_check(
             "critical_missing": critical_validation["critical_missing"],
             "critical_count": len(critical_validation["critical_missing"]),
             "recommendations": critical_validation["recommendations"],
-            "timestamp": _get_current_timestamp(),
+            "timestamp": get_current_timestamp(),
         }
 
         # Set appropriate HTTP status based on critical issues
@@ -244,11 +284,15 @@ def _check_env_only_settings() -> Dict[str, Dict[str, Any]]:
             "description": _get_setting_description(var),
         }
 
-        # Add additional context for some settings
-        if var == "ENVIRONMENT":
-            result[var]["current_value"] = value if value else "development"  # Safe to expose
-        elif var == "DEBUG_MODE":
-            result[var]["current_value"] = value if value else "false"  # Safe to expose
+        # Add additional context for some settings (with security validation)
+        if var in ["ENVIRONMENT", "DEBUG_MODE"]:
+            # These are safe to expose with defaults
+            result[var]["current_value"] = value if value else ("development" if var == "ENVIRONMENT" else "false")
+        else:
+            # Use security validation for all other settings
+            sanitized_value = _sanitize_setting_value(var, value)
+            if sanitized_value is not None:
+                result[var]["current_value"] = sanitized_value
 
     return result
 
@@ -392,8 +436,13 @@ def _check_database_settings() -> Dict[str, Dict[str, Any]]:
                 # Check if settings exist in database
                 method_name = f"get_{category}"
                 if hasattr(settings_manager, method_name):
-                    settings_obj = getattr(settings_manager, method_name)()
-                    configured = settings_obj is not None
+                    try:
+                        settings_method = getattr(settings_manager, method_name)
+                        settings_obj = settings_method()
+                        configured = settings_obj is not None
+                    except Exception as method_error:
+                        logger.warning(f"Error executing {method_name}(): {method_error}")
+                        configured = False
                 else:
                     configured = False
 
