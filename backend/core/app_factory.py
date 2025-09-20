@@ -255,6 +255,7 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     # Register routers - import here to avoid circular imports
     from ..routes import (
         admin,
+        admin_diagnostics,
         admin_refresh,
         content,
         health,
@@ -324,6 +325,19 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     app.include_router(knowledge_admin_sync.router, prefix="/api/admin")
     # Expose content routes under admin prefix as well for consistent client base
     app.include_router(content.router, prefix="/api/admin")
+
+    # Conditionally register admin diagnostics router based on feature flag
+    try:
+        settings_manager = get_settings_manager()
+        if settings_manager.is_feature_enabled("enable_admin_diagnostics"):
+            app.include_router(admin_diagnostics.router, prefix="/api/admin")
+    except Exception as e:
+        # If feature flag check fails, log but continue without diagnostics (safe default)
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to check admin diagnostics feature flag: {e}")
+        logger.info("Admin diagnostics router not registered (feature flag check failed)")
 
     # Serve admin frontend static files (mount after API routes to avoid conflicts)
     admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"
