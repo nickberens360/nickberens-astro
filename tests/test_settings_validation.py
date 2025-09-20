@@ -138,7 +138,7 @@ class TestSettingsValidator:
         results = validator.validate_performance_impact(settings)
 
         # Should find performance warning
-        perf_warnings = [r for r in results if "may impact performance" in r.message]
+        perf_warnings = [r for r in results if "may increase response time" in r.message]
         assert len(perf_warnings) == 1
         assert perf_warnings[0].severity == ValidationSeverity.WARNING
 
@@ -173,7 +173,7 @@ class TestSettingsValidator:
         results = validator.validate_performance_impact(settings)
 
         # Should find RAG performance warning
-        rag_warnings = [r for r in results if "may impact response time" in r.message]
+        rag_warnings = [r for r in results if "document retrieval time" in r.message]
         assert len(rag_warnings) == 1
         assert rag_warnings[0].severity == ValidationSeverity.WARNING
 

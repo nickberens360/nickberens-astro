@@ -106,13 +106,14 @@ class SettingsValidator:
             response = settings.response
 
             if response.max_context_documents > 5 and response.max_context_length > 5000:
+                total_context = response.max_context_documents * response.max_context_length
                 results.append(
                     ValidationResult(
                         field_name="max_context_documents",
                         severity=ValidationSeverity.WARNING,
-                        message="High context documents + length may impact performance",
+                        message=f"High context load ({response.max_context_documents} docs × {response.max_context_length} chars = {total_context:,} total) may increase response time by 2-5 seconds",
                         current_value=response.max_context_documents,
-                        suggestion="Consider reducing max_context_documents or max_context_length",
+                        suggestion="Consider reducing max_context_documents to ≤5 or max_context_length to ≤3000 for optimal performance",
                     )
                 )
 
@@ -121,8 +122,8 @@ class SettingsValidator:
                     ValidationResult(
                         field_name="enable_caching",
                         severity=ValidationSeverity.WARNING,
-                        message="Caching disabled with comprehensive responses may impact performance",
-                        suggestion="Enable caching for comprehensive responses",
+                        message="Caching disabled with comprehensive responses may add 3-8 seconds per repeated query due to full LLM processing",
+                        suggestion="Enable caching to reduce comprehensive response time from ~10s to ~2s for cached queries",
                     )
                 )
 
@@ -131,13 +132,14 @@ class SettingsValidator:
             rag = settings.rag_config
 
             if rag.rag_use_mmr and rag.rag_mmr_fetch_k > 50:
+                estimated_latency = (rag.rag_mmr_fetch_k - 20) * 0.1  # Rough estimate
                 results.append(
                     ValidationResult(
                         field_name="rag_mmr_fetch_k",
                         severity=ValidationSeverity.WARNING,
-                        message="High MMR fetch K may impact response time",
+                        message=f"High MMR fetch count ({rag.rag_mmr_fetch_k}) may add ~{estimated_latency:.1f}s to document retrieval time",
                         current_value=rag.rag_mmr_fetch_k,
-                        suggestion="Consider reducing rag_mmr_fetch_k for better performance",
+                        suggestion="Consider reducing rag_mmr_fetch_k to 20-40 for optimal retrieval speed (typically <2s)",
                     )
                 )
 
