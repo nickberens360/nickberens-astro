@@ -14,7 +14,7 @@ References
 - Before opening a PR: `git fetch origin && git rebase origin/development` (from your worktree).
 - No secrets in logs or docs. Never print key values.
 
-## Workstreams (A1–A7)
+## Workstreams / Phases
 
 ### A1 — Inventory & Classification (docs-only)
 - Goal: Enumerate all settings (env, DB, defaults) and where they are used.
@@ -88,7 +88,7 @@ References
   - Guard infra/advanced UI with v-if based on the flag
   - Ensure local build passes; no route deletions
 
-### A6 — Integration Owner (centralized wiring)
+### Phase 5 — Integration (centralized wiring)
 - Goal: Single agent integrates A2/A3 safely behind feature flag.
 - Files (existing, minimal edits):
   - `backend/main.py` (call `validate_configuration()` with try/except; optional flag-aware log)
@@ -101,7 +101,7 @@ References
   - Wire diagnostics router into the app under `/api/admin`
   - Call validation at startup; do not change runtime precedence yet
 
-### A7 — Tests & CI Hardening (tests only)
+### Phase 6 — Tests & CI Hardening (tests only)
 - Goal: Expand tests without touching production code.
 - Files (new only):
   - `tests/` additions; `tests/conftest.py` if needed
@@ -114,18 +114,18 @@ References
 ## Integration & Merge Order
 1) A1 (docs only)
 2) A2 and A3 (new files + tests, independent)
-3) A7 (tests only)
-4) A6 (integration wiring)
+3) Phase 6 (tests only)
+4) Phase 5 (integration wiring)
 5) A4 (scripts/docs)
 6) A5 (UI flags)
 
 ## Conflict Boundaries
-- Only A6 edits: `backend/main.py`, `backend/core/app_factory.py` (integration points)
+- Only Phase 5 edits: `backend/main.py`, `backend/core/app_factory.py` (integration points)
 - A2: adds a new module + its tests; no edits to existing modules
-- A3: adds a new router + its tests; app wiring deferred to A6
+- A3: adds a new router + its tests; app wiring deferred to Phase 5
 - A4: scripts and docs only
 - A5: feature flags + minimal conditional rendering; avoid router edits
-- A7: tests only
+- Phase 6: tests only
 
 ## Branch & Worktree Conventions
 - Branch naming: `feat/...` for features, `chore/...` for non-functional, `docs/...` for docs
@@ -146,8 +146,8 @@ References
 - A3: Diagnostics router + tests
 - A4: Migration + sync + validation scripts documented and runnable
 - A5: Flags hide infra UI; build passes
-- A6: Validation wired at startup; router included; flag default false
-- A7: CI passes with stable or improved coverage
+- Phase 5: Validation wired at startup; router included; flag default false
+- Phase 6: CI passes with stable or improved coverage
 
 ## Rollback & Safety
 - Feature flag: `USE_NEW_CONFIG_SYSTEM=false` means runtime remains DB-first until cutover
@@ -157,4 +157,4 @@ References
 ## Communication
 - Use branch names from this doc so reviewers can map changes quickly
 - Cross-reference this plan in each PR description
-- Integration owner (A6) coordinates merges and resolves any wiring conflicts
+- Integration owner (Phase 5) coordinates merges and resolves any wiring conflicts

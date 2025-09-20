@@ -36,7 +36,7 @@ Introduce a centralized settings manifest, validation utilities, a diagnostics e
 ## Prerequisites
 - Repo up to date with `origin/development`
 - pytest configured (`pytest -q`)
-- Do not edit integration points; A6 will wire things up later
+- Do not edit integration points; Phase 5 (Integration) will wire things up later
 
 ## Worktree & Branch
 ```
