@@ -1,30 +1,32 @@
 <template>
   <div>
-    <v-card elevation="2">
-      <v-card-title class="text-h6 font-weight-bold pa-6 d-flex align-center justify-space-between">
-        <span>RAG Configuration</span>
-        <v-btn
-          color="primary"
-          variant="elevated"
-          :loading="store.loading"
-          prepend-icon="$check"
-          @click="saveRagConfig"
-        >
-          Save Changes
-        </v-btn>
-      </v-card-title>
-      
-      <v-card-text class="pa-0">
-        <v-alert
-          v-if="store.error"
-          type="error"
-          variant="tonal"
-          class="ma-6 mb-4"
-        >
-          {{ store.error }}
-        </v-alert>
-        
-        <div v-if="store.ragConfig && Object.keys(store.ragConfig).length > 0">
+    <!-- RAG Configuration (hidden by feature flag) -->
+    <div v-if="!flags.ADMIN_HIDE_INFRA_SETTINGS">
+      <v-card elevation="2">
+        <v-card-title class="text-h6 font-weight-bold pa-6 d-flex align-center justify-space-between">
+          <span>RAG Configuration</span>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            :loading="store.loading"
+            prepend-icon="$check"
+            @click="saveRagConfig"
+          >
+            Save Changes
+          </v-btn>
+        </v-card-title>
+
+        <v-card-text class="pa-0">
+          <v-alert
+            v-if="store.error"
+            type="error"
+            variant="tonal"
+            class="ma-6 mb-4"
+          >
+            {{ store.error }}
+          </v-alert>
+
+          <div v-if="store.ragConfig && Object.keys(store.ragConfig).length > 0">
           <!-- Retrieval Settings Section -->
           <div class="section-header">
             <v-icon
@@ -275,17 +277,31 @@
             <v-divider v-if="index < dataManagementSettings.length - 1" />
           </div>
         </div>
-        
-        <v-alert
-          v-else
-          type="info"
-          variant="tonal"
-          class="ma-6"
-        >
-          No RAG configuration available
-        </v-alert>
-      </v-card-text>
-    </v-card>
+          <v-alert
+            v-else
+            type="info"
+            variant="tonal"
+            class="ma-6"
+          >
+            No RAG configuration available
+          </v-alert>
+        </v-card-text>
+      </v-card>
+    </div>
+
+    <!-- Simplified message when RAG configuration is hidden -->
+    <div v-else>
+      <v-card elevation="2">
+        <v-card-text class="pa-6">
+          <v-alert
+            type="info"
+            variant="tonal"
+          >
+            RAG configuration settings are managed at the infrastructure level and are not available in this simplified view.
+          </v-alert>
+        </v-card-text>
+      </v-card>
+    </div>
   </div>
 </template>
 
@@ -293,6 +309,7 @@
 import { onMounted, computed } from 'vue'
 import { useRagConfigStore } from '@/stores/ragConfigSettings'
 import { useNotifications } from '@/composables/useNotifications'
+import flags from '@/config/featureFlags'
 
 const store = useRagConfigStore()
 const { showSuccess, showError } = useNotifications()

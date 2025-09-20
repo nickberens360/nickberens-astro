@@ -278,8 +278,9 @@
         </v-card-text>
       </v-card>
 
-      <!-- RAG Configuration Card -->
+      <!-- RAG Configuration Card (hidden by feature flag) -->
       <v-card
+        v-if="!flags.ADMIN_HIDE_INFRA_SETTINGS"
         elevation="2"
         class="mb-6"
       >
@@ -292,7 +293,7 @@
           </v-icon>
           RAG (Retrieval-Augmented Generation) Configuration
         </v-card-title>
-        
+
         <v-card-text class="pa-0">
           <v-alert
             type="info"
@@ -311,7 +312,7 @@
           >
             {{ ragError }}
           </v-alert>
-          
+
           <!-- Success notifications are shown via global toasts -->
 
           <div v-if="ragSettings && Object.keys(ragSettings).length > 0">
@@ -664,6 +665,7 @@ import { useSearchRetrievalSettingsStore } from '@/stores/searchRetrievalSetting
 import { adminAPI as apiService } from '@/services/api'
 import ragConfigService from '@/services/settings/ragConfigSettingsService'
 import { useNotifications } from '@/composables/useNotifications'
+import flags from '@/config/featureFlags'
 
 const adminStore = useAdminStore()
 const searchRetrievalStore = useSearchRetrievalSettingsStore()
