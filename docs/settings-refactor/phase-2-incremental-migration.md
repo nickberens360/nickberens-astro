@@ -18,6 +18,15 @@ Shell commands:
   cd ../wt-settings-manifest
   pre-commit install || true
 
+Reference Phase 1 inventory (for names and classification):
+  # If Phase 1 is merged:
+  ls docs/reports/settings-inventory.*
+
+  # If Phase 1 is not yet merged, fetch from its branch without switching:
+  git fetch origin chore/settings-inventory || true
+  git show origin/chore/settings-inventory:docs/reports/settings-inventory.json > /tmp/settings-inventory.json || true
+  git show origin/chore/settings-inventory:docs/reports/settings-inventory.md > /tmp/settings-inventory.md || true
+
 Then implement backend/core/settings_manifest.py and tests/test_settings_manifest.py exactly as specified below. Keep changes isolated to new files. When done, open a PR targeting the development branch titled: "feat: settings manifest + validation (phase 2)".
 """
 

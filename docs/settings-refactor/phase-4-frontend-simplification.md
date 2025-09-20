@@ -18,6 +18,15 @@ Shell commands:
   cd ../wt-admin-simplify
   pre-commit install || true
 
+Reference Phase 1 inventory (to know which settings are env-only):
+  # If Phase 1 is merged:
+  ls docs/reports/settings-inventory.*
+
+  # If Phase 1 is not yet merged, fetch from its branch without switching:
+  git fetch origin chore/settings-inventory || true
+  git show origin/chore/settings-inventory:docs/reports/settings-inventory.json > /tmp/settings-inventory.json || true
+  git show origin/chore/settings-inventory:docs/reports/settings-inventory.md > /tmp/settings-inventory.md || true
+
 Then add admin/frontend/src/config/featureFlags.ts and apply minimal v-if guards as shown below. Build locally to verify. When done, open a PR targeting the development branch titled: "feat: admin settings simplify via flags (phase 4)".
 """
 

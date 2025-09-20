@@ -18,6 +18,15 @@ Shell commands:
   cd ../wt-settings-migration
   pre-commit install || true
 
+Reference Phase 1 inventory (for env-only vs admin-managed classification):
+  # If Phase 1 is merged:
+  ls docs/reports/settings-inventory.*
+
+  # If Phase 1 is not yet merged, fetch from its branch without switching:
+  git fetch origin chore/settings-inventory || true
+  git show origin/chore/settings-inventory:docs/reports/settings-inventory.json > /tmp/settings-inventory.json || true
+  git show origin/chore/settings-inventory:docs/reports/settings-inventory.md > /tmp/settings-inventory.md || true
+
 Then add the scripts exactly as specified (backend/scripts/migrate_settings_to_env.py, scripts/sync-environments.sh, scripts/validate-deployment.sh, scripts/required-env.txt). Validate locally with dry-run. When done, open a PR targeting the development branch titled: "feat: infra settings migration scripts (phase 3)".
 """
 
