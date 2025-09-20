@@ -403,6 +403,14 @@ class InfraSettingsMigrator:
 
             logger.info(f"Rolling back migration using backup: {backup_file}")
 
+            # Import schema classes needed for restoration
+            from core.settings_schemas import (
+                CoreSettings,
+                KnowledgeSettings,
+                SecuritySettings,
+                SystemConfigurationSettings,
+            )
+
             # Load backup data
             with open(backup_file, "r") as f:
                 backup_data = json.load(f)
@@ -418,12 +426,36 @@ class InfraSettingsMigrator:
             for setting_type, settings_data in backup_data.get("db_settings", {}).items():
                 if settings_data:
                     try:
-                        # Here we would restore to database
-                        # For now, just log what would be restored
-                        logger.info(f"Would restore {setting_type}: {len(settings_data)} settings")
-                        restored_count += 1
+                        # Map setting types to their schema classes and manager methods
+                        settings_mapping = {
+                            "system_config_settings": (
+                                SystemConfigurationSettings,
+                                settings_manager.set_system_config_settings,
+                            ),
+                            "security_settings": (SecuritySettings, settings_manager.set_security_settings),
+                            "knowledge_settings": (KnowledgeSettings, settings_manager.set_knowledge_settings),
+                            "core_settings": (CoreSettings, settings_manager.set_core_settings),
+                        }
+
+                        if setting_type in settings_mapping:
+                            schema_class, setter_method = settings_mapping[setting_type]
+
+                            # Reconstruct the settings object from backup data
+                            restored_settings = schema_class(**settings_data)
+
+                            # Save to database (updated_by=0 indicates system restoration)
+                            success = setter_method(restored_settings, updated_by=0)
+
+                            if success:
+                                logger.info(f"✅ Restored {setting_type}: {len(settings_data)} settings")
+                                restored_count += 1
+                            else:
+                                logger.error(f"❌ Failed to save {setting_type} to database")
+                        else:
+                            logger.warning(f"⚠️  Unknown setting type: {setting_type} - skipping")
+
                     except Exception as e:
-                        logger.error(f"Failed to restore {setting_type}: {e}")
+                        logger.error(f"❌ Failed to restore {setting_type}: {e}")
 
             # Remove migration env file if it exists
             migration_files = [".env.migration", "env.migration"]
