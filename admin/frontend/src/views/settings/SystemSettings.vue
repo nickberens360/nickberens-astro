@@ -75,142 +75,145 @@
           </div>
         </div>
 
-        <v-divider />
+        <!-- Infrastructure Settings (hidden by feature flag) -->
+        <section v-if="!flags.ADMIN_HIDE_INFRA_SETTINGS">
+          <v-divider />
 
-        <!-- Processing LLM Selection Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon
-                color="primary"
-                class="setting-icon"
-              >
-                $cog
-              </v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">
-                  Processing LLM
-                </div>
-                <div class="setting-description text-medium-emphasis">
-                  Language model for background operations like content indexing and query reformulation. Fast models recommended.
+          <!-- Processing LLM Selection Row -->
+          <div class="setting-row">
+            <div class="setting-content">
+              <div class="setting-left">
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $cog
+                </v-icon>
+                <div class="setting-info">
+                  <div class="setting-title text-high-emphasis">
+                    Processing LLM
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Language model for background operations like content indexing and query reformulation. Fast models recommended.
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="setting-right">
-              <v-select
-                v-model="settings.processing_llm"
-                :items="processingLlmOptions"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="width: 160px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider />
-
-        <!-- Claude Model Selection Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon
-                color="primary"
-                class="setting-icon"
-              >
-                $robot
-              </v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">
-                  Claude Model
-                </div>
-                <div class="setting-description text-medium-emphasis">
-                  Specific Claude model to use for Anthropic queries
-                </div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-select
-                v-model="settings.claude_model"
-                :items="claudeModelOptions"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="width: 220px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider />
-
-        <!-- Gemini Model Selection Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon
-                color="primary"
-                class="setting-icon"
-              >
-                $google
-              </v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">
-                  Gemini Model
-                </div>
-                <div class="setting-description text-medium-emphasis">
-                  Specific Gemini model to use for Google queries
-                </div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-select
-                v-model="settings.gemini_model"
-                :items="geminiModelOptions"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="width: 180px;"
-              />
-            </div>
-          </div>
-        </div>
-
-        <v-divider />
-
-        <!-- Smart Model Selection Row -->
-        <div class="setting-row">
-          <div class="setting-content">
-            <div class="setting-left">
-              <v-icon
-                color="primary"
-                class="setting-icon"
-              >
-                $tune
-              </v-icon>
-              <div class="setting-info">
-                <div class="setting-title text-high-emphasis">
-                  Smart Model Selection
-                </div>
-                <div class="setting-description text-medium-emphasis">
-                  Automatically choose between fast (Haiku) and quality (Sonnet) models within the selected Response LLM family based on query complexity
-                </div>
-              </div>
-            </div>
-            <div class="setting-right">
-              <v-switch
-                v-model="settings.enable_smart_model_selection"
-                color="primary"
-                inset
-                hide-details
-              />
-              <div class="setting-status text-medium-emphasis">
-                {{ settings.enable_smart_model_selection ? 'Enabled' : 'Disabled' }}
+              <div class="setting-right">
+                <v-select
+                  v-model="settings.processing_llm"
+                  :items="processingLlmOptions"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 160px;"
+                />
               </div>
             </div>
           </div>
-        </div>
+
+          <v-divider />
+
+          <!-- Claude Model Selection Row -->
+          <div class="setting-row">
+            <div class="setting-content">
+              <div class="setting-left">
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $robot
+                </v-icon>
+                <div class="setting-info">
+                  <div class="setting-title text-high-emphasis">
+                    Claude Model
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Specific Claude model to use for Anthropic queries
+                  </div>
+                </div>
+              </div>
+              <div class="setting-right">
+                <v-select
+                  v-model="settings.claude_model"
+                  :items="claudeModelOptions"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 220px;"
+                />
+              </div>
+            </div>
+          </div>
+
+          <v-divider />
+
+          <!-- Gemini Model Selection Row -->
+          <div class="setting-row">
+            <div class="setting-content">
+              <div class="setting-left">
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $google
+                </v-icon>
+                <div class="setting-info">
+                  <div class="setting-title text-high-emphasis">
+                    Gemini Model
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Specific Gemini model to use for Google queries
+                  </div>
+                </div>
+              </div>
+              <div class="setting-right">
+                <v-select
+                  v-model="settings.gemini_model"
+                  :items="geminiModelOptions"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 180px;"
+                />
+              </div>
+            </div>
+          </div>
+
+          <v-divider />
+
+          <!-- Smart Model Selection Row -->
+          <div class="setting-row">
+            <div class="setting-content">
+              <div class="setting-left">
+                <v-icon
+                  color="primary"
+                  class="setting-icon"
+                >
+                  $tune
+                </v-icon>
+                <div class="setting-info">
+                  <div class="setting-title text-high-emphasis">
+                    Smart Model Selection
+                  </div>
+                  <div class="setting-description text-medium-emphasis">
+                    Automatically choose between fast (Haiku) and quality (Sonnet) models within the selected Response LLM family based on query complexity
+                  </div>
+                </div>
+              </div>
+              <div class="setting-right">
+                <v-switch
+                  v-model="settings.enable_smart_model_selection"
+                  color="primary"
+                  inset
+                  hide-details
+                />
+                <div class="setting-status text-medium-emphasis">
+                  {{ settings.enable_smart_model_selection ? 'Enabled' : 'Disabled' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </v-card-text>
     </v-card>
   </div>
@@ -221,6 +224,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import adminAPI from '@/services/api'
 import { useNotifications } from '@/composables/useNotifications'
+import flags from '@/config/featureFlags'
 
 const adminStore = useAdminStore()
 
