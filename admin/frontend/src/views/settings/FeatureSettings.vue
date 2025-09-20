@@ -218,7 +218,8 @@ const filteredKeys = computed(() => {
     'enable_maintenance_mode',
     'enable_api_versioning',
     'enable_geolocation',
-    'enable_query_preprocessing'
+    'enable_query_preprocessing',
+    'enable_admin_diagnostics'
   ])
   return Object.keys(store.featureFlags).filter(k => allowed.has(k))
 })

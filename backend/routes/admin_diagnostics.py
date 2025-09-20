@@ -182,7 +182,7 @@ async def get_critical_settings_check(
             "critical_missing": critical_validation["critical_missing"],
             "critical_count": len(critical_validation["critical_missing"]),
             "recommendations": critical_validation["recommendations"],
-            "timestamp": _get_current_timestamp(),
+            "timestamp": get_current_timestamp(),
         }
 
         # Set appropriate HTTP status based on critical issues
