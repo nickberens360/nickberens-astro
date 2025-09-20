@@ -5,6 +5,12 @@
 
 set -e  # Exit on any error
 
+# Check bash version for compatibility
+if [ -z "${BASH_VERSION:-}" ]; then
+    echo "Error: This script requires bash to run properly"
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 

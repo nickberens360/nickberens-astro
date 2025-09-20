@@ -54,7 +54,7 @@ class DeploymentValidator:
             "ANTHROPIC_API_KEY": {
                 "required": True,
                 "description": "Anthropic Claude API key",
-                "pattern": r"^sk-ant-api03-[\w-]+$",
+                "pattern": r"^sk-ant-[\w-]+$",  # More flexible pattern for various Anthropic API key formats
                 "min_length": 20,
             },
             "GOOGLE_API_KEY": {
