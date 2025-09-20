@@ -200,8 +200,8 @@ class ConfigurationValidator:
         all_issues.extend(feature_flag_validation["issues"])
 
         all_recommendations = critical_validation["recommendations"] + feature_flag_validation["recommendations"]
-        # Remove duplicate recommendations
-        all_recommendations = list(set(all_recommendations))
+        # Remove duplicate recommendations while preserving order
+        all_recommendations = list(dict.fromkeys(all_recommendations))
 
         return {
             "overall_health": overall_health,
@@ -267,9 +267,14 @@ class ConfigurationValidator:
 
     def _get_timestamp(self) -> str:
         """Get current timestamp in ISO format."""
-        from datetime import datetime, timezone
+        return get_current_timestamp()
 
-        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+def get_current_timestamp() -> str:
+    """Get current timestamp in ISO format."""
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 # Convenience functions for easy access

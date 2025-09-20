@@ -9,6 +9,7 @@ This module handles:
 - Security middleware application
 """
 
+import logging
 from pathlib import Path
 from typing import AsyncContextManager, Callable, Optional
 
@@ -333,10 +334,8 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
             app.include_router(admin_diagnostics.router, prefix="/api/admin")
     except Exception as e:
         # If feature flag check fails, log but continue without diagnostics (safe default)
-        import logging
-
         logger = logging.getLogger(__name__)
-        logger.warning(f"Failed to check admin diagnostics feature flag: {e}")
+        logger.warning(f"Failed to check admin diagnostics feature flag: {e}", exc_info=True)
         logger.info("Admin diagnostics router not registered (feature flag check failed)")
 
     # Serve admin frontend static files (mount after API routes to avoid conflicts)

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from ..core.admin_auth import require_admin_auth
-from ..core.config_validation import get_configuration_health_summary, validate_critical_settings
+from ..core.config_validation import get_configuration_health_summary, get_current_timestamp, validate_critical_settings
 from ..core.settings_manager import get_settings_manager
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ async def get_config_status(
                 "admin_managed_env": admin_managed_env,
                 "database_settings": database_settings,
                 "summary": summary,
-                "timestamp": _get_current_timestamp(),
+                "timestamp": get_current_timestamp(),
             }
         )
     except Exception as e:
@@ -85,7 +85,7 @@ async def get_env_only_status(
                     "configured": sum(1 for s in env_only_settings.values() if s["present"]),
                     "missing": sum(1 for s in env_only_settings.values() if not s["present"]),
                 },
-                "timestamp": _get_current_timestamp(),
+                "timestamp": get_current_timestamp(),
             }
         )
     except Exception as e:
@@ -126,7 +126,7 @@ async def get_admin_managed_status(
                         "using_defaults": sum(1 for s in database_settings.values() if not s["configured"]),
                     },
                 },
-                "timestamp": _get_current_timestamp(),
+                "timestamp": get_current_timestamp(),
             }
         )
     except Exception as e:
@@ -155,7 +155,7 @@ async def get_config_validation(
         return JSONResponse(
             content={
                 "validation_results": health_summary,
-                "timestamp": _get_current_timestamp(),
+                "timestamp": get_current_timestamp(),
             }
         )
     except Exception as e:
@@ -518,10 +518,3 @@ def _get_setting_description(setting_name: str) -> str:
     }
 
     return descriptions.get(setting_name, f"Configuration setting: {setting_name}")
-
-
-def _get_current_timestamp() -> str:
-    """Get current timestamp in ISO format."""
-    from datetime import datetime, timezone
-
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
