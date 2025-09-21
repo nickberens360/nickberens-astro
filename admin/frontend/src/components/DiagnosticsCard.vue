@@ -52,6 +52,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import adminAPI from '@/services/api'
+import { useFeatureSettingsStore } from '@/stores/featureSettings'
 
 const envConfigured = ref(0)
 const envTotal = ref(0)
@@ -61,11 +62,31 @@ const criticalStatus = ref(null)
 const error = ref(null)
 const lastUpdated = ref('')
 
+const featureStore = useFeatureSettingsStore()
+const diagnosticsEnabled = computed(() => !!featureStore?.featureFlags?.enable_admin_diagnostics)
+
 const fetchDiagnostics = async () => {
   error.value = null
   try {
+    // Ensure feature flags are loaded so we can respect the diagnostics toggle
+    try {
+      await featureStore.loadData()
+    } catch (e) {
+      // Non-fatal for this card; continue with safe default behavior
+      console.warn('Feature flags load failed:', e?.message || e)
+    }
+
+    if (!diagnosticsEnabled.value) {
+      error.value = 'Diagnostics are disabled. Enable in Feature Flags to view.'
+      return
+    }
+
     const [configStatus, validation, critical] = await Promise.all([
-      adminAPI.getDiagnosticsConfigStatus(),
+      // Be defensive: swallow 404s so the card degrades gracefully when routes are absent
+      adminAPI.getDiagnosticsConfigStatus().catch(err => {
+        console.warn('Config status endpoint unavailable:', err.message)
+        return {}
+      }),
       adminAPI.getDiagnosticsValidation().catch(err => {
         console.warn('Validation endpoint unavailable:', err.message)
         return {}

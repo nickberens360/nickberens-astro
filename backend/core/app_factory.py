@@ -327,16 +327,32 @@ def create_app(lifespan: Optional[Callable[[FastAPI], AsyncContextManager]] = No
     # Expose content routes under admin prefix as well for consistent client base
     app.include_router(content.router, prefix="/api/admin")
 
-    # Conditionally register admin diagnostics router based on feature flag
+    # Conditionally register admin diagnostics router based on feature flag,
+    # with optional environment override for development.
+    enable_admin_diagnostics = False
     try:
         settings_manager = get_settings_manager()
-        if settings_manager.is_feature_enabled("enable_admin_diagnostics"):
-            app.include_router(admin_diagnostics.router, prefix="/api/admin")
+        enable_admin_diagnostics = settings_manager.is_feature_enabled("enable_admin_diagnostics")
     except Exception as e:
-        # If feature flag check fails, log but continue without diagnostics (safe default)
+        # If feature flag check fails, log but continue to env override check
         logger = logging.getLogger(__name__)
         logger.warning(f"Failed to check admin diagnostics feature flag: {e}", exc_info=True)
-        logger.info("Admin diagnostics router not registered (feature flag check failed)")
+
+    # Environment override (useful in dev/staging): ENABLE_ADMIN_DIAGNOSTICS=true
+    try:
+        if not enable_admin_diagnostics and os.getenv("ENABLE_ADMIN_DIAGNOSTICS", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+        }:
+            enable_admin_diagnostics = True
+            logger = logging.getLogger(__name__)
+            logger.info("Admin diagnostics router enabled via env override ENABLE_ADMIN_DIAGNOSTICS")
+    except Exception:
+        pass
+
+    if enable_admin_diagnostics:
+        app.include_router(admin_diagnostics.router, prefix="/api/admin")
 
     # Serve admin frontend static files (mount after API routes to avoid conflicts)
     admin_static_path = Path(__file__).parent.parent.parent / "admin" / "frontend" / "dist"
