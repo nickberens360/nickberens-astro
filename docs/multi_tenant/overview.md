@@ -1,4 +1,15 @@
-# Multi‑Tenant Overview (MVP)
+# Multi‑Tenant Overview (Greenfield)
+
+Status
+
+- Greenfield plan: implement Postgres + SQLAlchemy + RLS from day one.
+
+Quick start for agents
+- See the Agent Playbook with machine-readable steps: `docs/multi_tenant/agent_playbook.md`.
+- Prefer the YAML index for ingestion: `docs/multi_tenant/agent_playbook.yaml` (JSON: `docs/multi_tenant/agent_playbook.json`).
+
+Greenfield mode
+- Adopt Postgres + SQLAlchemy + RLS from day one. See `plan.md` for the phases.
 
 This document outlines the architectural approach to evolve the app into a multi‑tenant SaaS with a minimal MVP scope and a strong security baseline. No billing or pricing plans are included at this stage.
 
@@ -6,12 +17,14 @@ This document outlines the architectural approach to evolve the app into a multi
 - Isolate tenant data reliably at the database level.
 - Minimize app‑wide changes by centralizing tenant resolution and scoping.
 - Keep developer ergonomics high: defaults enforce tenancy; opt‑out only for truly global data.
-- Enable smooth retrofit of existing single‑tenant data with a clear migration path.
+ 
 
 ## Tenancy Model
 - Model: single Postgres database, shared schema, every tenant‑scoped table has `tenant_id` (UUID, NOT NULL, indexed).
 - Security: PostgreSQL Row‑Level Security (RLS) enforced on all tenant tables.
 - Identity: tenants are “organizations”. Users can belong to multiple tenants with roles (`owner`, `admin`, `member`).
+
+
 
 ## Tenant Resolution
 - Primary: subdomain `https://<tenant>.yourapp.com` for production.
@@ -20,6 +33,8 @@ This document outlines the architectural approach to evolve the app into a multi
 - Backend determines the current tenant per request, stores it in request context, and sets `SET LOCAL app.tenant_id = '<uuid>'` on the DB session so RLS can use `current_setting('app.tenant_id')`.
 - Headers like `X-Tenant` may be used for client convenience in early dev but are not trusted for security.
 
+
+
 ## Data Model Additions
 - New tables:
   - `tenants`: id (UUID PK), slug (unique), name, created_at, updated_at, deleted_at (soft delete).
@@ -27,6 +42,9 @@ This document outlines the architectural approach to evolve the app into a multi
   - `invitations`: id, tenant_id, email, inviter_user_id, token, status, expires_at.
 - Existing domain tables: add `tenant_id UUID NOT NULL` + index (and unique composite indexes where necessary, e.g., `(tenant_id, name)`).
 - Global tables: auth providers, feature flags (if any) remain tenant‑less.
+
+Repository note
+- Define global user model in the auth stack; tenant memberships determine per‑tenant roles.
 
 ## RLS Policies (Pattern)
 - Enable RLS per tenant table: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`
@@ -42,10 +60,14 @@ This document outlines the architectural approach to evolve the app into a multi
 4. SQLAlchemy queries execute normally; RLS guarantees isolation.
 5. Handlers and services do not need to manually filter by tenant ID (defense in depth: can still add `with_loader_criteria`).
 
+
+
 ## Frontend Considerations (Astro + Vue)
 - Read current tenant from subdomain or `/:tenant` prefix using a `useTenant()` composable.
 - Display a simple organization switcher in the navbar.
 - API calls: do not rely on client to enforce tenancy. The backend resolves the tenant; clients may include a non‑authoritative header for ergonomics.
+
+
 
 ## Operational Decisions (MVP)
 - Admin routes: Admin endpoints that manage tenant data (settings, follow-ups, API keys) are tenant‑scoped and must run with a resolved tenant; global admin operations remain explicit and separate.
@@ -59,12 +81,7 @@ This document outlines the architectural approach to evolve the app into a multi
 - Pytest integration tests attempt cross‑tenant access and expect 403/empty results.
 - Include `tenant_id` in logs for traceability.
 
-## Migration Approach (Retrofit)
-1. Create `tenants` table and seed a “default” tenant.
-2. Add `tenant_id` to tenant‑scoped tables; backfill existing rows with default tenant ID.
-3. Create indexes and any composite unique constraints.
-4. Enable RLS and add policies.
-5. Deploy and verify; then migrate traffic to rely on context‑based scoping.
+
 
 ## Non‑Goals (MVP)
 - Billing, pricing plans, or metering.

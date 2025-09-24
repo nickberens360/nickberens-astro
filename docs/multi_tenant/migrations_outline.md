@@ -1,50 +1,31 @@
-# Alembic Migration Outlines — Multi‑Tenant MVP
+# Alembic Initial Schema — Multi‑Tenant (Greenfield)
 
-This document specifies the sequence and contents of Alembic revisions to introduce multi‑tenancy with Postgres Row‑Level Security (RLS). It is implementation‑ready guidance; no code changes are made here.
+This document provides an initial, single Alembic revision for a greenfield multi‑tenant schema with Postgres Row‑Level Security (RLS). No backfills or phased migrations are required.
 
-## Summary & Sequencing
-- R1: Create `tenants` table and seed default tenant
-- R2: Create `tenant_memberships` and `invitations`
-- R3: Add `tenant_id` columns to tenant‑scoped domain tables
-- R4: Backfill `tenant_id` with default tenant for existing rows
-- R5: Indexes and composite unique constraints including `tenant_id`
-- R6: Enable RLS and add policies for all tenant tables
+Agent quick links
+- Agent Playbook (guide): `docs/multi_tenant/agent_playbook.md`
+- Machine-readable index: `docs/multi_tenant/agent_playbook.yaml` (JSON: `docs/multi_tenant/agent_playbook.json`)
 
-Each revision should be independently reversible via `downgrade()`.
+Conventions
+- Schema: `public`
+- GUC for RLS: `app.tenant_id` (UUID string). Set per request via `SET LOCAL app.tenant_id = '<uuid>'`.
+- App role: `NOBYPASSRLS` and least privilege.
+- Soft‑delete: `deleted_at TIMESTAMPTZ NULL` on select tenant‑scoped tables where recovery is useful.
 
-## Conventions & Assumptions
-- DB: Postgres; schema `public`.
-- GUC for RLS: `app.tenant_id` (UUID string). Set per transaction via `SET LOCAL app.tenant_id = '<uuid>'`.
-- Soft‑delete: `deleted_at TIMESTAMPTZ NULL` on tenant‑scoped tables recommended.
-- Default tenant ID: use an env var `DEFAULT_TENANT_ID` when seeding, or generate a stable UUID in the migration.
-- Constraint names: use explicit names to avoid dialect‑generated names that vary by env.
-- Large tables: avoid table rewrites; add columns NULL first, backfill, then set NOT NULL.
-
-## Inventory Step (pre‑work)
-Identify tenant‑scoped tables. For each, list:
-- Table name
-- Primary key
-- Current unique constraints/indexes to be converted to composite with `tenant_id`
-
-Example placeholder list to replace in R3–R6:
-- `projects(name UNIQUE)` -> becomes UNIQUE(`tenant_id`, `name`)
-- `tasks(uid UNIQUE)` -> becomes UNIQUE(`tenant_id`, `uid`)
-
-## R1 — Create `tenants`
-Example Alembic revision skeleton (fill in `revision` and `down_revision`):
+Initial Revision Skeleton (init_multi_tenant_schema)
 
 ```python
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-# revision identifiers, used by Alembic.
-revision = "r1_create_tenants"
+revision = "init_multi_tenant_schema"
 down_revision = None
 branch_labels = None
 depends_on = None
 
 def upgrade():
+    # Global tables
     op.create_table(
         "tenants",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
@@ -54,38 +35,13 @@ def upgrade():
         sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("deleted_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
-    # Optional seed default tenant
-    # default_id = sa.text("'00000000-0000-0000-0000-000000000001'::uuid")  # or read from env in offline mode
-    # op.execute(sa.text("INSERT INTO tenants (id, slug, name) VALUES (:id, :slug, :name) ON CONFLICT DO NOTHING").bindparams(
-    #     id=default_id, slug="default", name="Default Tenant"
-    # ))
 
-
-def downgrade():
-    op.drop_table("tenants")
-```
-
-Notes
-- If you seed a default tenant here, persist the chosen UUID for later backfills.
-
-## R2 — Create `tenant_memberships` and `invitations`
-```python
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
-
-revision = "r2_memberships_invitations"
-down_revision = "r1_create_tenants"
-branch_labels = None
-depends_on = None
-
-def upgrade():
     op.create_table(
         "tenant_memberships",
         sa.Column("id", sa.BigInteger, primary_key=True),
         sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("user_id", sa.BigInteger, nullable=False),  # FK to users table if available
-        sa.Column("role", sa.String(length=20), nullable=False),
+        sa.Column("user_id", sa.BigInteger, nullable=False),  # FK to users (global) if present
+        sa.Column("role", sa.String(length=20), nullable=False),  # owner|admin|member
         sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
     )
     op.create_unique_constraint("uq_membership_tenant_user", "tenant_memberships", ["tenant_id", "user_id"])
@@ -103,201 +59,193 @@ def upgrade():
     )
     op.create_index("ix_invitations_token", "invitations", ["token"], unique=True)
 
+    # Tenant-scoped domain tables (examples; extend to your domain)
+    op.create_table(
+        "admin_settings",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("setting_key", sa.String(length=120), nullable=False),
+        sa.Column("setting_value", sa.Text, nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_by", sa.BigInteger, nullable=True),
+    )
+    op.create_unique_constraint("uq_admin_settings_tenant_key", "admin_settings", ["tenant_id", "setting_key"])
+    op.create_index("ix_admin_settings_tenant", "admin_settings", ["tenant_id"])  # hot filter
 
-def downgrade():
-    op.drop_index("ix_invitations_token", table_name="invitations")
-    op.drop_table("invitations")
-    op.drop_constraint("uq_membership_tenant_user", "tenant_memberships", type_="unique")
-    op.drop_table("tenant_memberships")
-```
+    op.create_table(
+        "followup_categories",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("name", sa.String(length=120), nullable=False),
+        sa.Column("display_name", sa.String(length=120), nullable=False),
+        sa.Column("description", sa.Text),
+        sa.Column("icon", sa.String(length=64), server_default="help-circle"),
+        sa.Column("sort_order", sa.Integer, server_default="0"),
+        sa.Column("is_active", sa.Boolean, server_default=sa.text("true")),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+    )
+    op.create_unique_constraint("uq_followup_categories_tenant_name", "followup_categories", ["tenant_id", "name"])
+    op.create_index("ix_followup_categories_tenant", "followup_categories", ["tenant_id"])  # hot filter
 
-Notes
-- Replace `user_id` with the correct FK once the users table is confirmed.
+    op.create_table(
+        "followup_questions",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("category_id", sa.BigInteger, nullable=False),  # ensure same-tenant FK in app logic/RLS
+        sa.Column("question_text", sa.Text, nullable=False),
+        sa.Column("sort_order", sa.Integer, server_default="0"),
+        sa.Column("is_active", sa.Boolean, server_default=sa.text("true")),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("created_by", sa.BigInteger, nullable=True),
+    )
+    op.create_index("ix_followup_questions_tenant", "followup_questions", ["tenant_id"])  # hot filter
 
-## R3 — Add `tenant_id` to domain tables (NULLable first)
-Pattern for each tenant‑scoped table:
+    op.create_table(
+        "welcome_questions",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("question_text", sa.Text, nullable=False),
+        sa.Column("sort_order", sa.Integer, server_default="0"),
+        sa.Column("is_active", sa.Boolean, server_default=sa.text("true")),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("created_by", sa.BigInteger, nullable=True),
+    )
+    op.create_index("ix_welcome_questions_tenant", "welcome_questions", ["tenant_id"])  # hot filter
 
-```python
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
+    op.create_table(
+        "api_keys",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("key_name", sa.String(length=120), nullable=False),
+        sa.Column("key_type", sa.String(length=64), nullable=False),
+        sa.Column("encrypted_value", sa.Text, nullable=False),
+        sa.Column("last_four", sa.String(length=8), nullable=False),
+        sa.Column("is_active", sa.Boolean, server_default=sa.text("true")),
+        sa.Column("last_used_at", sa.TIMESTAMP(timezone=True)),
+        sa.Column("last_validated_at", sa.TIMESTAMP(timezone=True)),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_by", sa.BigInteger),
+    )
+    op.create_unique_constraint("uq_api_keys_tenant_name", "api_keys", ["tenant_id", "key_name"])
+    op.create_index("ix_api_keys_tenant", "api_keys", ["tenant_id"])  # hot filter
 
-revision = "r3_add_tenant_id_columns"
-down_revision = "r2_memberships_invitations"
+    # Example log-like tables; index by (tenant_id, timestamp)
+    op.create_table(
+        "query_logs",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("user_query", sa.Text),
+        sa.Column("system_response", sa.Text),
+        sa.Column("query_type", sa.String(length=32), server_default="text"),
+        sa.Column("response_time_ms", sa.Float),
+        sa.Column("llm_provider", sa.String(length=64)),
+        sa.Column("llm_model", sa.String(length=64)),
+        sa.Column("vector_search_score", sa.Float),
+        sa.Column("sources_used", postgresql.JSONB, nullable=True),
+        sa.Column("follow_up_questions", postgresql.JSONB, nullable=True),
+        sa.Column("cache_hit", sa.Boolean, server_default=sa.text("false")),
+        sa.Column("error_occurred", sa.Boolean, server_default=sa.text("false")),
+        sa.Column("error_message", sa.Text),
+        sa.Column("user_feedback", sa.Text),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("client_ip", sa.Text),
+        sa.Column("location_city", sa.Text),
+        sa.Column("location_region", sa.Text),
+        sa.Column("location_country", sa.Text),
+        sa.Column("location_country_code", sa.Text),
+    )
+    op.create_index("ix_query_logs_tenant_ts", "query_logs", ["tenant_id", "timestamp"])  # hot filter
 
-TENANT_TABLES = [
-    # (table_name, column_type, index_name)
-    ("projects", postgresql.UUID(as_uuid=True), "ix_projects_tenant_id"),
-    ("tasks", postgresql.UUID(as_uuid=True), "ix_tasks_tenant_id"),
-    # add more
-]
+    op.create_table(
+        "content_gaps",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("query_pattern", sa.Text, nullable=False),
+        sa.Column("occurrence_count", sa.Integer, server_default="0"),
+        sa.Column("avg_similarity_score", sa.Float),
+        sa.Column("first_seen", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("last_seen", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("resolved", sa.Boolean, server_default=sa.text("false")),
+        sa.Column("notes", sa.Text),
+        sa.Column("sample_query_id", sa.BigInteger),  # ensure same-tenant relationship in policies/logic
+    )
+    op.create_index("ix_content_gaps_tenant", "content_gaps", ["tenant_id"])  # hot filter
 
-def upgrade():
-    for table, coltype, ix in TENANT_TABLES:
-        op.add_column(table, sa.Column("tenant_id", coltype, nullable=True))  # NULL first to avoid rewrite
-        op.create_index(ix, table, ["tenant_id"], unique=False)
+    op.create_table(
+        "security_events",
+        sa.Column("id", sa.BigInteger, primary_key=True),
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), nullable=True),  # nullable for infra-level events
+        sa.Column("event_type", sa.String(length=64), nullable=False),
+        sa.Column("identifier", sa.Text, nullable=False),
+        sa.Column("details", sa.Text),
+        sa.Column("severity", sa.String(length=16), server_default="low"),
+        sa.Column("ip_address", sa.Text),
+        sa.Column("user_agent", sa.Text),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+    )
+    op.create_index("ix_security_events_tenant_type", "security_events", ["tenant_id", "event_type"])  # flexible scope
 
+    # RLS policies for tenant-scoped tables
+    TENANT_TABLES = [
+        "admin_settings",
+        "followup_categories",
+        "followup_questions",
+        "welcome_questions",
+        "api_keys",
+        "query_logs",
+        "content_gaps",
+        # security_events optional (tenant_id nullable); add a policy only if you require row scoping there
+    ]
 
-def downgrade():
-    # drop in reverse order
-    for table, _, ix in reversed(TENANT_TABLES):
-        op.drop_index(ix, table_name=table)
-        op.drop_column(table, "tenant_id")
-```
-
-Notes
-- Avoid `server_default` on `UUID()` here to prevent whole‑table rewrites.
-
-## R4 — Backfill `tenant_id`
-Perform a safe backfill to a known default tenant. For large tables, consider batching.
-
-```python
-from alembic import op
-from sqlalchemy.sql import text
-
-revision = "r4_backfill_tenant_id"
-down_revision = "r3_add_tenant_id_columns"
-
-DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"  # replace or inject via env/config
-
-TABLES = [
-    "projects",
-    "tasks",
-    # add more
-]
-
-def upgrade():
-    for table in TABLES:
-        op.execute(text(f"UPDATE {table} SET tenant_id = :tid WHERE tenant_id IS NULL").bindparams(tid=DEFAULT_TENANT_ID))
-    # Set NOT NULL after backfill
-    for table in TABLES:
-        op.alter_column(table, "tenant_id", nullable=False)
-
-
-def downgrade():
-    # Allow NULL again (optional), then clear values
-    for table in TABLES:
-        op.alter_column(table, "tenant_id", nullable=True)
-        op.execute(text(f"UPDATE {table} SET tenant_id = NULL"))
-```
-
-Batching option (SQL only):
-```sql
--- Repeat until 0 rows affected
-UPDATE projects SET tenant_id = :tid
-WHERE tenant_id IS NULL
-AND ctid = ANY(
-  ARRAY(SELECT ctid FROM projects WHERE tenant_id IS NULL LIMIT 10000)
-);
-```
-
-## R5 — Composite uniques and indexes
-Convert global uniques to tenant‑scoped ones. Example patterns:
-
-```python
-from alembic import op
-
-revision = "r5_composite_uniques"
-down_revision = "r4_backfill_tenant_id"
-
-UNIQUES = [
-    # (table, old_constraint_name, new_constraint_name, columns)
-    ("projects", "uq_projects_name", "uq_projects_tenant_name", ["tenant_id", "name"]),
-    ("tasks", "uq_tasks_uid", "uq_tasks_tenant_uid", ["tenant_id", "uid"]),
-]
-
-def upgrade():
-    for table, old_uq, new_uq, cols in UNIQUES:
-        # Drop old unique
-        op.drop_constraint(old_uq, table, type_="unique")
-        # Create new composite unique
-        op.create_unique_constraint(new_uq, table, cols)
-
-
-def downgrade():
-    for table, old_uq, new_uq, cols in reversed(UNIQUES):
-        op.drop_constraint(new_uq, table, type_="unique")
-        op.create_unique_constraint(old_uq, table, cols[1:])  # original without tenant_id
-```
-
-Notes
-- If original uniques were implicit (index‑backed), first introspect to get their names or recreate as needed.
-
-## R6 — Enable RLS and policies
-Enable RLS and add policies uniformly. Use explicit names for easy maintenance.
-
-```python
-from alembic import op
-
-revision = "r6_enable_rls"
-down_revision = "r5_composite_uniques"
-
-# Apply to tenant-scoped tables only (exclude truly global tables like 'tenants',
-# 'tenant_memberships', and 'invitations' unless you design specific policies).
-TENANT_TABLES = [
-    "admin_settings",
-    "followup_categories",
-    "followup_questions",
-    "welcome_questions",
-    "api_keys",
-    "query_logs",
-    "content_gaps",
-    "security_events",  # if tenant-scoped; skip if global
-]
-
-POLICY_TEMPLATE = """
-ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
--- Optional: FORCE ROW LEVEL SECURITY to prevent BYPASSRLS roles
--- ALTER TABLE {table} FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS {table}_tenant_policy ON {table};
-CREATE POLICY {table}_tenant_policy ON {table}
-  USING (tenant_id = current_setting('app.tenant_id')::uuid AND deleted_at IS NULL)
-  WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
-"""
-
-def upgrade():
     for table in TENANT_TABLES:
-        op.execute(POLICY_TEMPLATE.format(table=table))
+        op.execute(sa.text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
+        op.execute(sa.text(
+            f"DROP POLICY IF EXISTS {table}_tenant_policy ON {table};"
+        ))
+        op.execute(sa.text(
+            f"""
+            CREATE POLICY {table}_tenant_policy ON {table}
+              USING (tenant_id = current_setting('app.tenant_id')::uuid)
+              WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+            """
+        ))
 
 
 def downgrade():
-    for table in TENANT_TABLES:
-        op.execute(f"DROP POLICY IF EXISTS {table}_tenant_policy ON {table};")
-        op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY;")
+    # Drop in reverse dependency order
+    for table in [
+        "content_gaps",
+        "query_logs",
+        "api_keys",
+        "welcome_questions",
+        "followup_questions",
+        "followup_categories",
+        "invitations",
+        "tenant_memberships",
+        "security_events",
+        "admin_settings",
+        "tenants",
+    ]:
+        try:
+            op.drop_table(table)
+        except Exception:
+            pass
 ```
 
-Notes
-- Do not apply RLS to truly global tables. If `tenants` must be restricted, add a dedicated policy based on membership.
-- If some tables lack `deleted_at`, remove that predicate from the `USING` clause for those tables.
-
-## Smoke Test (psql)
+Smoke Test (psql)
 ```sql
 -- As an app role with RLS enabled
 SET LOCAL app.tenant_id = '00000000-0000-0000-0000-000000000001';
-SELECT COUNT(*) FROM projects;  -- should show only default tenant rows
+SELECT COUNT(*) FROM admin_settings;  -- should show only default tenant rows
 
 SET LOCAL app.tenant_id = '00000000-0000-0000-0000-000000000002';
-SELECT COUNT(*) FROM projects;  -- should show 0 until seeded for tenant 2
-
--- Write path respects WITH CHECK
-INSERT INTO projects (id, tenant_id, name) VALUES (gen_random_uuid(), '...0002', 'x');
--- Fails if app.tenant_id != '...0002'
+SELECT COUNT(*) FROM admin_settings;  -- should show 0 until seeded for tenant 2
 ```
 
-## Downtime & Locking Considerations
-- Adding columns NULL is metadata‑only; safe. Avoid `DEFAULT` on add.
-- Setting NOT NULL requires a full table scan; do after backfill and during low traffic.
-- Dropping/creating uniques takes locks; schedule in a short maintenance window.
-
-## Observability Checklist
-- Log `current_setting('app.tenant_id')` during integration tests to confirm session wiring.
-- Track policy hits via `pg_stat_policy` (PG 16+) or verify via EXPLAIN and filters.
-
-## Open Decisions
-- Confirm users table name/type for FKs.
-- Decide whether `tenants` is visible only to members (policy) or globally listable by admins.
-- Determine cascade behavior on tenant deletion (prefer soft‑delete + background purge).
-
-```text
-End of outlines — ready for implementation as Alembic revisions.
-```
+Notes
+- Create the global `users` table in your auth stack and reference it from memberships as needed.
+- Consider `FORCE ROW LEVEL SECURITY` if your database version and security posture require it.
