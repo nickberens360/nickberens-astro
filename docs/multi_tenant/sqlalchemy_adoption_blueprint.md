@@ -1,6 +1,10 @@
-# SQLAlchemy Adoption Blueprint (M2)
+# SQLAlchemy Adoption Blueprint (Greenfield)
 
-This blueprint outlines a pragmatic path to introduce SQLAlchemy and Postgres into the current backend (which primarily uses `sqlite3` and inline SQL) while enabling RLS-backed multi-tenancy. It aims to minimize churn and risk by layering SQLAlchemy alongside existing code, then gradually porting.
+Greenfield mode
+
+- Adopt Postgres + SQLAlchemy from day one; no SQLite fallback or cutover required.
+
+This blueprint outlines a pragmatic path to wire SQLAlchemy and Postgres with RLS-backed multi-tenancy. It keeps complexity low by starting with SQLAlchemy Core, then layering ORM models as needed.
 
 ## Objectives
 - Use Postgres with Row-Level Security (RLS) as the primary enforcement for tenant isolation.
@@ -8,15 +12,14 @@ This blueprint outlines a pragmatic path to introduce SQLAlchemy and Postgres in
 - Add SQLAlchemy Engine/Session and a per-request dependency without rewriting all routes at once.
 - Provide a feature-flagged fallback to SQLite during migration/testing.
 
-## Constraints and Current State
+## Constraints
 - Framework: FastAPI.
-- Current data access: `sqlite3` connections and manager classes (e.g., admin database manager, query logger).
-- Planned DB: Postgres 14+ with RLS.
+- Database: Postgres 14+ with RLS.
 
 ## Phased Adoption
 
-### Phase A — Introduce Engine + Session (no route rewrites)
-- Add SQLAlchemy engine configured via `DATABASE_URL` (Postgres) and a feature flag to keep using SQLite in production until cutover.
+### Phase A — Engine + Session (default path)
+- Add SQLAlchemy engine configured via `DATABASE_URL` (Postgres).
 - Create `SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)`. Avoid global sessions.
 - Implement a FastAPI dependency that:
   - Opens a session at request start
@@ -89,14 +92,9 @@ Recommendation
 - Start with SQLAlchemy Core + `text()` queries for the first few routes/managers to minimize complexity.
 - Add ORM models later for domains that benefit from relationships and eager loading.
 
-### Phase D — Feature Flags and Cutover
-- Add flags to control:
-  - Use Postgres driver vs. SQLite managers
-  - Enable/disable tenant middleware
-  - Fallback to default tenant in emergencies (RLS remains enabled)
-- Cutover plan:
-  - Staging: enable Postgres + RLS + middleware; run integration tests
-  - Production: enable for a slice of traffic; monitor; roll forward
+### Phase D — Hardening
+- Add defensive `with_loader_criteria` to critical ORM models if/when you adopt ORM.
+- Confirm every request begins a transaction and sets `app.tenant_id`.
 
 ## Testing and Observability
 - Integration tests:
@@ -108,11 +106,8 @@ Recommendation
 - Metrics:
   - Add per-tenant request and error counters where feasible.
 
-## Non-ORM Path (if deferring ORM)
-- Keep existing `sqlite3` style but route those calls through a thin abstraction that:
-  - Uses SQLAlchemy Engine/Session to execute SQL text in Postgres
-  - Relies entirely on RLS for tenant isolation
-- Pros: minimal rewrite; Cons: less type-safety and relationship handling.
+## Non-ORM Path
+- Start with SQLAlchemy Core + `text()`; rely on RLS for isolation. Add ORM later as needed.
 
 ## Rollback
 - Toggle feature flags back to SQLite and disable tenant middleware. Keep RLS enabled on Postgres to prevent accidental exposure during rollback testing.
@@ -124,4 +119,3 @@ Recommendation
 - [ ] App role `NOBYPASSRLS`, least-privilege grants
 - [ ] First few routes/managers ported to SQLAlchemy Core or ORM
 - [ ] Logs include `tenant_id`; tests cover cross-tenant denial
-

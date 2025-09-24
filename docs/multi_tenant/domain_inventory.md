@@ -4,6 +4,16 @@ This document enumerates current data tables in the project and specifies which 
 
 Current storage uses multiple SQLite databases; target is a unified Postgres DB with RLS. Mapping and scoping below reflect that target.
 
+Greenfield mode
+- Create tenant‑scoped tables from day one (include `tenant_id` in schema and uniques). The SQLite mapping in this document is historical context only.
+
+Repository status notes (as of 2025-09-23)
+- The backend currently uses SQLite only; Postgres and RLS are not wired.
+- Admin data live in `admin_monitoring.db` via `AdminDatabaseManager` (see `backend/core/admin_database.py`).
+- Query analytics live in `rag_monitoring.db` via `SQLiteQueryLogger` (see `backend/core/sqlite_query_logger.py`).
+- Security events exist both in admin DB and, in places, a dedicated `security_events.db` via `SecurityEventsDatabaseManager`.
+- `admin_users` maps to target `users`; `admin_sessions` maps to target `sessions` (global).
+
 ## Storage Landscape (Current → Target)
 - Admin DB (SQLite: `admin_monitoring.db`) → Postgres schema `public`
 - Query Analytics DB (SQLite: `rag_monitoring.db`) → Postgres schema `public`
@@ -36,10 +46,12 @@ Legend
 - admin_settings
   - Scope: tenant.
   - Unique changes: `setting_key` UNIQUE → composite UNIQUE (`tenant_id`, `setting_key`).
+  - Current repo: table is global (SQLite) with unique `setting_key`.
 
 - taxonomy_settings_history
   - Scope: tenant.
   - Unique changes: none.
+  - Current repo: table exists in SQLite for history snapshots; will be tenant‑scoped post‑migration.
 
 - rate_limiting
   - Scope: global with optional tenant dimension.
@@ -50,6 +62,7 @@ Legend
   - Scope: tenant (preferred) or global if events are infrastructure‑level.
   - Uniques: none.
   - Notes: duplicate table also exists in dedicated Security DB; in target, use a single `security_events` table.
+  - Current repo: both patterns exist; consolidate during migration.
 
 - user_2fa
   - Scope: global (per user).
@@ -136,4 +149,3 @@ Open Decisions
 - Whether admin_sessions should be replaced with a unified `sessions` table and include `current_tenant_id`.
 - If rate limiting policies should be global or per tenant; schema supports both with nullable `tenant_id`.
 - Whether security events are always tenant‑bound or sometimes global; schema allows nullable `tenant_id`.
-

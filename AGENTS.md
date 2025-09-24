@@ -33,3 +33,9 @@
 - Env: copy `.env.example` to `.env`. Frontend reads `PUBLIC_*` vars; backend loads `.env` via `dotenv`.
 - Secrets: never commit real keys/tokens; use local `.env` and CI secrets.
 
+## Agentic Implementation Resources
+- Multi-tenant plan and migration guides live under `docs/multi_tenant/`.
+- Start with the Agent Playbook:
+  - Guide: `docs/multi_tenant/agent_playbook.md`
+  - Machine-readable index: `docs/multi_tenant/agent_playbook.yaml` (JSON: `docs/multi_tenant/agent_playbook.json`)
+  - These outline step IDs, dependencies, files to touch, commands to run, and validations to perform.
