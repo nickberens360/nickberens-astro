@@ -40,16 +40,31 @@ class TestGeolocationValidator:
 
     def test_frequent_ip_changes_threshold_increased(self, validator):
         """Test that the frequent IP changes threshold has been increased."""
-        login_history = [
+        # Test with 6 different IPs (should NOT trigger frequent changes)
+        login_history_6_ips = [
             {"ip": f"192.0.2.{i}", "last_seen": f"2024-01-{i:02d}T00:00:00", "count": 1}
             for i in range(1, 7)  # 6 different IPs
         ]
 
         ip_info = {"type": "public", "risk_level": "low", "description": "Public internet address"}
-        is_unusual, risk_factors = validator._analyze_location_risk("192.0.2.7", ip_info, login_history)
+        is_unusual, risk_factors = validator._analyze_location_risk("192.0.2.7", ip_info, login_history_6_ips)
 
-        # Should not flag 6 IPs as frequent changes (threshold raised to >6)
+        # Should not flag 6 IPs as frequent changes (threshold is >6)
         assert "frequent_ip_changes" not in risk_factors
+
+    def test_frequent_ip_changes_boundary_condition(self, validator):
+        """Test the boundary condition for frequent IP changes (7+ IPs should trigger)."""
+        # Test with 7 different IPs (should trigger frequent changes)
+        login_history_7_ips = [
+            {"ip": f"192.0.2.{i}", "last_seen": f"2024-01-{i:02d}T00:00:00", "count": 1}
+            for i in range(1, 8)  # 7 different IPs
+        ]
+
+        ip_info = {"type": "public", "risk_level": "low", "description": "Public internet address"}
+        is_unusual, risk_factors = validator._analyze_location_risk("192.0.2.8", ip_info, login_history_7_ips)
+
+        # Should flag 7+ IPs as frequent changes (threshold is >6)
+        assert "frequent_ip_changes" in risk_factors
 
     def test_risk_score_calculation_is_more_lenient(self, validator):
         """Test that risk score calculation is more lenient."""
@@ -83,15 +98,23 @@ class TestGeolocationValidator:
         """Test that cloud usage only adds penalty when it's unusual for the user."""
         ip_info = {"type": "cloud", "risk_level": "medium", "description": "AWS cloud infrastructure"}
 
-        # No cloud penalty if not unusual usage
+        # Test without unusual cloud usage - should not get extra penalty
         risk_factors_without_unusual_cloud = ["new_ip_address"]
         risk_level = validator._calculate_risk_level(ip_info, risk_factors_without_unusual_cloud, is_unusual=True)
 
-        # Should not get extra penalty just for being cloud
+        # Test with unusual cloud usage - should get extra penalty
         risk_factors_with_unusual_cloud = ["new_ip_address", "unusual_cloud_usage"]
         risk_level_with_penalty = validator._calculate_risk_level(
             ip_info, risk_factors_with_unusual_cloud, is_unusual=True
         )
 
-        # The second should have higher risk due to unusual cloud usage
-        assert risk_level != risk_level_with_penalty or risk_level_with_penalty in ["medium", "low"]
+        # The second case should have higher risk due to unusual cloud usage
+        # Base case: 1 risk factor + 1 is_unusual penalty = 2 points = low (< 3)
+        # With unusual cloud: 2 risk factors + 1 is_unusual + 1 cloud penalty = 4 points, but actually just 3 = medium
+        assert risk_level == "low"  # Base case: 1 factor + 1 is_unusual = 2 points = low (< 3)
+        assert risk_level_with_penalty == "medium"  # With cloud: 2 factors + 1 is_unusual = 3 points = medium
+
+        # If they're different, the penalty version should be higher
+        if risk_level != risk_level_with_penalty:
+            severity_order = {"low": 0, "medium": 1, "high": 2}
+            assert severity_order[risk_level_with_penalty] > severity_order[risk_level]
