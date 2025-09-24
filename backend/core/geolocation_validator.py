@@ -25,6 +25,14 @@ class GeolocationValidator:
     - Security event logging
     """
 
+    # Risk scoring constants for maintainability
+    RECENT_IP_HISTORY_COUNT = 8
+    FREQUENT_IP_CHANGES_THRESHOLD = 6
+    RISK_SCORE_THRESHOLD_HIGH = 6
+    RISK_SCORE_THRESHOLD_MEDIUM = 3
+    UNUSUAL_LOCATION_PENALTY = 1
+    UNUSUAL_CLOUD_PENALTY = 1
+
     def __init__(self):
         """Initialize the geolocation validator."""
         self._known_ranges = self._load_known_ranges()
@@ -88,7 +96,7 @@ class GeolocationValidator:
             return {
                 "type": "public",
                 "provider": "unknown",
-                "risk_level": "medium",
+                "risk_level": "low",
                 "description": "Public internet address",
             }
 
@@ -208,9 +216,9 @@ class GeolocationValidator:
 
         # Check for rapid location changes
         if len(login_history) > 0:
-            recent_ips = [entry["ip"] for entry in login_history[:5]]
+            recent_ips = [entry["ip"] for entry in login_history[: self.RECENT_IP_HISTORY_COUNT]]
             unique_recent_ips = set(recent_ips)
-            if len(unique_recent_ips) > 3:
+            if len(unique_recent_ips) > self.FREQUENT_IP_CHANGES_THRESHOLD:
                 risk_factors.append("frequent_ip_changes")
 
         # Check IP reputation
@@ -235,12 +243,16 @@ class GeolocationValidator:
 
         risk_score = 0
         risk_score += len(risk_factors)
-        risk_score += 2 if is_unusual else 0
-        risk_score += 1 if ip_info["type"] == "cloud" else 0
+        # Reduce penalty for new locations - many legitimate users have dynamic IPs
+        risk_score += self.UNUSUAL_LOCATION_PENALTY if is_unusual else 0
+        # Only add cloud penalty if it's unusual for this user
+        if ip_info["type"] == "cloud" and "unusual_cloud_usage" in risk_factors:
+            risk_score += self.UNUSUAL_CLOUD_PENALTY
 
-        if risk_score >= 4:
+        # Raised thresholds to be less aggressive
+        if risk_score >= self.RISK_SCORE_THRESHOLD_HIGH:
             return "high"
-        elif risk_score >= 2:
+        elif risk_score >= self.RISK_SCORE_THRESHOLD_MEDIUM:
             return "medium"
         else:
             return "low"
@@ -248,9 +260,9 @@ class GeolocationValidator:
     def _determine_action(self, risk_level: str, is_unusual: bool) -> str:
         """Determine what action to take."""
         if risk_level == "high":
-            return "block"  # In production, might require additional verification
-        elif risk_level == "medium" and is_unusual:
-            return "warn"  # Log and potentially notify user
+            return "block"  # Only block truly high-risk scenarios
+        elif risk_level == "medium":
+            return "warn"  # Log unusual activity but don't block legitimate users
         else:
             return "allow"
 
