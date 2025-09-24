@@ -88,7 +88,7 @@ class GeolocationValidator:
             return {
                 "type": "public",
                 "provider": "unknown",
-                "risk_level": "medium",
+                "risk_level": "low",
                 "description": "Public internet address",
             }
 
@@ -208,9 +208,9 @@ class GeolocationValidator:
 
         # Check for rapid location changes
         if len(login_history) > 0:
-            recent_ips = [entry["ip"] for entry in login_history[:5]]
+            recent_ips = [entry["ip"] for entry in login_history[:8]]
             unique_recent_ips = set(recent_ips)
-            if len(unique_recent_ips) > 3:
+            if len(unique_recent_ips) > 6:
                 risk_factors.append("frequent_ip_changes")
 
         # Check IP reputation
@@ -235,12 +235,16 @@ class GeolocationValidator:
 
         risk_score = 0
         risk_score += len(risk_factors)
-        risk_score += 2 if is_unusual else 0
-        risk_score += 1 if ip_info["type"] == "cloud" else 0
+        # Reduce penalty for new locations - many legitimate users have dynamic IPs
+        risk_score += 1 if is_unusual else 0
+        # Only add cloud penalty if it's unusual for this user
+        if ip_info["type"] == "cloud" and "unusual_cloud_usage" in risk_factors:
+            risk_score += 1
 
-        if risk_score >= 4:
+        # Raised thresholds to be less aggressive
+        if risk_score >= 6:
             return "high"
-        elif risk_score >= 2:
+        elif risk_score >= 3:
             return "medium"
         else:
             return "low"
@@ -248,9 +252,9 @@ class GeolocationValidator:
     def _determine_action(self, risk_level: str, is_unusual: bool) -> str:
         """Determine what action to take."""
         if risk_level == "high":
-            return "block"  # In production, might require additional verification
-        elif risk_level == "medium" and is_unusual:
-            return "warn"  # Log and potentially notify user
+            return "block"  # Only block truly high-risk scenarios
+        elif risk_level == "medium":
+            return "warn"  # Log unusual activity but don't block legitimate users
         else:
             return "allow"
 

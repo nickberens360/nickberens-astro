@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from backend.core.admin_database import get_admin_db_manager
 
