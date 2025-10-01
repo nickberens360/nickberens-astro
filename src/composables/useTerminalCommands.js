@@ -258,18 +258,14 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
     },
 
     'bust-cache': (args, commandId) => {
-      const userConfirmed = confirm('Are you sure you want to clear the cache and reload the page?');
-
-      if (userConfirmed) {
-        // User confirmed, proceed with clearing cache and reloading
-        localStorage.clear();
-        window.location.reload();
-      } else {
-        // User canceled, update history with a message
-        updateHistoryItem(commandId, {
-          textOutput: ['Cache clearing canceled by user.']
-        });
-      }
+      // Use in-terminal confirmation flow instead of native confirm()
+      updateHistoryItem(commandId, {
+        textOutput: [
+          'This will clear localStorage and reload the page.',
+          'Type "yes" to proceed or "no" to cancel.'
+        ],
+        awaitingConfirmation: { action: 'bust-cache' }
+      });
     },
 
     default: (baseCommand, commandId) => {
@@ -281,6 +277,40 @@ export function useTerminalCommands(terminalOutput, isMounted, unmaximizeCallbac
 
   // Main command handler
   const handleCommand = (command, commandId, theme) => {
+    // First, handle any pending confirmation flows tied to the previous command
+    try {
+      const history = commandHistoryStore.get();
+      // The newly added command is the last entry; check the previous one for pending confirmation
+      if (history.length >= 2) {
+        const prevItem = history[history.length - 2];
+        if (prevItem?.awaitingConfirmation?.action === 'bust-cache') {
+          const answer = (command || '').trim().toLowerCase();
+          if (answer === 'y' || answer === 'yes') {
+            updateHistoryItem(prevItem.id, {
+              textOutput: ['Clearing cache and reloading...'],
+              awaitingConfirmation: null
+            });
+            try {
+              localStorage.clear();
+            } catch {}
+            // Give the UI a tick to render the message before reload
+            setTimeout(() => window.location.reload(), 50);
+          } else if (answer === 'n' || answer === 'no') {
+            updateHistoryItem(prevItem.id, {
+              textOutput: ['Cache clearing canceled.'],
+              awaitingConfirmation: null
+            });
+          } else {
+            updateHistoryItem(prevItem.id, {
+              textOutput: ['Please type "yes" to proceed or "no" to cancel.']
+            });
+            return; // Keep awaiting confirmation
+          }
+          return; // Do not process as a regular command
+        }
+      }
+    } catch {}
+
     // First check if the entire command matches an easter egg
     const eggFound = checkForEasterEgg(command);
 
