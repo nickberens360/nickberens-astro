@@ -138,8 +138,14 @@ class TestParseTimestampString:
 
     def test_parse_timestamp_string_space_separated(self):
         """Test parsing space-separated format."""
+        # Without microseconds
         result = parse_timestamp_string("2024-01-15 10:30:00")
         assert result == datetime(2024, 1, 15, 10, 30, 0)
+        assert result.tzinfo is None
+
+        # With microseconds (admin database format)
+        result = parse_timestamp_string("2024-01-15 10:30:00.123456")
+        assert result == datetime(2024, 1, 15, 10, 30, 0, 123456)
         assert result.tzinfo is None
 
     def test_parse_timestamp_string_date_only(self):

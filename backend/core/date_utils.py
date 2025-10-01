@@ -90,9 +90,12 @@ def parse_timestamp_string(timestamp_str: str) -> datetime:
                 # Already naive, assume UTC
                 return dt_obj
 
-        # Handle space-separated format (e.g., "2023-12-25 10:30:00")
+        # Handle space-separated format (e.g., "2023-12-25 10:30:00" or "2023-12-25 10:30:00.123456")
         elif " " in timestamp_str:
-            return datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+            try:
+                return datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S.%f")
+            except ValueError:
+                return datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
 
         # Handle date-only format (e.g., "2023-12-25")
         else:
