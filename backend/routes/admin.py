@@ -8,7 +8,7 @@ import io
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -640,22 +640,8 @@ async def get_performance_metrics(
 
         cursor = conn.cursor()
 
-        # First, check if we have any recent data
-        cursor.execute("SELECT MAX(timestamp) as latest FROM query_logs")
-        latest_result = cursor.fetchone()
-
-        if not latest_result or not latest_result[0]:
-            conn.close()
-            return {
-                "response_time": {"current": 0, "previous": 0, "change": 0},
-                "throughput": {"current": 0, "previous": 0, "change": 0},
-                "error_rate": {"current": 0, "previous": 0, "change": 0},
-                "cache_hit_rate": {"current": 0.0, "previous": 0.0, "change": 0},
-            }
-
-        # Parse the latest timestamp and calculate end date
-        latest_str = latest_result[0]
-        end_date = parse_timestamp_string(latest_str)
+        # Use current time as end date for consistency with dashboard stats
+        end_date = datetime.now()
 
         # Calculate start date based on time range
         start_date = parse_time_range_start_only(time_range, end_date)

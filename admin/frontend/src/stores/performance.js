@@ -86,7 +86,7 @@ export const usePerformanceStore = defineStore('performance', () => {
 
   const isLoading = ref(false)
   const error = ref(null)
-  const timeRange = ref(TimeRanges.WEEK)
+  const timeRange = ref(TimeRanges.MONTH) // Default to 30 days for better coverage
 
   // Getters
   const hasData = computed(() => {
