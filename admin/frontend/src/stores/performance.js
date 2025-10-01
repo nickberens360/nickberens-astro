@@ -246,16 +246,15 @@ export const usePerformanceStore = defineStore('performance', () => {
         return dateStr // Return original string as fallback
       }
 
-      // Format based on time range
+      // Format based on time range - build options conditionally
       const formatOptions = {
         month: 'short',
         day: 'numeric'
       }
 
-      // Add hour for short time ranges
+      // Add hour for short time ranges only
       if (timeRange.value === '1h' || timeRange.value === '6h' || timeRange.value === '24h') {
         formatOptions.hour = '2-digit'
-        formatOptions.minute = undefined
       }
 
       return date.toLocaleDateString('en-US', formatOptions)
