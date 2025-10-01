@@ -8,7 +8,7 @@ import io
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -641,7 +641,7 @@ async def get_performance_metrics(
         cursor = conn.cursor()
 
         # Use current time as end date for consistency with dashboard stats
-        end_date = datetime.now()
+        end_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Calculate start date based on time range
         start_date = parse_time_range_start_only(time_range, end_date)
