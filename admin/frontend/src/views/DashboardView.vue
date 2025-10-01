@@ -196,9 +196,9 @@ const handleQuerySelected = (query) => {
 
 // Lifecycle
 onMounted(async () => {
-  // Initialize data - the stores will handle API calls
+  // Initialize data with 30-day window for better coverage
   await Promise.all([
-    adminStore.fetchStats(),
+    adminStore.fetchStats(30),
     queriesStore.fetchQueries({ limit: 10 }),
     performanceStore.refreshData()
   ])
