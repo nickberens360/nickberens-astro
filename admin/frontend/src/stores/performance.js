@@ -141,35 +141,46 @@ export const usePerformanceStore = defineStore('performance', () => {
 
   const fetchTimeline = async (days = 7, interval = 'hour') => {
     try {
+      console.log(`Fetching timeline data for ${days} days with ${interval} interval`)
       const data = await adminAPI.getPerformanceTimeline(days, interval)
-      
+
+      console.log('Timeline response received:', data)
+
       // Ensure we have valid timeline data
       if (data && data.timeline && Array.isArray(data.timeline)) {
         timeline.value = data.timeline
-        
+        console.log(`Timeline data set with ${timeline.value.length} points`)
+
         // Only update chart data if we have valid timeline points
         if (timeline.value.length > 0) {
           updateChartData()
+        } else {
+          console.warn('Timeline array is empty')
+          initializeChartData()
         }
       } else {
         console.warn('Invalid timeline data received:', data)
         timeline.value = []
+        initializeChartData()
       }
-      
+
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch timeline:', err)
       timeline.value = [] // Reset timeline on error
+      initializeChartData()
     }
   }
 
   const fetchPercentiles = async () => {
     try {
       const data = await adminAPI.getResponseTimePercentiles(timeRange.value)
+      // Backend returns { percentiles: { p50, p75, p90, p95, p99 }, sample_size }
+      const p = (data && data.percentiles) ? data.percentiles : data || {}
       percentiles.value = {
-        p50: Math.round(data.p50 || 0),
-        p95: Math.round(data.p95 || 0),
-        p99: Math.round(data.p99 || 0)
+        p50: Math.round((p.p50 || 0)),
+        p95: Math.round((p.p95 || 0)),
+        p99: Math.round((p.p99 || 0))
       }
       
     } catch (err) {
@@ -179,40 +190,63 @@ export const usePerformanceStore = defineStore('performance', () => {
 
   const updateChartData = () => {
     if (!timeline.value || timeline.value.length === 0) {
+      console.log('No timeline data available to update chart')
+      initializeChartData() // Initialize with empty structure
       return
     }
-    
+
+    console.log('Updating chart with timeline data:', timeline.value.length, 'points')
+
     const labels = timeline.value.map(point => {
       // Check if point exists and has either timestamp or period field
       if (!point) {
         console.warn('Missing data point')
         return 'N/A'
       }
-      
+
       // Backend returns 'period' field for some endpoints, 'timestamp' for others
       const dateStr = point.timestamp || point.period
-      
+
       if (!dateStr) {
         console.warn('Missing timestamp/period in data point:', point)
         return 'N/A'
       }
-      
+
       // Handle different timestamp formats from backend
       // Backend returns either "YYYY-MM-DD HH:00:00" or "YYYY-MM-DD"
-      const timestamp = dateStr.replace(' ', 'T') // Convert space to T for ISO format
-      const date = new Date(timestamp)
-      
+      let date
+
+      // First try to parse as ISO format
+      if (dateStr.includes('T') || dateStr.includes('Z')) {
+        date = new Date(dateStr)
+      } else if (dateStr.includes(' ')) {
+        // Convert "YYYY-MM-DD HH:MM:SS" to ISO format
+        const isoFormat = dateStr.replace(' ', 'T')
+        date = new Date(isoFormat)
+      } else {
+        // Assume YYYY-MM-DD format
+        date = new Date(dateStr + 'T00:00:00')
+      }
+
       // Check if date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date format:', dateStr)
         return dateStr // Return original string as fallback
       }
-      
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        hour: timeRange.value === '1h' || timeRange.value === '6h' ? '2-digit' : undefined
-      })
+
+      // Format based on time range
+      const formatOptions = {
+        month: 'short',
+        day: 'numeric'
+      }
+
+      // Add hour for short time ranges
+      if (timeRange.value === '1h' || timeRange.value === '6h' || timeRange.value === '24h') {
+        formatOptions.hour = '2-digit'
+        formatOptions.minute = undefined
+      }
+
+      return date.toLocaleDateString('en-US', formatOptions)
     })
 
     const newChartData = {

@@ -628,23 +628,6 @@ async def get_performance_metrics(
         # Import database connection utility from performance route
         from ..core.database_utils import get_rag_monitoring_db_connection as get_db_connection
 
-        def parse_time_range(time_range: str) -> tuple:
-            """Parse time range string to start and end dates."""
-            end_date = datetime.now()
-            if time_range == "1h":
-                start_date = end_date - timedelta(hours=1)
-            elif time_range == "6h":
-                start_date = end_date - timedelta(hours=6)
-            elif time_range == "24h":
-                start_date = end_date - timedelta(hours=24)
-            elif time_range == "7d":
-                start_date = end_date - timedelta(days=7)
-            elif time_range == "30d":
-                start_date = end_date - timedelta(days=30)
-            else:
-                start_date = end_date - timedelta(hours=24)
-            return start_date, end_date
-
         conn = get_db_connection()
 
         if not conn:
@@ -657,7 +640,31 @@ async def get_performance_metrics(
             }
 
         cursor = conn.cursor()
-        start_date, end_date = parse_time_range(time_range)
+
+        # First, check if we have any recent data
+        cursor.execute("SELECT MAX(timestamp) as latest FROM query_logs")
+        latest_result = cursor.fetchone()
+
+        if not latest_result or not latest_result[0]:
+            conn.close()
+            return {
+                "response_time": {"current": 0, "previous": 0, "change": 0},
+                "throughput": {"current": 0, "previous": 0, "change": 0},
+                "error_rate": {"current": 0, "previous": 0, "change": 0},
+                "cache_hit_rate": {"current": 85.0, "previous": 85.0, "change": 0},
+            }
+
+        # Parse the latest timestamp and calculate end date
+        latest_str = latest_result[0]
+        if "T" in latest_str:
+            end_date = datetime.fromisoformat(latest_str.replace("+00:00", ""))
+        else:
+            end_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
+
+        # Calculate start date based on time range
+        time_map = {"1h": 0.04, "6h": 0.25, "24h": 1, "7d": 7, "30d": 30}
+        days = time_map.get(time_range, 1)
+        start_date = end_date - timedelta(days=days)
 
         # Calculate dynamic date ranges based on the period
         period_duration = end_date - start_date
@@ -759,8 +766,30 @@ async def get_performance_timeline(
         with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
 
+            # First, check if we have any recent data
+            cursor.execute("SELECT MAX(timestamp) as latest FROM query_logs")
+            latest_result = cursor.fetchone()
+
+            if not latest_result or not latest_result[0]:
+                return {"timeline": []}
+
+            # If no data in the requested range, use the most recent data available
+            from datetime import datetime, timedelta
+
+            # Parse the latest timestamp
+            latest_str = latest_result[0]
+            if "T" in latest_str:
+                # ISO format
+                latest_date = datetime.fromisoformat(latest_str.replace("+00:00", ""))
+            else:
+                # Space-separated format
+                latest_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
+
+            # Calculate the start date based on the latest available data
+            start_date = latest_date - timedelta(days=days)
+
             if interval == "hour":
-                # Hourly data for the last N days
+                # Hourly data
                 cursor.execute(
                     """
                     SELECT
@@ -770,14 +799,14 @@ async def get_performance_timeline(
                         AVG(CASE WHEN error_occurred THEN 1.0 ELSE 0.0 END) as error_rate,
                         AVG(CASE WHEN cache_hit THEN 1.0 ELSE 0.0 END) as cache_hit_rate
                     FROM query_logs
-                    WHERE timestamp >= datetime('now', '-' || ? || ' days')
+                    WHERE timestamp >= ? AND timestamp <= ?
                     GROUP BY strftime('%Y-%m-%d %H:00:00', timestamp)
                     ORDER BY period
                     """,
-                    (days,),
+                    (start_date.isoformat(), latest_date.isoformat()),
                 )
             else:
-                # Daily data for the last N days
+                # Daily data
                 cursor.execute(
                     """
                     SELECT
@@ -787,18 +816,19 @@ async def get_performance_timeline(
                         AVG(CASE WHEN error_occurred THEN 1.0 ELSE 0.0 END) as error_rate,
                         AVG(CASE WHEN cache_hit THEN 1.0 ELSE 0.0 END) as cache_hit_rate
                     FROM query_logs
-                    WHERE timestamp >= datetime('now', '-' || ? || ' days')
+                    WHERE timestamp >= ? AND timestamp <= ?
                     GROUP BY strftime('%Y-%m-%d', timestamp)
                     ORDER BY period
                     """,
-                    (days,),
+                    (start_date.isoformat(), latest_date.isoformat()),
                 )
 
             timeline_data = []
             for row in cursor.fetchall():
                 timeline_data.append(
                     {
-                        "period": row[0],
+                        "timestamp": row[0],  # Use timestamp field name for frontend compatibility
+                        "period": row[0],  # Keep period for backward compatibility
                         "query_count": row[1],
                         "avg_response_time": round(row[2] or 0, 1),
                         "error_rate": round((row[3] or 0) * 100, 2),
@@ -823,17 +853,36 @@ async def get_response_time_percentiles(
         with query_data_manager.get_connection() as conn:
             cursor = conn.cursor()
 
-            # Convert time range to SQL
-            time_map = {"1h": "1 hours", "6h": "6 hours", "24h": "1 days", "7d": "7 days", "30d": "30 days"}
+            # First, check if we have any recent data
+            cursor.execute("SELECT MAX(timestamp) as latest FROM query_logs")
+            latest_result = cursor.fetchone()
+
+            if not latest_result or not latest_result[0]:
+                return {"percentiles": {"p50": 0, "p75": 0, "p90": 0, "p95": 0, "p99": 0}, "sample_size": 0}
+
+            # Parse the latest timestamp and calculate start date
+            from datetime import datetime, timedelta
+
+            latest_str = latest_result[0]
+            if "T" in latest_str:
+                latest_date = datetime.fromisoformat(latest_str.replace("+00:00", ""))
+            else:
+                latest_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
+
+            # Convert time range to days
+            time_map = {"1h": 0.04, "6h": 0.25, "24h": 1, "7d": 7, "30d": 30}
+            days = time_map[time_range]
+            start_date = latest_date - timedelta(days=days)
 
             cursor.execute(
-                f"""
+                """
                 SELECT response_time_ms
                 FROM query_logs
-                WHERE timestamp >= datetime('now', '-{time_map[time_range]}')
+                WHERE timestamp >= ? AND timestamp <= ?
                 AND response_time_ms IS NOT NULL
                 ORDER BY response_time_ms
                 """,
+                (start_date.isoformat(), latest_date.isoformat()),
             )
 
             response_times = [row[0] for row in cursor.fetchall()]
