@@ -8,7 +8,7 @@ import io
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -86,6 +86,48 @@ def parse_time_range(time_range: str, end_date: datetime) -> datetime:
     }
     delta = time_deltas.get(time_range, timedelta(days=1))
     return end_date - delta
+
+
+def parse_timestamp_string(timestamp_str: str) -> datetime:
+    """
+    Parse timestamp string from database, handling various formats robustly.
+
+    Args:
+        timestamp_str: Timestamp string in various formats (ISO, space-separated, etc.)
+
+    Returns:
+        datetime: Parsed datetime object (timezone-naive UTC)
+
+    Raises:
+        ValueError: If timestamp format is not recognized
+    """
+    if not timestamp_str:
+        raise ValueError("Empty timestamp string")
+
+    try:
+        # Handle ISO format with timezone info (e.g., "2023-12-25T10:30:00Z" or "2023-12-25T10:30:00+00:00")
+        if "T" in timestamp_str:
+            # Replace 'Z' with '+00:00' for fromisoformat compatibility
+            normalized = timestamp_str.replace("Z", "+00:00")
+            dt_obj = datetime.fromisoformat(normalized)
+
+            # Convert to naive UTC datetime for consistency
+            if dt_obj.tzinfo is not None:
+                return dt_obj.astimezone(timezone.utc).replace(tzinfo=None)
+            else:
+                # Already naive, assume UTC
+                return dt_obj
+
+        # Handle space-separated format (e.g., "2023-12-25 10:30:00")
+        elif " " in timestamp_str:
+            return datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+
+        # Handle date-only format (e.g., "2023-12-25")
+        else:
+            return datetime.strptime(timestamp_str, "%Y-%m-%d")
+
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Unable to parse timestamp '{timestamp_str}': {e}") from e
 
 
 router = APIRouter()
@@ -676,10 +718,7 @@ async def get_performance_metrics(
 
         # Parse the latest timestamp and calculate end date
         latest_str = latest_result[0]
-        if "T" in latest_str:
-            end_date = datetime.fromisoformat(latest_str.replace("+00:00", ""))
-        else:
-            end_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
+        end_date = parse_timestamp_string(latest_str)
 
         # Calculate start date based on time range
         start_date = parse_time_range(time_range, end_date)
@@ -794,12 +833,7 @@ async def get_performance_timeline(
             # If no data in the requested range, use the most recent data available
             # Parse the latest timestamp
             latest_str = latest_result[0]
-            if "T" in latest_str:
-                # ISO format
-                latest_date = datetime.fromisoformat(latest_str.replace("+00:00", ""))
-            else:
-                # Space-separated format
-                latest_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
+            latest_date = parse_timestamp_string(latest_str)
 
             # Calculate the start date based on the latest available data
             start_date = latest_date - timedelta(days=days)
@@ -878,10 +912,7 @@ async def get_response_time_percentiles(
 
             # Parse the latest timestamp and calculate start date
             latest_str = latest_result[0]
-            if "T" in latest_str:
-                latest_date = datetime.fromisoformat(latest_str.replace("+00:00", ""))
-            else:
-                latest_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
+            latest_date = parse_timestamp_string(latest_str)
 
             # Calculate start date based on time range
             start_date = parse_time_range(time_range, latest_date)

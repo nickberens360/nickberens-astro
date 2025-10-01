@@ -1,7 +1,39 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { parseISO, parse, isValid } from 'date-fns'
 import adminAPI from '@/services/api'
 import { TimeRanges } from '@/types/admin'
+
+/**
+ * Parse timestamp string using date-fns for robust handling
+ * @param {string} dateStr - Timestamp string in various formats
+ * @returns {Date|null} - Parsed date or null if invalid
+ */
+const parseTimestamp = (dateStr) => {
+  if (!dateStr) return null
+
+  try {
+    // Handle ISO format with T or Z
+    if (dateStr.includes('T') || dateStr.includes('Z')) {
+      const date = parseISO(dateStr)
+      return isValid(date) ? date : null
+    }
+
+    // Handle space-separated format (YYYY-MM-DD HH:MM:SS)
+    if (dateStr.includes(' ')) {
+      const date = parse(dateStr, 'yyyy-MM-dd HH:mm:ss', new Date())
+      return isValid(date) ? date : null
+    }
+
+    // Handle date-only format (YYYY-MM-DD)
+    const date = parse(dateStr, 'yyyy-MM-dd', new Date())
+    return isValid(date) ? date : null
+
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', dateStr, error)
+    return null
+  }
+}
 
 export const usePerformanceStore = defineStore('performance', () => {
   // State
@@ -172,11 +204,11 @@ export const usePerformanceStore = defineStore('performance', () => {
     try {
       const data = await adminAPI.getResponseTimePercentiles(timeRange.value)
       // Backend returns { percentiles: { p50, p75, p90, p95, p99 }, sample_size }
-      const p = (data && data.percentiles) ? data.percentiles : data || {}
+      const p = data?.percentiles ?? data ?? {}
       percentiles.value = {
-        p50: Math.round((p.p50 || 0)),
-        p95: Math.round((p.p95 || 0)),
-        p99: Math.round((p.p99 || 0))
+        p50: Math.round(p.p50 ?? 0),
+        p95: Math.round(p.p95 ?? 0),
+        p99: Math.round(p.p99 ?? 0)
       }
       
     } catch (err) {
@@ -205,24 +237,11 @@ export const usePerformanceStore = defineStore('performance', () => {
         return 'N/A'
       }
 
-      // Handle different timestamp formats from backend
-      // Backend returns either "YYYY-MM-DD HH:00:00" or "YYYY-MM-DD"
-      let date
+      // Parse timestamp using robust date-fns helper
+      const date = parseTimestamp(dateStr)
 
-      // First try to parse as ISO format
-      if (dateStr.includes('T') || dateStr.includes('Z')) {
-        date = new Date(dateStr)
-      } else if (dateStr.includes(' ')) {
-        // Convert "YYYY-MM-DD HH:MM:SS" to ISO format
-        const isoFormat = dateStr.replace(' ', 'T')
-        date = new Date(isoFormat)
-      } else {
-        // Assume YYYY-MM-DD format
-        date = new Date(dateStr + 'T00:00:00')
-      }
-
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
+      // Check if date parsing was successful
+      if (!date) {
         console.warn('Invalid date format:', dateStr)
         return dateStr // Return original string as fallback
       }
