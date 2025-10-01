@@ -698,7 +698,7 @@ async def get_performance_metrics(
                 "response_time": {"current": 0, "previous": 0, "change": 0},
                 "throughput": {"current": 0, "previous": 0, "change": 0},
                 "error_rate": {"current": 0, "previous": 0, "change": 0},
-                "cache_hit_rate": {"current": 85.0, "previous": 85.0, "change": 0},
+                "cache_hit_rate": {"current": 0.0, "previous": 0.0, "change": 0},
             }
 
         cursor = conn.cursor()
@@ -713,7 +713,7 @@ async def get_performance_metrics(
                 "response_time": {"current": 0, "previous": 0, "change": 0},
                 "throughput": {"current": 0, "previous": 0, "change": 0},
                 "error_rate": {"current": 0, "previous": 0, "change": 0},
-                "cache_hit_rate": {"current": 85.0, "previous": 85.0, "change": 0},
+                "cache_hit_rate": {"current": 0.0, "previous": 0.0, "change": 0},
             }
 
         # Parse the latest timestamp and calculate end date
