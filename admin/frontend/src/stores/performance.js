@@ -141,15 +141,11 @@ export const usePerformanceStore = defineStore('performance', () => {
 
   const fetchTimeline = async (days = 7, interval = 'hour') => {
     try {
-      console.log(`Fetching timeline data for ${days} days with ${interval} interval`)
       const data = await adminAPI.getPerformanceTimeline(days, interval)
-
-      console.log('Timeline response received:', data)
 
       // Ensure we have valid timeline data
       if (data && data.timeline && Array.isArray(data.timeline)) {
         timeline.value = data.timeline
-        console.log(`Timeline data set with ${timeline.value.length} points`)
 
         // Only update chart data if we have valid timeline points
         if (timeline.value.length > 0) {
@@ -190,12 +186,9 @@ export const usePerformanceStore = defineStore('performance', () => {
 
   const updateChartData = () => {
     if (!timeline.value || timeline.value.length === 0) {
-      console.log('No timeline data available to update chart')
       initializeChartData() // Initialize with empty structure
       return
     }
-
-    console.log('Updating chart with timeline data:', timeline.value.length, 'points')
 
     const labels = timeline.value.map(point => {
       // Check if point exists and has either timestamp or period field

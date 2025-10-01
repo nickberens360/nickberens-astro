@@ -8,7 +8,7 @@ import io
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -64,6 +64,28 @@ logger = logging.getLogger(__name__)
 
 # Initialize audit logger
 audit_logger = AuditLogger()
+
+
+def parse_time_range(time_range: str, end_date: datetime) -> datetime:
+    """
+    Parse time range string and return the start date based on the end date.
+
+    Args:
+        time_range: Time range string ('1h', '6h', '24h', '7d', '30d')
+        end_date: The end date to calculate from
+
+    Returns:
+        datetime: The calculated start date
+    """
+    time_deltas = {
+        "1h": timedelta(hours=1),
+        "6h": timedelta(hours=6),
+        "24h": timedelta(days=1),
+        "7d": timedelta(days=7),
+        "30d": timedelta(days=30),
+    }
+    delta = time_deltas.get(time_range, timedelta(days=1))
+    return end_date - delta
 
 
 router = APIRouter()
@@ -621,8 +643,6 @@ async def get_performance_metrics(
     """Get performance metrics for the specified time range."""
     try:
         # Use the same logic as the main performance API endpoint
-        from datetime import datetime, timedelta
-
         from ..core.config import AppConfig
 
         # Import database connection utility from performance route
@@ -662,9 +682,7 @@ async def get_performance_metrics(
             end_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
 
         # Calculate start date based on time range
-        time_map = {"1h": 0.04, "6h": 0.25, "24h": 1, "7d": 7, "30d": 30}
-        days = time_map.get(time_range, 1)
-        start_date = end_date - timedelta(days=days)
+        start_date = parse_time_range(time_range, end_date)
 
         # Calculate dynamic date ranges based on the period
         period_duration = end_date - start_date
@@ -774,8 +792,6 @@ async def get_performance_timeline(
                 return {"timeline": []}
 
             # If no data in the requested range, use the most recent data available
-            from datetime import datetime, timedelta
-
             # Parse the latest timestamp
             latest_str = latest_result[0]
             if "T" in latest_str:
@@ -861,18 +877,14 @@ async def get_response_time_percentiles(
                 return {"percentiles": {"p50": 0, "p75": 0, "p90": 0, "p95": 0, "p99": 0}, "sample_size": 0}
 
             # Parse the latest timestamp and calculate start date
-            from datetime import datetime, timedelta
-
             latest_str = latest_result[0]
             if "T" in latest_str:
                 latest_date = datetime.fromisoformat(latest_str.replace("+00:00", ""))
             else:
                 latest_date = datetime.strptime(latest_str, "%Y-%m-%d %H:%M:%S")
 
-            # Convert time range to days
-            time_map = {"1h": 0.04, "6h": 0.25, "24h": 1, "7d": 7, "30d": 30}
-            days = time_map[time_range]
-            start_date = latest_date - timedelta(days=days)
+            # Calculate start date based on time range
+            start_date = parse_time_range(time_range, latest_date)
 
             cursor.execute(
                 """
