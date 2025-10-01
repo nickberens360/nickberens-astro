@@ -781,12 +781,8 @@ const updateCharts = () => {
 const loadStats = async () => {
   loading.value = true
   try {
-    // Call the knowledge stats endpoint through the public API
-    const response = await fetch('http://localhost:8000/api/public/knowledge/stats')
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    const data = await response.json()
+    // Use the admin API client (same-origin, respects VITE_API_BASE_URL in prod)
+    const data = await adminAPI.getKnowledgeStats()
     stats.value = data
     await nextTick()
     updateCharts()

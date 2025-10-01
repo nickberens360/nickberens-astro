@@ -3,10 +3,15 @@ import { ref } from 'vue'
 import { systemSettingsService } from '@/services/settings/systemSettingsService'
 
 export const useSystemSettingsStore = defineStore('systemSettings', () => {
+  // Reflect configured API base URL to avoid confusion in the UI
+  const resolvedApiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL ||
+    (typeof window !== 'undefined' ? `${window.location.origin}/api/admin` : '/api/admin')
+
   const settings = ref({
     app_name: 'Nick Berens AI Assistant',
     app_version: '2.0.0',
-    api_base_url: 'http://localhost:8000',
+    api_base_url: resolvedApiBaseUrl,
     enable_debug_mode: false,
     enable_maintenance_mode: false,
     admin_contact_email: 'admin@nickberens.com',
