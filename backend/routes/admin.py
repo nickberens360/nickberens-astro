@@ -640,8 +640,19 @@ async def get_performance_metrics(
 
         cursor = conn.cursor()
 
-        # Use current time as end date for consistency with dashboard stats
-        end_date = datetime.now(timezone.utc).replace(tzinfo=None)
+        # Use the latest data point as the end date for accuracy
+        cursor.execute("SELECT MAX(timestamp) as latest FROM query_logs")
+        latest_result = cursor.fetchone()
+        if not latest_result or not latest_result[0]:
+            # No data, return default empty metrics
+            return {
+                "response_time": {"current": 0, "previous": 0, "change": 0},
+                "throughput": {"current": 0, "previous": 0, "change": 0},
+                "error_rate": {"current": 0, "previous": 0, "change": 0},
+                "cache_hit_rate": {"current": 0.0, "previous": 0.0, "change": 0},
+            }
+        latest_str = latest_result[0]
+        end_date = parse_timestamp_string(latest_str)
 
         # Calculate start date based on time range
         start_date = parse_time_range_start_only(time_range, end_date)
