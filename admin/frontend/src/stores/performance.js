@@ -1,7 +1,39 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { parseISO, parse, isValid } from 'date-fns'
 import adminAPI from '@/services/api'
 import { TimeRanges } from '@/types/admin'
+
+/**
+ * Parse timestamp string using date-fns for robust handling
+ * @param {string} dateStr - Timestamp string in various formats
+ * @returns {Date|null} - Parsed date or null if invalid
+ */
+const parseTimestamp = (dateStr) => {
+  if (!dateStr) return null
+
+  try {
+    // Handle ISO format with T or Z
+    if (dateStr.includes('T') || dateStr.includes('Z')) {
+      const date = parseISO(dateStr)
+      return isValid(date) ? date : null
+    }
+
+    // Handle space-separated format (YYYY-MM-DD HH:MM:SS)
+    if (dateStr.includes(' ')) {
+      const date = parse(dateStr, 'yyyy-MM-dd HH:mm:ss', new Date())
+      return isValid(date) ? date : null
+    }
+
+    // Handle date-only format (YYYY-MM-DD)
+    const date = parse(dateStr, 'yyyy-MM-dd', new Date())
+    return isValid(date) ? date : null
+
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', dateStr, error)
+    return null
+  }
+}
 
 export const usePerformanceStore = defineStore('performance', () => {
   // State
@@ -54,7 +86,7 @@ export const usePerformanceStore = defineStore('performance', () => {
 
   const isLoading = ref(false)
   const error = ref(null)
-  const timeRange = ref(TimeRanges.WEEK)
+  const timeRange = ref(TimeRanges.MONTH) // Default to 30 days for better coverage
 
   // Getters
   const hasData = computed(() => {
@@ -142,34 +174,41 @@ export const usePerformanceStore = defineStore('performance', () => {
   const fetchTimeline = async (days = 7, interval = 'hour') => {
     try {
       const data = await adminAPI.getPerformanceTimeline(days, interval)
-      
+
       // Ensure we have valid timeline data
       if (data && data.timeline && Array.isArray(data.timeline)) {
         timeline.value = data.timeline
-        
+
         // Only update chart data if we have valid timeline points
         if (timeline.value.length > 0) {
           updateChartData()
+        } else {
+          console.warn('Timeline array is empty')
+          initializeChartData()
         }
       } else {
         console.warn('Invalid timeline data received:', data)
         timeline.value = []
+        initializeChartData()
       }
-      
+
     } catch (err) {
       error.value = adminAPI.formatError(err)
       console.error('Failed to fetch timeline:', err)
       timeline.value = [] // Reset timeline on error
+      initializeChartData()
     }
   }
 
   const fetchPercentiles = async () => {
     try {
       const data = await adminAPI.getResponseTimePercentiles(timeRange.value)
+      // Backend returns { percentiles: { p50, p75, p90, p95, p99 }, sample_size }
+      const p = data?.percentiles ?? data ?? {}
       percentiles.value = {
-        p50: Math.round(data.p50 || 0),
-        p95: Math.round(data.p95 || 0),
-        p99: Math.round(data.p99 || 0)
+        p50: Math.round(p.p50 ?? 0),
+        p95: Math.round(p.p95 ?? 0),
+        p99: Math.round(p.p99 ?? 0)
       }
       
     } catch (err) {
@@ -179,40 +218,46 @@ export const usePerformanceStore = defineStore('performance', () => {
 
   const updateChartData = () => {
     if (!timeline.value || timeline.value.length === 0) {
+      initializeChartData() // Initialize with empty structure
       return
     }
-    
+
     const labels = timeline.value.map(point => {
       // Check if point exists and has either timestamp or period field
       if (!point) {
         console.warn('Missing data point')
         return 'N/A'
       }
-      
+
       // Backend returns 'period' field for some endpoints, 'timestamp' for others
       const dateStr = point.timestamp || point.period
-      
+
       if (!dateStr) {
         console.warn('Missing timestamp/period in data point:', point)
         return 'N/A'
       }
-      
-      // Handle different timestamp formats from backend
-      // Backend returns either "YYYY-MM-DD HH:00:00" or "YYYY-MM-DD"
-      const timestamp = dateStr.replace(' ', 'T') // Convert space to T for ISO format
-      const date = new Date(timestamp)
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
+
+      // Parse timestamp using robust date-fns helper
+      const date = parseTimestamp(dateStr)
+
+      // Check if date parsing was successful
+      if (!date) {
         console.warn('Invalid date format:', dateStr)
         return dateStr // Return original string as fallback
       }
-      
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        hour: timeRange.value === '1h' || timeRange.value === '6h' ? '2-digit' : undefined
-      })
+
+      // Format based on time range - build options conditionally
+      const formatOptions = {
+        month: 'short',
+        day: 'numeric'
+      }
+
+      // Add hour for short time ranges only
+      if (timeRange.value === '1h' || timeRange.value === '6h' || timeRange.value === '24h') {
+        formatOptions.hour = '2-digit'
+      }
+
+      return date.toLocaleDateString('en-US', formatOptions)
     })
 
     const newChartData = {

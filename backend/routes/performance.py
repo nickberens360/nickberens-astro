@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from ..core.config import AppConfig
+from ..core.date_utils import parse_time_range, parse_timestamp_string
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -57,27 +58,6 @@ class PercentileMetrics(BaseModel):
 
 # Database connection utility imported from shared module
 from ..core.database_utils import get_rag_monitoring_db_connection as get_db_connection
-
-
-def parse_time_range(time_range: str) -> tuple:
-    """Parse time range string to start and end dates."""
-    end_date = datetime.now()
-
-    if time_range == "1h":
-        start_date = end_date - timedelta(hours=1)
-    elif time_range == "6h":
-        start_date = end_date - timedelta(hours=6)
-    elif time_range == "24h":
-        start_date = end_date - timedelta(hours=24)
-    elif time_range == "7d":
-        start_date = end_date - timedelta(days=7)
-    elif time_range == "30d":
-        start_date = end_date - timedelta(days=30)
-    else:
-        # Default to 24 hours
-        start_date = end_date - timedelta(hours=24)
-
-    return start_date, end_date
 
 
 @router.get("/performance/metrics", response_model=PerformanceMetrics)
@@ -288,7 +268,17 @@ async def get_performance_timeline(
             return PerformanceTimeline(timeline=[])
 
         cursor = conn.cursor()
-        end_date = datetime.now()
+
+        # First, check if we have any recent data
+        cursor.execute("SELECT MAX(timestamp) as latest FROM query_logs")
+        latest_result = cursor.fetchone()
+
+        if not latest_result or not latest_result[0]:
+            return PerformanceTimeline(timeline=[])
+
+        # Parse the latest timestamp and calculate date range
+        latest_str = latest_result[0]
+        end_date = parse_timestamp_string(latest_str)
         start_date = end_date - timedelta(days=days)
 
         # Generate timeline based on interval

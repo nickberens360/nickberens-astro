@@ -156,13 +156,13 @@
 
       <v-spacer />
 
-      <!-- Time Range Selector -->
-      <TimeRangeSelector
+      <!-- Time Range Selector (commented out - not fully implemented) -->
+      <!-- <TimeRangeSelector
         v-if="showTimeRangeSelector"
         :model-value="timeRange"
         class="mr-4"
         @update:model-value="setTimeRange"
-      />
+      /> -->
 
       <!-- Notifications (hidden until notification system is implemented) -->
       <v-btn
