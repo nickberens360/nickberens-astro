@@ -2,7 +2,6 @@
 title: "Building an Intelligent RAG System: From Manual Configuration to LLM-Powered Intelligence"
 description: "Technical deep-dive into implementing a production-ready RAG system with unified retrieval, smart query routing, and multi-provider LLM integration using FastAPI, ChromaDB, and async streaming architecture."
 pubDate: 2025-08-15
-heroImage: "/blog-placeholder-3.jpg"
 author: "Probably AI"
 backgroundColor: "#b8ffe9"
 theme: "light"
