@@ -43,46 +43,40 @@ class SmartIllustrationService:
             return False, f"❌ Illustration validation failed: {e}"
 
     def get_all(self) -> List[Dict[str, str]]:
-        """Return all illustrations using metadata filtering with caching."""
+        """Return all illustrations using direct metadata query with caching."""
         # Return cached results if available
         if self._all_illustrations_cache is not None:
             logger.info(f"Returning cached all illustrations: {len(self._all_illustrations_cache)} items")
             return self._all_illustrations_cache
 
         try:
-            logger.info("Attempting to get all illustrations using metadata filtering...")
+            logger.info("Attempting to get all illustrations using direct metadata query...")
 
-            # Use semantic search with creative content type filter
-            docs = self.unified_retriever.semantic_search(
-                query="illustration art design creative",
-                k=AppConfig.MAX_ILLUSTRATION_SEARCH,  # High enough to get all illustrations
-                filter_content_types=["creative"],
-                score_threshold=0.0,  # Get all results (no distance filtering)
+            # Query directly for documents with is_illustration_data=True
+            # This is more reliable than semantic search with content type filtering
+            raw_docs = self.unified_retriever.semantic_searcher.get_documents(
+                where={"is_illustration_data": True},
+                limit=AppConfig.MAX_ILLUSTRATION_SEARCH,
             )
 
-            logger.debug(f"Semantic search returned {len(docs)} documents")
-            for i, doc in enumerate(docs[:5]):  # Debug first 5 docs
-                logger.debug(f"Doc {i}: metadata = {doc.metadata}")
+            logger.info(f"Direct query returned {len(raw_docs)} illustration documents")
 
             illustrations: List[Dict[str, str]] = []
             seen_files = set()
 
-            for doc in docs:
-                is_illustration = doc.metadata.get("is_illustration_data")
-                logger.debug(
-                    f"Processing doc: is_illustration_data={is_illustration}, metadata keys={list(doc.metadata.keys())}"
-                )
+            for doc_dict in raw_docs:
+                metadata = doc_dict.get("metadata", {})
+                display_path = metadata.get("display_path")
+                file_key = metadata.get("illustration_file")
 
-                if is_illustration:
-                    display_path = doc.metadata.get("display_path")
-                    file_key = doc.metadata.get("illustration_file")
-                    logger.debug(f"Found illustration: display_path={display_path}, file_key={file_key}")
+                logger.debug(f"Processing: display_path={display_path}, file_key={file_key}")
 
-                    if display_path and file_key not in seen_files:
-                        illustrations.append({"file": display_path})
-                        seen_files.add(file_key)
+                if display_path and file_key and file_key not in seen_files:
+                    illustrations.append({"file": display_path})
+                    seen_files.add(file_key)
+                    logger.debug(f"Added illustration: {file_key} -> {display_path}")
 
-            logger.debug(f"Found {len(illustrations)} illustrations via metadata filtering")
+            logger.info(f"Found {len(illustrations)} illustrations via direct metadata query")
             # Cache the results
             self._all_illustrations_cache = illustrations
             return illustrations

@@ -351,7 +351,11 @@ class ContentIndexer:
 
                     # Add rich metadata to each chunk including enhanced RAG metadata
                     for chunk_index, chunk in enumerate(chunks):
-                        if use_per_chunk_fallback:
+                        # Special handling for illustration JSON: extract per-chunk metadata
+                        if file_path.name == "illustrations.json":
+                            # Extract illustration-specific metadata for each chunk
+                            base_metadata = self.extract_content_metadata(chunk, file_path, precomputed=None)
+                        elif use_per_chunk_fallback:
                             base_metadata = self.extract_content_metadata(chunk, file_path, precomputed=None)
                             # Telemetry: count chunk-level fallbacks
                             self._metrics["llm_classifications_fallback_chunk"] += 1
