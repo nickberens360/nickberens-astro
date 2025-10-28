@@ -661,3 +661,31 @@ with cleaned HTML files, FAQ schemas, disclosures, and a summary report.
 
 main();
 ```
+
+```javascript
+{
+  "name": "word-html-cleanup",
+  "version": "1.0.0",
+  "description": "Node.js script to process Word-exported HTML files into clean, semantic HTML modules",
+  "type": "module",
+  "main": "word-html-cleanup.js",
+  "scripts": {
+    "start": "node word-html-cleanup.js"
+  },
+  "keywords": [
+    "html",
+    "word",
+    "cleanup",
+    "progressive",
+    "cms"
+  ],
+  "author": "Nick",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12"
+  }
+}
+```
