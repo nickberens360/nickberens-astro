@@ -86,7 +86,7 @@ def get_success_message_template(found_images: bool, query_type: QueryType, fell
                                     "and implementing robust backend systems."
                                 ),
                                 "images": [],
-                                "model_used": "claude-3-5-sonnet-20241022",
+                                "model_used": "claude-sonnet-4-5",
                                 "followup_questions": [
                                     "What specific projects has Nick worked on at Calendly?",
                                     "What technologies does Nick prefer for frontend development?",
@@ -109,7 +109,7 @@ def get_success_message_template(found_images: bool, query_type: QueryType, fell
                                         "tags": ["animal", "bird", "cartoon"],
                                     },
                                 ],
-                                "model_used": "claude-3-5-sonnet-20241022",
+                                "model_used": "claude-sonnet-4-5",
                                 "followup_questions": [
                                     "Can you show me more animal illustrations?",
                                     "What tools do you use for digital art?",

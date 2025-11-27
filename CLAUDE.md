@@ -1,45 +1,76 @@
 # CLAUDE.md
 
-Claude Code guidance for this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-Nick Berens' personal website with RAG-powered AI assistant. FastAPI backend with **unified smart retriever** (auto-discovery, intelligent routing). Astro frontend. Comprehensive admin dashboard.
+Nick Berens' personal website with RAG-powered AI assistant. FastAPI backend with **unified smart retriever** (auto-discovery, intelligent routing). Astro frontend with Vue islands. Comprehensive Vue 3 + Vuetify admin dashboard.
 
 ## Quick Reference
 
-### Essential Commands
+### Development Commands
 ```bash
-# Frontend
-npm run dev                    # Astro dev server
-npm run build                  # Build frontend
+# Frontend Development
+npm run dev                    # Astro dev server (localhost:4321)
+npm run build                  # Build frontend for production
+npm run preview                # Preview production build
 
-# Backend
-npm run backend:dev            # Run with hot reload
-npm run backend:dev:reindex    # Force reindex
+# Backend Development (Podman containerized)
+npm run backend:dev            # Run with hot reload (localhost:8000)
+npm run backend:dev:reindex    # Force reindex all content
 npm run backend:stop           # Stop container
+npm run backend:build          # Rebuild container image
 
-# Admin
-npm run admin:frontend         # Admin UI dev server
+# Admin Dashboard
+npm run admin:frontend         # Admin UI dev server (localhost:3000)
+npm run admin:backend          # Admin backend server
 npm run admin:build            # Build admin for production
+npm run admin:stop             # Stop admin processes
+```
 
-# Testing
-pytest                         # Run all tests
-pytest -m unit                 # Unit tests only
-npm run e2e                    # Playwright E2E tests
+### Testing Commands
+```bash
+# Python Tests
+pytest                         # All tests with coverage
+pytest -m unit                 # Unit tests only (fast)
+pytest -m integration          # Integration tests (slower)
+pytest tests/unit/test_file.py # Run specific test file
+pytest tests/unit/test_file.py::TestClass::test_method # Single test
+pytest -k "test_name"          # Run tests matching pattern
+make test-unit                 # Fast unit tests (Makefile shortcut)
+make test-integration          # Integration tests (Makefile shortcut)
 
-# Linting
-make lint-fix                  # Auto-format (Black + isort)
-make lint-fast                 # Quick lint without MyPy
-make type-check                # MyPy type checking
+# E2E Tests (Playwright)
+npm run e2e                    # Headless E2E tests
+npm run e2e:headed             # E2E with visible browser
+npm run e2e:debug              # E2E with debugging
+npm run e2e:ui                 # Playwright UI mode
+npm run e2e:report             # Show test report
+
+# Frontend Tests (Vitest)
+npm test                       # Run frontend tests
+npm run test:run               # Run once (no watch)
+```
+
+### Linting & Formatting
+```bash
+# Quick formatting (most common)
+make lint-fix                  # Auto-format with Black + isort + autoflake
+make lint-fast                 # Format + check (no type checking)
+
+# Full lint pipeline
+make lint                      # Format + check + type-check
+make lint-check                # Check without modifying
+make type-check                # MyPy type checking only
 ```
 
 ### Python Code Standards
-1. Line length: 120 characters
-2. Format with Black before committing
-3. Sort imports with isort (profile=black)
-4. Use type hints for public functions
-5. Write docstrings for public APIs
-6. Pre-commit: Black + isort only (MyPy manual)
+1. **Line length:** 120 characters (configured in pyproject.toml)
+2. **Formatting:** Black + isort (profile=black) + autoflake
+3. **Type hints:** Required for public functions (MyPy for core modules)
+4. **Docstrings:** Required for public APIs (Google style)
+5. **Pre-commit hooks:** Auto-format only (Black + isort) - never fails
+6. **Logging:** Use module-level `logging.getLogger(__name__)`, never `print()`
+7. **Async:** Prefer async/await for I/O operations (FastAPI is async)
 
 ## API Routes Reference
 
@@ -74,32 +105,56 @@ make type-check                # MyPy type checking
 
 ## Architecture
 
-### Smart Retriever System
-✅ **Auto-discovery** - Drop files, automatic indexing
-✅ **No configuration** - No YAML needed
-✅ **Smart routing** - Intent-based query routing
-✅ **Content types** - Technical, Experience, Skills, Creative, Project, About
+### Smart Retriever System (Zero-Config RAG)
+The core innovation is a **unified smart retriever** that eliminates manual configuration:
 
-### Key Files
-**Core Logic** (`backend/core/`)
-- `unified_retriever.py` - Auto-discovery & indexing
-- `smart_query_handler.py` - Query intent analysis
-- `smart_illustration_service.py` - Image search with fuzzy matching
-- `query_router.py` - Smart routing logic
-- `response_service.py` - Response processing
-- `followup_management_service.py` - Follow-up questions
-- `config.py` - Centralized configuration
+✅ **Auto-discovery** - Drop files in `backend/knowledge/` or `public/`, automatically indexed
+✅ **No configuration** - No YAML, no manual setup, no content type declarations
+✅ **Smart routing** - Intent-based query routing with semantic analysis
+✅ **Content types** - Auto-detects: Technical, Experience, Skills, Creative, Project, About
+✅ **Single vector store** - ChromaDB with intelligent filtering (faster than multi-store)
+✅ **Multi-level caching** - Response caching, illustration caching, follow-up pre-generation
 
-**Security & Admin**
-- `admin_auth.py` - Admin authentication
-- `api_key_manager.py` - API key rotation
-- `security_middleware.py` - Security layer
-- `settings_manager.py` - Settings management
+### Key Files & Responsibilities
 
-**Routes** (`backend/routes/`)
-- `query.py` - Main query endpoint
-- `admin.py` - Admin dashboard API
-- `knowledge.py` - Knowledge management
+**Core RAG Pipeline** (`backend/core/`)
+- `app_initializer_v2.py` - Application startup, unified retriever initialization
+- `unified_retriever.py` - **Central file**: Auto-discovery & content indexing
+- `smart_query_handler.py` - Query intent analysis & routing decisions
+- `query_router.py` - Routes queries to appropriate content types
+- `response_service.py` - Response generation & streaming
+- `llm_chain.py` - LangChain integration (Anthropic + Google fallback)
+- `smart_illustration_service.py` - Image search with fuzzy matching + caching
+- `followup_service.py` - Follow-up question generation
+- `followup_management_service.py` - Follow-up management with validation
+- `config.py` - Centralized configuration (AppConfig class)
+
+**Content Processing** (`backend/core/`)
+- `content_indexer.py` - File discovery and document loading
+- `fast_content_classifier.py` - Content type detection (technical/experience/etc.)
+- `content_router.py` - Content routing logic
+
+**Security & Admin** (`backend/core/`)
+- `admin_auth.py` - Session-based authentication + fingerprinting
+- `admin_database.py` - All admin database operations
+- `api_key_manager.py` - Secure API key storage & rotation
+- `settings_manager.py` - Settings management with caching
+- `settings_schemas.py` - Pydantic schemas for settings validation
+- `security_middleware.py` - Rate limiting & security headers
+- `audit_logger.py` - Comprehensive audit logging
+- `totp_service.py` - TOTP two-factor authentication
+
+**API Routes** (`backend/routes/`)
+- `query.py` - **Main endpoint**: `/api/query` (streaming responses)
+- `admin.py` - Admin dashboard API (159KB file - all admin operations)
+- `knowledge.py` - Knowledge management (upload, delete, update)
+- `health.py` - Health checks & system status
+- `query_logs.py` - Protected query log access
+- `smart_query.py` - Advanced testing endpoints
+
+**Application Entry** (`backend/`)
+- `main.py` - FastAPI app creation, lifespan management, global state
+- `dependencies.py` - Dependency injection helpers
 
 ### Directory Structure
 ```
@@ -124,23 +179,77 @@ tests/
 
 ## Development Workflows
 
-### Adding Content
-1. Drop files in `backend/knowledge/` (supports: .md, .pdf, .json, .txt, .html, .docx)
-2. For images: Add to `backend/knowledge/illustrations.json`
-3. Restart backend - auto-indexed!
+### Adding Content (Zero Config!)
+1. **Text content:** Drop files in `backend/knowledge/` or `public/`
+   - Supported: `.md`, `.pdf`, `.json`, `.txt`, `.html`, `.docx`
+   - No configuration needed - automatically indexed on startup
+2. **Images/Illustrations:** Add entry to `backend/knowledge/illustrations.json`
+3. **Restart backend:** `npm run backend:stop && npm run backend:dev`
+   - Or force reindex: `npm run backend:dev:reindex`
 
-### Admin Dashboard Icons (Vue + Vuetify)
-**ALWAYS use `$` prefix with aliases:**
+### Adding a New Admin Setting
+When adding a new setting to the admin dashboard:
+1. **Schema:** Add dataclass to `backend/core/settings_schemas.py`
+2. **Manager:** Add getter/setter methods to `backend/core/settings_manager.py`
+3. **API Route:** Add endpoint in `backend/routes/admin.py` (settings section)
+4. **Frontend Store:** Add to relevant Pinia store in `admin/frontend/src/stores/`
+5. **Frontend View:** Create/update view in `admin/frontend/src/views/settings/`
+6. **Database:** Settings auto-persist to `admin_monitoring.db` (no migration needed)
+
+### Modifying API Routes
+1. **Keep routers thin:** Business logic goes in `backend/core/`, not routes
+2. **Use dependency injection:** Import from `backend/dependencies.py`
+3. **Add rate limiting:** Use `@limiter.limit()` decorator for protected routes
+4. **Document with docstrings:** FastAPI auto-generates OpenAPI docs
+5. **Test with pytest:** Add tests in `tests/integration/` for route changes
+
+### Working with the Unified Retriever
+The system automatically discovers and indexes content. To modify retrieval:
+1. **Content discovery:** `backend/core/content_indexer.py` - File scanning
+2. **Content classification:** `backend/core/fast_content_classifier.py` - Type detection
+3. **Query routing:** `backend/core/smart_query_handler.py` - Intent analysis
+4. **Retrieval logic:** `backend/core/unified_retriever.py` - Main retrieval
+5. **Never modify manually:** ChromaDB in `backend/.unified_chroma/` (auto-generated)
+
+### Admin Dashboard Development (Vue 3 + Vuetify 3)
+
+**CRITICAL: Icon Usage Pattern**
+ALWAYS use `$` prefix with icon aliases (configured in Vuetify plugin):
 ```vue
-✅ <v-icon>$weather-night</v-icon>
-❌ <v-icon>mdi-weather-night</v-icon>
+✅ CORRECT: <v-icon>$weather-night</v-icon>
+❌ WRONG:   <v-icon>mdi-weather-night</v-icon>
 ```
 
-Add new icons in `admin/frontend/src/plugins/vuetify.js`:
+**Adding New Icons:**
+1. Import from `@mdi/js` in `admin/frontend/src/plugins/vuetify.js`:
 ```javascript
 import { mdiNewIcon } from '@mdi/js'
-aliases: { 'new-icon': mdiNewIcon }
 ```
+2. Add to aliases object:
+```javascript
+aliases: {
+  'new-icon': mdiNewIcon,
+  // ... other aliases
+}
+```
+
+**Admin Frontend Architecture:**
+- **State Management:** Pinia stores in `admin/frontend/src/stores/`
+- **API Services:** `admin/frontend/src/services/` - Axios-based API clients
+- **Views:** `admin/frontend/src/views/` - Page components
+  - `settings/` - Settings management views (API Keys, Follow-ups, etc.)
+- **Components:** `admin/frontend/src/components/` - Reusable UI components
+- **Router:** `admin/frontend/src/router/` - Vue Router configuration
+- **Vuetify Config:** `admin/frontend/src/plugins/vuetify.js` - Theme & icons
+
+**Key Admin Features:**
+- Dashboard with real-time query analytics
+- Settings management (system, response, routing, RAG, security, features)
+- API key rotation (Anthropic, Google)
+- Follow-up question management
+- Welcome questions configuration
+- Knowledge base management
+- Performance metrics visualization (Chart.js)
 
 ### Testing Smart System
 ```bash
@@ -155,17 +264,29 @@ curl http://localhost:8000/api/smart-query/status
 
 ## Database Architecture
 
-### SQLite Databases
-**`/backend/logs/rag_monitoring.db`**
-- Query logs, responses, performance metrics
-- Content gap analysis
+### SQLite Databases (Multi-DB Design)
+The system uses **separate databases** for different concerns:
 
-**`/backend/logs/admin_monitoring.db`**
-- Admin users, sessions, settings
-- Isolated for security
+**`backend/logs/rag_monitoring.db`** - Public query analytics
+- Tables: `query_logs`, `content_gaps`, `performance_metrics`
+- Features: IP filtering, anonymization, geolocation tracking
+- Access: Public API + Admin dashboard
 
-**`/backend/logs/auth_sessions.db`**
-- User session tracking
+**`backend/logs/admin_monitoring.db`** - Admin system (isolated)
+- Tables: `admin_users`, `admin_sessions`, `admin_settings`, `api_keys`, `audit_log`
+- Features: Secure settings storage, API key management, audit logging
+- Access: Admin routes only (session auth required)
+- **Security:** Isolated from public queries, encrypted passwords (bcrypt)
+
+**`backend/logs/auth_sessions.db`** - User session tracking
+- Tables: `user_sessions`, `session_fingerprints`
+- Features: Session management, fingerprinting, CSRF protection
+
+### Database Access Patterns
+- **Settings Manager:** `backend/core/settings_manager.py` - Centralized settings with caching
+- **Admin Database:** `backend/core/admin_database.py` - All admin DB operations
+- **Query Logger:** `backend/core/sqlite_query_logger.py` - Query logging with retry logic
+- **Connection Management:** WAL mode, busy timeouts, retry logic for concurrency
 
 ## Environment Variables
 ```bash
@@ -181,11 +302,84 @@ ADMIN_DB_PATH=path/to/db       # Admin DB path
 **Admin:** Vue 3.4, Vuetify 3.6, Pinia 2.1, Chart.js 4.5, Monaco Editor
 **Testing:** pytest, pytest-asyncio, Playwright, Vitest
 
-## Key Advantages
-1. **Zero Config** - Drop files → auto-indexed
-2. **Smart Intent** - Understands what users want
-3. **Auto Content Types** - Detects technical/experience/creative/etc
-4. **Multi-level Caching** - Fast performance
-5. **Fuzzy Matching** - Better illustration search
-6. **Session Security** - Fingerprinting & secure cookies
-7. **Comprehensive Testing** - Unit, integration, E2E, security
+## Common Issues & Troubleshooting
+
+### Backend Won't Start
+```bash
+# Check if container is already running
+podman ps | grep nickberens
+
+# Stop existing container
+npm run backend:stop
+
+# Rebuild if needed
+npm run backend:build
+
+# Check logs
+podman logs nickberens
+```
+
+### Database Locked Errors (SQLite)
+The system uses WAL mode and retry logic, but if you see persistent locks:
+```bash
+# Set these in .env for development
+SQLITE_JOURNAL_MODE=WAL
+ADMIN_DB_BUSY_TIMEOUT_MS=15000
+ADMIN_DB_CONNECT_RETRIES=7
+
+# For debugging, temporarily disable features
+FAST_LOGIN_MODE=true          # Skips audit writes during login
+DISABLE_RATE_LIMITING=true    # Skips rate limiting middleware
+```
+
+### Content Not Indexed
+```bash
+# Force rebuild vector database
+npm run backend:dev:reindex
+
+# Or set in .env
+FORCE_REBUILD_DATA=true
+
+# Check ChromaDB directory
+ls -la backend/.unified_chroma/
+```
+
+### Admin Dashboard Issues
+```bash
+# Rebuild admin frontend
+cd admin/frontend && npm run build
+
+# Check API base URL (in admin/frontend/.env)
+VITE_API_BASE_URL=http://localhost:8000/api/admin
+
+# Verify admin user exists
+python3 admin/create_admin.py
+
+# Reset admin password
+python3 admin/change_password.py
+```
+
+### Tests Failing
+```bash
+# Clear pytest cache
+rm -rf .pytest_cache __pycache__
+
+# Run with verbose output
+pytest -vv tests/unit/test_file.py
+
+# Check test coverage
+pytest --cov=backend/core --cov-report=html
+
+# Skip slow tests
+pytest -m "not slow"
+```
+
+## Key Design Principles
+1. **Zero Config** - Drop files → auto-indexed (no YAML, no manual setup)
+2. **Smart Intent** - Query analysis determines routing (not keyword matching)
+3. **Auto Content Types** - Detects technical/experience/creative/etc from content
+4. **Multi-level Caching** - Response cache, illustration cache, follow-up pre-generation
+5. **Fuzzy Matching** - Better illustration search (handles typos, variations)
+6. **Session Security** - Fingerprinting, secure cookies, CSRF protection, audit logging
+7. **Separation of Concerns** - Isolated databases, thin routers, core business logic
+8. **Comprehensive Testing** - Unit (fast), integration, E2E (Playwright), security tests

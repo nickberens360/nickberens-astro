@@ -229,11 +229,11 @@ const settings = ref({
   primary_llm: 'claude',  // Legacy field for backward compatibility
   response_llm: 'claude',  // User-facing responses
   processing_llm: 'claude_haiku',  // Background operations
-  claude_model: 'claude-3-5-sonnet-20241022',
+  claude_model: 'claude-sonnet-4-5',
   gemini_model: 'gemini-1.5-flash',
-  response_claude_model: 'claude-3-5-sonnet-20241022',
+  response_claude_model: 'claude-sonnet-4-5',
   response_gemini_model: 'gemini-1.5-flash',
-  processing_claude_model: 'claude-3-haiku-20240307',
+  processing_claude_model: 'claude-haiku-4-5',
   processing_gemini_model: 'gemini-1.5-flash',
   embedding_model: 'models/embedding-001',
   enable_smart_model_selection: true,
@@ -259,8 +259,8 @@ const processingLlmOptions = [
 ]
 
 const claudeModelOptions = [
-  { title: 'Claude 3.5 Sonnet', value: 'claude-3-5-sonnet-20241022' },
-  { title: 'Claude 3.5 Haiku', value: 'claude-3-5-haiku-20241022' },
+  { title: 'Claude Sonnet 4.5', value: 'claude-sonnet-4-5' },
+  { title: 'Claude Haiku 4.5', value: 'claude-haiku-4-5' },
   { title: 'Claude 3 Opus', value: 'claude-3-opus-20240229' }
 ]
 

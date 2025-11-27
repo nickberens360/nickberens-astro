@@ -93,13 +93,13 @@ def create_processing_llm() -> BaseLanguageModel:
         logger.debug(f"Could not get processing LLM settings from database: {e}, using fast default")
 
     # Fallback to fast Claude model for background processing
-    logger.info("Creating fast Claude processing LLM from environment: claude-3-haiku-20240307")
+    logger.info("Creating fast Claude processing LLM from environment: claude-haiku-4-5")
     anthropic_key = get_api_key_for_provider("anthropic")
     if anthropic_key:
-        return ChatAnthropic(model_name="claude-3-haiku-20240307", api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
+        return ChatAnthropic(model_name="claude-haiku-4-5", api_key=anthropic_key, **ANTHROPIC_COMMON_PARAMS)
     else:
         # Last resort - try without explicit API key (may use environment)
-        return ChatAnthropic(model_name="claude-3-haiku-20240307", **ANTHROPIC_COMMON_PARAMS)
+        return ChatAnthropic(model_name="claude-haiku-4-5", **ANTHROPIC_COMMON_PARAMS)
 
 
 def create_response_llm() -> BaseLanguageModel:

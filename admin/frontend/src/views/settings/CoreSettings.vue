@@ -496,7 +496,7 @@ const featureStore = useFeatureSettingsStore()
 const responseSettings = ref({
   response_llm: 'claude',
   enable_smart_selection: true,
-  response_claude_model: 'claude-3-5-sonnet-20241022',
+  response_claude_model: 'claude-sonnet-4-5',
   response_gemini_model: 'gemini-1.5-flash'
 })
 
@@ -544,8 +544,8 @@ const processingLlmOptions = [
 ]
 
 const claudeModelOptions = [
-  { title: 'Claude 3.5 Sonnet', value: 'claude-3-5-sonnet-20241022' },
-  { title: 'Claude 3.5 Haiku', value: 'claude-3-5-haiku-20241022' },
+  { title: 'Claude Sonnet 4.5', value: 'claude-sonnet-4-5' },
+  { title: 'Claude Haiku 4.5', value: 'claude-haiku-4-5' },
   { title: 'Claude 3 Opus', value: 'claude-3-opus-20240229' }
 ]
 

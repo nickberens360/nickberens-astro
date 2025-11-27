@@ -150,8 +150,8 @@ LLM_PROVIDERS = [
     {
         "name": "claude_haiku",
         "class": ChatAnthropic,
-        "model": "claude-3-haiku-20240307",
-        "init_kwargs": {"model": "claude-3-haiku-20240307", "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
+        "model": "claude-haiku-4-5",
+        "init_kwargs": {"model": "claude-haiku-4-5", "temperature": 0.7, "timeout": REQUEST_TIMEOUT},
     },
     {
         "name": "gemini",

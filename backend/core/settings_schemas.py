@@ -140,7 +140,7 @@ class ResponseSettings:
 
     # Response model selection (moved from system settings)
     response_llm: str = "claude"  # claude, gemini
-    response_claude_model: str = "claude-3-5-sonnet-20241022"
+    response_claude_model: str = "claude-sonnet-4-5"
     response_gemini_model: str = "gemini-1.5-flash"
     enable_smart_selection: bool = True  # Allow complexity-based model switching
 
@@ -215,7 +215,7 @@ class ResponseSettings:
             validated_data["response_llm"] = "claude"
 
         # Validate model selections
-        valid_claude_models = ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]
+        valid_claude_models = ["claude-sonnet-4-5", "claude-haiku-4-5", "claude-3-opus-20240229"]
         if validated_data["response_claude_model"] not in valid_claude_models:
             validated_data["response_claude_model"] = defaults.response_claude_model
 
@@ -496,18 +496,18 @@ class SystemConfigurationSettings:
 
     # LLM Configuration (Legacy - use response_llm instead)
     primary_llm: str = "claude"  # claude, gemini (DEPRECATED: maps to response_llm)
-    claude_model: str = "claude-3-5-sonnet-20241022"
+    claude_model: str = "claude-sonnet-4-5"
     gemini_model: str = "gemini-1.5-flash"
     embedding_model: str = "models/embedding-001"
 
     # User-Facing Response LLM (what chatbot uses to respond)
     response_llm: str = "claude"  # claude, gemini
-    response_claude_model: str = "claude-3-5-sonnet-20241022"
+    response_claude_model: str = "claude-sonnet-4-5"
     response_gemini_model: str = "gemini-1.5-flash"
 
     # Background Processing LLM (indexing, reformulation, etc.)
     processing_llm: str = "claude_haiku"  # claude_haiku, claude, gemini
-    processing_claude_model: str = "claude-3-haiku-20240307"
+    processing_claude_model: str = "claude-haiku-4-5"
     processing_gemini_model: str = "gemini-1.5-flash"
 
     # Smart Selection Settings
@@ -570,7 +570,7 @@ class SystemConfigurationSettings:
 
             # Processing model variants use optimized defaults
             if "processing_claude_model" not in validated_data:
-                validated_data["processing_claude_model"] = "claude-3-haiku-20240307"  # Fast model
+                validated_data["processing_claude_model"] = "claude-haiku-4-5"  # Fast model
 
             if "processing_gemini_model" not in validated_data:
                 validated_data["processing_gemini_model"] = validated_data.get("gemini_model", defaults.gemini_model)
@@ -601,7 +601,7 @@ class SystemConfigurationSettings:
             return self.processing_gemini_model
         else:
             # Default to fast Claude model
-            return "claude-3-haiku-20240307"
+            return "claude-haiku-4-5"
 
     @property
     def effective_primary_llm(self) -> str:
@@ -626,7 +626,7 @@ class SystemConfigurationSettings:
             validated_data["primary_llm"] = defaults.primary_llm
 
         # Validate Claude model
-        valid_claude_models = ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]
+        valid_claude_models = ["claude-sonnet-4-5", "claude-haiku-4-5", "claude-3-opus-20240229"]
         if validated_data["claude_model"] not in valid_claude_models:
             validated_data["claude_model"] = defaults.claude_model
 

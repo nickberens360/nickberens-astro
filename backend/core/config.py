@@ -40,7 +40,7 @@ class AppConfig:
 
     # LLM Configuration - keep it simple for now
     PRIMARY_LLM = os.getenv("PRIMARY_LLM", "claude")
-    CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
+    CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5")
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
 
