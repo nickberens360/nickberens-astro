@@ -10,7 +10,7 @@ RAG system running. Use the git commits as a reference to decide on what to
 write. Output to a markdown file with the name of your choosing to the content/blog dir."
 ---
 
-
+<!-- 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 -->
 
 This article examines the architectural evolution from a naive keyword-matching system to a production-ready RAG implementation featuring unified retrieval, intelligent query routing, and multi-provider LLM integration. The system processes queries with sub-50ms analysis latency while maintaining semantic accuracy through hybrid classification strategies and configurable similarity thresholds.
 
