@@ -68,11 +68,11 @@ This project utilizes a modern, full-stack technology setup.
 
 * **Core AI Logic**: **LangChain** for RAG pipeline with smart query routing and intent analysis
 * **Language Models (LLMs)**:
-    * **Anthropic Claude 3.5 Sonnet** (primary)
+    * **Anthropic Claude Sonnet 4.5** (primary - claude-sonnet-4-5) - **Recently upgraded** from Claude 3.5 Sonnet
     * **Google Gemini 1.5 Flash** (fallback)
-* **Embeddings**: **GoogleGenerativeAIEmbeddings** for semantic search capabilities
-* **Vector Database**: **ChromaDB** with intelligent content type filtering and caching
-* **Smart Features**: **Fuzzy matching**, geolocation integration, and response caching
+* **Embeddings**: **GoogleGenerativeAIEmbeddings** (models/embedding-001) for semantic search capabilities
+* **Vector Database**: **ChromaDB 0.5.x** with intelligent content type filtering and caching
+* **Smart Features**: **Fuzzy matching**, geolocation integration, multi-level response caching, and session fingerprinting
 
 ---
 
@@ -159,21 +159,28 @@ The project features a modern full-stack architecture with auto-discovery conten
 │   ├── templates/                   # Jinja2 templates for admin
 │   └── logs/                        # Database and log files
 ├── admin/                           # Admin dashboard system
-│   ├── backend/                     # Python admin backend services
-│   │   ├── main.py                  # Admin FastAPI application
-│   │   ├── auth.py                  # Authentication and authorization
-│   │   ├── database.py              # Admin database operations
-│   │   ├── models.py                # Database models
-│   │   └── routes.py                # Admin API routes
+│   ├── backend/                     # Python admin backend services (DEPRECATED - logic moved to backend/core)
 │   ├── frontend/                    # Vue.js + Vuetify admin frontend
 │   │   ├── src/
-│   │   │   ├── components/          # Vue components
-│   │   │   ├── views/               # Page components including Settings
-│   │   │   │   └── settings/        # Settings management views (API Keys, Followups, etc.)
-│   │   │   ├── stores/              # Pinia state management
-│   │   │   ├── services/            # API services
+│   │   │   ├── components/          # Reusable Vue components
+│   │   │   │   └── settings/        # Settings-specific components
+│   │   │   ├── views/               # Page-level components
+│   │   │   │   ├── settings/        # Settings management views (API Keys, Followups, Welcome, etc.)
+│   │   │   │   ├── user-settings/   # User preference views
+│   │   │   │   └── knowledge/       # Knowledge base management views
+│   │   │   ├── stores/              # Pinia state management stores
+│   │   │   ├── services/            # API client services
+│   │   │   │   └── settings/        # Settings API services
+│   │   │   ├── composables/         # Vue composables for reusable logic
+│   │   │   │   └── queries/         # Query-related composables
+│   │   │   ├── types/               # TypeScript type definitions
+│   │   │   ├── utils/               # Utility functions
+│   │   │   ├── styles/              # Global styles and themes
+│   │   │   ├── router/              # Vue Router configuration
 │   │   │   └── plugins/             # Vuetify configuration with icon aliases
-│   │   └── dist/                    # Built frontend files
+│   │   └── dist/                    # Built frontend files (production)
+│   ├── create_admin.py              # Admin user creation script
+│   ├── change_password.py           # Admin password management script
 │   └── start-admin.py               # Admin server startup script
 ├── scripts/                         # Utility scripts
 │   ├── copy-content-to-knowledge.sh # Content management
@@ -190,18 +197,22 @@ The project features a modern full-stack architecture with auto-discovery conten
 
 ## Development Commands
 
-### Build Commands
-- `npm run build` - Build the Astro frontend
-- `npm run dev` - Start Astro development server
-- `npm run backend:build` - Build backend container with Podman
-- `npm run backend:dev` - Run backend in development mode with hot reload
+### Frontend Commands
+- `npm run dev` - Start Astro development server (localhost:4321)
+- `npm run build` - Build the Astro frontend for production
+- `npm run preview` - Preview production build locally
+
+### Backend Commands (Podman Containerized)
+- `npm run backend:build` - Copy content & build backend container with Podman
+- `npm run backend:dev` - Run backend with hot reload & volume mounts (localhost:8000)
+- `npm run backend:dev:reindex` - Force reindex all content on startup (when content changes)
 - `npm run backend:stop` - Stop the backend container
 
-### Admin Commands
-- `npm run admin:backend` - Start admin backend server
-- `npm run admin:frontend` - Start admin frontend development server
+### Admin Dashboard Commands
+- `npm run admin:frontend` - Start admin UI dev server (localhost:3000)
+- `npm run admin:backend` - Start admin backend server (uses backend/routes/admin.py)
 - `npm run admin:build` - Build admin frontend for production
-- `npm run admin` - Start both admin backend and frontend
+- `npm run admin` - Alias for admin:frontend
 - `npm run admin:stop` - Stop admin backend processes
 
 ### Test Commands
@@ -211,13 +222,13 @@ The project features a modern full-stack architecture with auto-discovery conten
 - `npm test` - Run frontend tests with Vitest
 - `PYTHONPATH=. pytest tests/` - Run tests with proper Python path
 
-### E2E Test Commands
-- `npm run e2e` - Run end-to-end tests with Playwright
-- `npm run e2e:headed` - Run E2E tests in headed mode (visible browser)
-- `npm run e2e:debug` - Run E2E tests with debugging enabled
-- `npm run e2e:ui` - Run E2E tests with Playwright UI mode
-- `npm run e2e:report` - Show Playwright test report
-- `npm run e2e:install` - Install Playwright browsers
+### E2E Test Commands (Playwright with MCP)
+- `npm run e2e` - Run end-to-end tests with Playwright in headless mode
+- `npm run e2e:headed` - Run E2E tests in headed mode (visible browser for debugging)
+- `npm run e2e:debug` - Run E2E tests with step-by-step debugging enabled
+- `npm run e2e:ui` - Run E2E tests with interactive Playwright UI mode
+- `npm run e2e:report` - Show detailed HTML test report from last run
+- `npm run e2e:install` - Install Playwright browsers (Chromium, Firefox, WebKit)
 
 ### Makefile Commands
 - `make lint-fix` - Auto-format code with Black, isort, and autoflake
@@ -315,16 +326,22 @@ The system uses multiple SQLite databases for different purposes:
 
 ### Backend Databases
 - **`/backend/logs/rag_monitoring.db`** - Primary query logging and analytics
-  - Tables: `query_logs`, `content_gaps`
+  - Tables: `query_logs`, `content_gaps`, `performance_metrics`
   - Features: IP filtering, anonymization, geolocation tracking
 - **`/backend/logs/auth_sessions.db`** - User session tracking for main application
-  - Tables: `user_sessions`
-  - Features: Session management and user behavior analytics
+  - Tables: `user_sessions`, `session_fingerprints`
+  - Features: Session management, fingerprinting, and user behavior analytics
+- **`/backend/logs/security_events.db`** - Security monitoring and threat detection
+  - Tables: Security event logs, threat patterns, blocked IPs
+  - Features: Real-time security monitoring, attack pattern detection
+- **`/backend/logs/knowledge_index.db`** - Content indexing metadata
+  - Tables: Document metadata, indexing status, content checksums
+  - Features: Content tracking, indexing optimization, duplicate detection
 
-### Admin System Databases  
+### Admin System Databases
 - **`/backend/logs/admin_monitoring.db`** - Admin user management and settings
-  - Tables: `admin_users`, `admin_sessions`, `admin_settings`
-  - Features: Admin authentication, roles, session management, and system configuration
+  - Tables: `admin_users`, `admin_sessions`, `admin_settings`, `api_keys`, `audit_log`
+  - Features: Admin authentication, roles, session management, API key storage, and comprehensive audit logging
 
 ### Security Features
 - **Session-based Authentication**: Secure cookies with fingerprinting
