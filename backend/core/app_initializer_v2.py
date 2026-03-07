@@ -14,8 +14,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from langchain_anthropic import ChatAnthropic
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.language_models import BaseLanguageModel
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .config import AppConfig
 from .constants import ANTHROPIC_COMMON_PARAMS, GOOGLE_COMMON_PARAMS
@@ -215,7 +216,7 @@ def initialize_app_state() -> Tuple[Dict[str, Any], SmartIllustrationService, Ba
     user_query_llm = create_response_llm()
 
     # Initialize embeddings
-    embeddings = GoogleGenerativeAIEmbeddings(model=AppConfig.EMBEDDING_MODEL)
+    embeddings = HuggingFaceEmbeddings(model_name=AppConfig.EMBEDDING_MODEL)
 
     # Determine persist directory (allow override via environment for tests/CI)
     persist_dir = os.getenv("UNIFIED_PERSIST_DIR", "backend/.unified_chroma")

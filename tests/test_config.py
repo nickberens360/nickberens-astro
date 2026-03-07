@@ -17,7 +17,7 @@ class TestConfig:
         assert AppConfig.PRIMARY_LLM == "claude"
         assert "claude" in AppConfig.CLAUDE_MODEL
         assert "gemini" in AppConfig.GEMINI_MODEL
-        assert "embedding" in AppConfig.EMBEDDING_MODEL
+        assert AppConfig.EMBEDDING_MODEL  # non-empty embedding model name
 
     @pytest.mark.unit
     def test_search_threshold_validation(self):

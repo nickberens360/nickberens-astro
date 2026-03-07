@@ -28,6 +28,9 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r /app/backend/requirements.txt
 
+# Pre-download the HuggingFace embedding model so it's baked into the image
+RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
 # Build admin frontend
 COPY admin/frontend/package*.json /app/admin/frontend/
 WORKDIR /app/admin/frontend
@@ -54,6 +57,9 @@ RUN groupadd --system app && useradd --system --no-create-home --gid app app && 
 
 # Copy the virtual environment from builder stage
 COPY --from=builder /opt/venv /opt/venv
+
+# Copy pre-downloaded HuggingFace embedding model from builder
+COPY --from=builder --chown=app:app /root/.cache/huggingface /home/app/.cache/huggingface
 
 # Set environment variables
 ENV VIRTUAL_ENV=/opt/venv
