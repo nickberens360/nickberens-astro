@@ -214,9 +214,10 @@ class AppConfig:
     SEARCH_EXPANSION_MULTIPLIER = int(os.getenv("SEARCH_EXPANSION_MULTIPLIER", "3"))  # Multiply k for initial search
 
     # Distance Threshold Configuration
-    DEFAULT_DISTANCE_THRESHOLD = float(os.getenv("DEFAULT_DISTANCE_THRESHOLD", "0.5"))  # Default similarity threshold
-    INCLUSIVE_DISTANCE_THRESHOLD = float(os.getenv("INCLUSIVE_DISTANCE_THRESHOLD", "1.0"))  # More inclusive threshold
-    BROAD_DISTANCE_THRESHOLD = float(os.getenv("BROAD_DISTANCE_THRESHOLD", "1.2"))  # Very broad threshold
+    # NOTE: Calibrated for all-MiniLM-L6-v2 embeddings (L2 distance ~0.8-1.5 for good matches)
+    DEFAULT_DISTANCE_THRESHOLD = float(os.getenv("DEFAULT_DISTANCE_THRESHOLD", "1.3"))  # Default similarity threshold
+    INCLUSIVE_DISTANCE_THRESHOLD = float(os.getenv("INCLUSIVE_DISTANCE_THRESHOLD", "1.5"))  # More inclusive threshold
+    BROAD_DISTANCE_THRESHOLD = float(os.getenv("BROAD_DISTANCE_THRESHOLD", "1.8"))  # Very broad threshold
 
     # Query Processing Configuration
     DEFAULT_MAX_CONTEXT_LENGTH = int(os.getenv("DEFAULT_MAX_CONTEXT_LENGTH", "2000"))  # Token limit for context
