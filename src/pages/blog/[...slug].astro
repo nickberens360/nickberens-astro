@@ -50,6 +50,44 @@ const { Content } = await entry.render();
   </PageSection>
 </Layout>
 
+<script>
+  // Copy button for accordions written as <details data-copy> in post markdown.
+  // Copies the code block if there is one, otherwise the accordion's text without its heading.
+  document.querySelectorAll('.content details[data-copy]').forEach((details) => {
+    const summary = details.querySelector('summary');
+    if (!summary) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy-btn';
+    button.textContent = 'Copy';
+    button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const pre = details.querySelector('pre');
+      let text = '';
+      if (pre) {
+        text = pre.textContent ?? '';
+      } else {
+        const wasOpen = details.open;
+        details.open = true;
+        text = Array.from(details.children)
+          .filter((el) => el.tagName !== 'SUMMARY')
+          .map((el) => (el as HTMLElement).innerText)
+          .join('\n\n');
+        details.open = wasOpen;
+      }
+      try {
+        await navigator.clipboard.writeText(text.trim());
+        button.textContent = 'Copied';
+      } catch {
+        button.textContent = 'Copy failed';
+      }
+      setTimeout(() => (button.textContent = 'Copy'), 2000);
+    });
+    summary.appendChild(button);
+  });
+</script>
+
 <style>
   .content {
     line-height: 1.6;
@@ -75,6 +113,48 @@ const { Content } = await entry.render();
   .content :global(pre) {
     padding: 1rem;
     border-radius: 0.5rem;
+  }
+
+  /* Accordions (<details>) in post content */
+  .content :global(details) {
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .content :global(summary) {
+    cursor: pointer;
+    padding-right: 5rem;
+  }
+
+  .content :global(details[open] > summary) {
+    margin-bottom: 1rem;
+  }
+
+  .content :global(details pre) {
+    overflow-x: auto;
+  }
+
+  .content :global(.copy-btn) {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.75rem;
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+  }
+
+  .theme-dark :global(details) {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.25);
   }
 
   /* Theme-based text colors */
